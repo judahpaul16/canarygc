@@ -4,7 +4,7 @@
 
 ![Raspberry Pi Version](https://img.shields.io/badge/Raspberry_Pi-Zero%20%2F%204B-red?style=flat-square&logo=raspberry-pi)
 ![Docker Compose Version](https://img.shields.io/badge/Docker%20Compose-v2.27.1-blue?style=flat-square&logo=docker)
-![PocketBase Version](https://img.shields.io/badge/PocketBase-v0.21.3-green?style=flat-square&logo=pocketbase)
+![PocketBase Version](https://img.shields.io/badge/PocketBase-v0.22.14-green?style=flat-square&logo=pocketbase)
 
 Complete solution for drone delivery using Raspberry Pi and Docker Compose, integrating with ArduPilot flight controller. *The project uses a web interface and is designed to run on a Raspberry Pi or Pi Zero.*
 

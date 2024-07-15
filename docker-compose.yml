@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+    volumes:
+      - ./backend/pb_data:/pb_data
+    ports:
+      - "8090:8090"
+    container_name: airsend_backend
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+
+  frontend:
+    build:
+      context: ./frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    container_name: airsend_frontend
+    environment:
+      - CHOKIDAR_USEPOLLING=true
