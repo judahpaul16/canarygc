@@ -109,7 +109,7 @@
   }
 </style>
 
-<div class="compass bg-[#1c1c1e] text-white p-4 rounded-lg flex flex-col items-center h-full w-full">
+<div class="compass bg-[#1c1c1e] text-white p-4 rounded-lg flex flex-col items-center h-full w-full overflow-auto">
   <div id="direction-degree" class="bg-[#62bbff] p-2 text-black text-xs rounded-full">83°</div>
   <div class="compass-container">
     <div class="compass-circle">
