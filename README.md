@@ -101,11 +101,10 @@ sudo apt-get install -y docker-compose
 ## 🐳 Building the Docker Containers
 Run the setup script to build and start the services:
 ```bash
-git clone git@github.com:judahpaul16/airsend.git
-cp ./airsend/contrib/setup.sh ./setup.sh
-sudo chmod +x ./setup.sh
-./setup.sh
+git clone git@github.com:judahpaul16/airsend.git && cd airsend
+docker compose up
 ```
+*Run with `-d` to detach the container from the terminal session*
 
 ---
 
