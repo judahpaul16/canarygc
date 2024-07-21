@@ -4,7 +4,9 @@
     <a class="right" href="#"><i class="fas fa-chevron-right"></i></a>
     <a class="down" href="#"><i class="fas fa-chevron-down"></i></a>
     <a class="left" href="#"><i class="fas fa-chevron-left"></i></a>
-    <div class="center-circle"></div>
+    <div class="center-circle">
+      <span class="move-text">Move</span>
+    </div>
   </nav>
 </div>
 
@@ -87,5 +89,13 @@
   background-color: #1c1c1e;
   border-radius: 50%;
   transform: translate(-50%, -50%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.move-text {
+  color: #ffffff;
+  font-size: calc(0.5rem + 0.5vw);
 }
 </style>

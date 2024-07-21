@@ -48,6 +48,17 @@
         <button class="alt-button rounded-full">↓</button>
       </div>
     </div>
+    <div class="separator"></div>
+    <div class="column flex flex-col items-center space-y-4">
+      <div class="flex flex-col items-center">
+        <label class="text-sm mb-1">Rotate Left</label>
+        <button class="rotate-button rounded-full">⟲</button>
+      </div>
+      <div class="flex flex-col items-center">
+        <label class="text-sm mb-1">Rotate Right</label>
+        <button class="rotate-button rounded-full">⟳</button>
+      </div>
+    </div>
   </div>
   <DPad />
 </div>
@@ -67,7 +78,8 @@
   .form-checkbox,
   .form-range,
   .form-input,
-  .alt-button {
+  .alt-button,
+  .rotate-button {
     appearance: none;
     background-color: #374151;
     transition: background-color 0.3s ease;
@@ -105,7 +117,8 @@
     border-color: #66e1ff;
   }
 
-  .alt-button {
+  .alt-button,
+  .rotate-button {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -119,7 +132,8 @@
     border: none;
   }
 
-  .alt-button:hover {
+  .alt-button:hover,
+  .rotate-button:hover {
     background-color: #4f4f50;
   }
 </style>
