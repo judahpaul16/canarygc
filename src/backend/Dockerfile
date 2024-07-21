@@ -4,9 +4,14 @@ RUN apt-get update && apt-get install -y wget unzip
 
 ENV POCKETBASE_VERSION=0.22.14
 
-RUN wget https://github.com/pocketbase/pocketbase/releases/download/v${POCKETBASE_VERSION}/pocketbase_${POCKETBASE_VERSION}_linux_amd64.zip && \
-    unzip pocketbase_${POCKETBASE_VERSION}_linux_amd64.zip -d /usr/local/bin/ && \
-    rm pocketbase_${POCKETBASE_VERSION}_linux_amd64.zip
+RUN ARCH=$(dpkg --print-architecture) && \
+    if [ "$ARCH" = "amd64" ]; then \
+        wget https://github.com/pocketbase/pocketbase/releases/download/v${POCKETBASE_VERSION}/pocketbase_${POCKETBASE_VERSION}_linux_amd64.zip; \
+    elif [ "$ARCH" = "arm64" ]; then \
+        wget https://github.com/pocketbase/pocketbase/releases/download/v${POCKETBASE_VERSION}/pocketbase_${POCKETBASE_VERSION}_linux_arm64.zip; \
+    fi && \
+    unzip pocketbase_${POCKETBASE_VERSION}_linux_*.zip -d /usr/local/bin/ && \
+    rm pocketbase_${POCKETBASE_VERSION}_linux_*.zip
 
 EXPOSE 8090
 
