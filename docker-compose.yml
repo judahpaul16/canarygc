@@ -8,7 +8,7 @@ services:
       - ./src/backend/pb_data:/pb_data
     ports:
       - "8090:8090"
-    container_name: airsend_backend
+    container_name: mmgcs_backend
     deploy:
       resources:
         limits:
@@ -22,6 +22,6 @@ services:
       - /app/node_modules
     ports:
       - "5173:5173"
-    container_name: airsend_frontend
+    container_name: mmgcs_frontend
     environment:
       - CHOKIDAR_USEPOLLING=true

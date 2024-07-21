@@ -1,18 +1,17 @@
 <div align="center">
 
-# 🚁 AirSend 📦
+# 🚁 MAV Manager GCS 📡
 
 ![Raspberry Pi Version](https://img.shields.io/badge/Raspberry_Pi-Zero%20%2F%204B-red?style=flat-square&logo=raspberry-pi)
 ![Docker Compose Version](https://img.shields.io/badge/Docker%20Compose-v2.27.1-blue?style=flat-square&logo=docker)
 ![PocketBase Version](https://img.shields.io/badge/PocketBase-v0.22.14-green?style=flat-square&logo=pocketbase)
 
-A web-based ground control station (GCS) for remote autopilot management via MAVProxy. *Tested on Raspberry Pi Zero with ArduPilot.*
+A web-based ground control station (GCS) for remote autopilot management via MAVProxy.  
+*Tested on Raspberry Pi Zero with ArduPilot.*
 
 <img src="screenshots/dashboard.png" alt="Illustration" width="auto"/>
 
 </div>
-
-## 📦 Integrations
 
 <table align="center">
 
@@ -102,7 +101,7 @@ sudo apt-get install -y docker-compose
 ## 🐳 Building the Docker Containers
 Run the setup script to build and start the services:
 ```bash
-git clone git@github.com:judahpaul16/airsend.git && cd airsend
+git clone git@github.com:judahpaul16/mmgcs.git && cd mmgcs
 docker compose up
 ```
 *Run with `-d` to detach the container from the terminal session*
