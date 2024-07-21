@@ -5,9 +5,13 @@
   $: user = $authData;
 </script>
 
+<sveltekit:head>
+  <title>MAV Manager GCS - Home</title>
+</sveltekit:head>
+
 <div class="flex items-center justify-center h-full">
   <div class="bg-gray-900 bg-opacity-75 text-white p-8 rounded-lg shadow-lg max-w-md w-full">
-    <h1 class="text-3xl font-bold mb-4 text-center">Welcome to AirSend</h1>
+    <h1 class="text-3xl font-bold mb-4 text-center">Welcome to MAV Manager GCS</h1>
     {#if user}
       <p class="text-lg text-center">Hello, {user?.record?.name || 'admin'}!
         Continue to <a href="/dashboard" class="text-blue-500 underline">dashboard</a>.

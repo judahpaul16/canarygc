@@ -26,6 +26,10 @@
   }
 </script>
 
+<sveltekit:head>
+  <title>MAV Manager GCS - Login</title>
+</sveltekit:head>
+
 <div class="flex items-center justify-center h-full">
   <div class="bg-gray-900 bg-opacity-75 text-white p-8 rounded-lg shadow-lg max-w-md w-full">
     <h2 class="text-2xl font-bold mb-4 text-center">Login</h2>

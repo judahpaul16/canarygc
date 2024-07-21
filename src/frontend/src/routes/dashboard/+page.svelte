@@ -20,6 +20,10 @@
   });
 </script>
 
+<sveltekit:head>
+  <title>MAV Manager GCS - Dashboard</title>
+</sveltekit:head>
+
 <div class="dashboard grid grid-cols-12 grid-rows-6 gap-4 p-6 bg-[#121212] h-[95vh] rounded-[30px] overflow-auto">
   <div class="col-span-6 row-span-4">
     <LiveFeed />
