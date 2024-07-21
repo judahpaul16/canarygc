@@ -28,10 +28,6 @@
   }
 </script>
 
-<sveltekit:head>
-  <title>MAV Manager GCS - Profile</title>
-</sveltekit:head>
-
 <main class="flex">
   <nav class="bg-[#1c1c1e] text-white w-min flex flex-col items-center py-4 px-2">
     <div class="mb-4">
