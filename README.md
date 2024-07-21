@@ -6,9 +6,9 @@
 ![Docker Compose Version](https://img.shields.io/badge/Docker%20Compose-v2.27.1-blue?style=flat-square&logo=docker)
 ![PocketBase Version](https://img.shields.io/badge/PocketBase-v0.22.14-green?style=flat-square&logo=pocketbase)
 
-Complete solution for drone delivery using Raspberry Pi and Docker Compose, integrating with ArduPilot flight controller. *The project uses a web interface and is designed to run on a Raspberry Pi or Pi Zero.*
+A web-based ground control station (GCS) for remote autopilot management via MAVProxy. *Tested on Raspberry Pi Zero with ArduPilot.*
 
-<img src="screenshots/drone.png" alt="Illustration" width="400"/>
+<img src="screenshots/dashboard.png" alt="Illustration" width="auto"/>
 
 </div>
 
@@ -24,9 +24,10 @@ Complete solution for drone delivery using Raspberry Pi and Docker Compose, inte
 <tr>
 <td>
       
+✅ SvelteKit  
 ✅ PocketBase  
 ✅ Docker Compose  
-✅ ArduPilot  
+✅ MAVProxy  
 
 </td>
 <td>
@@ -122,7 +123,14 @@ docker compose up
 - [Raspberry Pi Docs](https://www.raspberrypi.com/documentation)
 - [Docker Docs](https://docs.docker.com/)
 - [PocketBase Docs](https://pocketbase.io/docs/)
+- [SvelteKit Docs](https://kit.svelte.dev/)
+
+</td>
+<td>
+
 - [ArduPilot Docs](https://ardupilot.org/ardupilot/index.html)
+- [MAVLink Protocol](https://mavlink.io/en/)
+- [MAVProxy Docs](https://ardupilot.org/mavproxy/)
 - [Flight Controller Setup](https://ardupilot.org/copter/docs/initial-setup.html)
 
 </td>
