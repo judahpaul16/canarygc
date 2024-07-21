@@ -6,9 +6,12 @@
   import Stats from '../../components/Stats.svelte';
   import Controls from '../../components/Controls.svelte';
   import Compass from '../../components/Compass.svelte';
+  import Weather from '../../components/Weather.svelte';
 
   let user;
   $: user = $authData;
+  const lat = 26.0558;  // Dummy latitude
+  const lon = -80.1437; // Dummy longitude
 
   onMount(() => {
     if (!user) {
@@ -18,10 +21,10 @@
 </script>
 
 <div class="dashboard grid grid-cols-12 grid-rows-6 gap-4 p-6 bg-[#121212] h-[95vh] rounded-[30px] overflow-auto">
-  <div class="col-span-7 row-span-3">
+  <div class="col-span-6 row-span-4">
     <LiveFeed />
   </div>
-  <div class="col-span-5 row-span-3">
+  <div class="col-span-4 row-span-4">
     <Stats 
       speed={20} 
       height={80} 
@@ -36,10 +39,13 @@
       droneName="CUAV X7 Running Ardupilot"
     />
   </div>
-  <div class="col-span-10 row-span-3">
+  <div class="col-span-2 row-span-4">
+    <Weather {lat} {lon} />
+  </div>
+  <div class="col-span-10 row-span-2">
     <Controls />
   </div>
-  <div class="col-span-2 row-span-3 flex justify-end items-end">
+  <div class="col-span-2 row-span-2 flex justify-end items-end">
     <div class="w-full h-full">
       <Compass />
     </div>
