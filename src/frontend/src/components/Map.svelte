@@ -26,11 +26,11 @@
       const L = await import('leaflet');
       const leaflet = L.default;
 
-      map = leaflet.map('map').setView([51.506, -0.09], 13);
+      map = leaflet.map('map').setView([33.749, -84.388], 13);
 
       leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {}).addTo(map);
 
-      leaflet.marker([51.505, -0.09]).addTo(map);
+      leaflet.marker([33.749, -84.388]).addTo(map);
     }
   });
 </script>
