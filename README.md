@@ -13,37 +13,14 @@ A web-based ground control station (GCS) for remote autopilot management via MAV
 
 </div>
 
+---
+
+<table align="center">
+<tr>
+<td>
+
 <table align="center">
 
-<tr>
-<td>
-  
-<table>
-<th colspan="2" style="text-align: center;">📦 Services</th>
-<tr>
-<td>
-      
-✅ SvelteKit  
-✅ PocketBase  
-✅ Docker Compose  
-✅ MAVProxy  
-
-</td>
-<td>
-
-✅ Web Interface  
-✅ Delivery Management  
-✅ GPS Tracking  
-✅ Real-time Monitoring  
-
-</td>
-</tr>
-</table>
-
-</td>
-<td>
-    
-<table>
 <th colspan="2" style="text-align: center;">🔧 Use Cases</th>
 <tr>
 <td>
@@ -64,6 +41,35 @@ A web-based ground control station (GCS) for remote autopilot management via MAV
 </td>
 </tr>
 </table>
+
+
+</td>
+<td>
+
+
+<table align="center">
+<th colspan="2" style="text-align: center;">📚 Useful Documentation</th>
+<tr>
+<td>
+
+
+- [Raspberry Pi Docs](https://www.raspberrypi.com/documentation)
+- [Docker Docs](https://docs.docker.com/)
+- [PocketBase Docs](https://pocketbase.io/docs/)
+- [SvelteKit Docs](https://kit.svelte.dev/)
+
+</td>
+<td>
+
+- [ArduPilot Docs](https://ardupilot.org/ardupilot/index.html)
+- [MAVLink Protocol](https://mavlink.io/en/)
+- [MAVProxy Docs](https://ardupilot.org/mavproxy/)
+- [Flight Controller Setup](https://ardupilot.org/copter/docs/initial-setup.html)
+
+</td>
+</tr>
+</table>
+
 
 </td>
 </tr>
@@ -110,31 +116,6 @@ docker compose up
 
 ## ✅ Compatibility
 ...
-
----
-
-## 📚 Useful Documentation
-
-<table align="center">
-<tr>
-<td>
-
-- [Raspberry Pi Docs](https://www.raspberrypi.com/documentation)
-- [Docker Docs](https://docs.docker.com/)
-- [PocketBase Docs](https://pocketbase.io/docs/)
-- [SvelteKit Docs](https://kit.svelte.dev/)
-
-</td>
-<td>
-
-- [ArduPilot Docs](https://ardupilot.org/ardupilot/index.html)
-- [MAVLink Protocol](https://mavlink.io/en/)
-- [MAVProxy Docs](https://ardupilot.org/mavproxy/)
-- [Flight Controller Setup](https://ardupilot.org/copter/docs/initial-setup.html)
-
-</td>
-</tr>
-</table>
 
 ---
 
