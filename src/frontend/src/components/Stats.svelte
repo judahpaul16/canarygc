@@ -171,7 +171,7 @@
     </div>
     <div class="relative group">
       <button class="circular-button" on:click={stopFlight}>
-        <i class="fas fa-stop"></i>
+        <i class="fas fa-stop text-red-400"></i>
         <div class="tooltip">Stop Flight</div>
       </button>
     </div>

@@ -43,6 +43,9 @@
         <a href="/dashboard" on:click|preventDefault={() => handleNavigation('/dashboard')} class="nav-button mb-4 {currentPath === '/dashboard' ? 'active' : ''}">
           <i class="nav-icon fas fa-tachometer-alt"></i>
         </a>
+        <a href="/flight-planner" on:click|preventDefault={() => handleNavigation('/flight-planner')} class="nav-button mb-4 {currentPath === '/flight-planner' ? 'active' : ''}">
+          <i class="nav-icon fas fa-route"></i>
+        </a>
         <a href="/profile" on:click|preventDefault={() => handleNavigation('/profile')} class="nav-button mb-4 {currentPath === '/profile' ? 'active' : ''}">
           <i class="nav-icon fas fa-user"></i>
         </a>
