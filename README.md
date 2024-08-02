@@ -6,7 +6,7 @@
 ![Docker Compose Version](https://img.shields.io/badge/Docker%20Compose-v2.27.1-blue?style=flat-square&logo=docker)
 ![PocketBase Version](https://img.shields.io/badge/PocketBase-v0.22.14-green?style=flat-square&logo=pocketbase)
 
-A web-based ground control station (GCS) for remote autopilot management via MAVProxy.  
+A web-based ground control station (GCS) for remote autopilot management via MAVLink.  
 *Tested on Raspberry Pi Zero with ArduPilot.*
 
 <img src="screenshots/dashboard.png" alt="Illustration" width="auto"/>
@@ -63,7 +63,7 @@ A web-based ground control station (GCS) for remote autopilot management via MAV
 
 - [ArduPilot Docs](https://ardupilot.org/ardupilot/index.html)
 - [MAVLink Protocol](https://mavlink.io/en/)
-- [MAVProxy Docs](https://ardupilot.org/mavproxy/)
+- [MAVLink Wiki](https://en.wikipedia.org/wiki/MAVLink)
 - [Flight Controller Setup](https://ardupilot.org/copter/docs/initial-setup.html)
 
 </td>
@@ -105,7 +105,6 @@ sudo apt-get install -y docker-compose
 ---
 
 ## 🐳 Building the Docker Containers
-Run the setup script to build and start the services:
 ```bash
 git clone git@github.com:judahpaul16/mmgcs.git && cd mmgcs
 docker compose up
@@ -120,4 +119,4 @@ docker compose up
 ---
 
 ## 📜 License
-This project is not yet licensed. A license will be added soon.
+This software is made available under a propietary End Use License Agreement. See the <a href="?tab=License-1-ov-file">`LICENSE`</a> file for more information.
