@@ -119,4 +119,4 @@ docker compose up
 ---
 
 ## 📜 License
-This software is made available under a propietary End Use License Agreement. See the <a href="?tab=License-1-ov-file">`LICENSE`</a> file for more information.
+This software is made available under a propietary End Use License Agreement. See the [`LICENSE`](LICENSE.md) file for more information.
