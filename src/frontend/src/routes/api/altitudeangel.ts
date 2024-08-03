@@ -13,7 +13,7 @@ export const GET: RequestHandler = async ({ url }) => {
     const response = await axios.get<ApiResponse>(apiUrl, {
       params: url.searchParams,
       headers: {
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `X-AA-ApiKey ${apiKey}`
       }
     });
 
