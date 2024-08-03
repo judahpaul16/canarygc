@@ -22,20 +22,22 @@
   <sveltekit:head>
     <title>MAV Manager GCS - Dashboard</title>
   </sveltekit:head>
-  
-  <div class="dashboard grid grid-cols-12 grid-rows-6 gap-4 p-6 bg-[#121212] h-[95vh] rounded-[30px] overflow-auto">
-    <div class="col-span-10 row-span-4">
-      <Map />
-    </div>
-    <div class="col-span-2 row-span-4">
-      <Weather {lat} {lon} />
-    </div>
-    <div class="col-span-10 row-span-2">
-      <FlightPlan />
-    </div>
-    <div class="col-span-2 row-span-2 flex justify-end items-end">
-      <div class="w-full h-full">
-        <FlightPlanSettings />
+
+  <div class="flex items-center justify-center min-h-[95vh] p-6">
+    <div class="dashboard grid grid-cols-12 grid-rows-6 gap-4 p-6 bg-[#121212] h-[95vh] rounded-[30px] overflow-auto max-h-[700px]">
+      <div class="col-span-10 row-span-4">
+        <Map />
+      </div>
+      <div class="col-span-2 row-span-4">
+        <Weather {lat} {lon} />
+      </div>
+      <div class="col-span-10 row-span-2">
+        <FlightPlan />
+      </div>
+      <div class="col-span-2 row-span-2 flex justify-end items-end">
+        <div class="w-full h-full">
+          <FlightPlanSettings />
+        </div>
       </div>
     </div>
   </div>
