@@ -5,7 +5,7 @@
 
 <div class="controls bg-[#1c1c1e] text-white p-4 rounded-lg h-full flex space-x-4 items-center overflow-x-auto">
   <div class="map-container flex-shrink-0 h-48 w-48">
-    <Map />
+    <Map hideOverlay={true} />
   </div>
   <div class="flex w-full justify-between">
     <div class="column flex flex-col items-center align-middle space-y-4">

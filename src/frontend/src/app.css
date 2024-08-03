@@ -48,3 +48,7 @@ main {
 html {
   overflow: hidden;
 }
+
+iframe {
+  border-radius: 1em;
+}
