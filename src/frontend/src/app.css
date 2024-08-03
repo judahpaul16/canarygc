@@ -4,11 +4,11 @@
 
 
 a {
-    text-decoration: none !important;
-    color: #3182ce;
+  text-decoration: none !important;
+  color: #3182ce;
 }
 a:hover {
-    color: #8abcf8;
+  color: #8abcf8;
 }
 
 main {
@@ -43,4 +43,8 @@ main {
     scrollbar-color: var(--sb-thumb-color)
                      var(--sb-track-color);
   }
+}
+
+html {
+  overflow: hidden;
 }

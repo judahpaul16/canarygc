@@ -24,42 +24,36 @@
   <title>MAV Manager GCS - Dashboard</title>
 </sveltekit:head>
 
-<div class="dashboard grid grid-cols-12 grid-rows-6 gap-4 p-6 bg-[#121212] h-[95vh] rounded-[30px] overflow-auto">
-  <div class="col-span-6 row-span-4">
-    <LiveFeed />
-  </div>
-  <div class="col-span-4 row-span-4">
-    <Stats 
-      speed={20} 
-      height={80} 
-      flightTime={360} 
-      lens="25 mm" 
-      iso={600} 
-      frameLine="1920 x 1080" 
-      shutter={180} 
-      resolution="1280 x 720"
-      batteryStatus={100}
-      altitudeLimited={100}
-      droneName="CUAV X7 Running Ardupilot"
-    />
-  </div>
-  <div class="col-span-2 row-span-4">
-    <Weather {lat} {lon} />
-  </div>
-  <div class="col-span-10 row-span-2">
-    <Controls />
-  </div>
-  <div class="col-span-2 row-span-2 flex justify-end items-end">
-    <div class="w-full h-full">
-      <Compass />
+<div class="flex items-center justify-center min-h-[95vh] p-6">
+  <div class="dashboard grid grid-cols-12 grid-rows-7 gap-4 p-6 bg-[#121212] rounded-[30px] overflow-auto max-h-[700px]">
+    <div class="col-span-6 row-span-4">
+      <LiveFeed />
+    </div>
+    <div class="col-span-4 row-span-4">
+      <Stats 
+        speed={20} 
+        height={80} 
+        flightTime={360} 
+        lens="25 mm" 
+        iso={600} 
+        frameLine="1920 x 1080" 
+        shutter={180} 
+        resolution="1280 x 720"
+        batteryStatus={100}
+        altitudeLimited={100}
+        droneName="CUAV X7 Running Ardupilot"
+      />
+    </div>
+    <div class="col-span-2 row-span-4">
+      <Weather {lat} {lon} />
+    </div>
+    <div class="col-span-10 row-span-3">
+      <Controls />
+    </div>
+    <div class="col-span-2 row-span-3 flex justify-end items-end">
+      <div class="w-full h-full">
+        <Compass />
+      </div>
     </div>
   </div>
 </div>
-
-<style>
-  .dashboard {
-    grid-template-columns: repeat(12, minmax(0, 1fr));
-    grid-template-rows: repeat(2, 1fr);
-    height: 95vh;
-  }
-</style>

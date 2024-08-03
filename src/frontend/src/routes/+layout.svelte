@@ -28,8 +28,8 @@
   }
 </script>
 
-<main class="flex">
-  <nav class="bg-[#1c1c1e] text-white w-min flex flex-col items-center py-4 px-2">
+<main class="flex overflow-auto">
+  <nav class="bg-[#1c1c1e] text-white w-min h-full p-4">
     <div class="mb-4">
       <a href="/" on:click|preventDefault={() => handleNavigation('/')}>
         <img src="/logo.png" alt="Logo" class="w-12 h-12">
