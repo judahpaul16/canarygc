@@ -2,7 +2,54 @@
   import { onMount } from 'svelte';
   import '@fortawesome/fontawesome-free/css/all.min.css';
 
-  let map;
+  export let hideOverlay: boolean = false;
+
+  const apiKey = import.meta.env.VITE_ALTITUDE_ANGEL_API_KEY;
+
+  const loadScript = (src: string): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error(`Failed to load script ${src}`));
+      document.head.appendChild(script);
+    });
+  };
+
+  onMount(async () => {
+    try {
+      await loadScript('js/jquery-3.2.1.min.js');
+      await loadScript('js/altitudeAngelMap.js');
+
+      const { aa } = window as any;
+      if (typeof aa !== 'undefined') {
+        const features = [
+          aa.features.displayUserLocation,
+          aa.features.currentLocationOnStart,
+          ...(hideOverlay ? [
+            aa.features.hideMapTileSelector,
+            aa.features.hideMenuPanel,
+            aa.features.hideMenuBar,
+            aa.features.hideSearch,
+            aa.features.hideUTMStatusIcons
+          ] : [])
+        ];
+
+        aa.initialize({
+          target: 'aamap',
+          baseUrl: 'https://dronesafetymap.com',
+          authDetails: {
+            apiKey: apiKey,
+          },
+          features: features,
+        });
+      } else {
+        console.error('Altitude Angel Map not loaded');
+      }
+    } catch (error) {
+      console.error('Script loading failed', error);
+    }
+  });
 
   function toggleFullScreen(element: HTMLElement) {
     if (!document.fullscreenElement) {
@@ -14,47 +61,30 @@
     }
   }
 
-  function handleMapFullScreen() {
-    const mapElement = document.querySelector('.map-container');
-    if (mapElement instanceof HTMLElement) {
-      toggleFullScreen(mapElement);
+  function handleFullScreen() {
+    const el = document.querySelector('.map-container');
+    if (el instanceof HTMLElement) {
+      toggleFullScreen(el);
     }
   }
-
-  onMount(async () => {
-    if (typeof window !== 'undefined') {
-      const L = await import('leaflet');
-      const leaflet = L.default;
-
-      map = leaflet.map('map').setView([33.749, -84.388], 13);
-
-      leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {}).addTo(map);
-
-      leaflet.marker([33.749, -84.388]).addTo(map);
-    }
-  });
 </script>
 
-<div class="map-container bg-[#1c1c1e] text-white rounded-lg h-48 w-48 p-1 relative">
-  <div id="map" class="relative h-full bg-gray-700 rounded-lg"></div>
-  <div class="absolute bottom-0 left-0 bg-gray-800 text-white p-2 rounded-tr-lg rounded-bl-lg z-[1000] transform translate-x-1 -translate-y-1">Map View</div>
-  <button class="absolute top-2 right-2 text-white bg-gray-800 bg-opacity-75 p-2 px-3 hover:bg-blue-400 rounded-full z-[1000]" on:click={handleMapFullScreen}>
-    <i class="fas fa-expand"></i>
-  </button>
-</div>
-
 <style>
-  @import url('https://unpkg.com/leaflet@1.7.1/dist/leaflet.css');
-
   .map-container {
     position: relative;
     height: 100%;
     width: 100%;
   }
 
-  #map {
-    height: 100%;
+  #aamap {
     width: 100%;
-    border-radius: 1rem;
+    height: 100%;
   }
 </style>
+
+<div class="map-container text-white rounded-lg h-48 w-48 relative">
+  <div id="aamap" class="relative h-full"></div>
+  <button class="absolute top-2 right-2 text-white bg-gray-800 bg-opacity-75 p-2 px-3 hover:bg-blue-400 rounded-full" on:click={handleFullScreen}>
+    <i class="fas fa-expand"></i>
+  </button>
+</div>
