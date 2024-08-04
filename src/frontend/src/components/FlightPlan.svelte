@@ -67,8 +67,8 @@
               </div>
               <div class="separator"></div>
               <div class="form-input text-center grid gap-2">
-                  <input type="number" id="lat" placeholder="Latitude - eg. 33.749" />
-                  <input type="number" id="lon" placeholder="Longitude - eg. -84.388" />
+                  <input type="number" step="0.001" id="lat" placeholder="Latitude - eg. 33.749" />
+                  <input type="number" step="0.001" id="lon" placeholder="Longitude - eg. -84.388" />
               </div>
               <div class="separator"></div>
               <div class="form-input text-center flex gap-2">
