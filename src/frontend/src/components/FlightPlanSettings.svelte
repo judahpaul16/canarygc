@@ -48,7 +48,7 @@
     }
 
     button:nth-of-type(2) i {
-        color: red;
+        color: #f87171;
     }
 
 </style>

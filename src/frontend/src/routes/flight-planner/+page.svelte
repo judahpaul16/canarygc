@@ -9,8 +9,8 @@
   
     let user;
     $: user = $authData;
-    const lat = 26.0558;  // Dummy latitude
-    const lon = -80.1437; // Dummy longitude
+    const lat: number = 33.749;
+    const lon: number = -84.388;
   
     onMount(() => {
       if (!user) {

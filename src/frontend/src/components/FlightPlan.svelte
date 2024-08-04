@@ -1,7 +1,40 @@
 <script lang="ts">
   import { onMount } from 'svelte';
 
-  let actions = [1, 2];
+  let actions: number[] = [1];
+  let action_types = [
+    'WAYPOINT',
+    'TAKEOFF',
+    'RETURN_TO_LAUNCH',
+    'ALTITUDE_TIME',
+    'DELAY',
+    'GUIDED_ENABLE',
+    'LAND',
+    'LOITER_TIME',
+    'LOITER_TURNS',
+    'LOITER_UNLIM',
+    'PAYLOAD_PLACE',
+    'SCRIPT_TIME',
+    'DO_SEND_SCRIPT_MESSAGE',
+    'DO_SET_CAM_TRIGG_DIST',
+    'DO_SET_SERVO',
+    'DO_REPEAT_SERVO',
+    'DO_DIGICAM_CONFIGURE',
+    'DO_DIGICAM_CONTROL',
+    'DO_MOUNT_CONFIGURE',
+    'DO_MOUNT_CONTROL',
+    'DO_SET_CAM_TRIGG_DIST',
+    'DO_FENCE_ENABLE',
+    'CONDITION_DELAY',
+    'CONDITION_CHANGE_ALT',
+    'CONDITION_DISTANCE',
+    'CONDITION_YAW',
+    'DO_WINCH',
+    'CONDITION_DELAY',
+    'CONDITION_DISTANCE',
+    'CONDITION_YAW',
+    'UNKNOWN'
+  ];
 
   function addAction() {
     actions = [...actions, actions.length + 1];
@@ -15,55 +48,55 @@
 <div class="flightplan bg-[#1c1c1e] text-white p-4 rounded-lg space-x-4 items-center h-full overflow-auto">
   <div class="container block">
     <div class="column h-[10vh]">
-      {#each actions as action, index}
-        <div class="flex items-center">
-            <div class="form-checkbox">
-                <input type="checkbox" id="action-{index}" />
-                <label for="action-{index}">{index}</label>
-            </div>
-            <div class="separator"></div>
-            <div class="form-input">
-                <select name="action" id="action" value="WAYPOINT">
-                <option value="WAYPOINT">WAYPOINT</option>
-                <option value="TAKEOFF">TAKEOFF</option>
-                <option value="LAND">LAND</option>
-                <option value="RETURN">RETURN</option>
-                <option value="LOITER">LOITER</option>
-                <option value="DROP PAYLOAD">DROP PAYLOAD</option>
-                </select>
-            </div>
-            <div class="separator"></div>
-            <div class="form-range text-center">
-                <label for="speed" class="text-sm">Max Speed (m/s)</label>
-                <input type="range" id="speed" name="speed" min="1" max="10" value="5" />
-            </div>
-            <div class="separator"></div>
-            <div class="form-input text-center flex gap-2">
-                <label for="altitude">Altitude</label>
-                <select name="altitude" id="altitude" value="100">
-                <option value="100">100</option>
-                <option value="150">150</option>
-                <option value="200">200</option>
-                <option value="250">250</option>
-                <option value="300">300</option>
-                <option value="350">350</option>
-                </select> ft
-            </div>
-            <div class="separator"></div>
-            <div class="form-input">
-                <input type="text" placeholder="Notes" />
-            </div>
-            <div class="separator"></div>
-            <div class="form-input">
-                <input type="checkbox" id="action-{index}-notify" />
-                <label for="action-{index}-notify" class="text-sm">Notify on complete?</label>
-            </div>
-            <div class="separator"></div>
-            <button class="bg-[#2d2d2d] text-white rounded-lg px-3 py-2 text-sm" on:click={() => removeAction(index)}>
-                <i class="fas fa-trash-alt text-red-400"></i>
-            </button>
-        </div>
-      {/each}
+      <div class="overflow-auto">
+        {#each actions as action, index}
+          <div class="flex items-center">
+              <div class="form-checkbox">
+                  <input type="checkbox" id="action-{index}" />
+                  <label for="action-{index}">{index}</label>
+              </div>
+              <div class="separator"></div>
+              <div class="form-input text-center">
+                  <label for="action">Action Type</label>
+                  <select class="mt-1" name="action" id="action" value="WAYPOINT">
+                  {#each action_types as action_type}
+                      <option value="{action_type}">{action_type}</option>
+                  {/each}
+                  </select>
+              </div>
+              <div class="separator"></div>
+              <div class="form-input text-center grid gap-2">
+                  <input type="number" id="lat" placeholder="Latitude - eg. 33.749" />
+                  <input type="number" id="lon" placeholder="Longitude - eg. -84.388" />
+              </div>
+              <div class="separator"></div>
+              <div class="form-input text-center flex gap-2">
+                  <label for="altitude">Altitude</label>
+                  <select name="altitude" id="altitude" value="100">
+                  <option value="100">100</option>
+                  <option value="150">150</option>
+                  <option value="200">200</option>
+                  <option value="250">250</option>
+                  <option value="300">300</option>
+                  <option value="350">350</option>
+                  </select> ft
+              </div>
+              <div class="separator"></div>
+              <div class="form-input">
+                  <input type="text" placeholder="Notes" />
+              </div>
+              <div class="separator"></div>
+              <div class="form-input w-[fit-content] flex items-center gap-3">
+                  <input type="checkbox" id="action-{index}-notify" />
+                  <label for="action-{index}-notify" class="text-sm flex">Notify on complete?</label>
+              </div>
+              <div class="separator"></div>
+              <button class="bg-[#2d2d2d] text-white rounded-lg px-3 py-2 text-sm" on:click={() => removeAction(index)}>
+                  <i class="fas fa-trash-alt text-red-400"></i>
+              </button>
+          </div>
+        {/each}
+      </div>
       <div class="flex justify-center">
         <button class="bg-[#2d2d2d] text-white rounded-lg px-4 py-2 my-4" on:click={addAction}>
           <i class="fas fa-plus"></i>&nbsp;&nbsp;Add Action
@@ -80,9 +113,11 @@
   }
 
   .separator {
-    width: 1px;
-    background-color: #4f4f50;
-    margin: 0 1rem;
+    height: 4vh;
+    background-color: #2d2d2d;
+    margin: 0 1em;
+    padding: 1px;
+    border-radius: 0.5rem;
   }
 
   .form-checkbox {
@@ -95,29 +130,12 @@
   }
 
   .form-checkbox:checked {
-    background-color: #66e1ff;
-  }
-
-  .form-range::-webkit-slider-thumb {
-    appearance: none;
-    background-color: #66e1ff;
-    width: 1rem;
-    height: 1rem;
-    border-radius: 0.5rem;
-    cursor: pointer;
-  }
-
-  .form-range::-moz-range-thumb {
-    appearance: none;
-    background-color: #66e1ff;
-    width: 1rem;
-    height: 1rem;
-    border-radius: 0.5rem;
-    cursor: pointer;
+    background-color: #61cd89;
   }
 
   .form-input {
     padding: 0.5rem;
+    font-size: 0.875rem;
   }
 
   input, select {
@@ -130,12 +148,12 @@
   }
 
   input:focus, select:focus {
-    border-color: #66e1ff;
+    border-color: #61cd89;
   }
 
   .form-input:focus {
     outline: none;
-    border-color: #66e1ff;
+    border-color: #61cd89;
   }
 
   input[type="checkbox"] {
@@ -148,6 +166,6 @@
   }
 
   input[type="checkbox"]:checked {
-    background-color: #66e1ff;
+    background-color: #61cd89;
   }
 </style>

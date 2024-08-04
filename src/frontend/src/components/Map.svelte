@@ -3,6 +3,8 @@
   import '@fortawesome/fontawesome-free/css/all.min.css';
 
   export let hideOverlay: boolean = false;
+  export let lat: number = 33.749;
+  export let lon: number = -84.388;
 
   const apiKey = import.meta.env.VITE_ALTITUDE_ANGEL_API_KEY;
 
@@ -54,17 +56,15 @@
         authDetails: { apiKey },
         features: features,
       });
-
-      setLocation(26.0558, -80.1437);
     } else {
       console.error('Altitude Angel Map not loaded');
     }
   }
 
   function initializeLeafletMap(leaflet: any) {
-    const map = leaflet.map('map').setView([33.749, -84.388], 13);
+    const map = leaflet.map('map').setView([lat, lon], 13);
     leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {}).addTo(map);
-    leaflet.marker([33.749, -84.388]).addTo(map);
+    leaflet.marker([lat, lon]).addTo(map);
   }
 
   function toggleFullScreen(element: HTMLElement) {
@@ -122,7 +122,7 @@
     <label id="map-toggle" class="flex justify-center cursor-pointer my-2 absolute top-1 right-2 left-2 w-fit m-auto bg-[#000000ba] rounded-3xl p-2 pl-3 text-sm items-center">
       <input type="checkbox" value="" class="sr-only peer" on:click={toggleMap}>
       <span><i class="fas fa-map"></i>&nbsp;&nbsp;{currentMap === 'altitudeAngel' ? 'Altitude Angel' : 'Leaflet'}</span>
-      <div class="relative w-11 h-6 ml-3 bg-gray-200 peer-focus:outline-none peer-focus:ring-4  rounded-full peer dark:bg-green-600 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+      <div class="relative w-11 h-6 ml-3 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-[#61cd89] peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-[#d94d7c]"></div>
     </label>
   {/if}
 </div>
