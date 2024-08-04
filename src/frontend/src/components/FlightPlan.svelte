@@ -49,8 +49,9 @@
   <div class="container block">
     <div class="column h-[10vh]">
       <div class="overflow-auto">
+        <hr>
         {#each actions as action, index}
-          <div class="flex items-center">
+          <div class="flex items-center action-container">
               <div class="form-checkbox">
                   <input type="checkbox" id="action-{index}" />
                   <label for="action-{index}">{index}</label>
@@ -95,6 +96,7 @@
                   <i class="fas fa-trash-alt text-red-400"></i>
               </button>
           </div>
+          <hr>
         {/each}
       </div>
       <div class="flex justify-center">
@@ -118,6 +120,11 @@
     margin: 0 1em;
     padding: 1px;
     border-radius: 0.5rem;
+  }
+
+  hr {
+    border: 0;
+    border-top: 1px solid #2d2d2d;
   }
 
   .form-checkbox {
