@@ -65,7 +65,8 @@
   function initializeLeafletMap(leaflet: any) {
     const map = leaflet.map('map').setView([lat, lon], 13);
     leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {}).addTo(map);
-    leaflet.marker([lat, lon]).addTo(map);
+    leaflet.marker([lat, lon]).addTo(map)
+      .bindPopup('You are here');
     mapStore.set(map);
   }
 
