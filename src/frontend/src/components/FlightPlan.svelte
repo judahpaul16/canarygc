@@ -1,47 +1,67 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-
+  import { mapStore } from '../stores/mapStore';
+  import { get } from 'svelte/store';
+  
+  let L: typeof import('leaflet');
   let actions: number[] = [1];
   let action_types = [
-    'WAYPOINT',
-    'TAKEOFF',
-    'RETURN_TO_LAUNCH',
-    'ALTITUDE_TIME',
-    'DELAY',
-    'GUIDED_ENABLE',
-    'LAND',
-    'LOITER_TIME',
-    'LOITER_TURNS',
-    'LOITER_UNLIM',
-    'PAYLOAD_PLACE',
-    'SCRIPT_TIME',
-    'DO_SEND_SCRIPT_MESSAGE',
-    'DO_SET_CAM_TRIGG_DIST',
-    'DO_SET_SERVO',
-    'DO_REPEAT_SERVO',
-    'DO_DIGICAM_CONFIGURE',
-    'DO_DIGICAM_CONTROL',
-    'DO_MOUNT_CONFIGURE',
-    'DO_MOUNT_CONTROL',
-    'DO_SET_CAM_TRIGG_DIST',
-    'DO_FENCE_ENABLE',
-    'CONDITION_DELAY',
-    'CONDITION_CHANGE_ALT',
-    'CONDITION_DISTANCE',
-    'CONDITION_YAW',
-    'DO_WINCH',
-    'CONDITION_DELAY',
-    'CONDITION_DISTANCE',
-    'CONDITION_YAW',
-    'UNKNOWN'
+    'WAYPOINT', 'TAKEOFF', 'RETURN_TO_LAUNCH', 'ALTITUDE_TIME', 'DELAY',
+    'GUIDED_ENABLE', 'LAND', 'LOITER_TIME', 'LOITER_TURNS', 'LOITER_UNLIM',
+    'PAYLOAD_PLACE', 'SCRIPT_TIME', 'DO_SEND_SCRIPT_MESSAGE', 'DO_SET_CAM_TRIGG_DIST',
+    'DO_SET_SERVO', 'DO_REPEAT_SERVO', 'DO_DIGICAM_CONFIGURE', 'DO_DIGICAM_CONTROL',
+    'DO_MOUNT_CONFIGURE', 'DO_MOUNT_CONTROL', 'DO_SET_CAM_TRIGG_DIST', 'DO_FENCE_ENABLE',
+    'CONDITION_DELAY', 'CONDITION_CHANGE_ALT', 'CONDITION_DISTANCE', 'CONDITION_YAW',
+    'DO_WINCH', 'CONDITION_DELAY', 'CONDITION_DISTANCE', 'CONDITION_YAW', 'UNKNOWN'
   ];
+  let selectedActions: string[] = Array(actions.length).fill('WAYPOINT');
+
+  let map: L.Map | null = null;
+  let markers: Map<number, L.Marker> = new Map(); // Map to keep track of markers
+
+  mapStore.subscribe((value: L.Map | null) => {
+    map = value;
+  });
+
+  onMount(async () => {
+    const module = await import('leaflet');
+    L = module;
+  });
 
   function addAction() {
     actions = [...actions, actions.length + 1];
   }
 
-  function removeAction(index : number) {
+  function removeAction(index: number) {
     actions = actions.filter((_, i) => i !== index);
+    if (markers.has(index)) {
+      map?.removeLayer(markers.get(index)!); // Remove marker from the map
+      markers.delete(index); // Remove marker from the map reference
+    }
+  }
+
+  async function updateMap(event: Event, index: number) {
+    let action = event.target as HTMLSelectElement;
+    const lat = document.querySelector(`#lat-${index}`) as HTMLInputElement;
+    const lon = document.querySelector(`#lon-${index}`) as HTMLInputElement;
+
+    if (!action_types.includes(action.value)) {
+      action = (event.target! as HTMLInputElement).parentElement!.parentElement!.querySelector('select')!;
+    }
+
+    // Remove previous marker if it exists
+    if (markers.has(index)) {
+      map?.removeLayer(markers.get(index)!);
+    }
+
+    if (L && map && lat.value && lon.value) {
+      map.flyTo([Number(lat.value), Number(lon.value)], 13);
+      let marker = L.marker([Number(lat.value), Number(lon.value)])
+          .bindPopup(`${index} - ${action.value}`);
+      map.addLayer(marker);
+      marker.openPopup();
+      markers.set(index, marker); // Keep reference to the marker
+    }
   }
 </script>
 
@@ -59,7 +79,7 @@
               <div class="separator"></div>
               <div class="form-input text-center">
                   <label for="action">Action Type</label>
-                  <select class="mt-1" name="action" id="action" value="WAYPOINT">
+                  <select class="mt-1" name="action" id="action-{index}" bind:value={selectedActions[index]} on:change={(event) => updateMap(event, index)}>
                   {#each action_types as action_type}
                       <option value="{action_type}">{action_type}</option>
                   {/each}
@@ -67,8 +87,8 @@
               </div>
               <div class="separator"></div>
               <div class="form-input text-center grid gap-2">
-                  <input type="number" step="0.001" id="lat" placeholder="Latitude - eg. 33.749" />
-                  <input type="number" step="0.001" id="lon" placeholder="Longitude - eg. -84.388" />
+                  <input type="number" step="0.001" id="lat-{index}" placeholder="Latitude - eg. 33.749" on:change={(event) => updateMap(event, index)} />
+                  <input type="number" step="0.001" id="lon-{index}" placeholder="Longitude - eg. -84.388" on:change={(event) => updateMap(event, index)} />
               </div>
               <div class="separator"></div>
               <div class="form-input text-center flex gap-2">
