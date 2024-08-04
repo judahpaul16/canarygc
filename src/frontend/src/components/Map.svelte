@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import '@fortawesome/fontawesome-free/css/all.min.css';
+  import { mapStore } from '../stores/mapStore';
 
   export let hideOverlay: boolean = false;
   export let lat: number = 33.749;
@@ -65,6 +66,7 @@
     const map = leaflet.map('map').setView([lat, lon], 13);
     leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {}).addTo(map);
     leaflet.marker([lat, lon]).addTo(map);
+    mapStore.set(map);
   }
 
   function toggleFullScreen(element: HTMLElement) {
