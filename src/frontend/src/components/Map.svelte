@@ -63,10 +63,17 @@
   }
 
   function initializeLeafletMap(leaflet: any) {
+    const icon = leaflet.icon({
+      iconUrl: 'map/here.png',
+      iconSize: [45, 45],
+      iconAnchor: [23, 45],
+      popupAnchor: [0, -45],
+      shadowSize: [41, 41]
+    });
     const map = leaflet.map('map').setView([lat, lon], 13);
     leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {}).addTo(map);
-    leaflet.marker([lat, lon]).addTo(map)
-      .bindPopup('You are here');
+    leaflet.marker([lat, lon], {icon: icon}).addTo(map)
+      .bindPopup('MAV is here');
     mapStore.set(map);
   }
 
