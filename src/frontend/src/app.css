@@ -18,9 +18,9 @@ main {
 
 * {
     transition: all 0.3s ease;
-  --sb-track-color: #232E33;
-  --sb-thumb-color: #868686;
-  --sb-size: 14px;
+  --sb-track-color: #2d2d2d;
+  --sb-thumb-color: #3d3d3d;
+  --sb-size: 12px;
 }
 
 ::-webkit-scrollbar {
@@ -29,12 +29,12 @@ main {
 
 ::-webkit-scrollbar-track {
   background: var(--sb-track-color);
-  border-radius: 3px;
+  border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb {
   background: var(--sb-thumb-color);
-  border-radius: 3px;
+  border-radius: 10px;
   
 }
 

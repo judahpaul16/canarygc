@@ -19,8 +19,8 @@
 
   const weatherCodesTyped: WeatherCodes = weatherCodes as WeatherCodes;
 
-  export let lat: number;
-  export let lon: number;
+  export let lat: number = 33.749;
+  export let lon: number = -84.388;
 
   let locationName = '';
   let temperature = '';
