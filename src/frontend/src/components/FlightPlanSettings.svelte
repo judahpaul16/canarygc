@@ -44,7 +44,7 @@
     }
 
     button:first-of-type i {
-        color: green;
+        color: #61cd89;
     }
 
     button:nth-of-type(2) i {

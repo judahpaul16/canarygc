@@ -80,6 +80,10 @@
   left: -5px;
 }
 
+.d-pad a:hover {
+  color: #66e1ff;
+}
+
 .center-circle {
   position: absolute;
   top: 50%;

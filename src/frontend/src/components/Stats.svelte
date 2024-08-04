@@ -164,12 +164,6 @@
   </div>
   <div class="button-container mt-6">
     <div class="relative group">
-      <button class="circular-button" on:click={pauseFlight}>
-        <i class="fas fa-pause"></i>
-        <div class="tooltip">Pause Flight (Loiter)</div>
-      </button>
-    </div>
-    <div class="relative group">
       <button class="circular-button" on:click={stopFlight}>
         <i class="fas fa-stop text-red-400"></i>
         <div class="tooltip">Stop Flight</div>
@@ -179,6 +173,12 @@
       <button class="circular-button" on:click={resumeFlight} disabled>
         <i class="fas fa-play"></i>
         <div class="tooltip">Resume Flight</div>
+      </button>
+    </div>
+    <div class="relative group">
+      <button class="circular-button" on:click={pauseFlight}>
+        <i class="fas fa-pause"></i>
+        <div class="tooltip">Pause Flight (Loiter)</div>
       </button>
     </div>
     <div class="relative group flex flex-col items-center">

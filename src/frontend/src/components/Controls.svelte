@@ -41,22 +41,26 @@
     <div class="column flex flex-col items-center space-y-4">
       <div class="flex flex-col items-center">
         <label class="text-sm mb-1">Altitude Up</label>
-        <button class="alt-button rounded-full">↑</button>
+        <button class="alt-button rounded-full">
+          <i class="fas fa-arrow-up alt-up"></i>
+        </button>
       </div>
       <div class="flex flex-col items-center">
         <label class="text-sm mb-1">Altitude Down</label>
-        <button class="alt-button rounded-full">↓</button>
+        <button class="alt-button rounded-full">
+          <i class="fas fa-arrow-down alt-down"></i>
+        </button>
       </div>
     </div>
     <div class="separator"></div>
     <div class="column flex flex-col items-center space-y-4">
       <div class="flex flex-col items-center">
         <label class="text-sm mb-1">Rotate Left</label>
-        <button class="rotate-button rounded-full">⟲</button>
+        <button class="rotate-button rotate-left rounded-full">⟲</button>
       </div>
       <div class="flex flex-col items-center">
         <label class="text-sm mb-1">Rotate Right</label>
-        <button class="rotate-button rounded-full">⟳</button>
+        <button class="rotate-button rotate-right rounded-full">⟳</button>
       </div>
     </div>
   </div>
@@ -135,5 +139,43 @@
   .alt-button:hover,
   .rotate-button:hover {
     background-color: #4f4f50;
+  }
+
+  .rotate-left:hover {
+    animation: rotate-left 0.6s;
+    color: #66e1ff;
+  }
+
+  .rotate-right:hover {
+    animation: rotate-right 0.6s;
+    color: #66e1ff;
+  }
+
+  @keyframes rotate-left {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(-360deg);
+    }
+  }
+
+  @keyframes rotate-right {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  .alt-button:hover .alt-up {
+    transform: translateY(-0.3rem);
+    color: #66e1ff;
+  }
+
+  .alt-button:hover .alt-down  {
+    transform: translateY(0.3rem);
+    color: #66e1ff;
   }
 </style>
