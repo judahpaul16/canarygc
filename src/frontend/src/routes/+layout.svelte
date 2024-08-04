@@ -59,7 +59,7 @@
       {/if}
     </div>
   </nav>
-  <div class="flex-grow p-4">
+  <div class="flex-grow p-4 overflow-auto">
     <slot />
   </div>
 </main>
