@@ -5,15 +5,21 @@
   
   let L: typeof import('leaflet');
   let actions: number[] = [1];
+  // See https://mavlink.io/en/messages/common.html
   let action_types = [
-    'WAYPOINT', 'TAKEOFF', 'RETURN_TO_LAUNCH', 'ALTITUDE_TIME', 'DELAY',
-    'GUIDED_ENABLE', 'LAND', 'LOITER_TIME', 'LOITER_TURNS', 'LOITER_UNLIM',
-    'PAYLOAD_PLACE', 'SCRIPT_TIME', 'DO_SEND_SCRIPT_MESSAGE', 'DO_SET_CAM_TRIGG_DIST',
-    'DO_SET_SERVO', 'DO_REPEAT_SERVO', 'DO_DIGICAM_CONFIGURE', 'DO_DIGICAM_CONTROL',
-    'DO_MOUNT_CONFIGURE', 'DO_MOUNT_CONTROL', 'DO_SET_CAM_TRIGG_DIST', 'DO_FENCE_ENABLE',
-    'CONDITION_DELAY', 'CONDITION_CHANGE_ALT', 'CONDITION_DISTANCE', 'CONDITION_YAW',
-    'DO_WINCH', 'CONDITION_DELAY', 'CONDITION_DISTANCE', 'CONDITION_YAW', 'UNKNOWN'
+    'WAYPOINT', 'SPLINE_WAYPOINT', 'TAKEOFF', 'RETURN_TO_LAUNCH', 'GUIDED_ENABLE', 'LAND',
+    'LOITER_TIME', 'LOITER_TURNS', 'LOITER_UNLIM', 'PAYLOAD_PLACE', 'DO_WINCH', 'DO_SET_CAM_TRIGG_DIST',
+    'DO_SET_SERVO', 'DO_REPEAT_SERVO', 'DO_DIGICAM_CONFIGURE', 'DO_DIGICAM_CONTROL', 'DO_FENCE_ENABLE',
+    'DO_ENGINE_CONTROL', 'CONDITION_DELAY', 'CONDITION_CHANGE_ALT', 'CONDITION_DISTANCE', 'CONDITION_YAW'
   ];
+  let action_markers = [
+    'map/waypoint.png', 'map/waypoint.png', 'map/takeoff.png', 'map/rtl.png', 'map/guided_enable.png', 'map/land.png',
+    'map/loiter.png', 'map/loiter.png', 'map/loiter.png', 'map/payload_place.png', 'map/do_winch.png', 'map/camera.png',
+    'map/do_set_servo.png', 'map/do_repeat_servo.png', 'map/camera.png', 'map/camera.png', 'map/do_fence_enable.png',
+    'map/do_engine_control.png', 'map/delay.png', 'map/condition_change_alt.png', 'map/condition_distance.png', 'map/condition_yaw.png'
+  ];
+  let icons: L.Icon[] = [];
+
   let selectedActions: string[] = Array(actions.length).fill('WAYPOINT');
 
   let map: L.Map | null = null;
@@ -26,6 +32,16 @@
   onMount(async () => {
     const module = await import('leaflet');
     L = module;
+    
+    icons = action_markers.map((marker) => {
+      return L.icon({
+        iconUrl: marker,
+        iconSize: [45, 45],
+        iconAnchor: [23, 45],
+        popupAnchor: [0, -45],
+        shadowSize: [41, 41]
+      });
+    });
   });
 
   function addAction() {
@@ -56,7 +72,7 @@
 
     if (L && map && lat.value && lon.value) {
       map.flyTo([Number(lat.value), Number(lon.value)], 13);
-      let marker = L.marker([Number(lat.value), Number(lon.value)])
+      let marker = L.marker([Number(lat.value), Number(lon.value)], { icon: icons[action_types.indexOf(action.value)] })
           .bindPopup(`${index} - ${action.value}`);
       map.addLayer(marker);
       marker.openPopup();
