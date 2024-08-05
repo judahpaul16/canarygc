@@ -1,10 +1,18 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { mapStore, mavLocationStore } from '../stores/mapStore';
+  import { flightPlanStore } from '../stores/flightPlanStore';
   import { get } from 'svelte/store';
-  
+
   let L: typeof import('leaflet');
-  let actions: number[] = [1];
+  let actions: { [key: number]: {
+    type: string;
+    lat: number;
+    lon: number;
+    altitude: number;
+    notes: string;
+    notify: boolean;
+  }} = {};
   let action_types = [
     'WAYPOINT', 'SPLINE_WAYPOINT', 'TAKEOFF', 'RETURN_TO_LAUNCH', 'GUIDED_ENABLE', 'LAND',
     'LOITER_TIME', 'LOITER_TURNS', 'LOITER_UNLIM', 'PAYLOAD_PLACE', 'DO_WINCH', 'DO_SET_CAM_TRIGG_DIST',
@@ -18,9 +26,6 @@
     'map/do_engine_control.png', 'map/delay.png', 'map/condition_change_alt.png', 'map/condition_distance.png', 'map/condition_yaw.png'
   ];
   let icons: L.Icon[] = [];
-
-  let selectedActions: string[] = Array(actions.length).fill('WAYPOINT');
-
   let map: L.Map | null = null;
   let markers: Map<number, L.Marker> = new Map(); // Map to keep track of markers
   let polylines: Map<string, L.Polyline> = new Map(); // Map to keep track of polylines
@@ -32,7 +37,7 @@
   onMount(async () => {
     const module = await import('leaflet');
     L = module;
-    
+
     icons = action_markers.map((marker) => {
       return L.icon({
         iconUrl: marker,
@@ -51,30 +56,119 @@
     resizeInput();
     input.style.width = '162px';
     input.addEventListener('input', resizeInput);
+
+    updateMap(Object.keys(actions).length);
   });
 
   function addAction() {
-    actions = [...actions, actions.length + 1];
+    let mavLocation = get(mavLocationStore)!;
+    actions = get(flightPlanStore);
+
+    // Determine the next index
+    const newIndex = Object.keys(actions).length + 1;
+
+    // Add new action
+    actions = { 
+      ...actions, 
+      [newIndex]: {
+        type: 'WAYPOINT',
+        lat: mavLocation.lat + 0.003,
+        lon: mavLocation.lng + 0.003,
+        altitude: 100,
+        notes: '',
+        notify: false,
+      }
+    };
+
+    flightPlanStore.set(actions);
+    
+    setTimeout(() => {
+      updateMap(Object.keys(actions).length);
+    }, 100);
   }
 
   function removeAction(index: number) {
-    actions = actions.filter((_, i) => i !== index);
+    // Remove the corresponding DOM element
+    const actionElement = document.querySelector(`#action-${index}`) as HTMLSelectElement;
+    if (actionElement) {
+      actionElement.remove();
+    }
+
+    // Remove the specified action and create a new object without it
+    const { [index]: _, ...remainingActions } = actions;
+    actions = remainingActions; // Trigger reactivity by creating a new object
+    // update keys
+    Object.values(actions).forEach((action, i) => {
+      actions[i + 1] = action;
+    });
+        
+    // Remove the marker from the map and the map reference
     if (markers.has(index)) {
       map?.removeLayer(markers.get(index)!); // Remove marker from the map
-      markers.delete(index); // Remove marker from the map reference
+      markers.delete(index); // Remove marker from the markers reference
     }
-    
+
     // Remove related polylines
     removeConnectedPolylines(index);
+
+    reindexActions();
+    flightPlanStore.set(actions);
+    updateMap(Object.keys(actions).length);
+  }
+
+  function reindexActions() {
+    const newActions: { [key: number]: {
+      type: string;
+      lat: number;
+      lon: number;
+      altitude: number;
+      notes: string;
+      notify: boolean;
+    } } = {};
+    Object.values(actions).forEach((action, index) => {
+      newActions[index + 1] = action;
+    });
+    actions = newActions;
+  
+    // Update UI to reflect new indexes
+    updateActionUI();
+    updateMarkersAndPolylines(true);
+  }
+
+  function updateActionUI() {
+    const actionContainers = document.querySelectorAll('.action-container');
+    actionContainers.forEach((container, index) => {
+      container.id = `action-${index + 1}`;
+      container.querySelector('span')!.textContent = `${index + 1}`;
+      container.querySelectorAll('input').forEach((input) => {
+        const id = input.id.split('-');
+        id[1] = String(index + 1);
+        input.id = id.join('-');
+      });
+      container.querySelectorAll('label').forEach((label) => {
+        const id = label.htmlFor.split('-');
+        id[1] = String(index + 1);
+        label.htmlFor = id.join('-');
+      });
+      container.querySelectorAll('select').forEach((select) => {
+        const id = select.id.split('-');
+        id[1] = String(index + 1);
+        select.id = id.join('-');
+      });
+      container.querySelectorAll('button').forEach((button) => {
+        const id = button.id.split('-');
+        id[1] = String(index + 1);
+        button.id = id.join('-');
+      });
+    });
   }
 
   function removeConnectedPolylines(index: number) {
-    // Identify and remove polylines connected to the removed marker
     const connectedKeys = Array.from(polylines.keys()).filter(key => {
       const [startIndex, endIndex] = key.split('-').map(Number);
       return startIndex === index || endIndex === index;
     });
-    
+
     connectedKeys.forEach(key => {
       const polyline = polylines.get(key);
       if (polyline) {
@@ -115,68 +209,83 @@
     return [startLatLng, endLatLng].sort().join('-'); // Ensure consistent ordering
   }
 
-  async function updateMap(event: Event, index: number) {
-    let action = event.target as HTMLSelectElement;
-    const lat = document.querySelector(`#lat-${index}`) as HTMLInputElement;
-    const lon = document.querySelector(`#lon-${index}`) as HTMLInputElement;
+  async function updateMap(index: number) {
+    flightPlanStore.subscribe((value) => {
+      actions = value;
+    });
 
-    if (!action_types.includes(action.value)) {
-        action = (event.target! as HTMLInputElement).parentElement!.parentElement!.querySelector('select')!;
-    }
-
-    // Remove old marker if it exists
+    // Retrieve the action details using the index
+    const action = actions[index];
+    
+    // Remove existing marker if it exists
     if (markers.has(index)) {
-        map?.removeLayer(markers.get(index)!);
+      map?.removeLayer(markers.get(index)!);
     }
 
-    // Add new marker
-    if (L && map && lat.value && lon.value) {
-        let marker = L.marker([Number(lat.value), Number(lon.value)], { icon: icons[action_types.indexOf(action.value)] })
-            .bindPopup(`${index} - ${action.value}`);
+    // Add new marker with updated info if map and action are valid
+    if (L && map) {
+      const { type, lat, lon } = action;
+      const iconIndex = action_types.indexOf(type);
+      
+      if (!isNaN(lat) && !isNaN(lon) && iconIndex >= 0) {
+        const marker = L.marker([lat, lon], { icon: icons[iconIndex] })
+          .bindPopup(`${index} - ${type}`);
         map.addLayer(marker);
         marker.openPopup();
-        markers.set(index, marker); // Update marker reference
+        markers.set(index, marker);
+      }
     }
 
-    // Remove old polylines connected to the current marker
+    // Remove polylines connected to this action and update all polylines
     removeConnectedPolylines(index);
-
-    // Add or update polyline connections based on updated markers
-    updatePolylines();
+    updateMarkersAndPolylines();
   }
 
-  function updatePolylines() {
+  function updateMarkersAndPolylines(reindex: boolean = false) {
+    if (reindex) {
+      // Remove last marker
+      const lastMarker = markers.get(Object.keys(actions).length + 1);
+      if (lastMarker) {
+        map?.removeLayer(lastMarker);
+        markers.delete(Object.keys(actions).length + 1);
+      }
+      // Update the popup content for each marker
+      markers.forEach((marker, index) => {
+        const action = actions[index];
+        marker.bindPopup(`${index} - ${action.type}`);
+      });
+    }
+
     // Clear existing polylines before recalculating
     polylines.forEach(polyline => {
       if (map?.hasLayer(polyline)) {
         map.removeLayer(polyline);
       }
     });
-    polylines.clear(); // Clear the map reference
+    polylines.clear();
 
     const markerEntries = Array.from(markers.entries()).sort((a, b) => a[0] - b[0]); // Ensure order by index
 
     for (let i = 0; i < markerEntries.length - 1; i++) {
-        const [currentIndex, currentMarker] = markerEntries[i];
-        const [nextIndex, nextMarker] = markerEntries[i + 1];
-        
-        if (currentMarker && nextMarker) {
-            let currentLatLng = currentMarker.getLatLng();
-            let nextLatLng = nextMarker.getLatLng();
-            addPolyline(currentLatLng, nextLatLng);
-        }
+      const [currentIndex, currentMarker] = markerEntries[i];
+      const [nextIndex, nextMarker] = markerEntries[i + 1];
+      
+      if (currentMarker && nextMarker) {
+        let currentLatLng = currentMarker.getLatLng();
+        let nextLatLng = nextMarker.getLatLng();
+        addPolyline(currentLatLng, nextLatLng);
+      }
     }
 
-    // Handle the connection from the first marker to the MAV location
     if (markerEntries.length > 0) {
-        const [firstIndex, firstMarker] = markerEntries[0];
-        if (get(mapStore)) {
-            let prevMarkerLatLng = get(mavLocationStore)!;
-            let currentMarkerLatLng = firstMarker.getLatLng();
-            if (prevMarkerLatLng && currentMarkerLatLng) {
-                addPolyline(prevMarkerLatLng, currentMarkerLatLng);
-            }
+      const [firstIndex, firstMarker] = markerEntries[0];
+      if (get(mapStore)) {
+        let mavLocation = get(mavLocationStore)!;
+        let currentMarkerLatLng = firstMarker.getLatLng();
+        if (mavLocation && currentMarkerLatLng) {
+            addPolyline(mavLocation, currentMarkerLatLng);
         }
+      }
     }
   }
 </script>
@@ -192,16 +301,15 @@
     <div class="column h-[10vh]">
       <div class="overflow-auto">
         <hr>
-        {#each actions as action, index}
-          <div class="flex items-center action-container">
+        {#each Object.keys(actions) as index}
+          <div id="action-{index}" class="flex items-center action-container">
               <div class="form-checkbox">
-                  <input type="checkbox" id="action-{index}" />
-                  <label for="action-{index}">{index}</label>
+                  <span>{index}</span>
               </div>
               <div class="separator"></div>
               <div class="form-input text-center">
                   <label for="action">Action Type</label>
-                  <select class="mt-1" name="action" id="action-{index}" bind:value={selectedActions[index]} on:change={(event) => updateMap(event, index)}>
+                  <select class="mt-1" name="action" id="action-{index}-type" bind:value={actions[Number(index)].type} on:change={() => updateMap(Number(index))}>
                   {#each action_types as action_type}
                       <option value="{action_type}">{action_type}</option>
                   {/each}
@@ -209,32 +317,32 @@
               </div>
               <div class="separator"></div>
               <div class="form-input text-center grid gap-2">
-                  <input type="number" step="0.001" id="lat-{index}" placeholder="Latitude - eg. 33.749" on:change={(event) => updateMap(event, index)} />
-                  <input type="number" step="0.001" id="lon-{index}" placeholder="Longitude - eg. -84.388" on:change={(event) => updateMap(event, index)} />
+                  <input type="number" step="0.001" id="lat-{index}" placeholder="Latitude - eg. 33.749" on:change={() => updateMap(Number(index))} bind:value={actions[Number(index)].lat} />
+                  <input type="number" step="0.001" id="lon-{index}" placeholder="Longitude - eg. -84.388" on:change={() => updateMap(Number(index))} bind:value={actions[Number(index)].lon} />
               </div>
               <div class="separator"></div>
               <div class="form-input text-center flex gap-2">
                   <label for="altitude">Altitude</label>
-                  <select name="altitude" id="altitude" value="100">
-                  <option value="100">100</option>
-                  <option value="150">150</option>
-                  <option value="200">200</option>
-                  <option value="250">250</option>
-                  <option value="300">300</option>
-                  <option value="350">350</option>
+                  <select name="altitude" id="altitude-{index}" value={String(actions[Number(index)].altitude)}>
+                  <option value=100>100</option>
+                  <option value=150>150</option>
+                  <option value=200>200</option>
+                  <option value=250>250</option>
+                  <option value=300>300</option>
+                  <option value=350>350</option>
                   </select> ft
               </div>
               <div class="separator"></div>
               <div class="form-input">
-                  <input type="text" placeholder="Notes" />
+                  <input type="text" placeholder="Notes" value={actions[Number(index)].notes} />
               </div>
               <div class="separator"></div>
               <div class="form-input w-[fit-content] flex items-center gap-3">
-                  <input type="checkbox" id="action-{index}-notify" />
+                  <input type="checkbox" id="action-{index}-notify" checked={actions[Number(index)].notify} />
                   <label for="action-{index}-notify" class="text-sm flex">Notify on complete?</label>
               </div>
               <div class="separator"></div>
-              <button class="bg-[#2d2d2d] text-white rounded-lg px-3 py-2 text-sm" on:click={() => removeAction(index)}>
+              <button class="bg-[#2d2d2d] text-white rounded-lg px-3 py-2 text-sm" on:click={() => removeAction(Number(index))}>
                   <i class="fas fa-trash-alt text-red-400"></i>
               </button>
           </div>
