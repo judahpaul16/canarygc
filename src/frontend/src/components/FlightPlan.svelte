@@ -42,6 +42,15 @@
         shadowSize: [41, 41]
       });
     });
+
+    const input = document.querySelector('input[type="text"]') as HTMLInputElement;
+    function resizeInput() {
+      input.style.width = '162px';
+      input.style.width = `${input.scrollWidth}px`;
+    }
+    resizeInput();
+    input.style.width = '162px';
+    input.addEventListener('input', resizeInput);
   });
 
   function addAction() {
@@ -174,6 +183,12 @@
 
 <div class="flightplan bg-[#1c1c1e] text-white p-4 rounded-lg space-x-4 items-center h-full overflow-auto">
   <div class="container block">
+    <input type="text" class="text-md font-bold mb-2 ml-4 focus:outline-none" placeholder="Untitled Flight Plan"/>
+    <div class="flex items-center gap-2 float-right text-sm">
+      <button class="px-2 py-1 bg-[#55b377] text-white rounded-lg hover:bg-[#61cd89]" on:click={() => {}}>Start Flight</button>
+      <button class="px-2 py-1 bg-[#da864e] text-white rounded-lg hover:bg-[#ff995e]" on:click={() => {}}>Pause Flight</button>
+      <button class="px-2 py-1 bg-[#d94d7c] text-white rounded-lg hover:bg-[#ff5e78]" on:click={() => {}}>Stop Flight</button>
+    </div>
     <div class="column h-[10vh]">
       <div class="overflow-auto">
         <hr>
