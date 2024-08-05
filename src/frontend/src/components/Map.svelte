@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import '@fortawesome/fontawesome-free/css/all.min.css';
-  import { mapStore } from '../stores/mapStore';
+  import { mapStore, mavLocationStore } from '../stores/mapStore';
 
   export let hideOverlay: boolean = false;
   export let lat: number = 33.749;
@@ -9,6 +9,7 @@
 
   const apiKey = import.meta.env.VITE_ALTITUDE_ANGEL_API_KEY;
 
+  let L: typeof import('leaflet');
   let currentMap: 'altitudeAngel' | 'leaflet' = 'leaflet'; // Default to Leaflet
 
   const loadScript = (src: string): Promise<void> => {
@@ -75,6 +76,7 @@
     leaflet.marker([lat, lon], {icon: icon}).addTo(map)
       .bindPopup('MAV is here');
     mapStore.set(map);
+    mavLocationStore.set(L.latLng(lat, lon));
   }
 
   function toggleFullScreen(element: HTMLElement) {

@@ -1,11 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { mapStore } from '../stores/mapStore';
+  import { mapStore, mavLocationStore } from '../stores/mapStore';
   import { get } from 'svelte/store';
   
   let L: typeof import('leaflet');
   let actions: number[] = [1];
-  // See https://mavlink.io/en/messages/common.html
   let action_types = [
     'WAYPOINT', 'SPLINE_WAYPOINT', 'TAKEOFF', 'RETURN_TO_LAUNCH', 'GUIDED_ENABLE', 'LAND',
     'LOITER_TIME', 'LOITER_TURNS', 'LOITER_UNLIM', 'PAYLOAD_PLACE', 'DO_WINCH', 'DO_SET_CAM_TRIGG_DIST',
@@ -24,6 +23,7 @@
 
   let map: L.Map | null = null;
   let markers: Map<number, L.Marker> = new Map(); // Map to keep track of markers
+  let polylines: Map<string, L.Polyline> = new Map(); // Map to keep track of polylines
 
   mapStore.subscribe((value: L.Map | null) => {
     map = value;
@@ -54,6 +54,56 @@
       map?.removeLayer(markers.get(index)!); // Remove marker from the map
       markers.delete(index); // Remove marker from the map reference
     }
+    
+    // Remove related polylines
+    removeConnectedPolylines(index);
+  }
+
+  function removeConnectedPolylines(index: number) {
+    // Identify and remove polylines connected to the removed marker
+    const connectedKeys = Array.from(polylines.keys()).filter(key => {
+      const [startIndex, endIndex] = key.split('-').map(Number);
+      return startIndex === index || endIndex === index;
+    });
+    
+    connectedKeys.forEach(key => {
+      const polyline = polylines.get(key);
+      if (polyline) {
+        if (map?.hasLayer(polyline)) {
+          map.removeLayer(polyline);
+        }
+        polylines.delete(key);
+      }
+    });
+  }
+
+  function removePolyline(start: L.LatLng, end: L.LatLng) {
+    const key = generatePolylineKey(start, end);
+    const polylineToRemove = polylines.get(key);
+
+    if (polylineToRemove) {
+      if (map?.hasLayer(polylineToRemove)) {
+        map.removeLayer(polylineToRemove);
+      }
+      polylines.delete(key);
+    }
+  }
+
+  function addPolyline(start: L.LatLng, end: L.LatLng) {
+    const key = generatePolylineKey(start, end);
+    removePolyline(start, end); // Ensure no old polyline is left
+
+    const latlngs: L.LatLngExpression[] = [start, end];
+    const polyline = L.polyline(latlngs, { color: 'red' });
+    map?.addLayer(polyline);
+
+    polylines.set(key, polyline);
+  }
+
+  function generatePolylineKey(start: L.LatLng, end: L.LatLng): string {
+    const startLatLng = [start.lat, start.lng].join(',');
+    const endLatLng = [end.lat, end.lng].join(',');
+    return [startLatLng, endLatLng].sort().join('-'); // Ensure consistent ordering
   }
 
   async function updateMap(event: Event, index: number) {
@@ -62,21 +112,62 @@
     const lon = document.querySelector(`#lon-${index}`) as HTMLInputElement;
 
     if (!action_types.includes(action.value)) {
-      action = (event.target! as HTMLInputElement).parentElement!.parentElement!.querySelector('select')!;
+        action = (event.target! as HTMLInputElement).parentElement!.parentElement!.querySelector('select')!;
     }
 
-    // Remove previous marker if it exists
+    // Remove old marker if it exists
     if (markers.has(index)) {
-      map?.removeLayer(markers.get(index)!);
+        map?.removeLayer(markers.get(index)!);
     }
 
+    // Add new marker
     if (L && map && lat.value && lon.value) {
-      map.flyTo([Number(lat.value), Number(lon.value)], 13);
-      let marker = L.marker([Number(lat.value), Number(lon.value)], { icon: icons[action_types.indexOf(action.value)] })
-          .bindPopup(`${index} - ${action.value}`);
-      map.addLayer(marker);
-      marker.openPopup();
-      markers.set(index, marker); // Keep reference to the marker
+        let marker = L.marker([Number(lat.value), Number(lon.value)], { icon: icons[action_types.indexOf(action.value)] })
+            .bindPopup(`${index} - ${action.value}`);
+        map.addLayer(marker);
+        marker.openPopup();
+        markers.set(index, marker); // Update marker reference
+    }
+
+    // Remove old polylines connected to the current marker
+    removeConnectedPolylines(index);
+
+    // Add or update polyline connections based on updated markers
+    updatePolylines();
+  }
+
+  function updatePolylines() {
+    // Clear existing polylines before recalculating
+    polylines.forEach(polyline => {
+      if (map?.hasLayer(polyline)) {
+        map.removeLayer(polyline);
+      }
+    });
+    polylines.clear(); // Clear the map reference
+
+    const markerEntries = Array.from(markers.entries()).sort((a, b) => a[0] - b[0]); // Ensure order by index
+
+    for (let i = 0; i < markerEntries.length - 1; i++) {
+        const [currentIndex, currentMarker] = markerEntries[i];
+        const [nextIndex, nextMarker] = markerEntries[i + 1];
+        
+        if (currentMarker && nextMarker) {
+            let currentLatLng = currentMarker.getLatLng();
+            let nextLatLng = nextMarker.getLatLng();
+            addPolyline(currentLatLng, nextLatLng);
+        }
+    }
+
+    // Handle the connection from the first marker to the MAV location
+    if (markerEntries.length > 0) {
+        const [firstIndex, firstMarker] = markerEntries[0];
+        if (get(mapStore)) {
+            let prevMarkerLatLng = get(mavLocationStore)!;
+            let currentMarkerLatLng = firstMarker.getLatLng();
+            if (prevMarkerLatLng && currentMarkerLatLng) {
+                addPolyline(prevMarkerLatLng, currentMarkerLatLng);
+            }
+        }
     }
   }
 </script>
