@@ -138,23 +138,6 @@
     display: block;
   }
 
-  button {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    background-color: rgba(0, 0, 0, 0.75);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    padding: 10px;
-    cursor: pointer;
-    z-index: 10;
-  }
-
-  button:hover {
-    background-color: rgba(0, 0, 0, 0.9);
-  }
-
   #map-toggle {
     z-index: 10;
   }
@@ -163,7 +146,7 @@
 <div class="map-container">
   <div id="aamap" class="relative h-full"></div>
   <div id="map" class="relative h-full rounded-lg z-0"></div>
-  <button on:click={handleFullScreen}>
+  <button class="absolute top-2 right-2 text-white bg-gray-800 bg-opacity-75 p-2 px-3 hover:bg-[#000000e6] rounded-full" on:click={handleFullScreen}>
     <i class="fas fa-expand"></i>
   </button>
   {#if !hideOverlay}
