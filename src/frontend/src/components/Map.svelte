@@ -10,6 +10,8 @@
   const apiKey = import.meta.env.VITE_ALTITUDE_ANGEL_API_KEY;
 
   let L: typeof import('leaflet');
+  let altitudeAngelMap: any;
+  let leafletMap: any;
   let currentMap: 'altitudeAngel' | 'leaflet' = 'leaflet'; // Default to Leaflet
 
   const loadScript = (src: string): Promise<void> => {
@@ -24,14 +26,14 @@
 
   onMount(async () => {
     try {
-      if (currentMap === 'altitudeAngel') {
-        await loadScript('js/jquery-3.2.1.min.js');
-        await loadScript('js/altitudeAngelMap.js');
-        initializeAltitudeAngelMap();
-      } else if (currentMap === 'leaflet') {
-        const L = await import('leaflet');
-        initializeLeafletMap(L.default);
-      }
+      // Load and initialize Leaflet
+      L = (await import('leaflet')).default;
+      initializeLeafletMap();
+
+      // Load and initialize Altitude Angel
+      await loadScript('js/jquery-3.2.1.min.js');
+      await loadScript('js/altitudeAngelMap.js');
+      initializeAltitudeAngelMap();
     } catch (error) {
       console.error('Script loading failed', error);
     }
@@ -52,7 +54,7 @@
         ] : [])
       ];
 
-      aa.initialize({
+      altitudeAngelMap = aa.initialize({
         target: 'aamap',
         baseUrl: 'https://dronesafetymap.com',
         authDetails: { apiKey },
@@ -63,20 +65,35 @@
     }
   }
 
-  function initializeLeafletMap(leaflet: any) {
-    const icon = leaflet.icon({
+  function initializeLeafletMap() {
+    const icon = L.icon({
       iconUrl: 'map/here.png',
       iconSize: [45, 45],
       iconAnchor: [23, 45],
       popupAnchor: [0, -45],
       shadowSize: [41, 41]
     });
-    const map = leaflet.map('map').setView([lat, lon], 13);
-    leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {}).addTo(map);
-    leaflet.marker([lat, lon], {icon: icon}).addTo(map)
+    leafletMap = L.map('map').setView([lat, lon], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {}).addTo(leafletMap);
+    L.marker([lat, lon], {icon: icon}).addTo(leafletMap)
       .bindPopup('MAV is here');
-    mapStore.set(map);
+    mapStore.set(leafletMap);
     mavLocationStore.set(L.latLng(lat, lon));
+  }
+
+  function toggleMap() {
+    const altitudeAngelDiv = document.getElementById('aamap');
+    const leafletDiv = document.getElementById('map');
+
+    if (currentMap === 'altitudeAngel') {
+      currentMap = 'leaflet';
+      if (altitudeAngelDiv) altitudeAngelDiv.style.display = 'none';
+      if (leafletDiv) leafletDiv.style.display = 'block';
+    } else {
+      currentMap = 'altitudeAngel';
+      if (altitudeAngelDiv) altitudeAngelDiv.style.display = 'block';
+      if (leafletDiv) leafletDiv.style.display = 'none';
+    }
   }
 
   function toggleFullScreen(element: HTMLElement) {
@@ -95,16 +112,6 @@
       toggleFullScreen(el);
     }
   }
-
-  function toggleMap() {
-    currentMap = currentMap === 'altitudeAngel' ? 'leaflet' : 'altitudeAngel';
-    // Reinitialize map when toggling
-    if (currentMap === 'altitudeAngel') {
-      loadScript('js/altitudeAngelMap.js').then(initializeAltitudeAngelMap);
-    } else {
-      import('leaflet').then(L => initializeLeafletMap(L.default));
-    }
-  }
 </script>
 
 <style lang="css">
@@ -118,22 +125,51 @@
   #aamap, #map {
     height: 100%;
     width: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+
+  #aamap {
+    display: none;
+  }
+
+  #map {
+    display: block;
+  }
+
+  button {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background-color: rgba(0, 0, 0, 0.75);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    padding: 10px;
+    cursor: pointer;
+    z-index: 10;
+  }
+
+  button:hover {
+    background-color: rgba(0, 0, 0, 0.9);
+  }
+
+  #map-toggle {
+    z-index: 10;
   }
 </style>
 
-<div class="map-container text-white rounded-lg h-48 w-48 relative">
-  {#if currentMap === 'altitudeAngel'}
-    <div id="aamap" class="relative h-full"></div>
-  {:else}
-    <div id="map" class="relative h-full rounded-lg z-0"></div>
-  {/if}
-  <button class="absolute top-2 right-2 text-white bg-gray-800 bg-opacity-75 p-2 px-3 hover:bg-blue-400 rounded-full" on:click={handleFullScreen}>
+<div class="map-container">
+  <div id="aamap" class="relative h-full"></div>
+  <div id="map" class="relative h-full rounded-lg z-0"></div>
+  <button on:click={handleFullScreen}>
     <i class="fas fa-expand"></i>
   </button>
   {#if !hideOverlay}
     <label id="map-toggle" class="flex justify-center cursor-pointer my-2 absolute top-1 right-2 left-2 w-fit m-auto bg-[#000000ba] rounded-3xl p-2 pl-3 text-sm items-center">
       <input type="checkbox" value="" class="sr-only peer" on:click={toggleMap}>
-      <span><i class="fas fa-map"></i>&nbsp;&nbsp;{currentMap === 'altitudeAngel' ? 'Altitude Angel' : 'Leaflet'}</span>
+      <span class="text-white"><i class="fas fa-map"></i>&nbsp;&nbsp;{currentMap === 'altitudeAngel' ? 'Altitude Angel' : 'Leaflet'}</span>
       <div class="relative w-11 h-6 ml-3 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-[#61cd89] peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-[#d94d7c]"></div>
     </label>
   {/if}
