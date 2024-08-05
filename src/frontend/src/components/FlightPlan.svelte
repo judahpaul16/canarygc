@@ -34,6 +34,8 @@
     map = value;
   });
 
+  let remountKey = 0;
+
   onMount(async () => {
     const module = await import('leaflet');
     L = module;
@@ -59,6 +61,13 @@
 
     updateMap(Object.keys(actions).length);
   });
+
+  function remount() {
+    setTimeout(() => {
+      remountKey = 0;
+      remountKey += 1;
+    }, 300);
+  }
 
   function addAction() {
     let mavLocation = get(mavLocationStore)!;
@@ -94,14 +103,10 @@
       actionElement.remove();
     }
 
-    // Remove the specified action and create a new object without it
+    // Remove the specified action
     const { [index]: _, ...remainingActions } = actions;
     actions = remainingActions; // Trigger reactivity by creating a new object
-    // update keys
-    Object.values(actions).forEach((action, i) => {
-      actions[i + 1] = action;
-    });
-        
+
     // Remove the marker from the map and the map reference
     if (markers.has(index)) {
       map?.removeLayer(markers.get(index)!); // Remove marker from the map
@@ -111,9 +116,11 @@
     // Remove related polylines
     removeConnectedPolylines(index);
 
-    reindexActions();
+    // Update the map with new action count
+    reindexActions(); // Ensure this function handles reindexing correctly
     flightPlanStore.set(actions);
     updateMap(Object.keys(actions).length);
+    remount();
   }
 
   function reindexActions() {
@@ -301,53 +308,55 @@
     <div class="column h-[10vh]">
       <div class="overflow-auto">
         <hr>
-        {#each Object.keys(actions) as index}
-          <div id="action-{index}" class="flex items-center action-container">
-              <div class="form-checkbox">
-                  <span>{index}</span>
-              </div>
-              <div class="separator"></div>
-              <div class="form-input text-center">
-                  <label for="action">Action Type</label>
-                  <select class="mt-1" name="action" id="action-{index}-type" bind:value={actions[Number(index)].type} on:change={() => updateMap(Number(index))}>
-                  {#each action_types as action_type}
-                      <option value="{action_type}">{action_type}</option>
-                  {/each}
-                  </select>
-              </div>
-              <div class="separator"></div>
-              <div class="form-input text-center grid gap-2">
-                  <input type="number" step="0.001" id="lat-{index}" placeholder="Latitude - eg. 33.749" on:change={() => updateMap(Number(index))} bind:value={actions[Number(index)].lat} />
-                  <input type="number" step="0.001" id="lon-{index}" placeholder="Longitude - eg. -84.388" on:change={() => updateMap(Number(index))} bind:value={actions[Number(index)].lon} />
-              </div>
-              <div class="separator"></div>
-              <div class="form-input text-center flex gap-2">
-                  <label for="altitude">Altitude</label>
-                  <select name="altitude" id="altitude-{index}" value={String(actions[Number(index)].altitude)}>
-                  <option value=100>100</option>
-                  <option value=150>150</option>
-                  <option value=200>200</option>
-                  <option value=250>250</option>
-                  <option value=300>300</option>
-                  <option value=350>350</option>
-                  </select> ft
-              </div>
-              <div class="separator"></div>
-              <div class="form-input">
-                  <input type="text" placeholder="Notes" value={actions[Number(index)].notes} />
-              </div>
-              <div class="separator"></div>
-              <div class="form-input w-[fit-content] flex items-center gap-3">
-                  <input type="checkbox" id="action-{index}-notify" checked={actions[Number(index)].notify} />
-                  <label for="action-{index}-notify" class="text-sm flex">Notify on complete?</label>
-              </div>
-              <div class="separator"></div>
-              <button class="bg-[#2d2d2d] text-white rounded-lg px-3 py-2 text-sm" on:click={() => removeAction(Number(index))}>
-                  <i class="fas fa-trash-alt text-red-400"></i>
-              </button>
-          </div>
-          <hr>
-        {/each}
+        {#key remountKey}
+          {#each Object.keys(actions) as index}
+            <div id="action-{index}" class="flex items-center action-container">
+                <div class="form-checkbox">
+                    <span>{index}</span>
+                </div>
+                <div class="separator"></div>
+                <div class="form-input text-center">
+                    <label for="action">Action Type</label>
+                    <select class="mt-1" name="action" id="action-{index}-type" bind:value={actions[Number(index)].type} on:change={() => updateMap(Number(index))}>
+                    {#each action_types as action_type}
+                        <option value="{action_type}">{action_type}</option>
+                    {/each}
+                    </select>
+                </div>
+                <div class="separator"></div>
+                <div class="form-input text-center grid gap-2">
+                    <input type="number" step="0.001" id="lat-{index}" placeholder="Latitude - eg. 33.749" on:change={() => updateMap(Number(index))} bind:value={actions[Number(index)].lat} />
+                    <input type="number" step="0.001" id="lon-{index}" placeholder="Longitude - eg. -84.388" on:change={() => updateMap(Number(index))} bind:value={actions[Number(index)].lon} />
+                </div>
+                <div class="separator"></div>
+                <div class="form-input text-center flex gap-2">
+                    <label for="altitude">Altitude</label>
+                    <select name="altitude" id="altitude-{index}" value={String(actions[Number(index)].altitude)}>
+                    <option value=100>100</option>
+                    <option value=150>150</option>
+                    <option value=200>200</option>
+                    <option value=250>250</option>
+                    <option value=300>300</option>
+                    <option value=350>350</option>
+                    </select> ft
+                </div>
+                <div class="separator"></div>
+                <div class="form-input">
+                    <input type="text" placeholder="Notes" value={actions[Number(index)].notes} />
+                </div>
+                <div class="separator"></div>
+                <div class="form-input w-[fit-content] flex items-center gap-3">
+                    <input type="checkbox" id="action-{index}-notify" checked={actions[Number(index)].notify} />
+                    <label for="action-{index}-notify" class="text-sm flex">Notify on complete?</label>
+                </div>
+                <div class="separator"></div>
+                <button class="bg-[#2d2d2d] text-white rounded-lg px-3 py-2 text-sm" on:click={() => removeAction(Number(index))}>
+                    <i class="fas fa-trash-alt text-red-400"></i>
+                </button>
+            </div>
+            <hr>
+          {/each}
+        {/key}
       </div>
       <div class="flex justify-center">
         <button class="bg-[#2d2d2d] text-white rounded-lg px-4 py-2 my-4" on:click={addAction}>
