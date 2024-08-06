@@ -305,6 +305,10 @@
         <i class="fas fa-question-circle"></i>
         How do I create a flight plan?
       </a>
+      <button class="px-2 py-1 bg-[#588ae7] text-white rounded-lg hover:bg-[#6f9ff9]" on:click={() => {}}>
+        <i class="fas fa-check"></i>
+        <div class="tooltip">Validate Flight Plan</div>
+      </button>
       <button class="px-2 py-1 bg-[#55b377] text-white rounded-lg hover:bg-[#61cd89]" on:click={() => {}}>
         <i class="fas fa-play"></i>
         <div class="tooltip">Start/Resume Flight</div>
@@ -313,7 +317,7 @@
         <i class="fas fa-pause"></i>
         <div class="tooltip">Pause Flight</div>
       </button>
-      <button class="px-2 py-1 bg-[#d94d7c] text-white rounded-lg hover:bg-[#ff5e78]" on:click={() => {}}>
+      <button class="px-2 py-1 bg-[#f87171] text-white rounded-lg hover:bg-[#ff7e7e]" on:click={() => {}}>
         <i class="fas fa-stop"></i>
         <div class="tooltip">Stop Flight</div>
       </button>
@@ -403,7 +407,7 @@
     display: flex;
     align-items: center;
   }
-  
+
   .form-checkbox:checked {
     background-color: #61cd89;
   }
