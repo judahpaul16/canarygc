@@ -81,8 +81,8 @@
       ...actions, 
       [newIndex]: {
         type: 'WAYPOINT',
-        lat: mavLocation.lat + 0.003,
-        lon: mavLocation.lng + 0.003,
+        lat: mavLocation.lat + 0.0049,
+        lon: mavLocation.lng + 0.0184,
         altitude: 100,
         notes: '',
         notify: false,
@@ -297,15 +297,28 @@
   }
 </script>
 
-<div class="flightplan bg-[#1c1c1e] text-white p-4 rounded-lg space-x-4 items-center h-full overflow-auto">
+<div class="flightplan bg-[#1c1c1e] text-white p-4 rounded-lg space-x-4 items-center h-full">
   <div class="container block">
     <input type="text" class="text-md font-bold mb-2 ml-4 focus:outline-none" placeholder="Untitled Flight Plan"/>
     <div class="flex items-center gap-2 float-right text-sm">
-      <button class="px-2 py-1 bg-[#55b377] text-white rounded-lg hover:bg-[#61cd89]" on:click={() => {}}>Start Flight</button>
-      <button class="px-2 py-1 bg-[#da864e] text-white rounded-lg hover:bg-[#ff995e]" on:click={() => {}}>Pause Flight</button>
-      <button class="px-2 py-1 bg-[#d94d7c] text-white rounded-lg hover:bg-[#ff5e78]" on:click={() => {}}>Stop Flight</button>
+      <a href="https://mavmanager.com/docs/how-to-create-a-flight-plan" target="_blank" class="text-[#61cd89] hover:underline mr-2">
+        <i class="fas fa-question-circle"></i>
+        How do I create a flight plan?
+      </a>
+      <button class="px-2 py-1 bg-[#55b377] text-white rounded-lg hover:bg-[#61cd89]" on:click={() => {}}>
+        <i class="fas fa-play"></i>
+        <div class="tooltip">Start/Resume Flight</div>
+      </button>
+      <button class="px-2 py-1 bg-[#da864e] text-white rounded-lg hover:bg-[#ff995e]" on:click={() => {}}>
+        <i class="fas fa-pause"></i>
+        <div class="tooltip">Pause Flight</div>
+      </button>
+      <button class="px-2 py-1 bg-[#d94d7c] text-white rounded-lg hover:bg-[#ff5e78]" on:click={() => {}}>
+        <i class="fas fa-stop"></i>
+        <div class="tooltip">Stop Flight</div>
+      </button>
     </div>
-    <div class="column h-[10vh]">
+    <div class="column h-[15vh] overflow-auto">
       <div class="overflow-auto">
         <hr>
         {#key remountKey}
@@ -433,5 +446,32 @@
 
   input[type="checkbox"]:checked {
     background-color: #61cd89;
+  }
+
+  .tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 0.5rem;
+    background-color: #000000dc;
+    color: white;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
+    z-index: 2;
+  }
+
+  button:hover .tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(-0.25em);
+  }
+
+  button {
+    position: relative;
   }
 </style>

@@ -172,7 +172,7 @@
     <div class="relative group">
       <button class="circular-button" on:click={resumeFlight} disabled>
         <i class="fas fa-play"></i>
-        <div class="tooltip">Resume Flight</div>
+        <div class="tooltip">Start/Resume Flight</div>
       </button>
     </div>
     <div class="relative group">
