@@ -403,11 +403,7 @@
     display: flex;
     align-items: center;
   }
-
-  .form-checkbox input {
-    display: none;
-  }
-
+  
   .form-checkbox:checked {
     background-color: #61cd89;
   }
