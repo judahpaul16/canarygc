@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
+  import { flightPlanTitleStore, flightPlanActionsStore } from '../stores/flightPlanStore';
+  import { get } from 'svelte/store';
 
   import Modal from './Modal.svelte';
 
@@ -16,6 +18,7 @@
   export let altitudeLimited: number;
   export let flightProgress: number = 50;
 
+  let flightPlanTitle = get(flightPlanTitleStore);
   let interval: number;
 
   function getRandomInt(min: number, max: number): number {
@@ -212,7 +215,7 @@
   .button-container {
     display: flex;
     justify-content: center;
-    gap: 1rem;
+    gap: calc(0.5rem + 1vw);
     margin-top: 1.5rem;
   }
 
@@ -265,54 +268,61 @@
 
 <div class="stats bg-[#1c1c1e] text-white p-4 rounded-lg flex flex-col space-y-2 h-full overflow-y-auto text-sm">
   <h2 class="text-lg font-bold">{mavName}</h2>
-  <div class="grid grid-cols-2 gap-4">
-    <div>Speed: {speed} m/s</div>
-    <div>Height: {height} m</div>
-    <div>Flight Time: {`${Math.floor(flightTime / 3600)}h ${Math.floor((flightTime % 3600) / 60)}m ${flightTime % 60}s`}</div>
-    <div>Lens: {lens}</div>
-    <div>ISO: {iso}</div>
-    <div>Frame Line: {frameLine}</div>
-    <div>Shutter: {shutter}</div>
-    <div>Resolution: {resolution}</div>
-    <div class="battery-status {batteryStatus < 20 ? 'red' : batteryStatus < 50 ? 'yellow' : 'green'}">Battery Status: {batteryStatus}%</div>
-    <div>Altitude Limited: {altitudeLimited} m</div>
-  </div>
-  <div class="w-full mt-6">
-    <span>Flight Progress</span>
-    <div class="progress-bar bg-gray-700 rounded-full h-2.5 mt-2">
-      <div class="progress-bar-inner h-2.5 rounded-full" style="width: {flightProgress}%;"></div>
+  <hr class="border-[#2d2d2d]" />
+  <div class="h-full flex flex-col justify-center">
+    <div class="grid grid-cols-2 gap-4">
+      <div>Speed: {speed} m/s</div>
+      <div>Height: {height} m</div>
+      <div>Flight Time: {`${Math.floor(flightTime / 3600)}h ${Math.floor((flightTime % 3600) / 60)}m ${flightTime % 60}s`}</div>
+      <div>Lens: {lens}</div>
+      <div>ISO: {iso}</div>
+      <div>Frame Line: {frameLine}</div>
+      <div>Shutter: {shutter}</div>
+      <div>Resolution: {resolution}</div>
+      <div class="battery-status {batteryStatus < 20 ? 'red' : batteryStatus < 50 ? 'yellow' : 'green'}">Battery Status: {batteryStatus}%</div>
+      <div>Altitude Limited: {altitudeLimited} m</div>
     </div>
-  </div>
-  <div class="button-container mt-6">
-    <div class="relative group">
-      <button class="circular-button" on:click={stopFlight}>
-        <i class="fas fa-stop text-red-400"></i>
-        <div class="tooltip">Stop Flight</div>
-      </button>
-    </div>
-    <div class="relative group">
-      <button class="circular-button" on:click={resumeFlight} disabled>
-        <i class="fas fa-play"></i>
-        <div class="tooltip">Start/Resume Flight</div>
-      </button>
-    </div>
-    <div class="relative group">
-      <button class="circular-button" on:click={pauseFlight}>
-        <i class="fas fa-pause"></i>
-        <div class="tooltip">Pause Flight (Loiter)</div>
-      </button>
-    </div>
-    <div class="relative group flex flex-col items-center">
-      <button class="circular-button" on:click={initLanding}>
-        <i class="fas fa-arrow-down"></i>
-        <div class="tooltip">Land</div>
-      </button>
-    </div>
-    <div class="relative group">
-      <button class="circular-button" on:click={returnHome}>
-        <i class="fas fa-home"></i>
-        <div class="tooltip">Return Home</div>
-      </button>
+    <hr class="border-[#2d2d2d] my-3" />
+    <div class="w-full mb-2">Loaded Flight Plan: <span class="text-[#66e1ff]">{flightPlanTitle || 'No flight plan loaded.'}</span></div>
+    <div class="flex flex-col items-center justify-end">
+      <div class="w-full">
+        <span>Flight Progress: {flightProgress}% (ETA 00:00:00)</span>
+        <div class="progress-bar bg-gray-700 rounded-full h-2.5 mt-3">
+          <div class="progress-bar-inner h-2.5 rounded-full" style="width: {flightProgress}%;"></div>
+        </div>
+      </div>
+      <div class="button-container mt-6">
+        <div class="relative group">
+          <button class="circular-button" on:click={stopFlight}>
+            <i class="fas fa-stop text-red-400"></i>
+            <div class="tooltip">Stop Flight</div>
+          </button>
+        </div>
+        <div class="relative group">
+          <button class="circular-button" on:click={resumeFlight} disabled>
+            <i class="fas fa-play"></i>
+            <div class="tooltip">Start/Resume Flight</div>
+          </button>
+        </div>
+        <div class="relative group">
+          <button class="circular-button" on:click={pauseFlight}>
+            <i class="fas fa-pause"></i>
+            <div class="tooltip">Pause Flight (Loiter)</div>
+          </button>
+        </div>
+        <div class="relative group flex flex-col items-center">
+          <button class="circular-button" on:click={initLanding}>
+            <i class="fas fa-arrow-down"></i>
+            <div class="tooltip">Land</div>
+          </button>
+        </div>
+        <div class="relative group">
+          <button class="circular-button" on:click={returnHome}>
+            <i class="fas fa-home"></i>
+            <div class="tooltip">Return Home</div>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
