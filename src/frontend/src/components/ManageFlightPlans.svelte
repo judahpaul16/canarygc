@@ -30,6 +30,7 @@
   }
 
   function handleSave(title: string, plan: FlightPlanAction) {
+    flightPlanTitleStore.set(title);
     flightPlanActionsStore.set(plan);
     let flightPlan = {
       title: title,
@@ -134,13 +135,13 @@
         {title}
       </div>
     </div>
-    <div class="px-4 py-2 text-white">
+    <div class="p-2 text-white">
       <ul class="overflow-auto h-full max-h-[21vh] p-2 text-sm">
         {#if flightPlans.length != 0}
           {#each flightPlans as plan (plan.id)}
-            <li class="flex justify-between items-center px-2 py-1 bg-gray-700 rounded mb-2 w-full">
-              <span class="mr-10" title={plan.title}>{plan.title.substring(0, 12)}{#if plan.title.length >= 12}...{/if}</span>
-              <div class="flex items-center gap-3">
+            <li class="inline-block justify-between items-center px-2 py-1 bg-gray-700 rounded mb-2 w-full">
+              <span class="mr-2" title={plan.title}>{plan.title.substring(0, 15)}{#if plan.title.length >= 12}...{/if}</span>
+              <div class="flex items-center gap-3 float-right">
                 <button
                   on:click={() => handleDelete(plan.id)}
                   class="text-red-500 hover:text-red-700 relative">
