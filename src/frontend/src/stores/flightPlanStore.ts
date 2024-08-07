@@ -9,6 +9,8 @@ interface FlightPlanItem {
     notify: boolean;
 }
 
-export type FlightPlanStore = { [key: number]: FlightPlanItem };
+export type FlightPlanAction = { [key: number]: FlightPlanItem };
 
-export const flightPlanStore = writable<FlightPlanStore>({});
+export const flightPlanTitleStore = writable<string>('');
+
+export const flightPlanActionsStore = writable<FlightPlanAction>({});

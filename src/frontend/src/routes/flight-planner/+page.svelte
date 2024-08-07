@@ -23,18 +23,18 @@
     <title>MAV Manager GCS - Dashboard</title>
   </sveltekit:head>
 
-  <div class="flex items-center justify-center min-h-[95vh] p-6">
+  <div class="dashboard-container flex items-center justify-center min-h-[95vh] p-6">
     <div class="dashboard grid grid-cols-12 grid-rows-6 gap-4 p-6 bg-[#121212] h-[95vh] rounded-[30px] overflow-auto max-h-[700px]">
-      <div class="col-span-10 row-span-4">
+      <div class="map col-span-10 row-span-4">
         <Map />
       </div>
-      <div class="col-span-2 row-span-4">
+      <div class="weather col-span-2 row-span-4">
         <Weather {lat} {lon} />
       </div>
-      <div class="col-span-10 row-span-2">
+      <div class="flight-plan col-span-10 row-span-2">
         <FlightPlan />
       </div>
-      <div class="col-span-2 row-span-2 flex justify-end items-end">
+      <div class="flight-plan-settings col-span-2 row-span-2 flex justify-end items-end">
         <div class="w-full h-full">
           <FlightPlanSettings />
         </div>
@@ -48,5 +48,39 @@
       grid-template-rows: repeat(2, 1fr);
       height: 95vh;
     }
+
+  /* Mobile Styles */
+  @media (max-width: 990px) {
+    .dashboard-container {
+      padding: 0;
+      padding-top: 1.5em;
+      min-height: fit-content;
+      max-height: fit-content;
+    }
+
+    .dashboard {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 99%;
+      padding: 0.5em;
+      max-height: 86vh;
+      overflow-y: auto;
+      border-radius: 1em;
+    }
+
+    .dashboard > * {
+      width: 100%;
+      height: 100%;
+      display: block;
+      overflow-y: auto;
+    }
+
+    .weather {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
   </style>
   
