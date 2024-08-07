@@ -29,16 +29,29 @@
   ];
   let icons: L.Icon[] = [];
   let map: L.Map | null = null;
+  let mavLocation: L.LatLng | null = null;
   let markers: Map<number, L.Marker> = new Map(); // Map to keep track of markers
   let polylines: Map<string, L.Polyline> = new Map(); // Map to keep track of polylines
-
-  mapStore.subscribe((value: L.Map | null) => {
-    map = value;
-  });
-
   let remountKey = 0;
 
+  $: $flightPlanActionsStore,
+    flightPlanActionsStore.subscribe((value) => {
+      actions = value;
+    }),
+    Object.keys(actions).forEach((index) => {
+      updateMap(Number(index));
+    });
+
   onMount(async () => {
+    // alert(`${Object.keys(actions).length}`);
+    mapStore.subscribe((value: L.Map | null) => {
+      map = value;
+    });
+
+    mavLocationStore.subscribe((value) => {
+      mavLocation = value;
+    });
+
     flightPlanTitleStore.subscribe((value) => {
       title = value;
     });
@@ -69,7 +82,9 @@
     input.style.width = '162px';
     input.addEventListener('input', resizeInput);
 
-    updateMap(Object.keys(actions).length);
+    Object.keys(actions).forEach((index) => {
+      updateMap(Number(index));
+    });
   });
 
   function remount() {
@@ -80,7 +95,7 @@
   }
 
   function addAction() {
-    let mavLocation = get(mavLocationStore)!;
+    mavLocation = get(mavLocationStore)!;
     actions = get(flightPlanActionsStore);
 
     // Determine the next index
@@ -102,7 +117,9 @@
     flightPlanActionsStore.set(actions);
     
     setTimeout(() => {
-      updateMap(Object.keys(actions).length);
+      Object.keys(actions).forEach((index) => {
+        updateMap(Number(index));
+      });
     }, 100);
   }
 
@@ -129,7 +146,9 @@
     // Update the map with new action count
     reindexActions(); // Ensure this function handles reindexing correctly
     flightPlanActionsStore.set(actions);
-    updateMap(Object.keys(actions).length);
+    Object.keys(actions).forEach((index) => {
+      updateMap(Number(index));
+    });
     remount();
   }
 
