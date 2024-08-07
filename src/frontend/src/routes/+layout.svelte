@@ -13,7 +13,7 @@
   $: currentPath = $page.url.pathname;
 
   onMount(() => {
-    if (typeof window !== 'undefined' && authData.checkExpired()) {
+    if (typeof window !== 'undefined' && authData.checkExpired() && window.location.pathname !== '/') {
       authData.set(null);
       goto('/login');
     }
