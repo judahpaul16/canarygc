@@ -4,7 +4,7 @@
   import Weather from './Weather.svelte';
 </script>
 
-<div class="controls bg-[#1c1c1e] text-white p-9 rounded-lg h-full flex space-x-4 items-center overflow-x-auto">
+<div class="controls bg-[#1c1c1e] text-white px-10 rounded-lg h-full flex space-x-4 items-center overflow-x-auto">
   <div class="map-container flex-shrink-0 h-48 w-48">
     <Map hideOverlay={true} />
   </div>
@@ -15,14 +15,12 @@
     <div class="separator"></div>
     <div class="inputs column flex flex-col items-center justify-center space-y-4 text-center max-h-[16vh] min-w-[150px] overflow-auto">
       <div class="flex flex-col items-center">
-        <label class="text-sm mb-1">Max Speed</label>
+        <label class="text-sm mb-1">Max Speed<span class="text-xs text-gray-400 mt-1 ml-1">(m/s)</span></label>
         <input type="number"  min="0" class="form-input" placeholder="Default: 10" />
-        <span class="text-xs text-gray-400 mt-1">m/s</span>
       </div>
       <div class="flex flex-col items-center justify-center">
-        <label class="text-sm mb-1">Max Altitude</label>
+        <label class="text-sm mb-1">Max Altitude<span class="text-xs text-gray-400 mt-1 ml-1">(m)</span></label>
         <input type="number"  min="0" class="form-input" placeholder="Default: 100" />
-        <span class="text-xs text-gray-400 mt-1">m</span>
       </div>
     </div>
     <div class="separator"></div>
