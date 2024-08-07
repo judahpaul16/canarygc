@@ -392,7 +392,7 @@
                     <input type="number" step="0.001" id="lon-{index}" placeholder="Longitude - eg. -84.388" on:change={() => updateMap(Number(index))} bind:value={actions[Number(index)].lon} />
                 </div>
                 <div class="separator"></div>
-                <div class="form-input text-center flex gap-2">
+                <div class="form-input text-center flex gap-2 justify-center items-center">
                     <label for="altitude">Altitude</label>
                     <select name="altitude" id="altitude-{index}" value={String(actions[Number(index)].altitude)}>
                     <option value=100>100</option>
@@ -401,7 +401,7 @@
                     <option value=250>250</option>
                     <option value=300>300</option>
                     <option value=350>350</option>
-                    </select> ft
+                    </select> <span class="text-xs text-gray-400">m</span>
                 </div>
                 <div class="separator"></div>
                 <div class="form-input">
