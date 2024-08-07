@@ -1,7 +1,9 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
 
-  export let droneName: string = "DroneX";
+  import Modal from './Modal.svelte';
+
+  export let mavName: string = "MAV 1";
   export let speed: number;
   export let height: number;
   export let flightTime: number;
@@ -44,23 +46,137 @@
   });
 
   function stopFlight() {
-    alert('Stop Flight');
+    const modal = new Modal({
+      target: document.body,
+      props: {
+        title: 'Stop Flight',
+        content: 'Are you sure you want to stop the flight?',
+        isOpen: true,
+        confirmation: true,
+        notification: false,
+        onConfirm: () => {
+          modal.$destroy();
+          const newModal = new Modal({
+            target: document.body,
+            props: {
+              title: 'Flight Stopped',
+              content: 'The flight has been stopped.',
+              isOpen: true,
+              confirmation: false,
+              notification: true,
+            }
+          });
+        },
+      }
+    });
+    document.body.appendChild(modal.$$.fragment);
   }
 
   function pauseFlight() {
-    alert('Pause Flight (Loiter)');
+    const modal = new Modal({
+      target: document.body,
+      props: {
+        title: 'Pause Flight',
+        content: 'Are you sure you want to pause the flight?',
+        isOpen: true,
+        confirmation: true,
+        notification: false,
+        onConfirm: () => {
+          modal.$destroy();
+          const newModal = new Modal({
+            target: document.body,
+            props: {
+              title: 'Flight Paused',
+              content: 'The flight has been paused.',
+              isOpen: true,
+              confirmation: false,
+              notification: true,
+            }
+          });
+        },
+      }
+    });
+    document.body.appendChild(modal.$$.fragment);
   }
 
   function resumeFlight() {
-    alert('Resuming Flight...');
+    const modal = new Modal({
+      target: document.body,
+      props: {
+        title: 'Resume Flight',
+        content: 'Are you sure you want to resume the flight?',
+        isOpen: true,
+        confirmation: true,
+        notification: false,
+        onConfirm: () => {
+          modal.$destroy();
+          const newModal = new Modal({
+            target: document.body,
+            props: {
+              title: 'Flight Resumed',
+              content: 'The flight has been resumed.',
+              isOpen: true,
+              confirmation: false,
+              notification: true,
+            }
+          });
+        },
+      }
+    });
   }
 
   function returnHome() {
-    alert('Return Home');
+    const modal = new Modal({
+      target: document.body,
+      props: {
+        title: 'Return Home',
+        content: 'Are you sure you want to return home?',
+        isOpen: true,
+        confirmation: true,
+        notification: false,
+        onConfirm: () => {
+          modal.$destroy();
+          const newModal = new Modal({
+            target: document.body,
+            props: {
+              title: 'Returning Home',
+              content: 'The MAV is returning home.',
+              isOpen: true,
+              confirmation: false,
+              notification: true,
+            }
+          });
+        },
+      }
+    });
+    document.body.appendChild(modal.$$.fragment);
   }
 
   function initLanding() {
-    alert('Landing...');
+    const modal = new Modal({
+      target: document.body,
+      props: {
+        title: 'Land',
+        content: 'Are you sure you want to land the MAV?',
+        isOpen: true,
+        confirmation: true,
+        notification: false,
+        onConfirm: () => {
+          modal.$destroy();
+          const newModal = new Modal({
+            target: document.body,
+            props: {
+              title: 'Landing',
+              content: 'The MAV is landing.',
+              isOpen: true,
+              confirmation: false,
+              notification: true,
+            }
+          });
+        },
+      }
+    });
+    document.body.appendChild(modal.$$.fragment);
   }
 </script>
 
@@ -140,10 +256,15 @@
     visibility: visible;
     transform: translateX(-50%) translateY(-0.5rem);
   }
+
+  button:disabled, button:disabled:hover {
+    background-color: #656974;
+    cursor: not-allowed;
+  }
 </style>
 
 <div class="stats bg-[#1c1c1e] text-white p-4 rounded-lg flex flex-col space-y-2 h-full overflow-y-auto text-sm">
-  <h2 class="text-lg font-bold">{droneName}</h2>
+  <h2 class="text-lg font-bold">{mavName}</h2>
   <div class="grid grid-cols-2 gap-4">
     <div>Speed: {speed} m/s</div>
     <div>Height: {height} m</div>

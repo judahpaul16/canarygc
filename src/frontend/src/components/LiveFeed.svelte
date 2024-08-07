@@ -1,10 +1,20 @@
 <script lang="ts">
   import '@fortawesome/fontawesome-free/css/all.min.css';
+  import Modal from './Modal.svelte';
 
   function toggleFullScreen(element: HTMLElement) {
     if (!document.fullscreenElement) {
       element.requestFullscreen().catch(err => {
-        alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+        const modal = new Modal({
+          target: document.body,
+          props: {
+            title: 'Error',
+            content: `Error attempting to enable full-screen mode: ${err.message} (${err.name})`,
+            isOpen: true,
+            confirmation: false,
+            notification: true,
+          },
+        });
       });
     } else {
       document.exitFullscreen();

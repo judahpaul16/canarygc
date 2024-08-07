@@ -1,10 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { mapStore, mavLocationStore } from '../stores/mapStore';
-  import { flightPlanStore } from '../stores/flightPlanStore';
+  import { flightPlanTitleStore, flightPlanActionsStore } from '../stores/flightPlanStore';
   import { get } from 'svelte/store';
+  import Modal from './Modal.svelte';
 
   let L: typeof import('leaflet');
+  export let title: string = '';
   let actions: { [key: number]: {
     type: string;
     lat: number;
@@ -37,6 +39,14 @@
   let remountKey = 0;
 
   onMount(async () => {
+    flightPlanTitleStore.subscribe((value) => {
+      title = value;
+    });
+
+    flightPlanActionsStore.subscribe((value) => {
+      actions = value;
+    });
+
     const module = await import('leaflet');
     L = module;
 
@@ -71,7 +81,7 @@
 
   function addAction() {
     let mavLocation = get(mavLocationStore)!;
-    actions = get(flightPlanStore);
+    actions = get(flightPlanActionsStore);
 
     // Determine the next index
     const newIndex = Object.keys(actions).length + 1;
@@ -89,7 +99,7 @@
       }
     };
 
-    flightPlanStore.set(actions);
+    flightPlanActionsStore.set(actions);
     
     setTimeout(() => {
       updateMap(Object.keys(actions).length);
@@ -118,7 +128,7 @@
 
     // Update the map with new action count
     reindexActions(); // Ensure this function handles reindexing correctly
-    flightPlanStore.set(actions);
+    flightPlanActionsStore.set(actions);
     updateMap(Object.keys(actions).length);
     remount();
   }
@@ -217,7 +227,7 @@
   }
 
   async function updateMap(index: number) {
-    flightPlanStore.subscribe((value) => {
+    flightPlanActionsStore.subscribe((value) => {
       actions = value;
     });
 
@@ -230,7 +240,7 @@
     }
 
     // Add new marker with updated info if map and action are valid
-    if (L && map) {
+    if (L && map && action) {
       const { type, lat, lon } = action;
       const iconIndex = action_types.indexOf(type);
       
@@ -299,7 +309,7 @@
 
 <div class="flightplan bg-[#1c1c1e] text-white p-4 rounded-lg space-x-4 items-center h-full">
   <div class="container block">
-    <input type="text" class="text-md font-bold mb-2 ml-4 focus:outline-none" placeholder="Untitled Flight Plan"/>
+    <input type="text" class="text-md font-bold mb-2 ml-4 focus:outline-none" placeholder="Untitled Flight Plan" id="flight-plan-title" bind:value={title} />
     <div class="flex items-center gap-2 float-right text-sm">
       <a href="https://mavmanager.com/docs/how-to-create-a-flight-plan" target="_blank" class="text-[#61cd89] hover:underline mr-2">
         <i class="fas fa-question-circle"></i>

@@ -41,7 +41,7 @@
         resolution="1280 x 720"
         batteryStatus={100}
         altitudeLimited={100}
-        droneName="CUAV X7 Running Ardupilot"
+        mavName="CUAV X7 Running Ardupilot"
       />
     </div>
     <div class="col-span-2 row-span-4">

@@ -1,10 +1,13 @@
 <script lang="ts">
+  import PocketBase from 'pocketbase';
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import { authData } from '../stores/authStore';
   import { page } from '$app/stores';
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import '../app.css';
+
+  const pb = new PocketBase('http://localhost:8090');
 
   let currentPath = '';
   $: currentPath = $page.url.pathname;
@@ -14,7 +17,33 @@
       authData.set(null);
       goto('/login');
     }
+    
+    initializeFlightPlansCollection();
   });
+
+  async function initializeFlightPlansCollection() {
+      try {
+          const collections = await pb.collections.getFullList();
+          const collectionExists = collections.some(c => c.name === 'flight_plans');
+          
+          if (!collectionExists) {
+              const newCollection = {
+                  name: 'flight_plans',
+                  type: 'base',
+                  schema: [
+                      { name: 'title', type: 'text', options: { maxSize: 100000000 } },
+                      { name: 'actions', type: 'json', required: true, options: { maxSize: 100000000 } }
+                  ]
+              };
+              await pb.collections.create(newCollection);
+              console.log('Collection "flight_plans" created successfully.');
+          } else {
+              console.log('Collection "flight_plans" already exists.');
+          }
+      } catch (error) {
+          console.error('Error:', error);
+      }
+  }
 
   function handleNavigation(path: string) {
     if (currentPath !== path) {

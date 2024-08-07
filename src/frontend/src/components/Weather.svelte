@@ -122,7 +122,7 @@
 
 <div class="weather h-full overflow-y-auto">
   <div class="weather-header">Weather Advisory</div>
-  <div class="location">Based on drone location:<br>{locationName}</div>
+  <div class="location">Based on MAV location:<br>{locationName}</div>
   {#if error}
     <div class="error">{error}</div>
   {:else}

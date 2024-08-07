@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import { mapStore, mavLocationStore } from '../stores/mapStore';
+  import Modal from './Modal.svelte';
 
   export let hideOverlay: boolean = false;
   export let lat: number = 33.749;
@@ -99,7 +100,16 @@
   function toggleFullScreen(element: HTMLElement) {
     if (!document.fullscreenElement) {
       element.requestFullscreen().catch(err => {
-        alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+        const modal = new Modal({
+          target: document.body,
+          props: {
+            title: 'Error',
+            content: `Error attempting to enable full-screen mode: ${err.message} (${err.name})`,
+            isOpen: true,
+            confirmation: false,
+            notification: true,
+          },
+        });
       });
     } else {
       document.exitFullscreen();
