@@ -524,4 +524,30 @@
   #flight-plan-actions {
     max-height: 200px;
   }
+
+  /* Mobile Styles */
+  @media (max-width: 990px) {
+    .flightplan {
+      overflow: hidden;
+      overflow-y: auto;
+    }
+
+    #flight-plan-title {
+      margin-inline: 0;
+    }
+
+    .float-right {
+      display: block;
+      margin-bottom: 1em;
+    }
+    a {
+      font-size: small;
+    }
+    
+    .container {
+      display: inline-grid;
+      align-items: center;
+      justify-content: center;
+    }
+  }
 </style>

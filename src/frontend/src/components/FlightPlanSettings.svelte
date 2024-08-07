@@ -245,4 +245,14 @@
     button:nth-of-type(3) i {
         color: #f87171;
     }
+
+    /* Mobile Styles */
+    @media (max-width: 990px) {
+        .flight-plan-settings {
+            overflow: auto;
+        }
+        button {
+            font-size: 1rem;
+        }
+    }
 </style>
