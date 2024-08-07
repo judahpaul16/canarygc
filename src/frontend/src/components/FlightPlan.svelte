@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { mapStore, mavLocationStore } from '../stores/mapStore';
+  import { mapStore, mavLocationStore, markersStore, polylinesStore } from '../stores/mapStore';
   import { flightPlanTitleStore, flightPlanActionsStore } from '../stores/flightPlanStore';
   import { get } from 'svelte/store';
   import Modal from './Modal.svelte';
@@ -42,10 +42,28 @@
       updateMap(Number(index));
     });
 
+  $: $markersStore,
+    markersStore.subscribe((value) => {
+      markers = value;
+    });
+
+  $: $polylinesStore,
+    polylinesStore.subscribe((value) => {
+      polylines = value;
+    });
+
   onMount(async () => {
     // alert(`${Object.keys(actions).length}`);
     mapStore.subscribe((value: L.Map | null) => {
       map = value;
+    });
+
+    markersStore.subscribe((value) => {
+      markers = value;
+    });
+
+    polylinesStore.subscribe((value) => {
+      polylines = value;
     });
 
     mavLocationStore.subscribe((value) => {

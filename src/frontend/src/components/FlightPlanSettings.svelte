@@ -1,11 +1,11 @@
 <script lang="ts">
     import PocketBase from "pocketbase";
     import { onMount } from "svelte";
-    import { mapStore, mavLocationStore } from "../stores/mapStore";
+    import { mapStore, mavLocationStore, markersStore, polylinesStore } from "../stores/mapStore";
     import { flightPlanTitleStore, flightPlanActionsStore, type FlightPlanAction } from "../stores/flightPlanStore";
     import Modal from "./Modal.svelte";
     import FlightPlansModal from "./FlightPlansModal.svelte";
-
+    
     const pb = new PocketBase("http://localhost:8090");
 
     let actions: {
@@ -168,6 +168,8 @@
         mapStore.set(map);
         flightPlanTitleStore.set("");
         flightPlanActionsStore.set({});
+        markersStore.set(new Map());
+        polylinesStore.set(new Map());
     }
 
     function confirmClear() {
