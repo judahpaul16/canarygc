@@ -24,7 +24,7 @@
   </sveltekit:head>
 
   <div class="dashboard-container flex items-center justify-center min-h-[95vh] p-6">
-    <div class="dashboard grid grid-cols-12 grid-rows-6 gap-4 p-6 bg-[#121212] h-[95vh] rounded-[30px] overflow-auto max-h-[700px]">
+    <div class="dashboard grid grid-cols-12 grid-rows-6 gap-4 p-6 bg-[#121212] h-[95vh] rounded-[30px] overflow-auto max-h-[800px]">
       <div class="map col-span-10 row-span-4">
         <Map />
       </div>
