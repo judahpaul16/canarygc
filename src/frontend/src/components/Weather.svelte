@@ -22,6 +22,8 @@
   export let lat: number = 33.749;
   export let lon: number = -84.388;
 
+  export let isDashboard: boolean = false;
+
   let locationName = '';
   let temperature = '';
   let weatherDescription = '';
@@ -120,15 +122,29 @@
   }
 </style>
 
-<div class="weather h-full overflow-y-auto">
-  <div class="weather-header">Weather Advisory</div>
-  <div class="location">Based on drone location:<br>{locationName}</div>
-  {#if error}
-    <div class="error">{error}</div>
-  {:else}
-    <img src={weatherImage} alt={weatherDescription} class="weather-icon" />
-    <div class="weather-summary">{weatherDescription}</div>
-    <div class="weather-detail">Temp: {temperature}</div>
-    <div class="weather-detail">Rain Chance: {rainChance}</div>
-  {/if}
-</div>
+{#if !isDashboard}
+  <div class="weather h-full overflow-y-auto">
+    <div class="weather-header">Weather Advisory</div>
+    <div class="location">Based on MAV location:<br>{locationName}</div>
+    {#if error}
+      <div class="error">{error}</div>
+    {:else}
+      <img src={weatherImage} alt={weatherDescription} class="weather-icon" />
+      <div class="weather-summary">{weatherDescription}</div>
+      <div class="weather-detail">Temp: {temperature}</div>
+      <div class="weather-detail">Rain Chance: {rainChance}</div>
+    {/if}
+  </div>
+{:else}
+  <div class="min-w-[max-content] h-full max-h-[190px] overflow-y-auto text-center transform -translate-y-[10px]">
+    {#if error}
+      <div class="error">{error}</div>
+    {:else}
+      <img src={weatherImage} alt={weatherDescription} class="weather-icon" />
+      <div class="weather-summary">{weatherDescription}</div>
+      <div class="weather-detail">Temp: {temperature}</div>
+      <div class="weather-detail">Rain Chance: {rainChance}</div>
+    {/if}
+  </div>
+{/if}
+

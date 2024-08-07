@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import { mapStore, mavLocationStore } from '../stores/mapStore';
+  import Modal from './Modal.svelte';
 
   export let hideOverlay: boolean = false;
   export let lat: number = 33.749;
@@ -28,6 +29,11 @@
     try {
       // Load and initialize Leaflet
       L = (await import('leaflet')).default;
+      mapStore.subscribe((value: L.Map | null) => {
+        if (value) {
+          leafletMap = value;
+        }
+      });
       initializeLeafletMap();
 
       // Load and initialize Altitude Angel
@@ -99,7 +105,16 @@
   function toggleFullScreen(element: HTMLElement) {
     if (!document.fullscreenElement) {
       element.requestFullscreen().catch(err => {
-        alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+        const modal = new Modal({
+          target: document.body,
+          props: {
+            title: 'Error',
+            content: `Error attempting to enable full-screen mode: ${err.message} (${err.name})`,
+            isOpen: true,
+            confirmation: false,
+            notification: true,
+          },
+        });
       });
     } else {
       document.exitFullscreen();

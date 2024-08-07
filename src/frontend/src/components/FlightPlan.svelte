@@ -1,10 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { mapStore, mavLocationStore } from '../stores/mapStore';
-  import { flightPlanStore } from '../stores/flightPlanStore';
+  import { mapStore, mavLocationStore, markersStore, polylinesStore } from '../stores/mapStore';
+  import { flightPlanTitleStore, flightPlanActionsStore } from '../stores/flightPlanStore';
   import { get } from 'svelte/store';
+  import Modal from './Modal.svelte';
 
   let L: typeof import('leaflet');
+  export let title: string = '';
   let actions: { [key: number]: {
     type: string;
     lat: number;
@@ -27,16 +29,54 @@
   ];
   let icons: L.Icon[] = [];
   let map: L.Map | null = null;
+  let mavLocation: L.LatLng | null = null;
   let markers: Map<number, L.Marker> = new Map(); // Map to keep track of markers
   let polylines: Map<string, L.Polyline> = new Map(); // Map to keep track of polylines
-
-  mapStore.subscribe((value: L.Map | null) => {
-    map = value;
-  });
-
   let remountKey = 0;
 
+  $: $flightPlanActionsStore,
+    flightPlanActionsStore.subscribe((value) => {
+      actions = value;
+    }),
+    Object.keys(actions).forEach((index) => {
+      updateMap(Number(index));
+    });
+
+  $: $markersStore,
+    markersStore.subscribe((value) => {
+      markers = value;
+    });
+
+  $: $polylinesStore,
+    polylinesStore.subscribe((value) => {
+      polylines = value;
+    });
+
   onMount(async () => {
+    mapStore.subscribe((value: L.Map | null) => {
+      map = value;
+    });
+
+    markersStore.subscribe((value) => {
+      markers = value;
+    });
+
+    polylinesStore.subscribe((value) => {
+      polylines = value;
+    });
+
+    mavLocationStore.subscribe((value) => {
+      mavLocation = value;
+    });
+
+    flightPlanTitleStore.subscribe((value) => {
+      title = value;
+    });
+
+    flightPlanActionsStore.subscribe((value) => {
+      actions = value;
+    });
+
     const module = await import('leaflet');
     L = module;
 
@@ -59,7 +99,9 @@
     input.style.width = '162px';
     input.addEventListener('input', resizeInput);
 
-    updateMap(Object.keys(actions).length);
+    Object.keys(actions).forEach((index) => {
+      updateMap(Number(index));
+    });
   });
 
   function remount() {
@@ -70,8 +112,8 @@
   }
 
   function addAction() {
-    let mavLocation = get(mavLocationStore)!;
-    actions = get(flightPlanStore);
+    mavLocation = get(mavLocationStore)!;
+    actions = get(flightPlanActionsStore);
 
     // Determine the next index
     const newIndex = Object.keys(actions).length + 1;
@@ -89,10 +131,12 @@
       }
     };
 
-    flightPlanStore.set(actions);
+    flightPlanActionsStore.set(actions);
     
     setTimeout(() => {
-      updateMap(Object.keys(actions).length);
+      Object.keys(actions).forEach((index) => {
+        updateMap(Number(index));
+      });
     }, 100);
   }
 
@@ -118,8 +162,10 @@
 
     // Update the map with new action count
     reindexActions(); // Ensure this function handles reindexing correctly
-    flightPlanStore.set(actions);
-    updateMap(Object.keys(actions).length);
+    flightPlanActionsStore.set(actions);
+    Object.keys(actions).forEach((index) => {
+      updateMap(Number(index));
+    });
     remount();
   }
 
@@ -217,7 +263,7 @@
   }
 
   async function updateMap(index: number) {
-    flightPlanStore.subscribe((value) => {
+    flightPlanActionsStore.subscribe((value) => {
       actions = value;
     });
 
@@ -230,7 +276,7 @@
     }
 
     // Add new marker with updated info if map and action are valid
-    if (L && map) {
+    if (L && map && action) {
       const { type, lat, lon } = action;
       const iconIndex = action_types.indexOf(type);
       
@@ -299,7 +345,7 @@
 
 <div class="flightplan bg-[#1c1c1e] text-white p-4 rounded-lg space-x-4 items-center h-full">
   <div class="container block">
-    <input type="text" class="text-md font-bold mb-2 ml-4 focus:outline-none" placeholder="Untitled Flight Plan"/>
+    <input type="text" class="text-md font-bold mb-2 ml-4 focus:outline-none" placeholder="Untitled Flight Plan" id="flight-plan-title" bind:value={title} />
     <div class="flex items-center gap-2 float-right text-sm">
       <a href="https://mavmanager.com/docs/how-to-create-a-flight-plan" target="_blank" class="text-[#61cd89] hover:underline mr-2">
         <i class="fas fa-question-circle"></i>
@@ -322,7 +368,7 @@
         <div class="tooltip">Stop Flight</div>
       </button>
     </div>
-    <div class="column h-[15vh] overflow-auto">
+    <div class="column overflow-auto" id="flight-plan-actions">
       <div class="overflow-auto">
         <hr>
         {#key remountKey}
@@ -346,7 +392,7 @@
                     <input type="number" step="0.001" id="lon-{index}" placeholder="Longitude - eg. -84.388" on:change={() => updateMap(Number(index))} bind:value={actions[Number(index)].lon} />
                 </div>
                 <div class="separator"></div>
-                <div class="form-input text-center flex gap-2">
+                <div class="form-input text-center flex gap-2 justify-center items-center">
                     <label for="altitude">Altitude</label>
                     <select name="altitude" id="altitude-{index}" value={String(actions[Number(index)].altitude)}>
                     <option value=100>100</option>
@@ -355,7 +401,7 @@
                     <option value=250>250</option>
                     <option value=300>300</option>
                     <option value=350>350</option>
-                    </select> ft
+                    </select> <span class="text-xs text-gray-400">m</span>
                 </div>
                 <div class="separator"></div>
                 <div class="form-input">
@@ -473,5 +519,35 @@
 
   button {
     position: relative;
+  }
+
+  #flight-plan-actions {
+    max-height: 200px;
+  }
+
+  /* Mobile Styles */
+  @media (max-width: 990px) {
+    .flightplan {
+      overflow: hidden;
+      overflow-y: auto;
+    }
+
+    #flight-plan-title {
+      margin-inline: 0;
+    }
+
+    .float-right {
+      display: block;
+      margin-bottom: 1em;
+    }
+    a {
+      font-size: small;
+    }
+    
+    .container {
+      display: inline-grid;
+      align-items: center;
+      justify-content: center;
+    }
   }
 </style>

@@ -1,51 +1,39 @@
 <script>
   import Map from './Map.svelte';
   import DPad from './DPad.svelte';
+  import Weather from './Weather.svelte';
 </script>
 
-<div class="controls bg-[#1c1c1e] text-white p-4 rounded-lg h-full flex space-x-4 items-center overflow-x-auto">
+<div class="controls bg-[#1c1c1e] text-white p-9 rounded-lg h-full flex space-x-4 items-center overflow-x-auto">
   <div class="map-container flex-shrink-0 h-48 w-48">
     <Map hideOverlay={true} />
   </div>
   <div class="flex w-full justify-between">
     <div class="column flex flex-col items-center align-middle space-y-4">
+      <Weather isDashboard={true} />
+    </div>
+    <div class="separator"></div>
+    <div class="column flex flex-col items-center justify-center space-y-4 text-center max-h-[16vh] min-w-[150px] overflow-auto">
       <div class="flex flex-col items-center">
-        <label class="text-sm mb-1">Option 1</label>
-        <input type="checkbox" class="form-checkbox h-5 w-5 text-gray-600 rounded-md" />
+        <label class="text-sm mb-1">Max Speed</label>
+        <input type="number"  min="0" class="form-input" placeholder="Default: 10" />
+        <span class="text-xs text-gray-400 mt-1">m/s</span>
       </div>
-      <div class="flex flex-col items-center">
-        <label class="text-sm mb-1">Slider 1</label>
-        <input type="range" class="form-range w-20 rounded-md" min="0" max="100" />
-      </div>
-      <div class="flex flex-col items-center">
-        <label class="text-sm mb-1">Slider 2</label>
-        <input type="range" class="form-range w-20 rounded-md" min="0" max="100" />
+      <div class="flex flex-col items-center justify-center">
+        <label class="text-sm mb-1">Max Altitude</label>
+        <input type="number"  min="0" class="form-input" placeholder="Default: 100" />
+        <span class="text-xs text-gray-400 mt-1">m</span>
       </div>
     </div>
     <div class="separator"></div>
-    <div class="column flex flex-col items-center space-y-4">
-      <div class="flex flex-col items-center">
-        <label class="text-sm mb-1">Option 2</label>
-        <input type="checkbox" class="form-checkbox h-5 w-5 text-gray-600 rounded-md" />
-      </div>
-      <div class="flex flex-col items-center">
-        <label class="text-sm mb-1">Slider 3</label>
-        <input type="range" class="form-range w-20 rounded-md" min="0" max="100" />
-      </div>
-      <div class="flex flex-col items-center">
-        <label class="text-sm mb-1">Slider 4</label>
-        <input type="range" class="form-range w-20 rounded-md" min="0" max="100" />
-      </div>
-    </div>
-    <div class="separator"></div>
-    <div class="column flex flex-col items-center space-y-4">
+    <div class="column flex flex-col items-center justify-center space-y-4">
       <div class="flex flex-col items-center">
         <label class="text-sm mb-1">Altitude Up</label>
         <button class="alt-button rounded-full">
           <i class="fas fa-arrow-up alt-up"></i>
         </button>
       </div>
-      <div class="flex flex-col items-center">
+      <div class="flex flex-col items-center justify-center">
         <label class="text-sm mb-1">Altitude Down</label>
         <button class="alt-button rounded-full">
           <i class="fas fa-arrow-down alt-down"></i>
@@ -53,7 +41,7 @@
       </div>
     </div>
     <div class="separator"></div>
-    <div class="column flex flex-col items-center space-y-4">
+    <div class="column flex flex-col items-center justify-center space-y-4">
       <div class="flex flex-col items-center">
         <label class="text-sm mb-1">Rotate Left</label>
         <button class="rotate-button rotate-left rounded-full">⟲</button>
@@ -79,8 +67,6 @@
     margin: 0 1rem;
   }
 
-  .form-checkbox,
-  .form-range,
   .form-input,
   .alt-button,
   .rotate-button {
@@ -89,26 +75,15 @@
     transition: background-color 0.3s ease;
   }
 
-  .form-checkbox:checked {
-    background-color: #66e1ff;
-  }
-
-  .form-range::-webkit-slider-thumb {
-    appearance: none;
-    background-color: #66e1ff;
-    width: 1rem;
-    height: 1rem;
-    border-radius: 0.5rem;
-    cursor: pointer;
-  }
-
-  .form-range::-moz-range-thumb {
-    appearance: none;
-    background-color: #66e1ff;
-    width: 1rem;
-    height: 1rem;
-    border-radius: 0.5rem;
-    cursor: pointer;
+  input[type='number'] {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #2d2d2d;
+    border-radius: 0.25rem;
+    background-color: #3f3f40;
+    color: white;
+    font-size: 1rem;
+    transition: border-color 0.3s;
   }
 
   .form-input {
