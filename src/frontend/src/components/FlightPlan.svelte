@@ -332,7 +332,7 @@
         <div class="tooltip">Stop Flight</div>
       </button>
     </div>
-    <div class="column h-[15vh] overflow-auto">
+    <div class="column overflow-auto" id="flight-plan-actions">
       <div class="overflow-auto">
         <hr>
         {#key remountKey}
@@ -483,5 +483,9 @@
 
   button {
     position: relative;
+  }
+
+  #flight-plan-actions {
+    max-height: 200px;
   }
 </style>

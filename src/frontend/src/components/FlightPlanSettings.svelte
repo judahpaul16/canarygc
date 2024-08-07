@@ -189,7 +189,7 @@
     class="flight-plan-settings bg-[#1c1c1e] rounded-lg p-4 h-full text-white"
 >
     <button on:click={toggleFlightPlans}>
-        <i class="fas fa-tasks bg-[#cdab61]"></i>
+        <i class="fas fa-tasks bg-[#5898e2]"></i>
         Manage Flight Plans
     </button>
     <button on:click={saveFlightPlan}>
