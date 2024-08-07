@@ -139,7 +139,7 @@
         {#if flightPlans.length != 0}
           {#each flightPlans as plan (plan.id)}
             <li class="flex justify-between items-center px-2 py-1 bg-gray-700 rounded mb-2">
-              <span>{plan.title}</span>
+              <span class="mr-10" title={plan.title}>{plan.title.substring(0, 12)}{#if plan.title.length >= 12}...{/if}</span>
               <div class="flex items-center gap-3">
                 <button
                   on:click={() => handleDelete(plan.id)}
