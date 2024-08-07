@@ -13,7 +13,7 @@
       <Weather isDashboard={true} />
     </div>
     <div class="separator"></div>
-    <div class="column flex flex-col items-center justify-center space-y-4 text-center max-h-[16vh] min-w-[150px] overflow-auto">
+    <div class="inputs column flex flex-col items-center justify-center space-y-4 text-center max-h-[16vh] min-w-[150px] overflow-auto">
       <div class="flex flex-col items-center">
         <label class="text-sm mb-1">Max Speed</label>
         <input type="number"  min="0" class="form-input" placeholder="Default: 10" />
@@ -152,5 +152,45 @@
   .alt-button:hover .alt-down  {
     transform: translateY(0.3rem);
     color: #66e1ff;
+  }
+
+  /* Mobile Styles */
+  @media (max-width: 990px) {
+    .controls {
+      padding: 1rem;
+      display: block;
+    }
+
+    .controls > * {
+      display: flex;
+      align-items: normal;
+      justify-content: center;
+      width: 100%;
+      margin: auto;
+    }
+
+    .inputs {
+      max-height: fit-content;
+      padding: 1em;
+    }
+
+    .flex {
+      flex-direction: column;
+    }
+
+    .separator {
+      display: none;
+    }
+
+    .form-input {
+      padding: 0.5rem 1rem;
+    }
+
+    .alt-button,
+    .rotate-button {
+      width: 2rem;
+      height: 2rem;
+      font-size: 1rem;
+    }
   }
 </style>
