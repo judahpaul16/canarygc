@@ -29,6 +29,11 @@
     try {
       // Load and initialize Leaflet
       L = (await import('leaflet')).default;
+      mapStore.subscribe((value: L.Map | null) => {
+        if (value) {
+          leafletMap = value;
+        }
+      });
       initializeLeafletMap();
 
       // Load and initialize Altitude Angel

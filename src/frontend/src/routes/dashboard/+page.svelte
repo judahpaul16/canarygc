@@ -6,7 +6,7 @@
   import Stats from '../../components/Stats.svelte';
   import Controls from '../../components/Controls.svelte';
   import Compass from '../../components/Compass.svelte';
-  import Weather from '../../components/Weather.svelte';
+  import ManageFlightPlans from '../../components/ManageFlightPlans.svelte';
 
   let user;
   $: user = $authData;
@@ -45,7 +45,7 @@
       />
     </div>
     <div class="col-span-2 row-span-4">
-      <Weather {lat} {lon} />
+      <ManageFlightPlans />
     </div>
     <div class="col-span-10 row-span-3">
       <Controls />

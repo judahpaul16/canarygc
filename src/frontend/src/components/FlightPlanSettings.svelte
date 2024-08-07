@@ -4,8 +4,8 @@
     import { mapStore, mavLocationStore, markersStore, polylinesStore } from "../stores/mapStore";
     import { flightPlanTitleStore, flightPlanActionsStore, type FlightPlanAction } from "../stores/flightPlanStore";
     import Modal from "./Modal.svelte";
-    import FlightPlansModal from "./FlightPlansModal.svelte";
-    
+    import ManageFlightPlans from "./ManageFlightPlans.svelte";
+
     const pb = new PocketBase("http://localhost:8090");
 
     let actions: {
@@ -37,9 +37,10 @@
     });
 
     function toggleFlightPlans() {
-        const modal = new FlightPlansModal({
+        const modal = new ManageFlightPlans({
             target: document.body,
             props: {
+                isModal: true,
                 isOpen: true,
             },
         });

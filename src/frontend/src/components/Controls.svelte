@@ -1,41 +1,16 @@
 <script>
   import Map from './Map.svelte';
   import DPad from './DPad.svelte';
+  import Weather from './Weather.svelte';
 </script>
 
-<div class="controls bg-[#1c1c1e] text-white p-4 rounded-lg h-full flex space-x-4 items-center overflow-x-auto">
+<div class="controls bg-[#1c1c1e] text-white p-9 rounded-lg h-full flex space-x-4 items-center overflow-x-auto">
   <div class="map-container flex-shrink-0 h-48 w-48">
     <Map hideOverlay={true} />
   </div>
   <div class="flex w-full justify-between">
     <div class="column flex flex-col items-center align-middle space-y-4">
-      <div class="flex flex-col items-center">
-        <label class="text-sm mb-1">Option 1</label>
-        <input type="checkbox" class="form-checkbox h-5 w-5 text-gray-600 rounded-md" />
-      </div>
-      <div class="flex flex-col items-center">
-        <label class="text-sm mb-1">Slider 1</label>
-        <input type="range" class="form-range w-20 rounded-md" min="0" max="100" />
-      </div>
-      <div class="flex flex-col items-center">
-        <label class="text-sm mb-1">Slider 2</label>
-        <input type="range" class="form-range w-20 rounded-md" min="0" max="100" />
-      </div>
-    </div>
-    <div class="separator"></div>
-    <div class="column flex flex-col items-center space-y-4">
-      <div class="flex flex-col items-center">
-        <label class="text-sm mb-1">Option 2</label>
-        <input type="checkbox" class="form-checkbox h-5 w-5 text-gray-600 rounded-md" />
-      </div>
-      <div class="flex flex-col items-center">
-        <label class="text-sm mb-1">Slider 3</label>
-        <input type="range" class="form-range w-20 rounded-md" min="0" max="100" />
-      </div>
-      <div class="flex flex-col items-center">
-        <label class="text-sm mb-1">Slider 4</label>
-        <input type="range" class="form-range w-20 rounded-md" min="0" max="100" />
-      </div>
+      <Weather isDashboard={true} />
     </div>
     <div class="separator"></div>
     <div class="column flex flex-col items-center space-y-4">

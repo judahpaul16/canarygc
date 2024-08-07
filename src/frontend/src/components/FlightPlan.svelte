@@ -53,7 +53,6 @@
     });
 
   onMount(async () => {
-    // alert(`${Object.keys(actions).length}`);
     mapStore.subscribe((value: L.Map | null) => {
       map = value;
     });
