@@ -43,6 +43,12 @@
     } catch (error) {
       console.error('Script loading failed', error);
     }
+
+    document.addEventListener('fullscreenchange', () => {
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 1000);
+    });
   });
 
   function initializeAltitudeAngelMap() {
@@ -116,8 +122,14 @@
           },
         });
       });
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 1000);
     } else {
       document.exitFullscreen();
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 1000);
     }
   }
 

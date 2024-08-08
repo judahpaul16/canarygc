@@ -19,6 +19,10 @@
     }
     
     initializeFlightPlansCollection();
+    
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 1000);
   });
 
   async function initializeFlightPlansCollection() {

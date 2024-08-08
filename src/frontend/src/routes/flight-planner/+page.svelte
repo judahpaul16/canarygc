@@ -1,6 +1,5 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { goto } from '$app/navigation';
     import { authData } from '../../stores/authStore';
     import Map from '../../components/Map.svelte';
     import Weather from '../../components/Weather.svelte';
@@ -13,9 +12,9 @@
     const lon: number = -84.388;
   
     onMount(() => {
-      if (!user) {
-        goto('/login');
-      }
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 1000);
     });
   </script>
   
