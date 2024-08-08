@@ -129,10 +129,12 @@
     {#if error}
       <div class="error">{error}</div>
     {:else}
-      <img src={weatherImage} alt={weatherDescription} class="weather-icon" />
-      <div class="weather-summary">{weatherDescription}</div>
-      <div class="weather-detail">Temp: {temperature}</div>
-      <div class="weather-detail">Rain Chance: {rainChance}</div>
+      <div class="mt-10">
+        <img src={weatherImage} alt={weatherDescription} class="weather-icon" />
+        <div class="weather-summary">{weatherDescription}</div>
+        <div class="weather-detail">Temp: {temperature}</div>
+        <div class="weather-detail">Rain Chance: {rainChance}</div>
+      </div>
     {/if}
   </div>
 {:else}
