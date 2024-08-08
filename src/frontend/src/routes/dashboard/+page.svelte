@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
   import { authData } from '../../stores/authStore';
   import LiveFeed from '../../components/LiveFeed.svelte';
   import Stats from '../../components/Stats.svelte';
@@ -13,11 +11,6 @@
   const lat: number = 33.749;
   const lon: number = -84.388;
 
-  onMount(() => {
-    if (!user) {
-      goto('/login');
-    }
-  });
 </script>
 
 <sveltekit:head>
