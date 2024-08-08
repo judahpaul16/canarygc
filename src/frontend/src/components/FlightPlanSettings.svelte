@@ -255,4 +255,10 @@
             font-size: 1rem;
         }
     }
+    @media (max-width: 1300px) {
+        .flight-plan-settings {
+            max-height: 330px;
+            overflow: auto;
+        }
+    }
 </style>

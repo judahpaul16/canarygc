@@ -550,4 +550,15 @@
       justify-content: center;
     }
   }
+
+  @media (max-width: 1320px) {
+    #flight-plan-actions {
+      max-height: 260px;
+    }
+  }
+  @media (max-width: 1060px) {
+    #flight-plan-actions {
+      max-height: 270px;
+    }
+  }
 </style>
