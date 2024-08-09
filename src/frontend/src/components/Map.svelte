@@ -155,7 +155,7 @@
       popupAnchor: [0, -45],
       shadowSize: [41, 41]
     });
-    leafletMap = L.map('map').setView([lat, lon], 13);
+    leafletMap = L.map('map').setView([lat+0.002, lon], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {}).addTo(leafletMap);
     L.marker([lat, lon], {icon: icon}).addTo(leafletMap)
       .bindPopup('MAV is here');
