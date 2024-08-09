@@ -119,9 +119,9 @@
       </div>
       <div class="flex justify-center px-4 py-2 border-t border-[#2d2d2d]">
         <button
-          on:click={importPlan}
-          class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400"
-        >
+            on:click={importPlan}
+            class="bg-transparent hover:bg-[#4b5563] text-white px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
+          >
           <i class="fas fa-upload mr-1"></i>
           Import Flight Plan
         </button>
@@ -168,9 +168,9 @@
     </div>
     <div class="flex justify-center px-4 py-2 border-t border-[#2d2d2d] absolute bottom-0 left-0 right-0">
       <button
-        on:click={importPlan} id="import-btn"
-        class="bg-gray-500 text-white px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
-      >
+          on:click={importPlan}
+          class="bg-transparent hover:bg-[#4b5563] text-white px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
+        >
         <i class="fas fa-upload text-sm" title="Import Flight Plan"></i>
         <span class="import-btn-span text-sm ml-1">Import Flight Plan</span>
       </button>
@@ -183,7 +183,6 @@
     font-size: 1rem;
     line-height: 1.5;
     border: none;
-    background: none;
     cursor: pointer;
     transition:
       background-color 0.3s,
@@ -210,10 +209,6 @@
     opacity: 1;
     visibility: visible;
     transform: translateX(-50%) translateY(-0.5rem);
-  }
-
-  #import-btn:hover {
-    background-color: #3d3d3d;
   }
 
   .title-container {
