@@ -8,12 +8,12 @@
   <div class="map-container flex-shrink-0 h-48 w-48">
     <Map hideOverlay={true} />
   </div>
-  <div class="flex w-full justify-between">
-    <div class="column flex flex-col items-center align-middle space-y-4">
+  <div class="flex w-full justify-center">
+    <div class="column flex flex-col items-center justify-center">
       <Weather isDashboard={true} />
     </div>
     <div class="separator"></div>
-    <div class="inputs column flex flex-col items-center justify-center space-y-4 text-center max-h-[16vh] min-w-[150px] overflow-auto">
+    <div class="inputs column h-full flex flex-col items-center justify-center text-center min-w-[150px] overflow-auto gap-2 self-center">
       <div class="flex flex-col items-center">
         <label class="text-sm mb-1">Max Speed<span class="text-xs text-gray-400 mt-1 ml-1">(m/s)</span></label>
         <input type="number"  min="0" class="form-input" placeholder="Default: 10" />
@@ -24,7 +24,7 @@
       </div>
     </div>
     <div class="separator"></div>
-    <div class="column flex flex-col items-center justify-center space-y-4">
+    <div class="column flex flex-col items-center justify-center text-center space-y-4">
       <div class="flex flex-col items-center">
         <label class="text-sm mb-1">Altitude Up</label>
         <button class="alt-button rounded-full">
@@ -39,7 +39,7 @@
       </div>
     </div>
     <div class="separator"></div>
-    <div class="column flex flex-col items-center justify-center space-y-4">
+    <div class="column flex flex-col items-center justify-center text-center space-y-4">
       <div class="flex flex-col items-center">
         <label class="text-sm mb-1">Rotate Left</label>
         <button class="rotate-button rotate-left rounded-full">⟲</button>
@@ -80,7 +80,7 @@
     border-radius: 0.25rem;
     background-color: #3f3f40;
     color: white;
-    font-size: 1rem;
+    font-size: calc(0.4rem + 0.5vw);
     transition: border-color 0.3s;
   }
 

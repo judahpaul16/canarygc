@@ -138,7 +138,7 @@
     {/if}
   </div>
 {:else}
-  <div class="min-w-[max-content] h-full max-h-[190px] overflow-y-auto text-center">
+  <div class="min-w-[max-content] h-full max-h-[190px] overflow-y-auto text-center transform -translate-y-[10px]">
     {#if error}
       <div class="error">{error}</div>
     {:else}
