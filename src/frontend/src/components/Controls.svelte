@@ -77,7 +77,7 @@
     width: 100%;
     padding: 0.5rem;
     border: 1px solid #2d2d2d;
-    border-radius: 0.25rem;
+    border-radius: 1em;
     background-color: #3f3f40;
     color: white;
     font-size: calc(0.4rem + 0.5vw);

@@ -192,7 +192,8 @@
                     </select>
                 </div>
                 <div class="separator"></div>
-                <div class="form-input text-center grid gap-2">
+                <div class="form-input text-center grid gap-1">
+                    <span class="text-[8pt]">Latitude / Longitude</span>
                     <input type="number" step="0.001" id="lat-{index}" placeholder="Latitude - eg. 33.749" on:change={() => flightPlanActionsStore.set(actions)} bind:value={actions[Number(index)].lat} />
                     <input type="number" step="0.001" id="lon-{index}" placeholder="Longitude - eg. -84.388" on:change={() => flightPlanActionsStore.set(actions)} bind:value={actions[Number(index)].lon} />
                 </div>
@@ -210,7 +211,7 @@
                 </div>
                 <div class="separator"></div>
                 <div class="form-input">
-                    <input type="text" placeholder="Notes" value={actions[Number(index)].notes} />
+                    <textarea placeholder="Notes" value={actions[Number(index)].notes} />
                 </div>
                 <div class="separator"></div>
                 <div class="form-input w-[fit-content] flex items-center gap-3">
@@ -297,6 +298,18 @@
 
   input[type="checkbox"]:checked {
     background-color: #61cd89;
+  }
+  
+  input[type='number'] {
+    width: 150px;
+    font-size: 9pt;
+  }
+
+  textarea {
+    width: 120px;
+    background-color: #2d2d2d;
+    border-radius: 1em;
+    padding: 0.5rem;
   }
 
   .tooltip {
