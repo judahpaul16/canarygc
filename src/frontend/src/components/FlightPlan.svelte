@@ -152,6 +152,20 @@
     actions[index].type = select.value;
     flightPlanActionsStore.set(actions);
   }
+
+  function updateLat(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const index = Number(input.id.split('-')[1]);
+    actions[index].lat = Number(input.value);
+    flightPlanActionsStore.set(actions);
+  }
+
+  function updateLon(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const index = Number(input.id.split('-')[1]);
+    actions[index].lon = Number(input.value);
+    flightPlanActionsStore.set(actions);
+  }
 </script>
 
 <div class="flightplan bg-[#1c1c1e] text-white p-4 rounded-lg space-x-4 items-center h-full">
@@ -204,24 +218,18 @@
                 <div class="form-input text-center grid gap-1">
                     <div class="flex justify-between items-center gap-3">
                       <span class="text-[8pt]">Lat</span>
-                      <input type="number" step="0.001" id="lat-{index}" placeholder="eg. 33.749" on:change={() => flightPlanActionsStore.set(actions)} bind:value={actions[Number(index)].lat} />
+                      <input type="number" step="0.001" id="lat-{index}" placeholder="eg. 33.749" value={actions[Number(index)].lat} on:change={updateLat} />
                     </div>
                     <div class="flex justify-between items-center">
                       <span class="text-[8pt]">Lon</span>
-                      <input type="number" step="0.001" id="lon-{index}" placeholder="eg. -84.388" on:change={() => flightPlanActionsStore.set(actions)} bind:value={actions[Number(index)].lon} />
+                      <input type="number" step="0.001" id="lon-{index}" placeholder="eg. -84.388" value={actions[Number(index)].lon} on:change={updateLon} />
                     </div>
                 </div>
                 <div class="separator"></div>
                 <div class="form-input text-center flex gap-2 justify-center items-center">
                     <label for="altitude">Altitude</label>
-                    <select name="altitude" id="altitude-{index}" value={String(actions[Number(index)].altitude)}>
-                    <option value=100>100</option>
-                    <option value=150>150</option>
-                    <option value=200>200</option>
-                    <option value=250>250</option>
-                    <option value=300>300</option>
-                    <option value=350>350</option>
-                    </select> <span class="text-xs text-gray-400">m</span>
+                    <input type="number" min="0" name="altitude" id="altitude-{index}" class="altitude" value={String(actions[Number(index)].altitude)}>
+                    <span class="text-xs text-gray-400">m</span>
                 </div>
                 <div class="separator"></div>
                 <div class="form-input flex items-center justify-center">
@@ -317,6 +325,10 @@
   input[type='number'] {
     width: 100px;
     font-size: 9pt;
+  }
+
+  .altitude {
+    width: 60px !important;
   }
 
   textarea {
