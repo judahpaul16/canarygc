@@ -210,7 +210,7 @@
                     </select> <span class="text-xs text-gray-400">m</span>
                 </div>
                 <div class="separator"></div>
-                <div class="form-input">
+                <div class="form-input flex items-center justify-center">
                     <textarea placeholder="Notes" value={actions[Number(index)].notes} />
                 </div>
                 <div class="separator"></div>
