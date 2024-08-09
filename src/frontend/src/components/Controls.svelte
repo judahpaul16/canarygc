@@ -151,6 +151,10 @@
     transform: translateY(0.3rem);
     color: #66e1ff;
   }
+  
+  label {
+    font-size: 0.8rem;
+  }
 
   /* Mobile Styles */
   @media (max-width: 990px) {
