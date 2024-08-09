@@ -50,7 +50,7 @@
   });
 
   function stopFlight() {
-    const modal = new Modal({
+    new Modal({
       target: document.body,
       props: {
         title: 'Stop Flight',
@@ -77,7 +77,7 @@
   }
 
   function pauseFlight() {
-    const modal = new Modal({
+    new Modal({
       target: document.body,
       props: {
         title: 'Pause Flight',
@@ -104,7 +104,7 @@
   }
 
   function resumeFlight() {
-    const modal = new Modal({
+    new Modal({
       target: document.body,
       props: {
         title: 'Resume Flight',
@@ -130,7 +130,7 @@
   }
 
   function returnHome() {
-    const modal = new Modal({
+    new Modal({
       target: document.body,
       props: {
         title: 'Return Home',
@@ -157,7 +157,7 @@
   }
 
   function initLanding() {
-    const modal = new Modal({
+    new Modal({
       target: document.body,
       props: {
         title: 'Land',

@@ -129,7 +129,7 @@
     </div>
   </nav>
 
-  <div class="slot-container flex-grow p-4 overflow-auto">
+  <div class="slot-container flex-grow px-8 justify-center items-center overflow-auto">
     <slot />
   </div>
 </main>
@@ -171,7 +171,7 @@
     } 
 
     .slot-container {
-      padding-block: 0;
+      padding: 0;
       overflow: hidden;
     }
 

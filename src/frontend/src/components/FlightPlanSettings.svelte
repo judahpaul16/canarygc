@@ -38,28 +38,33 @@
     }
 
     async function saveFlightPlan() {
+        // @ts-ignore
+        let title = document.querySelector("#flight-plan-title").value || "Untitled Flight Plan",
+        plan = actions;
+        handleSave(title, plan);
+    }
+
+    async function handleSave(title: string, plan: FlightPlanAction) {
+        flightPlanTitleStore.set(title);
+        flightPlanActionsStore.set(plan);
         let flightPlan = {
-            // @ts-ignore
-            title: document.querySelector("#flight-plan-title").value || "Untitled Flight Plan",
-            actions: actions,
+            title: title,
+            actions: plan,
         };
-        let response = await pb
-            .collection("flight_plans")
-            .create(flightPlan)
-            .catch((error) => {
-                const modal = new Modal({
-                    target: document.body,
-                    props: {
-                        title: "Error Saving Flight Plan",
-                        content: error.message,
-                        isOpen: true,
-                        confirmation: false,
-                        notification: true,
-                    },
-                });
+        let response = await pb.collection("flight_plans").create(flightPlan).catch((error) => {
+            new Modal({
+                target: document.body,
+                props: {
+                    title: "Error",
+                    content: error.message,
+                    isOpen: true,
+                    confirmation: false,
+                    notification: true,
+                },
             });
+        });
         if (response) {
-            const modal = new Modal({
+            new Modal({
                 target: document.body,
                 props: {
                     title: "Flight Plan Saved",
@@ -69,30 +74,7 @@
                     notification: true,
                 },
             });
-            flightPlanTitleStore.set(flightPlan.title);
-            flightPlanActionsStore.set(flightPlan.actions);
         }
-    }
-
-    function handleSave(title: string, plan: FlightPlanAction) {
-        flightPlanTitleStore.set(title);
-        flightPlanActionsStore.set(plan);
-        let flightPlan = {
-            title: title,
-            actions: plan,
-        };
-        pb.collection("flight_plans").create(flightPlan);
-        const modal = new Modal({
-            target: document.body,
-            props: {
-                title: "Flight Plan Imported",
-                content: "The flight plan has been imported successfully.",
-                isOpen: true,
-                confirmation: false,
-                notification: true,
-            },
-        });
-        
     }
 
     async function importPlan() {
@@ -146,13 +128,13 @@
 
         mapStore.set(map);
         flightPlanTitleStore.set("");
-        flightPlanActionsStore.set({});
+        flightPlanActionsStore.set(actions);
         markersStore.set(new Map());
         polylinesStore.set(new Map());
     }
 
     function confirmClear() {
-        const modal = new Modal({
+        new Modal({
             target: document.body,
             props: {
                 title: "Clear Flight Plan",

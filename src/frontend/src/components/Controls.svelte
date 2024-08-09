@@ -9,12 +9,12 @@
     <Map hideOverlay={true} />
   </div>
   <div class="flex w-full justify-center">
-    <div class="column flex flex-col items-center justify-center">
+    <div class="weather column flex flex-col items-center justify-center">
       <Weather isDashboard={true} />
     </div>
     <div class="separator"></div>
     <div class="inputs column h-full flex flex-col items-center justify-center text-center min-w-[150px] overflow-auto gap-2 self-center">
-      <div class="flex flex-col items-center">
+      <div id="max-speed-container" class="flex flex-col items-center">
         <label class="text-sm mb-1">Max Speed<span class="text-xs text-gray-400 mt-1 ml-1">(m/s)</span></label>
         <input type="number"  min="0" class="form-input" placeholder="Default: 10" />
       </div>
@@ -39,8 +39,8 @@
       </div>
     </div>
     <div class="separator"></div>
-    <div class="column flex flex-col items-center justify-center text-center space-y-4">
-      <div class="flex flex-col items-center">
+    <div class="rotate-btns column flex flex-col items-center justify-center text-center space-y-4">
+      <div id="rotate-left-button" class="flex flex-col items-center">
         <label class="text-sm mb-1">Rotate Left</label>
         <button class="rotate-button rotate-left rounded-full">⟲</button>
       </div>
@@ -167,9 +167,21 @@
       margin: auto;
     }
 
+    .weather {
+      display: none;
+    }
+
     .inputs {
       max-height: fit-content;
       padding: 1em;
+    }
+
+    .inputs, .rotate-btns {
+      display: ruby;
+    }
+
+    #max-speed-container, #rotate-left-button {
+      margin-right: 1rem;
     }
 
     .flex {
