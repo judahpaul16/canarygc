@@ -3,6 +3,7 @@
     import { authData } from '../../stores/authStore';
     import Map from '../../components/Map.svelte';
     import Weather from '../../components/Weather.svelte';
+    import Compass from '../../components/Compass.svelte';
     import FlightPlan from '../../components/FlightPlan.svelte';
     import FlightPlanSettings from '../../components/FlightPlanSettings.svelte';
   
@@ -22,13 +23,16 @@
     <title>MAV Manager GCS - Dashboard</title>
   </sveltekit:head>
 
-  <div class="dashboard-container flex items-center justify-center min-h-[95vh] p-6">
-    <div class="dashboard grid grid-cols-12 grid-rows-6 gap-4 p-6 bg-[#121212] h-[95vh] rounded-[30px] overflow-auto max-h-[800px]">
+  <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">
+    <div class="dashboard grid grid-cols-12 grid-rows-7 gap-4 p-6 bg-[#121212] rounded-[30px] overflow-auto max-h-[80vh]">
       <div class="map col-span-10 row-span-4">
         <Map />
       </div>
-      <div class="weather col-span-2 row-span-4">
+      <div class="weather col-span-2 row-span-2">
         <Weather {lat} {lon} />
+      </div>
+      <div class="compass col-span-2 row-span-2">
+        <Compass />
       </div>
       <div class="flight-plan col-span-10 row-span-2">
         <FlightPlan />
@@ -51,8 +55,6 @@
   /* Mobile Styles */
   @media (max-width: 990px) {
     .dashboard-container {
-      padding: 0;
-      padding-top: 1.5em;
       min-height: fit-content;
       max-height: fit-content;
     }
@@ -61,11 +63,11 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
-      width: 99%;
+      width: 100%;
       padding: 0.5em;
-      max-height: 86vh;
+      max-height: 92vh;
+      border-radius: 0;
       overflow-y: auto;
-      border-radius: 1em;
     }
 
     .dashboard > * {
@@ -76,9 +78,11 @@
     }
 
     .weather {
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: none;
+    }
+
+    .compass{
+      display: none;
     }
   }
   </style>

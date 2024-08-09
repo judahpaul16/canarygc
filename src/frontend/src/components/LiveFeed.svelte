@@ -5,7 +5,7 @@
   function toggleFullScreen(element: HTMLElement) {
     if (!document.fullscreenElement) {
       element.requestFullscreen().catch(err => {
-        const modal = new Modal({
+        new Modal({
           target: document.body,
           props: {
             title: 'Error',

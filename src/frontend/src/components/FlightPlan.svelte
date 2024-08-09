@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { mapStore, mavLocationStore, markersStore, polylinesStore } from '../stores/mapStore';
+  import { mapStore, mavLocationStore } from '../stores/mapStore';
   import { flightPlanTitleStore, flightPlanActionsStore } from '../stores/flightPlanStore';
   import { get } from 'svelte/store';
   import Modal from './Modal.svelte';
@@ -23,47 +23,17 @@
     'DO_SET_SERVO', 'DO_REPEAT_SERVO', 'DO_DIGICAM_CONFIGURE', 'DO_DIGICAM_CONTROL', 'DO_FENCE_ENABLE',
     'DO_ENGINE_CONTROL', 'CONDITION_DELAY', 'CONDITION_CHANGE_ALT', 'CONDITION_DISTANCE', 'CONDITION_YAW'
   ];
-  let action_markers = [
-    'map/waypoint.png', 'map/waypoint.png', 'map/takeoff.png', 'map/rtl.png', 'map/guided_enable.png', 'map/land.png',
-    'map/loiter.png', 'map/loiter.png', 'map/loiter.png', 'map/payload_place.png', 'map/do_winch.png', 'map/camera.png',
-    'map/do_set_servo.png', 'map/do_repeat_servo.png', 'map/camera.png', 'map/camera.png', 'map/do_fence_enable.png',
-    'map/do_engine_control.png', 'map/delay.png', 'map/condition_change_alt.png', 'map/condition_distance.png', 'map/condition_yaw.png'
-  ];
   let icons: L.Icon[] = [];
-  let markers: Map<number, L.Marker> = new Map(); // Map to keep track of markers
-  let polylines: Map<string, L.Polyline> = new Map(); // Map to keep track of polylines
   
   $: map = $mapStore;
 
   $: mavLocation = $mavLocationStore;
 
-  $: actions = $flightPlanActionsStore,
-    removeAllMarkers(),
-    Object.keys(actions).forEach((index) => {
-      updateMap(Number(index));
-    });
-
-  $: markers = $markersStore,
-    Object.keys(actions).forEach((index) => {
-      updateMap(Number(index));
-    });
-
-  $: polylines = $polylinesStore,
-    Object.keys(actions).forEach((index) => {
-      updateMap(Number(index));
-    });
+  $: actions = $flightPlanActionsStore;
 
   onMount(async () => {
     mapStore.subscribe((value: L.Map | null) => {
       map = value;
-    });
-
-    markersStore.subscribe((value) => {
-      markers = value;
-    });
-
-    polylinesStore.subscribe((value) => {
-      polylines = value;
     });
 
     mavLocationStore.subscribe((value) => {
@@ -81,16 +51,6 @@
     const module = await import('leaflet');
     L = module;
 
-    icons = action_markers.map((marker) => {
-      return L.icon({
-        iconUrl: marker,
-        iconSize: [45, 45],
-        iconAnchor: [23, 45],
-        popupAnchor: [0, -45],
-        shadowSize: [41, 41]
-      });
-    });
-
     const input = document.querySelector('input[type="text"]') as HTMLInputElement;
     function resizeInput() {
       input.style.width = '162px';
@@ -99,10 +59,6 @@
     resizeInput();
     input.style.width = '162px';
     input.addEventListener('input', resizeInput);
-
-    Object.keys(actions).forEach((index) => {
-      updateMap(Number(index));
-    });
   });
 
   function addAction() {
@@ -126,12 +82,6 @@
     };
 
     flightPlanActionsStore.set(actions);
-    
-    setTimeout(() => {
-      Object.keys(actions).forEach((index) => {
-        updateMap(Number(index));
-      });
-    }, 100);
   }
 
   function removeAction(index: number) {
@@ -145,21 +95,9 @@
     const { [index]: _, ...remainingActions } = actions;
     actions = remainingActions; // Trigger reactivity by creating a new object
 
-    // Remove the marker from the map and the map reference
-    if (markers.has(index)) {
-      map?.removeLayer(markers.get(index)!); // Remove marker from the map
-      markers.delete(index); // Remove marker from the markers reference
-    }
-
-    // Remove related polylines
-    removeConnectedPolylines(index);
-
     // Update the map with new action count
     reindexActions(); // Ensure this function handles reindexing correctly
     flightPlanActionsStore.set(actions);
-    Object.keys(actions).forEach((index) => {
-      updateMap(Number(index));
-    });
   }
 
   function reindexActions() {
@@ -178,17 +116,6 @@
   
     // Update UI to reflect new indexes
     updateActionUI();
-    updateMarkersAndPolylines(true);
-  }
-
-  function removeAllMarkers() {
-    markers.forEach((marker) => {
-      // not the first marker
-      if (map?.hasLayer(marker) && marker.getLatLng() !== mavLocation) {
-        map.removeLayer(marker);
-      }
-    });
-    markers.clear();
   }
 
   function updateActionUI() {
@@ -219,131 +146,6 @@
     });
   }
 
-  function removeConnectedPolylines(index: number) {
-    const connectedKeys = Array.from(polylines.keys()).filter(key => {
-      const [startIndex, endIndex] = key.split('-').map(Number);
-      return startIndex === index || endIndex === index;
-    });
-
-    connectedKeys.forEach(key => {
-      const polyline = polylines.get(key);
-      if (polyline) {
-        if (map?.hasLayer(polyline)) {
-          map.removeLayer(polyline);
-        }
-        polylines.delete(key);
-      }
-    });
-  }
-
-  function removePolyline(start: L.LatLng, end: L.LatLng) {
-    const key = generatePolylineKey(start, end);
-    const polylineToRemove = polylines.get(key);
-
-    if (polylineToRemove) {
-      if (map?.hasLayer(polylineToRemove)) {
-        map.removeLayer(polylineToRemove);
-      }
-      polylines.delete(key);
-    }
-  }
-
-  function addPolyline(start: L.LatLng, end: L.LatLng) {
-    const key = generatePolylineKey(start, end);
-    removePolyline(start, end); // Ensure no old polyline is left
-
-    const latlngs: L.LatLngExpression[] = [start, end];
-    const polyline = L.polyline(latlngs, { color: 'red' });
-    map?.addLayer(polyline);
-
-    polylines.set(key, polyline);
-  }
-
-  function generatePolylineKey(start: L.LatLng, end: L.LatLng): string {
-    const startLatLng = [start.lat, start.lng].join(',');
-    const endLatLng = [end.lat, end.lng].join(',');
-    return [startLatLng, endLatLng].sort().join('-'); // Ensure consistent ordering
-  }
-
-  async function updateMap(index: number) {
-    flightPlanActionsStore.subscribe((value) => {
-      actions = value;
-    });
-
-    // Retrieve the action details using the index
-    const action = actions[index];
-    
-    // Remove existing marker if it exists
-    if (markers.has(index)) {
-      map?.removeLayer(markers.get(index)!);
-    }
-
-    // Add new marker with updated info if map and action are valid
-    if (L && map && action) {
-      const { type, lat, lon } = action;
-      const iconIndex = action_types.indexOf(type);
-      
-      if (!isNaN(lat) && !isNaN(lon) && iconIndex >= 0) {
-        const marker = L.marker([lat, lon], { icon: icons[iconIndex] })
-          .bindPopup(`${index} - ${type}`);
-        map.addLayer(marker);
-        marker.openPopup();
-        markers.set(index, marker);
-      }
-    }
-
-    // Remove polylines connected to this action and update all polylines
-    removeConnectedPolylines(index);
-    updateMarkersAndPolylines();
-  }
-
-  function updateMarkersAndPolylines(reindex: boolean = false) {
-    if (reindex) {
-      // Remove last marker
-      const lastMarker = markers.get(Object.keys(actions).length + 1);
-      if (lastMarker) {
-        map?.removeLayer(lastMarker);
-        markers.delete(Object.keys(actions).length + 1);
-      }
-      // Update the popup content for each marker
-      markers.forEach((marker, index) => {
-        const action = actions[index];
-        marker.bindPopup(`${index} - ${action.type}`);
-      });
-    }
-
-    // Clear existing polylines before recalculating
-    polylines.forEach(polyline => {
-      if (map?.hasLayer(polyline)) {
-        map.removeLayer(polyline);
-      }
-    });
-    polylines.clear();
-
-    const markerEntries = Array.from(markers.entries()).sort((a, b) => a[0] - b[0]); // Ensure order by index
-
-    for (let i = 0; i < markerEntries.length - 1; i++) {
-      const [currentIndex, currentMarker] = markerEntries[i];
-      const [nextIndex, nextMarker] = markerEntries[i + 1];
-      
-      if (currentMarker && nextMarker) {
-        let currentLatLng = currentMarker.getLatLng();
-        let nextLatLng = nextMarker.getLatLng();
-        addPolyline(currentLatLng, nextLatLng);
-      }
-    }
-
-    if (markerEntries.length > 0) {
-      const [firstIndex, firstMarker] = markerEntries[0];
-      if (get(mapStore)) {
-        let mavLocation = get(mavLocationStore)!;
-        let currentMarkerLatLng = firstMarker.getLatLng();
-        if (mavLocation && currentMarkerLatLng) {
-            addPolyline(mavLocation, currentMarkerLatLng);
-        }
-      }
-    }
-  }
 </script>
 
 <div class="flightplan bg-[#1c1c1e] text-white p-4 rounded-lg space-x-4 items-center h-full">
@@ -382,7 +184,7 @@
               <div class="separator"></div>
               <div class="form-input text-center">
                   <label for="action">Action Type</label>
-                  <select class="mt-1" name="action" id="action-{index}-type" bind:value={actions[Number(index)].type} on:change={() => updateMap(Number(index))}>
+                  <select class="mt-1" name="action" id="action-{index}-type" bind:value={actions[Number(index)].type} on:change={() => flightPlanActionsStore.set(actions)}>
                   {#each action_types as action_type}
                       <option value="{action_type}">{action_type}</option>
                   {/each}
@@ -390,8 +192,8 @@
               </div>
               <div class="separator"></div>
               <div class="form-input text-center grid gap-2">
-                  <input type="number" step="0.001" id="lat-{index}" placeholder="Latitude - eg. 33.749" on:change={() => updateMap(Number(index))} bind:value={actions[Number(index)].lat} />
-                  <input type="number" step="0.001" id="lon-{index}" placeholder="Longitude - eg. -84.388" on:change={() => updateMap(Number(index))} bind:value={actions[Number(index)].lon} />
+                  <input type="number" step="0.001" id="lat-{index}" placeholder="Latitude - eg. 33.749" on:change={() => flightPlanActionsStore.set(actions)} bind:value={actions[Number(index)].lat} />
+                  <input type="number" step="0.001" id="lon-{index}" placeholder="Longitude - eg. -84.388" on:change={() => flightPlanActionsStore.set(actions)} bind:value={actions[Number(index)].lon} />
               </div>
               <div class="separator"></div>
               <div class="form-input text-center flex gap-2 justify-center items-center">

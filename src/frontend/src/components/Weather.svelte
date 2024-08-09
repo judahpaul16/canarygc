@@ -84,7 +84,6 @@
   .weather {
     background-color: #1c1c1e;
     color: white;
-    padding: 0.5rem;
     border-radius: 0.5rem;
     max-width: 400px;
     text-align: center;
@@ -123,18 +122,16 @@
 </style>
 
 {#if !isDashboard}
-  <div class="weather h-full overflow-y-auto">
+  <div class="weather h-full overflow-y-auto p-4">
     <div class="weather-header">Weather Advisory</div>
     <div class="location">Based on MAV location:<br>{locationName}</div>
     {#if error}
       <div class="error">{error}</div>
     {:else}
-      <div class="mt-10">
-        <img src={weatherImage} alt={weatherDescription} class="weather-icon" />
-        <div class="weather-summary">{weatherDescription}</div>
-        <div class="weather-detail">Temp: {temperature}</div>
-        <div class="weather-detail">Rain Chance: {rainChance}</div>
-      </div>
+      <img src={weatherImage} alt={weatherDescription} class="weather-icon" />
+      <div class="weather-summary">{weatherDescription}</div>
+      <div class="weather-detail">Temp: {temperature}</div>
+      <div class="weather-detail">Rain Chance: {rainChance}</div>
     {/if}
   </div>
 {:else}
