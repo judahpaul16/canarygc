@@ -202,9 +202,14 @@
                 </div>
                 <div class="separator"></div>
                 <div class="form-input text-center grid gap-1">
-                    <span class="text-[8pt]">Latitude / Longitude</span>
-                    <input type="number" step="0.001" id="lat-{index}" placeholder="Latitude - eg. 33.749" on:change={() => flightPlanActionsStore.set(actions)} bind:value={actions[Number(index)].lat} />
-                    <input type="number" step="0.001" id="lon-{index}" placeholder="Longitude - eg. -84.388" on:change={() => flightPlanActionsStore.set(actions)} bind:value={actions[Number(index)].lon} />
+                    <div class="flex justify-between items-center gap-3">
+                      <span class="text-[8pt]">Lat</span>
+                      <input type="number" step="0.001" id="lat-{index}" placeholder="eg. 33.749" on:change={() => flightPlanActionsStore.set(actions)} bind:value={actions[Number(index)].lat} />
+                    </div>
+                    <div class="flex justify-between items-center">
+                      <span class="text-[8pt]">Lon</span>
+                      <input type="number" step="0.001" id="lon-{index}" placeholder="eg. -84.388" on:change={() => flightPlanActionsStore.set(actions)} bind:value={actions[Number(index)].lon} />
+                    </div>
                 </div>
                 <div class="separator"></div>
                 <div class="form-input text-center flex gap-2 justify-center items-center">
@@ -310,7 +315,7 @@
   }
   
   input[type='number'] {
-    width: 150px;
+    width: 100px;
     font-size: 9pt;
   }
 
