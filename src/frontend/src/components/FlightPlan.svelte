@@ -185,6 +185,9 @@
                 <div class="separator"></div>
                 <div class="form-input text-center">
                     <label for="action">Action Type</label>
+                    <a href="https://ardupilot.org/copter/docs/mission-command-list.html" target="_blank" class="text-[#61cd89] ml-1" title="More Information">
+                        <i class="fas fa-info-circle"></i>
+                    </a>
                     <select class="mt-1" name="action" id="action-{index}-type" bind:value={actions[Number(index)].type} on:change={() => flightPlanActionsStore.set(actions)}>
                     {#each action_types as action_type}
                         <option value="{action_type}">{action_type}</option>
