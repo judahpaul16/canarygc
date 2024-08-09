@@ -91,7 +91,7 @@
   }
 
   .weather-header {
-    font-size: 1.25rem;
+    font-size: calc(0.2rem + 1vw);
     margin-bottom: 0.5rem;
     font-weight: bold;
   }
@@ -119,12 +119,24 @@
     height: 100px;
     margin: auto;
   }
+
+  #location-name {
+    color: #ffe997;
+  }
+  
+  @media (max-height: 750px) {
+    #location-name {
+      display: none;
+    }
+  }
 </style>
 
 {#if !isDashboard}
   <div class="weather h-full overflow-y-auto p-4">
     <div class="weather-header">Weather Advisory</div>
-    <div class="location">Based on MAV location:<br>{locationName}</div>
+    <div class="location text-italic">Based on MAV location
+      <span id="location-name"><br><br>{locationName}</span>
+    </div>
     {#if error}
       <div class="error">{error}</div>
     {:else}
