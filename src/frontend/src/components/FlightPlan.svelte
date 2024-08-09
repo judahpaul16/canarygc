@@ -146,6 +146,12 @@
     });
   }
 
+  function updateActionType(event: Event) {
+    const select = event.target as HTMLSelectElement;
+    const index = Number(select.id.split('-')[1]);
+    actions[index].type = select.value;
+    flightPlanActionsStore.set(actions);
+  }
 </script>
 
 <div class="flightplan bg-[#1c1c1e] text-white p-4 rounded-lg space-x-4 items-center h-full">
@@ -188,7 +194,7 @@
                     <a href="https://ardupilot.org/copter/docs/mission-command-list.html" target="_blank" class="text-[#61cd89] ml-1" title="More Information">
                         <i class="fas fa-info-circle"></i>
                     </a>
-                    <select class="mt-1" name="action" id="action-{index}-type" bind:value={actions[Number(index)].type} on:change={() => flightPlanActionsStore.set(actions)}>
+                    <select class="mt-1" name="action" id="action-{index}-type" on:change={updateActionType} value={actions[Number(index)].type}>
                     {#each action_types as action_type}
                         <option value="{action_type}">{action_type}</option>
                     {/each}
