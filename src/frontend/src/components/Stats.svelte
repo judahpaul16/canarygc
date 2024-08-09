@@ -6,6 +6,7 @@
   import Modal from './Modal.svelte';
 
   export let mavName: string = "MAV 1";
+  export let mavType: string = "Multirotor";
   export let speed: number;
   export let altitude: number;
   export let flightTime: number;
@@ -266,11 +267,12 @@
   <hr class="border-[#2d2d2d]" />
   <div class="h-full flex flex-col justify-evenly">
     <div class="grid grid-cols-2 gap-2">
+      <div>MAV Type: {mavType}</div>
       <div>Speed: {speed} m/s</div>
       <div>Altitude: {altitude} m</div>
-      <div>Flight Time: {`${Math.floor(flightTime / 3600)}h ${Math.floor((flightTime % 3600) / 60)}m ${flightTime % 60}s`}</div>
       <div>Altitude Limited: {altitudeLimited} m</div>
       <div class="battery-status {batteryStatus < 20 ? 'red' : batteryStatus < 50 ? 'yellow' : 'green'}">Battery Status: {batteryStatus}%</div>
+      <div>Flight Time: {`${Math.floor(flightTime / 3600)}h ${Math.floor((flightTime % 3600) / 60)}m ${flightTime % 60}s`}</div>
     </div>
     <hr class="border-[#2d2d2d] my-3" />
       <div class="w-full mb-2">Loaded Flight Plan: <span class="text-[#66e1ff]">{flightPlanTitle || 'No flight plan loaded.'}</span></div>

@@ -30,6 +30,7 @@
         batteryStatus={100}
         altitudeLimited={100}
         mavName="CUAV X7 Running Ardupilot"
+        mavType="Multirotor"
       />
     </div>
     <div class="manage-flight-plans col-span-2 row-span-4">
