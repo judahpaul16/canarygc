@@ -1,6 +1,5 @@
 <script lang="ts">
     import PocketBase from "pocketbase";
-    import { onMount } from "svelte";
     import { mapStore, mavLocationStore, markersStore, polylinesStore } from "../stores/mapStore";
     import { flightPlanTitleStore, flightPlanActionsStore, type FlightPlanAction } from "../stores/flightPlanStore";
     import Modal from "./Modal.svelte";
@@ -19,22 +18,14 @@
         };
     } = {};
 
-    flightPlanActionsStore.subscribe((value) => {
-        actions = value;
-    });
+    let markers: Map<number, L.Marker> = new Map(); // Map to keep track of markers
+    let polylines: Map<string, L.Polyline> = new Map(); // Map to keep track of polylines
 
-    let map: L.Map | null = null;
-    let mavLocation: L.LatLng | null = null;
+    $: actions = $flightPlanActionsStore;
 
-    mapStore.subscribe((value: L.Map | null) => {
-        if (value) {
-            map = value;
-        }
-    });
+    $: map = $mapStore;
 
-    mavLocationStore.subscribe((value) => {
-        mavLocation = value;
-    });
+    $: mavLocation = $mavLocationStore;
 
     function toggleFlightPlans() {
         const modal = new ManageFlightPlans({
@@ -78,6 +69,8 @@
                     notification: true,
                 },
             });
+            flightPlanTitleStore.set(flightPlan.title);
+            flightPlanActionsStore.set(flightPlan.actions);
         }
     }
 
@@ -140,22 +133,7 @@
     }
 
     async function removeAllActions() {
-        let L = await import("leaflet");
-        map!.eachLayer((layer) => {
-            if (layer instanceof L.Marker || layer instanceof L.Polyline) {
-                map!.removeLayer(layer);
-            }
-        });
-        const icon = L.icon({
-            iconUrl: "map/here.png",
-            iconSize: [45, 45],
-            iconAnchor: [23, 45],
-            popupAnchor: [0, -45],
-            shadowSize: [41, 41],
-        });
-        L.marker([mavLocation?.lat || 33.749, mavLocation?.lng || -84.388], {
-            icon: icon,
-        }).addTo(map!);
+        removeAllMarkers();
 
         document.querySelectorAll(".action-container").forEach((el) => {
             el.remove();
@@ -185,6 +163,16 @@
                 onConfirm: removeAllActions,
             },
         });
+    }
+
+    function removeAllMarkers() {
+        markers.forEach((marker) => {
+            // not the first marker
+            if (map?.hasLayer(marker) && marker.getLatLng() !== mavLocation) {
+            map.removeLayer(marker);
+            }
+        });
+        markers.clear();
     }
 </script>
 

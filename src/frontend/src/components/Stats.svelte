@@ -18,8 +18,9 @@
   export let altitudeLimited: number;
   export let flightProgress: number = 50;
 
-  let flightPlanTitle = get(flightPlanTitleStore);
   let interval: number;
+
+  $: flightPlanTitle = $flightPlanTitleStore;
 
   function getRandomInt(min: number, max: number): number {
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -283,46 +284,46 @@
       <div>Altitude Limited: {altitudeLimited} m</div>
     </div>
     <hr class="border-[#2d2d2d] my-3" />
-    <div class="w-full mb-2">Loaded Flight Plan: <span class="text-[#66e1ff]">{flightPlanTitle || 'No flight plan loaded.'}</span></div>
-    <div class="flex flex-col items-center justify-end">
-      <div class="w-full">
-        <span>Flight Progress: {flightProgress}% (ETA 00:00:00)</span>
-        <div class="progress-bar bg-gray-700 rounded-full h-2.5 mt-3">
-          <div class="progress-bar-inner h-2.5 rounded-full" style="width: {flightProgress}%;"></div>
+      <div class="w-full mb-2">Loaded Flight Plan: <span class="text-[#66e1ff]">{flightPlanTitle || 'No flight plan loaded.'}</span></div>
+      <div class="flex flex-col items-center justify-end">
+        <div class="w-full">
+          <span>Flight Progress: {flightProgress}% (ETA 00:00:00)</span>
+          <div class="progress-bar bg-gray-700 rounded-full h-2.5 mt-3">
+            <div class="progress-bar-inner h-2.5 rounded-full" style="width: {flightProgress}%;"></div>
+          </div>
+        </div>
+        <div class="button-container mt-6">
+          <div class="relative group">
+            <button class="circular-button" on:click={stopFlight}>
+              <i class="fas fa-stop text-red-400"></i>
+              <div class="tooltip">Stop Flight</div>
+            </button>
+          </div>
+          <div class="relative group">
+            <button class="circular-button" on:click={resumeFlight} disabled>
+              <i class="fas fa-play"></i>
+              <div class="tooltip">Start/Resume Flight</div>
+            </button>
+          </div>
+          <div class="relative group">
+            <button class="circular-button" on:click={pauseFlight}>
+              <i class="fas fa-pause"></i>
+              <div class="tooltip">Pause Flight (Loiter)</div>
+            </button>
+          </div>
+          <div class="relative group flex flex-col items-center">
+            <button class="circular-button" on:click={initLanding}>
+              <i class="fas fa-arrow-down"></i>
+              <div class="tooltip">Land</div>
+            </button>
+          </div>
+          <div class="relative group">
+            <button class="circular-button" on:click={returnHome}>
+              <i class="fas fa-home"></i>
+              <div class="tooltip">Return Home</div>
+            </button>
+          </div>
         </div>
       </div>
-      <div class="button-container mt-6">
-        <div class="relative group">
-          <button class="circular-button" on:click={stopFlight}>
-            <i class="fas fa-stop text-red-400"></i>
-            <div class="tooltip">Stop Flight</div>
-          </button>
-        </div>
-        <div class="relative group">
-          <button class="circular-button" on:click={resumeFlight} disabled>
-            <i class="fas fa-play"></i>
-            <div class="tooltip">Start/Resume Flight</div>
-          </button>
-        </div>
-        <div class="relative group">
-          <button class="circular-button" on:click={pauseFlight}>
-            <i class="fas fa-pause"></i>
-            <div class="tooltip">Pause Flight (Loiter)</div>
-          </button>
-        </div>
-        <div class="relative group flex flex-col items-center">
-          <button class="circular-button" on:click={initLanding}>
-            <i class="fas fa-arrow-down"></i>
-            <div class="tooltip">Land</div>
-          </button>
-        </div>
-        <div class="relative group">
-          <button class="circular-button" on:click={returnHome}>
-            <i class="fas fa-home"></i>
-            <div class="tooltip">Return Home</div>
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
