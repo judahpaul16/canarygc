@@ -7,13 +7,8 @@
 
   export let mavName: string = "MAV 1";
   export let speed: number;
-  export let height: number;
+  export let altitude: number;
   export let flightTime: number;
-  export let lens: string;
-  export let iso: number;
-  export let frameLine: string;
-  export let shutter: number;
-  export let resolution: string;
   export let batteryStatus: number;
   export let altitudeLimited: number;
   export let flightProgress: number = 50;
@@ -28,16 +23,15 @@
 
   function mockDataUpdate() {
     speed = Math.max(0, Math.min(20, speed + getRandomInt(-2, 2)));
-    height = Math.max(0, Math.min(100, height + getRandomInt(-5, 5)));
+    altitude = Math.max(0, Math.min(100, altitude + getRandomInt(-5, 5)));
     flightTime = flightTime + 1;
-    frameLine = `${getRandomInt(24, 60)}fps`;
     batteryStatus = Math.max(0, Math.min(100, batteryStatus - 1));
     flightProgress = Math.max(0, Math.min(100, flightProgress + 1));
   }
 
   onMount(() => {
     speed = 20;
-    height = 0;
+    altitude = 0;
     batteryStatus = 100;
     altitudeLimited = 100;
     interval = window.setInterval(() => {
@@ -50,7 +44,7 @@
   });
 
   function stopFlight() {
-    new Modal({
+    let modal = new Modal({
       target: document.body,
       props: {
         title: 'Stop Flight',
@@ -77,7 +71,7 @@
   }
 
   function pauseFlight() {
-    new Modal({
+    let modal = new Modal({
       target: document.body,
       props: {
         title: 'Pause Flight',
@@ -104,7 +98,7 @@
   }
 
   function resumeFlight() {
-    new Modal({
+    let modal = new Modal({
       target: document.body,
       props: {
         title: 'Resume Flight',
@@ -130,7 +124,7 @@
   }
 
   function returnHome() {
-    new Modal({
+    let modal = new Modal({
       target: document.body,
       props: {
         title: 'Return Home',
@@ -157,7 +151,7 @@
   }
 
   function initLanding() {
-    new Modal({
+    let modal = new Modal({
       target: document.body,
       props: {
         title: 'Land',
@@ -216,7 +210,7 @@
   .button-container {
     display: flex;
     justify-content: center;
-    gap: calc(0.5rem + 1vw);
+    gap: 1vw;
     margin-top: 1.5rem;
   }
 
@@ -270,18 +264,13 @@
 <div class="stats bg-[#1c1c1e] text-white p-4 rounded-lg flex flex-col space-y-2 h-full overflow-y-auto text-sm">
   <h2 class="text-lg font-bold">{mavName}</h2>
   <hr class="border-[#2d2d2d]" />
-  <div class="h-full flex flex-col justify-center">
-    <div class="grid grid-cols-2 gap-4">
+  <div class="h-full flex flex-col justify-evenly">
+    <div class="grid grid-cols-2 gap-2">
       <div>Speed: {speed} m/s</div>
-      <div>Height: {height} m</div>
+      <div>Altitude: {altitude} m</div>
       <div>Flight Time: {`${Math.floor(flightTime / 3600)}h ${Math.floor((flightTime % 3600) / 60)}m ${flightTime % 60}s`}</div>
-      <div>Lens: {lens}</div>
-      <div>ISO: {iso}</div>
-      <div>Frame Line: {frameLine}</div>
-      <div>Shutter: {shutter}</div>
-      <div>Resolution: {resolution}</div>
-      <div class="battery-status {batteryStatus < 20 ? 'red' : batteryStatus < 50 ? 'yellow' : 'green'}">Battery Status: {batteryStatus}%</div>
       <div>Altitude Limited: {altitudeLimited} m</div>
+      <div class="battery-status {batteryStatus < 20 ? 'red' : batteryStatus < 50 ? 'yellow' : 'green'}">Battery Status: {batteryStatus}%</div>
     </div>
     <hr class="border-[#2d2d2d] my-3" />
       <div class="w-full mb-2">Loaded Flight Plan: <span class="text-[#66e1ff]">{flightPlanTitle || 'No flight plan loaded.'}</span></div>

@@ -25,13 +25,8 @@
     <div class="stats col-span-4 row-span-4">
       <Stats 
         speed={20} 
-        height={80} 
+        altitude={80} 
         flightTime={360} 
-        lens="25 mm" 
-        iso={600} 
-        frameLine="1920 x 1080" 
-        shutter={180} 
-        resolution="1280 x 720"
         batteryStatus={100}
         altitudeLimited={100}
         mavName="CUAV X7 Running Ardupilot"
