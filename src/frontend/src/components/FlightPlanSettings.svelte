@@ -115,7 +115,7 @@
     }
 
     async function removeAllActions() {
-        removeAllMarkers();
+        actions = {};
 
         document.querySelectorAll(".action-container").forEach((el) => {
             el.remove();
@@ -129,8 +129,6 @@
         mapStore.set(map);
         flightPlanTitleStore.set("");
         flightPlanActionsStore.set(actions);
-        markersStore.set(new Map());
-        polylinesStore.set(new Map());
     }
 
     function confirmClear() {
@@ -145,16 +143,6 @@
                 onConfirm: removeAllActions,
             },
         });
-    }
-
-    function removeAllMarkers() {
-        markers.forEach((marker) => {
-            // not the first marker
-            if (map?.hasLayer(marker) && marker.getLatLng() !== mavLocation) {
-            map.removeLayer(marker);
-            }
-        });
-        markers.clear();
     }
 </script>
 

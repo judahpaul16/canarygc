@@ -218,6 +218,15 @@
       }
     });
     markers.clear();
+
+    polylines.forEach(polyline => {
+      if (leafletMap?.hasLayer(polyline)) {
+        leafletMap.removeLayer(polyline);
+      }
+    });
+    polylines.clear();
+    markersStore.set(markers);
+    polylinesStore.set(polylines);
   }
   
   function removeConnectedPolylines(index: number) {
