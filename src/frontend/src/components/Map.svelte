@@ -7,8 +7,7 @@
   import Modal from './Modal.svelte';
 
   export let hideOverlay: boolean = false;
-  export let lat: number = 33.749;
-  export let lon: number = -84.388;
+  export let mavLocation: L.LatLng | { lat: number; lng: number };;
 
   const apiKey = import.meta.env.VITE_ALTITUDE_ANGEL_API_KEY;
 
@@ -45,7 +44,12 @@
   
   $: leafletMap = $mapStore;
 
-  $: mavLocation = $mavLocationStore;
+  $: mavLocation = $mavLocationStore,
+    markers.forEach((marker) => {
+      if (marker.getLatLng() === mavLocation) {
+        marker.setLatLng(mavLocation);
+      }
+    });
 
   $: actions = $flightPlanActionsStore,
     removeAllMarkers(),
@@ -148,6 +152,8 @@
   }
 
   function initializeLeafletMap() {
+    let lat = mavLocation.lat;
+    let lon = mavLocation.lng;
     const icon = L.icon({
       iconUrl: 'map/here.png',
       iconSize: [45, 45],
@@ -349,7 +355,7 @@
         let mavLocation = get(mavLocationStore)!;
         let currentMarkerLatLng = firstMarker.getLatLng();
         if (mavLocation && currentMarkerLatLng) {
-            addPolyline(mavLocation, currentMarkerLatLng);
+            addPolyline(mavLocation as L.LatLng, currentMarkerLatLng);
         }
       }
     }

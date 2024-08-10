@@ -5,11 +5,10 @@
   import Controls from '../../components/Controls.svelte';
   import Compass from '../../components/Compass.svelte';
   import ManageFlightPlans from '../../components/ManageFlightPlans.svelte';
+  import { mavLocationStore } from '../../stores/mapStore';
 
-  let user;
   $: user = $authData;
-  const lat: number = 33.749;
-  const lon: number = -84.388;
+  $: mavLocation = $mavLocationStore
 
 </script>
 
@@ -41,7 +40,7 @@
     </div>
     <div class="compass col-span-2 row-span-3 flex justify-end items-end">
       <div class="w-full h-full">
-        <Compass />
+        <Compass {mavLocation} />
       </div>
     </div>
   </div>
