@@ -15,7 +15,7 @@
   let altitudeAngelMap: any;
   let leafletMap: any;
   let currentMap: 'altitudeAngel' | 'leaflet' = 'leaflet'; // Default to Leaflet
-  let zoom = 23;
+  let zoom = 16;
 
   let actions: {
       [key: number]: {
@@ -42,8 +42,8 @@
   let icons: L.Icon[] = [];
   let markers: Map<number, L.Marker> = new Map(); // Map to keep track of markers
   let polylines: Map<string, L.Polyline> = new Map(); // Map to keep track of polylines
-
   let mavMarker: L.Marker;
+  let isDragging = false;
   
   $: leafletMap = $mapStore;
 
@@ -130,6 +130,31 @@
       mavLocation.lng = mavLocation.lng - 0.00001;
       mavLocationStore.set(mavLocation);
     }, 1000);
+    
+    document.addEventListener('mousedown', (event) => {
+      isDragging = true;
+    });
+    document.addEventListener('mouseup', (event) => {
+      isDragging = false;
+    });
+    document.addEventListener('touchstart', (event) => {
+      isDragging = true;
+    });
+    document.addEventListener('touchend', (event) => {
+      isDragging = false;
+    });
+    let zoomIn = document.querySelector('.leaflet-control-zoom-in');
+    let zoomOut = document.querySelector('.leaflet-control-zoom-out');
+    if (zoomIn) {
+      zoomIn.addEventListener('click', () => {
+        zoom = zoom + 1;
+      });
+    }
+    if (zoomOut) {
+      zoomOut.addEventListener('click', () => {
+        zoom = zoom - 1;
+      });
+    }
   });
 
   function initializeAltitudeAngelMap() {
@@ -159,14 +184,12 @@
   }
 
   function initializeLeafletMap() {
-    let lat = mavLocation.lat;
-    let lon = mavLocation.lng;
-    leafletMap = L.map('map').setView([lat+0.002, lon], zoom);
+    leafletMap = L.map('map').setView(mavLocation, zoom);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {}).addTo(leafletMap);
     updateMAVMarker();
     
     mapStore.set(leafletMap);
-    mavLocationStore.set(L.latLng(lat, lon));
+    mavLocationStore.set(mavLocation);
   }
 
   function toggleMap() {
@@ -393,7 +416,9 @@
             mavMarker = L.marker(mavLocation as L.LatLng, { icon: icon })
               .bindPopup('MAV is here: ' + mavLocation.lat + ', ' + mavLocation.lng);
             leafletMap.addLayer(mavMarker);
-            leafletMap.setView(mavLocation as L.LatLng, zoom);
+            if (!isDragging) {
+              leafletMap.setView(mavLocation as L.LatLng);
+            }
           }
         };
       });
