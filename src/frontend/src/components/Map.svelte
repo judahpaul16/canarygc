@@ -416,6 +416,7 @@
             mavMarker = L.marker(mavLocation as L.LatLng, { icon: icon })
               .bindPopup('MAV is here: ' + mavLocation.lat + ', ' + mavLocation.lng);
             leafletMap.addLayer(mavMarker);
+            updateMarkersAndPolylines();
             if (!isDragging) {
               leafletMap.setView(mavLocation as L.LatLng);
             }
