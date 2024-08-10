@@ -5,7 +5,6 @@
   import { get } from 'svelte/store';
   import Modal from './Modal.svelte';
 
-  let L: typeof import('leaflet');
   export let title: string = '';
   let actions: {
       [key: number]: {
@@ -23,7 +22,6 @@
     'DO_SET_SERVO', 'DO_REPEAT_SERVO', 'DO_DIGICAM_CONFIGURE', 'DO_DIGICAM_CONTROL', 'DO_FENCE_ENABLE',
     'DO_ENGINE_CONTROL', 'CONDITION_DELAY', 'CONDITION_CHANGE_ALT', 'CONDITION_DISTANCE', 'CONDITION_YAW'
   ];
-  let icons: L.Icon[] = [];
   
   $: map = $mapStore;
 
@@ -47,9 +45,6 @@
     flightPlanActionsStore.subscribe((value) => {
       actions = value;
     });
-
-    const module = await import('leaflet');
-    L = module;
 
     const input = document.querySelector('input[type="text"]') as HTMLInputElement;
     function resizeInput() {

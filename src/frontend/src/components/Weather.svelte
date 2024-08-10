@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import weatherCodes from '../lib/weathercodes.json';
+  import { mavLocationStore } from '../stores/mapStore';
 
   type WeatherCode = {
     day: {
@@ -19,10 +20,10 @@
 
   const weatherCodesTyped: WeatherCodes = weatherCodes as WeatherCodes;
 
-  export let lat: number = 33.749;
-  export let lon: number = -84.388;
-
   export let isDashboard: boolean = false;
+  export let mavLocation: L.LatLng | { lat: number; lng: number };;
+
+  $: mavLocation = $mavLocationStore;
 
   let locationName = '';
   let temperature = '';
@@ -33,10 +34,10 @@
 
   async function fetchWeather() {
     try {
-      const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=precipitation_probability`);
+      const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${mavLocation.lat}&longitude=${mavLocation.lng}&current_weather=true&hourly=precipitation_probability`);
       const weatherData = await weatherResponse.json();
 
-      const geocodeResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+      const geocodeResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${mavLocation.lat}&lon=${mavLocation.lng}`);
       const geocodeData = await geocodeResponse.json();
 
       if (weatherResponse.ok && geocodeResponse.ok) {

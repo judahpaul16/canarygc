@@ -6,11 +6,11 @@
     import Compass from '../../components/Compass.svelte';
     import FlightPlan from '../../components/FlightPlan.svelte';
     import FlightPlanSettings from '../../components/FlightPlanSettings.svelte';
+    import { mavLocationStore } from '../../stores/mapStore';
   
-    let user;
     $: user = $authData;
-    const lat: number = 33.749;
-    const lon: number = -84.388;
+    
+    $: mavLocation = $mavLocationStore
   
     onMount(() => {
       setTimeout(() => {
@@ -26,13 +26,13 @@
   <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">
     <div class="dashboard grid grid-cols-12 grid-rows-7 gap-4 p-6 bg-[#121212] rounded-[30px] overflow-auto max-h-[90vh]">
       <div class="map col-span-10 row-span-4">
-        <Map />
+        <Map {mavLocation} />
       </div>
       <div class="weather col-span-2 row-span-2">
-        <Weather {lat} {lon} />
+        <Weather {mavLocation} />
       </div>
       <div class="compass col-span-2 row-span-2">
-        <Compass />
+        <Compass {mavLocation} />
       </div>
       <div class="flight-plan col-span-10 row-span-2">
         <FlightPlan />

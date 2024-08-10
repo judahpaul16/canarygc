@@ -1,27 +1,43 @@
-<script>
+<script lang="ts">
   import { onMount, onDestroy } from 'svelte';
+  import { mavLocationStore } from '../stores/mapStore';
+  
+  export let mavLocation: L.LatLng | { lat: number; lng: number };;
 
-  let currentDegree = 83; // Mock initial degree
-  let currentLat = "50°26'31\"N"; // Mock initial latitude
-  let currentLong = "30°28'50\"E"; // Mock initial longitude
-  /**
-   * @type {number | undefined}
-   */
-  let interval;
+  $: mavLocation = $mavLocationStore;
 
-  /**
-   * Update the compass with a new degree and mock lat/long.
-   * @param {number} newDegree - The new degree to set the compass to.
-   */
-  function updateCompass(newDegree) {
+  let interval: number | undefined;
+  let currentLat = formatCoordinates(mavLocation.lat, true);
+  let currentLong = formatCoordinates(mavLocation.lng, false);
+  let heading = formatHeading(135);
+
+  function formatCoordinates(decimalDegree: number, isLatitude: boolean) {
+    const absDegree = Math.abs(decimalDegree);
+    const degrees = Math.floor(absDegree);
+    const minutes = Math.floor((absDegree - degrees) * 60);
+    const seconds = ((absDegree - degrees - minutes / 60) * 3600).toFixed(2);
+    const direction = isLatitude
+      ? (decimalDegree < 0 ? 'S' : 'N')
+      : (decimalDegree < 0 ? 'W' : 'E');
+    
+    return `${degrees}°${minutes}'${seconds}"${direction}`;
+  }
+
+  function formatHeading(heading: number) {
+    const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+    const index = Math.round(((heading % 360) / 45) % 8);
+    return `${heading}° ${directions[index]}`;
+  }
+
+  function updateCompass(newHeading: number) {
     const compassArrow = document.querySelector('.compass-arrow');
     const directionDegree = document.getElementById('direction-degree');
     const latLongElement = document.getElementById('lat-long');
 
     if (compassArrow instanceof HTMLElement && directionDegree instanceof HTMLElement) {
-      compassArrow.style.transform = `translate(-50%, -50%) rotate(${newDegree}deg)`;
-      directionDegree.textContent = `${newDegree}°`;
-      currentDegree = newDegree;
+      compassArrow.style.transform = `translate(-50%, -50%) rotate(${newHeading}deg)`;
+      directionDegree.textContent = formatHeading(newHeading);
+      heading = String(newHeading);
     }
 
     if (latLongElement instanceof HTMLElement) {
@@ -33,10 +49,9 @@
   }
 
   onMount(() => {
-    // Mock data update
     interval = setInterval(() => {
-      const newDegree = Math.floor(Math.random() * 360);
-      updateCompass(newDegree);
+      const newHeading = Math.floor(Math.random() * 360);
+      updateCompass(newHeading);
     }, 3000);
   });
 
@@ -110,7 +125,7 @@
 </style>
 
 <div class="compass bg-[#1c1c1e] text-white rounded-lg flex flex-col items-center justify-center h-full w-full overflow-auto p-4">
-  <div id="direction-degree" class="bg-[#62bbff] p-2 text-black text-xs rounded-full">83°</div>
+  <div id="direction-degree" class="bg-[#62bbff] p-2 text-black text-xs rounded-full">83° NE</div>
   <div class="compass-container">
     <div class="compass-circle">
       <i class="fas fa-arrow-up compass-arrow"></i>

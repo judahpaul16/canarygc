@@ -2,15 +2,18 @@
   import Map from './Map.svelte';
   import DPad from './DPad.svelte';
   import Weather from './Weather.svelte';
+  import { mavLocationStore } from '../stores/mapStore';
+
+  $: mavLocation = $mavLocationStore;
 </script>
 
 <div class="controls bg-[#1c1c1e] text-white px-10 rounded-lg h-full flex space-x-4 items-center overflow-x-auto">
   <div class="map-container flex-shrink-0 h-48 w-48">
-    <Map hideOverlay={true} />
+    <Map {mavLocation} hideOverlay={true} />
   </div>
   <div class="flex w-full justify-center">
     <div class="weather column flex flex-col items-center justify-center">
-      <Weather isDashboard={true} />
+      <Weather {mavLocation} isDashboard={true} />
     </div>
     <div class="separator"></div>
     <div class="inputs column h-full flex flex-col items-center justify-center text-center min-w-[150px] overflow-auto gap-2 self-center">
