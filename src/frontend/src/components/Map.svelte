@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import '@fortawesome/fontawesome-free/css/all.min.css';
-  import { mapStore, mavLocationStore, markersStore, polylinesStore } from '../stores/mapStore';
+  import { mapStore, mavLocationStore, mavHeadingStore, markersStore, polylinesStore } from '../stores/mapStore';
   import { flightPlanTitleStore, flightPlanActionsStore } from '../stores/flightPlanStore';
   import { get } from 'svelte/store';
   import Modal from './Modal.svelte';
@@ -15,6 +15,7 @@
   let altitudeAngelMap: any;
   let leafletMap: any;
   let currentMap: 'altitudeAngel' | 'leaflet' = 'leaflet'; // Default to Leaflet
+  let zoom = 23;
 
   let actions: {
       [key: number]: {
@@ -41,15 +42,15 @@
   let icons: L.Icon[] = [];
   let markers: Map<number, L.Marker> = new Map(); // Map to keep track of markers
   let polylines: Map<string, L.Polyline> = new Map(); // Map to keep track of polylines
+
+  let mavMarker: L.Marker;
   
   $: leafletMap = $mapStore;
 
+  $: mavHeading = $mavHeadingStore;
+
   $: mavLocation = $mavLocationStore,
-    markers.forEach((marker) => {
-      if (marker.getLatLng() === mavLocation) {
-        marker.setLatLng(mavLocation);
-      }
-    });
+        updateMAVMarker();
 
   $: actions = $flightPlanActionsStore,
     removeAllMarkers(),
@@ -123,6 +124,12 @@
     Object.keys(actions).forEach((index) => {
       updateMap(Number(index));
     });
+
+    setInterval(() => {
+      mavLocation.lat = mavLocation.lat - 0.00001;
+      mavLocation.lng = mavLocation.lng - 0.00001;
+      mavLocationStore.set(mavLocation);
+    }, 1000);
   });
 
   function initializeAltitudeAngelMap() {
@@ -154,17 +161,10 @@
   function initializeLeafletMap() {
     let lat = mavLocation.lat;
     let lon = mavLocation.lng;
-    const icon = L.icon({
-      iconUrl: 'map/here.png',
-      iconSize: [45, 45],
-      iconAnchor: [23, 45],
-      popupAnchor: [0, -45],
-      shadowSize: [41, 41]
-    });
-    leafletMap = L.map('map').setView([lat+0.002, lon], 13);
+    leafletMap = L.map('map').setView([lat+0.002, lon], zoom);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {}).addTo(leafletMap);
-    L.marker([lat, lon], {icon: icon}).addTo(leafletMap)
-      .bindPopup('MAV is here');
+    updateMAVMarker();
+    
     mapStore.set(leafletMap);
     mavLocationStore.set(L.latLng(lat, lon));
   }
@@ -358,6 +358,45 @@
             addPolyline(mavLocation as L.LatLng, currentMarkerLatLng);
         }
       }
+    }
+  }
+
+  function updateMAVMarker() {
+    if (leafletMap && mavLocation && mavHeading) {
+
+      fetch('map/here.png').then((response) => {
+        return response.blob();
+      }).then((blob) => {
+        let url = URL.createObjectURL(blob);
+        let img = new Image();
+        img.src = url;
+        img.onload = () => {
+          let canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          let ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.translate(img.width / 2, img.height / 2);
+            ctx.rotate((mavHeading) * Math.PI / 180);
+            ctx.drawImage(img, -img.width / 2, -img.height / 2);
+            ctx.save();
+            let icon = L.icon({
+              iconUrl: canvas.toDataURL(),
+              iconSize: [45, 45],
+              iconAnchor: [23, 45],
+              popupAnchor: [0, -45],
+              shadowSize: [41, 41]
+            });
+            if (mavMarker) {
+              leafletMap.removeLayer(mavMarker);
+            }
+            mavMarker = L.marker(mavLocation as L.LatLng, { icon: icon })
+              .bindPopup('MAV is here: ' + mavLocation.lat + ', ' + mavLocation.lng);
+            leafletMap.addLayer(mavMarker);
+            leafletMap.setView(mavLocation as L.LatLng, zoom);
+          }
+        };
+      });
     }
   }
 </script>

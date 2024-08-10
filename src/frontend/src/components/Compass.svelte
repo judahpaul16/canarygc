@@ -1,15 +1,23 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
-  import { mavLocationStore } from '../stores/mapStore';
+  import { onMount } from 'svelte';
+  import { mavLocationStore, mavHeadingStore } from '../stores/mapStore';
   
   export let mavLocation: L.LatLng | { lat: number; lng: number };;
+  let heading: string;
 
   $: mavLocation = $mavLocationStore;
+  $: heading = formatHeading($mavHeadingStore);
 
-  let interval: number | undefined;
   let currentLat = formatCoordinates(mavLocation.lat, true);
   let currentLong = formatCoordinates(mavLocation.lng, false);
-  let heading = formatHeading(135);
+
+  onMount(() => {
+    const updateHeading = (newHeading: number) => {
+      updateCompass(newHeading);
+    };
+
+    mavHeadingStore.subscribe(updateHeading);
+  });
 
   function formatCoordinates(decimalDegree: number, isLatitude: boolean) {
     const absDegree = Math.abs(decimalDegree);
@@ -37,27 +45,13 @@
     if (compassArrow instanceof HTMLElement && directionDegree instanceof HTMLElement) {
       compassArrow.style.transform = `translate(-50%, -50%) rotate(${newHeading}deg)`;
       directionDegree.textContent = formatHeading(newHeading);
-      heading = String(newHeading);
+      heading = formatHeading(newHeading);
     }
 
     if (latLongElement instanceof HTMLElement) {
-      // Generate mock latitude and longitude
-      currentLat = `${Math.floor(Math.random() * 90)}°${Math.floor(Math.random() * 60)}'${Math.floor(Math.random() * 60)}"N`;
-      currentLong = `${Math.floor(Math.random() * 180)}°${Math.floor(Math.random() * 60)}'${Math.floor(Math.random() * 60)}"E`;
       latLongElement.textContent = `${currentLat} ${currentLong}`;
     }
   }
-
-  onMount(() => {
-    interval = setInterval(() => {
-      const newHeading = Math.floor(Math.random() * 360);
-      updateCompass(newHeading);
-    }, 3000);
-  });
-
-  onDestroy(() => {
-    clearInterval(interval);
-  });
 </script>
 
 <style>
@@ -125,7 +119,7 @@
 </style>
 
 <div class="compass bg-[#1c1c1e] text-white rounded-lg flex flex-col items-center justify-center h-full w-full overflow-auto p-4">
-  <div id="direction-degree" class="bg-[#62bbff] p-2 text-black text-xs rounded-full">83° NE</div>
+  <div id="direction-degree" class="bg-[#62bbff] p-2 text-black text-xs rounded-full">{heading}</div>
   <div class="compass-container">
     <div class="compass-circle">
       <i class="fas fa-arrow-up compass-arrow"></i>
@@ -136,6 +130,6 @@
     <div class="west">W</div>
   </div>
   <div class="mt-2 text-center text-xs">
-    <div id="lat-long">50°26'31"N 30°28'50"E</div>
+    <div id="lat-long">{currentLat} {currentLong}</div>
   </div>
 </div>
