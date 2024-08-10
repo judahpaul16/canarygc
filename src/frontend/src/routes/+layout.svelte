@@ -3,7 +3,7 @@
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import { authData } from '../stores/authStore';
   import { page } from '$app/stores';
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy, afterUpdate } from 'svelte';
   import { goto } from '$app/navigation';
   import '../app.css';
 
@@ -11,6 +11,16 @@
 
   let currentPath = '';
   $: currentPath = $page.url.pathname;
+  let heightOfDashboard = 800;
+
+  function updateDashboardHeight() {
+    const dashboard = document.querySelector('.dashboard');
+    if (dashboard) {
+      heightOfDashboard = dashboard.clientHeight;
+    }
+  }
+
+  let resizeObserver: ResizeObserver;
 
   onMount(() => {
     if (typeof window !== 'undefined' && authData.checkExpired() && window.location.pathname !== '/') {
@@ -20,9 +30,34 @@
     
     initializeFlightPlansCollection();
     
-    setTimeout(() => {
-      window.dispatchEvent(new Event('resize'));
-    }, 1000);
+    const dashboard = document.querySelector('.dashboard');
+    if (dashboard) {
+      resizeObserver = new ResizeObserver(() => {
+        updateDashboardHeight();
+      });
+      resizeObserver.observe(dashboard);
+    }
+    
+    updateDashboardHeight();
+  });
+
+  onDestroy(() => {
+    if (resizeObserver) {
+      resizeObserver.disconnect();
+    }
+  });
+
+  afterUpdate(() => {
+    const dashboard = document.querySelector('.dashboard');
+    if (dashboard) {
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+      resizeObserver = new ResizeObserver(() => {
+        updateDashboardHeight();
+      });
+      resizeObserver.observe(dashboard);
+    }
   });
 
   async function initializeFlightPlansCollection() {
@@ -68,7 +103,7 @@
 
 <main class="flex overflow-auto">
   <!-- Desktop Navigation -->
-  <nav class="desktop-nav bg-[#1c1c1e] text-white w-min h-full p-4">
+  <nav class="desktop-nav bg-[#1c1c1e] text-white w-min h-full p-4" style="--heightOfDashboard: {heightOfDashboard}px;">
     <div class="mb-4">
       <a href="/" on:click|preventDefault={() => handleNavigation('/')}>
         <img src="/logo.png" alt="Logo" class="w-12 h-12">
@@ -129,7 +164,7 @@
     </div>
   </nav>
 
-  <div class="slot-container flex-grow px-8 justify-center items-center overflow-auto">
+  <div class="slot-container flex-grow pr-8 justify-center items-center overflow-auto">
     <slot />
   </div>
 </main>
@@ -139,6 +174,19 @@
     background: url('background.png') no-repeat center center fixed;
     background-size: cover;
     margin: 0;
+  }
+
+  .desktop-nav {
+    display: grid;
+    align-content: baseline;
+    align-self: center;
+    border: 5px solid #121212;
+    border-right: none;
+    border-radius: 30px 0 0 30px;
+    margin-left: 2em;
+    max-height: 90vh;
+    height: var(--heightOfDashboard);
+    transition: height 0s;
   }
 
   .nav-button {
@@ -152,7 +200,11 @@
     color: #8d8d8e;
   }
 
-  .nav-button:hover, .nav-button:active {
+  .nav-button:hover {
+    background-color: #2d2d2d;
+  }
+
+  .nav-button:hover, .nav-button.active {
     color: white;
   }
 
