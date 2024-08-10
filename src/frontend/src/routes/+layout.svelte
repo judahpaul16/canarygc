@@ -119,30 +119,45 @@
 <main class="flex overflow-auto">
   <!-- Desktop Navigation -->
   <nav class="desktop-nav bg-[#1c1c1e] text-white w-min h-full p-4 hidden" style="--heightOfDashboard: {heightOfDashboard}px;">
-    <div class="mb-4">
-      <a href="/" on:click|preventDefault={() => handleNavigation('/')}>
-        <img src="/logo.png" alt="Logo" class="w-12 h-12">
-      </a>
-    </div>
     <div class="flex-grow flex flex-col items-center">
+      <div class="mb-5">
+        <a href="/" on:click|preventDefault={() => handleNavigation('/')}>
+          <img src="/logo.png" alt="Logo" class="w-12 h-12">
+        </a>
+      </div>
       {#if $authData}
         <a href="/dashboard" on:click|preventDefault={() => handleNavigation('/dashboard')} class="nav-button mb-4 {currentPath === '/dashboard' ? 'active' : ''}">
           <i class="nav-icon fas fa-tachometer-alt"></i>
+          <div class="tooltip">Dashboard</div>
         </a>
         <a href="/flight-planner" on:click|preventDefault={() => handleNavigation('/flight-planner')} class="nav-button mb-4 {currentPath === '/flight-planner' ? 'active' : ''}">
           <i class="nav-icon fas fa-route"></i>
+          <div class="tooltip">Flight Planner</div>
         </a>
         <a href="/profile" on:click|preventDefault={() => handleNavigation('/notifications')} class="nav-button mb-4 {currentPath === '/notifications' ? 'active' : ''}">
           <i class="nav-icon fas fa-bell"></i>
+          <div class="tooltip">Notification Settings</div>
         </a>
         <button on:click={handleLogout} class="nav-button mb-4">
           <i class="nav-icon fas fa-sign-out-alt"></i>
+          <div class="tooltip">Logout</div>
         </button>
       {:else}
         <a href="/login" on:click|preventDefault={() => handleNavigation('/login')} class="nav-button mb-4 {currentPath === '/login' ? 'active' : ''}">
           <i class="nav-icon fas fa-sign-in-alt"></i>
+          <div class="tooltip">Login</div>
         </a>
       {/if}
+    </div>
+    <div class="flex flex-col justify-self-end gap-3">
+      <button class="nav-button" aria-label="Documentation">
+        <i class="nav-icon fas fa-book"></i>
+        <div class="tooltip">Documentation</div>
+      </button>
+      <button class="nav-button" aria-label="GitHub" on:click|preventDefault={() => window.open('https://github.com/MAV-Manager/mmgcs', '_blank')}>
+        <i class="nav-icon fab fa-github"></i>
+        <div class="tooltip">GitHub</div>
+      </button>
     </div>
   </nav>
 
@@ -168,7 +183,7 @@
         <a href="/profile" on:click|preventDefault={() => handleNavigation('/notifications')} class="nav-button mb-4 {currentPath === '/notifications' ? 'active' : ''}">
           <i class="nav-icon fas fa-bell"></i>&nbsp;&nbsp;Notification Settings
         </a>
-        <button on:click={handleLogout} class="nav-button mb-4">
+        <button on:click|preventDefault={handleLogout} class="nav-button mb-4" type="button">
           <i class="nav-icon fas fa-sign-out-alt"></i>&nbsp;&nbsp;Logout
         </button>
       {:else}
@@ -192,7 +207,7 @@
   }
 
   .desktop-nav {
-    align-content: baseline;
+    align-content: space-between;
     align-self: center;
     border: 5px solid #121212;
     border-right: none;
@@ -207,6 +222,7 @@
     width: 40px;
     height: 40px;
     display: flex;
+    position: relative;
     justify-content: center;
     align-items: center;
     background-color: transparent;
@@ -229,6 +245,29 @@
   .nav-icon {
     font-size: 18px;
   }
+
+  .tooltip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin-bottom: 0.5rem;
+    background-color: black;
+    color: white;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
+    z-index: 1;
+    transform: translateX(50px);
+  }
+
+  .nav-button:hover .tooltip {
+    opacity: 1;
+    visibility: visible;
+  }
+
 
   /* Mobile Styles */
   @media (max-width: 990px) {
