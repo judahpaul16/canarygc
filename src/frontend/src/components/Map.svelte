@@ -126,7 +126,7 @@
     });
 
     setInterval(() => {
-      mavLocation.lat = mavLocation.lat - 0.00001;
+      mavLocation.lat = mavLocation.lat + 0.00001;
       mavLocation.lng = mavLocation.lng - 0.00001;
       mavLocationStore.set(mavLocation);
     }, 1000);
