@@ -17,7 +17,7 @@
 </sveltekit:head>
 
 <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">
-  <div class="dashboard grid grid-cols-12 grid-rows-7 gap-4 p-6 bg-[#121212] rounded-[30px] overflow-auto max-h-[90vh]">
+  <div class="dashboard w-full grid grid-cols-12 grid-rows-7 gap-4 p-6 bg-[#121212] rounded-[30px] rounded-l-none overflow-auto max-h-[90vh]">
     <div class="live-feed col-span-6 row-span-4">
       <LiveFeed />
     </div>
