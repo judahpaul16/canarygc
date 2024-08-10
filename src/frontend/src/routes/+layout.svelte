@@ -27,6 +27,14 @@
       authData.set(null);
       goto('/login');
     }
+
+    if (window.location.pathname === '/' || window.location.pathname === '/login') {
+      // @ts-ignore
+      document.querySelector('.desktop-nav').style.display = 'none';
+    } else {
+      // @ts-ignore
+      document.querySelector('.desktop-nav').style.display = 'grid';
+    }
     
     initializeFlightPlansCollection();
     
@@ -57,6 +65,13 @@
         updateDashboardHeight();
       });
       resizeObserver.observe(dashboard);
+    }
+    if (window.location.pathname === '/' || window.location.pathname === '/login') {
+      // @ts-ignore
+      document.querySelector('.desktop-nav').style.display = 'none';
+    } else {
+      // @ts-ignore
+      document.querySelector('.desktop-nav').style.display = 'grid';
     }
   });
 
@@ -103,7 +118,7 @@
 
 <main class="flex overflow-auto">
   <!-- Desktop Navigation -->
-  <nav class="desktop-nav bg-[#1c1c1e] text-white w-min h-full p-4" style="--heightOfDashboard: {heightOfDashboard}px;">
+  <nav class="desktop-nav bg-[#1c1c1e] text-white w-min h-full p-4 hidden" style="--heightOfDashboard: {heightOfDashboard}px;">
     <div class="mb-4">
       <a href="/" on:click|preventDefault={() => handleNavigation('/')}>
         <img src="/logo.png" alt="Logo" class="w-12 h-12">
@@ -177,7 +192,6 @@
   }
 
   .desktop-nav {
-    display: grid;
     align-content: baseline;
     align-self: center;
     border: 5px solid #121212;

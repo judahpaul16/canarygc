@@ -30,8 +30,8 @@
   <title>MAV Manager GCS - Login</title>
 </sveltekit:head>
 
-<div class="flex items-center justify-center h-full">
-  <div class="bg-gray-900 bg-opacity-75 text-white p-8 rounded-lg shadow-lg max-w-md w-full">
+<div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">
+  <div class="dashboard w-fit h-fit flex flex-col justify-center text-white p-10 bg-[#121212bd] rounded-[30px]">
     <h2 class="text-2xl font-bold mb-4 text-center">Login</h2>
     {#if error}
       <div class="mb-4 p-2 bg-red-100 text-red-700 rounded">{error}</div>
