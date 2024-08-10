@@ -11,7 +11,7 @@ if (typeof window !== 'undefined') {
 }
 
 export const mavLocationStore = writable<L.LatLng | { lat: number; lng: number }>(latLng);
-export const mavHeadingStore = writable<number>(220);
+export const mavHeadingStore = writable<number>(320);
 
 export const mapStore = writable<L.Map | null>(null);
 export const markersStore = writable<Map<number, L.Marker>>(new Map());

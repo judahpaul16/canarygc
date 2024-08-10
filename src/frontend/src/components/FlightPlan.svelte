@@ -68,8 +68,8 @@
       ...actions, 
       [newIndex]: {
         type: 'WAYPOINT',
-        lat: mavLocation.lat + 0.0049,
-        lon: mavLocation.lng + 0.0184,
+        lat: mavLocation.lat + 0.00225,
+        lon: mavLocation.lng - 0.00225,
         altitude: 100,
         notes: '',
         notify: false,
