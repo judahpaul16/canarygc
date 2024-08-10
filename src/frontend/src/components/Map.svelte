@@ -115,7 +115,7 @@
       return L.icon({
         iconUrl: marker,
         iconSize: [45, 45],
-        iconAnchor: [23, 45],
+        iconAnchor: [23, 40],
         popupAnchor: [0, -45],
         shadowSize: [41, 41]
       });
@@ -406,7 +406,7 @@
             let icon = L.icon({
               iconUrl: canvas.toDataURL(),
               iconSize: [45, 45],
-              iconAnchor: [23, 45],
+              iconAnchor: [23, 20],
               popupAnchor: [0, -45],
               shadowSize: [41, 41]
             });
