@@ -89,6 +89,9 @@
     max-width: 400px;
     text-align: center;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
 
   .weather-header {
@@ -118,7 +121,7 @@
   .weather-icon {
     width: 100px;
     height: 100px;
-    margin: auto;
+    margin-inline: auto;
   }
 
   #location-name {
