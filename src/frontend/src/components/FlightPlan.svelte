@@ -181,11 +181,11 @@
       </button>
       <button class="px-2 py-1 bg-[#da864e] text-white rounded-lg hover:bg-[#ff995e]" on:click={() => {}}>
         <i class="fas fa-pause"></i>
-        <div class="tooltip">Pause Flight</div>
+        <div class="tooltip">Pause Flight (Loiter)</div>
       </button>
       <button class="px-2 py-1 bg-[#f87171] text-white rounded-lg hover:bg-[#ff7e7e]" on:click={() => {}}>
         <i class="fas fa-stop"></i>
-        <div class="tooltip">Stop Flight</div>
+        <div class="tooltip">Stop Flight (RTL)</div>
       </button>
     </div>
     <div class="column overflow-auto" id="flight-plan-actions">
