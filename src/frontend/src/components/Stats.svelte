@@ -124,12 +124,12 @@
     });
   }
 
-  function returnHome() {
+  function releasePayload() {
     let modal = new Modal({
       target: document.body,
       props: {
-        title: 'Return Home',
-        content: 'Are you sure you want to return home?',
+        title: 'Release Payload',
+        content: 'Are you sure you want to release the payload?\nUse caution and ensure the drop zone is clear.',
         isOpen: true,
         confirmation: true,
         notification: false,
@@ -138,8 +138,8 @@
           const newModal = new Modal({
             target: document.body,
             props: {
-              title: 'Returning Home',
-              content: 'The MAV is returning home.',
+              title: 'Payload Released',
+              content: 'The payload has been released.',
               isOpen: true,
               confirmation: false,
               notification: true,
@@ -285,9 +285,21 @@
         </div>
         <div class="button-container mt-6">
           <div class="relative group">
+            <button class="circular-button" on:click={releasePayload}>
+              <i class="fas fa-parachute-box"></i>
+              <div class="tooltip">Release Payload</div>
+            </button>
+          </div>
+          <div class="relative group flex flex-col items-center">
+            <button class="circular-button" on:click={initLanding}>
+              <i class="fas fa-plane-arrival"></i>
+              <div class="tooltip">Initiate Landing</div>
+            </button>
+          </div>
+          <div class="relative group">
             <button class="circular-button" on:click={stopFlight}>
               <i class="fas fa-stop text-red-400"></i>
-              <div class="tooltip">Stop Flight</div>
+              <div class="tooltip">Stop Flight (RTL)</div>
             </button>
           </div>
           <div class="relative group">
@@ -300,18 +312,6 @@
             <button class="circular-button" on:click={pauseFlight}>
               <i class="fas fa-pause"></i>
               <div class="tooltip">Pause Flight (Loiter)</div>
-            </button>
-          </div>
-          <div class="relative group flex flex-col items-center">
-            <button class="circular-button" on:click={initLanding}>
-              <i class="fas fa-arrow-down"></i>
-              <div class="tooltip">Land</div>
-            </button>
-          </div>
-          <div class="relative group">
-            <button class="circular-button" on:click={returnHome}>
-              <i class="fas fa-home"></i>
-              <div class="tooltip">Return Home</div>
             </button>
           </div>
         </div>
