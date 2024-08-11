@@ -15,7 +15,7 @@
   let altitudeAngelMap: any;
   let leafletMap: any;
   let currentMap: 'altitudeAngel' | 'leaflet' = 'leaflet'; // Default to Leaflet
-  let zoom = 16;
+  let zoom = 17;
 
   let actions: {
       [key: number]: {
@@ -44,6 +44,7 @@
   let polylines: Map<string, L.Polyline> = new Map(); // Map to keep track of polylines
   let mavMarker: L.Marker;
   let isDragging = false;
+  let darkMode = true;
   
   $: leafletMap = $mapStore;
 
@@ -186,6 +187,10 @@
   function initializeLeafletMap() {
     leafletMap = L.map('map').setView(mavLocation, zoom);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {}).addTo(leafletMap);
+    if (darkMode) document.getElementById('map')!.classList.add('dark');
+    // @ts-ignore
+    if (hideOverlay) Array.from(document.querySelectorAll('.map-btn i')).forEach((element) => element.style.fontSize = "small");
+    
     updateMAVMarker();
     
     mapStore.set(leafletMap);
@@ -236,6 +241,14 @@
     const el = document.querySelector('.map-container');
     if (el instanceof HTMLElement) {
       toggleFullScreen(el);
+    }
+  }
+
+  function toggleDarkMode() {
+    const map = document.getElementById('map');
+    if (map) {
+      map.classList.toggle('dark');
+      darkMode = !darkMode;
     }
   }
 
@@ -407,7 +420,7 @@
               iconUrl: canvas.toDataURL(),
               iconSize: [45, 45],
               iconAnchor: [23, 20],
-              popupAnchor: [0, -45],
+              popupAnchor: [0, -15],
               shadowSize: [41, 41]
             });
             if (mavMarker) {
@@ -459,7 +472,10 @@
 <div class="map-container">
   <div id="aamap" class="relative h-full"></div>
   <div id="map" class="relative h-full rounded-lg z-0"></div>
-  <button class="absolute top-2 right-2 text-white bg-gray-800 bg-opacity-75 p-2 px-3 hover:bg-[#000000e6] rounded-full" on:click={handleFullScreen}>
+  <button class="map-btn absolute top-[3.2rem] right-2 text-white bg-black bg-opacity-75 p-2 px-3 hover:bg-[#1c1c1ee6] rounded-full" on:click={toggleDarkMode}>
+    <i class="fas fa-moon"></i>
+  </button>
+  <button class="map-btn absolute top-2 right-2 text-white bg-black bg-opacity-75 p-2 px-3 hover:bg-[#1c1c1ee6] rounded-full" on:click={handleFullScreen}>
     <i class="fas fa-expand"></i>
   </button>
   {#if !hideOverlay}

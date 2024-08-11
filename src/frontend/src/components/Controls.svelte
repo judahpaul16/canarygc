@@ -159,6 +159,12 @@
     font-size: 0.8rem;
   }
 
+  .map-container {
+    padding: 3px;
+    background: #3d3d3d;
+    border-radius: 10px;
+  }
+
   /* Mobile Styles */
   @media (max-width: 990px) {
     .controls {
