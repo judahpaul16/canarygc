@@ -52,3 +52,7 @@ html {
 iframe {
   border-radius: 1em;
 }
+
+.dashboard {
+  opacity: 0;
+}

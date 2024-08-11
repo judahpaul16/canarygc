@@ -10,13 +10,24 @@
   const pb = new PocketBase('http://localhost:8090');
 
   let currentPath = '';
+  let heightOfDashboard = 1000;
+
   $: currentPath = $page.url.pathname;
-  let heightOfDashboard = 800;
+
+  $: isNavHidden = currentPath === '/' || currentPath === '/login';
 
   function updateDashboardHeight() {
     const dashboard = document.querySelector('.dashboard');
     if (dashboard) {
       heightOfDashboard = dashboard.clientHeight;
+      if (window.location.pathname !== '/') {
+        heightOfDashboard = dashboard.clientHeight + 1;
+        let nav = document.querySelector('.desktop-nav');
+        // @ts-ignore
+        nav.style.opacity = 1;
+        // @ts-ignore
+        dashboard.style.opacity = 1;
+      }
     }
   }
 
@@ -26,14 +37,6 @@
     if (typeof window !== 'undefined' && authData.checkExpired() && window.location.pathname !== '/') {
       authData.set(null);
       goto('/login');
-    }
-
-    if (window.location.pathname === '/' || window.location.pathname === '/login') {
-      // @ts-ignore
-      document.querySelector('.desktop-nav').style.display = 'none';
-    } else {
-      // @ts-ignore
-      document.querySelector('.desktop-nav').style.display = 'grid';
     }
     
     initializeFlightPlansCollection();
@@ -119,7 +122,7 @@
 <main class="flex overflow-auto">
   <div class="bg-[#00000071] flex w-full h-full">
     <!-- Desktop Navigation -->
-    <nav class="desktop-nav bg-[#1c1c1e] text-white w-min h-full p-4 hidden" style="--heightOfDashboard: {heightOfDashboard}px;">
+    <nav class="desktop-nav bg-[#1c1c1e] text-white w-min h-full p-4 grid opacity-0" style="--heightOfDashboard: {heightOfDashboard}px;" class:opacity={!isNavHidden ? 1 : 0}>
       <div class="flex-grow flex flex-col items-center">
         <div class="mb-5">
           <button on:click|preventDefault={() => handleNavigation('/')}>
@@ -234,6 +237,7 @@
     max-height: 90vh;
     height: var(--heightOfDashboard);
     transition: height 0s;
+    transition: opacity 0.25s;
   }
 
   .nav-button {
