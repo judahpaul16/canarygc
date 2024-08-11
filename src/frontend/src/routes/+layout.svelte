@@ -117,85 +117,103 @@
 </script>
 
 <main class="flex overflow-auto">
-  <!-- Desktop Navigation -->
-  <nav class="desktop-nav bg-[#1c1c1e] text-white w-min h-full p-4 hidden" style="--heightOfDashboard: {heightOfDashboard}px;">
-    <div class="flex-grow flex flex-col items-center">
-      <div class="mb-5">
+  <div class="bg-[#00000071] flex w-full h-full">
+    <!-- Desktop Navigation -->
+    <nav class="desktop-nav bg-[#1c1c1e] text-white w-min h-full p-4 hidden" style="--heightOfDashboard: {heightOfDashboard}px;">
+      <div class="flex-grow flex flex-col items-center">
+        <div class="mb-5">
+          <button on:click|preventDefault={() => handleNavigation('/')}>
+            <img src="/logo.png" alt="Logo" class="w-12 h-12">
+          </button>
+        </div>
+        {#if $authData}
+          <button on:click|preventDefault={() => handleNavigation('/dashboard')} class="nav-button mb-4 {currentPath === '/dashboard' ? 'active' : ''}">
+            <i class="nav-icon fas fa-tachometer-alt"></i>
+            <div class="tooltip">Dashboard</div>
+          </button>
+          <button on:click|preventDefault={() => handleNavigation('/flight-planner')} class="nav-button mb-4 {currentPath === '/flight-planner' ? 'active' : ''}">
+            <i class="nav-icon fas fa-route"></i>
+            <div class="tooltip">Flight Planner</div>
+          </button>
+          <button on:click|preventDefault={() => handleNavigation('/event-log')} class="nav-button mb-4 {currentPath === '/event-log' ? 'active' : ''}">
+            <i class="nav-icon fas fa-bars-staggered"></i>
+            <div class="tooltip">Event Log</div>
+          </button>
+          <div class="separator h-[2px] w-[80%] rounded-2xl bg-[#2d2d2d] mb-4"></div>
+          <button on:click|preventDefault={() => handleNavigation('/user-settings')} class="nav-button mb-4 {currentPath === '/user-settings' ? 'active' : ''}">
+            <i class="nav-icon fas fa-user"></i>
+            <div class="tooltip">User Settings</div>
+          </button>
+          <button on:click|preventDefault={() => handleNavigation('/notifications')} class="nav-button mb-4 {currentPath === '/notifications' ? 'active' : ''}">
+            <i class="nav-icon fas fa-bell"></i>
+            <div class="tooltip">Notifications</div>
+          </button>
+          <button on:click={handleLogout} class="nav-button mb-4">
+            <i class="nav-icon fas fa-sign-out-alt"></i>
+            <div class="tooltip">Logout</div>
+          </button>
+        {:else}
+          <button on:click|preventDefault={() => handleNavigation('/login')} class="nav-button mb-4 {currentPath === '/login' ? 'active' : ''}">
+            <i class="nav-icon fas fa-sign-in-alt"></i>
+            <div class="tooltip">Login</div>
+          </button>
+        {/if}
+      </div>
+      <div class="flex flex-col justify-self-end gap-3">
+        <button class="nav-button" aria-label="GitHub" on:click|preventDefault={() => window.open('https://github.com/MAV-Manager/mmgcs', '_blank')}>
+          <i class="nav-icon fab fa-github"></i>
+          <div class="tooltip">GitHub</div>
+        </button>
+        <div class="separator h-[2px] w-[80%] mx-auto mb-2 rounded-2xl bg-[#2d2d2d]"></div>
+        <button class="nav-button" aria-label="FAA Rules" on:click|preventDefault={() => window.open('https://www.faa.gov/uas', '_blank')}>
+          <i class="nav-icon fas fa-plane-circle-exclamation"></i>
+          <div class="tooltip">FAA Rules and Regulations for Unmanned Aircraft Systems (UAS)</div>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav bg-[#1c1c1e] text-white p-4 md:hidden flex flex-col">
+      <div class="flex justify-between items-center">
+        <button class="nav-button" aria-label="Toggle Navigation" on:click={toggleNav}>
+          <i class="nav-icon fas fa-bars"></i>
+        </button>
+        <span class="text-xl font-semibold">MAV Manager GCS</span>
         <a href="/" on:click|preventDefault={() => handleNavigation('/')}>
-          <img src="/logo.png" alt="Logo" class="w-12 h-12">
+          <img src="/logo.png" alt="Logo" class="w-8 h-8">
         </a>
       </div>
-      {#if $authData}
-        <a href="/dashboard" on:click|preventDefault={() => handleNavigation('/dashboard')} class="nav-button mb-4 {currentPath === '/dashboard' ? 'active' : ''}">
-          <i class="nav-icon fas fa-tachometer-alt"></i>
-          <div class="tooltip">Dashboard</div>
-        </a>
-        <a href="/flight-planner" on:click|preventDefault={() => handleNavigation('/flight-planner')} class="nav-button mb-4 {currentPath === '/flight-planner' ? 'active' : ''}">
-          <i class="nav-icon fas fa-route"></i>
-          <div class="tooltip">Flight Planner</div>
-        </a>
-        <a href="/profile" on:click|preventDefault={() => handleNavigation('/notifications')} class="nav-button mb-4 {currentPath === '/notifications' ? 'active' : ''}">
-          <i class="nav-icon fas fa-bell"></i>
-          <div class="tooltip">Notification Settings</div>
-        </a>
-        <button on:click={handleLogout} class="nav-button mb-4">
-          <i class="nav-icon fas fa-sign-out-alt"></i>
-          <div class="tooltip">Logout</div>
-        </button>
-      {:else}
-        <a href="/login" on:click|preventDefault={() => handleNavigation('/login')} class="nav-button mb-4 {currentPath === '/login' ? 'active' : ''}">
-          <i class="nav-icon fas fa-sign-in-alt"></i>
-          <div class="tooltip">Login</div>
-        </a>
-      {/if}
-    </div>
-    <div class="flex flex-col justify-self-end gap-3">
-      <button class="nav-button" aria-label="Documentation">
-        <i class="nav-icon fas fa-book"></i>
-        <div class="tooltip">Documentation</div>
-      </button>
-      <button class="nav-button" aria-label="GitHub" on:click|preventDefault={() => window.open('https://github.com/MAV-Manager/mmgcs', '_blank')}>
-        <i class="nav-icon fab fa-github"></i>
-        <div class="tooltip">GitHub</div>
-      </button>
-    </div>
-  </nav>
+      <div class={`mobile-nav-links ${isNavOpen ? 'block' : 'hidden'} flex flex-col items-center mt-4`}>
+        {#if $authData}
+          <a href="/dashboard" on:click|preventDefault={() => handleNavigation('/dashboard')} class="nav-button mb-4 {currentPath === '/dashboard' ? 'active' : ''}">
+            <i class="nav-icon fas fa-tachometer-alt"></i>&nbsp;&nbsp;Dashboard
+          </a>
+          <a href="/flight-planner" on:click|preventDefault={() => handleNavigation('/flight-planner')} class="nav-button mb-4 {currentPath === '/flight-planner' ? 'active' : ''}">
+            <i class="nav-icon fas fa-route"></i>&nbsp;&nbsp;Flight Planner
+          </a>
+          <a href="/event-log" on:click|preventDefault={() => handleNavigation('/event-log')} class="nav-button mb-4 {currentPath === '/event-log' ? 'active' : ''}">
+            <i class="nav-icon fas fa-bars-staggered"></i>&nbsp;&nbsp;Event Log
+          </a>
+          <a href="/user-settings" on:click|preventDefault={() => handleNavigation('/user-settings')} class="nav-button mb-4 {currentPath === '/user-settings' ? 'active' : ''}">
+            <i class="nav-icon fas fa-user"></i>&nbsp;&nbsp;User Settings
+          </a>
+          <a href="/notifications" on:click|preventDefault={() => handleNavigation('/notifications')} class="nav-button mb-4 {currentPath === '/notifications' ? 'active' : ''}">
+            <i class="nav-icon fas fa-bell"></i>&nbsp;&nbsp;Notifications
+          </a>
+          <button on:click|preventDefault={handleLogout} class="nav-button mb-4" type="button">
+            <i class="nav-icon fas fa-sign-out-alt"></i>&nbsp;&nbsp;Logout
+          </button>
+        {:else}
+          <a href="/login" on:click|preventDefault={() => handleNavigation('/login')} class="nav-button mb-4 {currentPath === '/login' ? 'active' : ''}">
+            <i class="nav-icon fas fa-sign-in-alt"></i>&nbsp;&nbsp;Login
+          </a>
+        {/if}
+      </div>
+    </nav>    
 
-  <!-- Mobile Navigation -->
-  <nav class="mobile-nav bg-[#1c1c1e] text-white p-4 md:hidden flex flex-col">
-    <div class="flex justify-between items-center">
-      <button class="nav-button" aria-label="Toggle Navigation" on:click={toggleNav}>
-        <i class="nav-icon fas fa-bars"></i>
-      </button>
-      <span class="text-xl font-semibold">MAV Manager GCS</span>
-      <a href="/" on:click|preventDefault={() => handleNavigation('/')}>
-        <img src="/logo.png" alt="Logo" class="w-8 h-8">
-      </a>
+    <div class="slot-container flex-grow pr-8 justify-center items-center overflow-auto">
+      <slot />
     </div>
-    <div class={`mobile-nav-links ${isNavOpen ? 'block' : 'hidden'} flex flex-col items-center mt-4`}>
-      {#if $authData}
-        <a href="/dashboard" on:click|preventDefault={() => handleNavigation('/dashboard')} class="nav-button mb-4 {currentPath === '/dashboard' ? 'active' : ''}">
-          <i class="nav-icon fas fa-tachometer-alt"></i>&nbsp;&nbsp;Dashboard
-        </a>
-        <a href="/flight-planner" on:click|preventDefault={() => handleNavigation('/flight-planner')} class="nav-button mb-4 {currentPath === '/flight-planner' ? 'active' : ''}">
-          <i class="nav-icon fas fa-route"></i>&nbsp;&nbsp;Flight Planner
-        </a>
-        <a href="/profile" on:click|preventDefault={() => handleNavigation('/notifications')} class="nav-button mb-4 {currentPath === '/notifications' ? 'active' : ''}">
-          <i class="nav-icon fas fa-bell"></i>&nbsp;&nbsp;Notification Settings
-        </a>
-        <button on:click|preventDefault={handleLogout} class="nav-button mb-4" type="button">
-          <i class="nav-icon fas fa-sign-out-alt"></i>&nbsp;&nbsp;Logout
-        </button>
-      {:else}
-        <a href="/login" on:click|preventDefault={() => handleNavigation('/login')} class="nav-button mb-4 {currentPath === '/login' ? 'active' : ''}">
-          <i class="nav-icon fas fa-sign-in-alt"></i>&nbsp;&nbsp;Login
-        </a>
-      {/if}
-    </div>
-  </nav>
-
-  <div class="slot-container flex-grow pr-8 justify-center items-center overflow-auto">
-    <slot />
   </div>
 </main>
 
@@ -271,7 +289,7 @@
 
   /* Mobile Styles */
   @media (max-width: 990px) {
-    main {
+    main > div {
       flex-direction: column;
     } 
 
@@ -281,7 +299,7 @@
     }
 
     .desktop-nav {
-      display: none;
+      display: none !important;
     }
 
     .mobile-nav {
