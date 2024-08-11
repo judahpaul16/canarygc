@@ -400,43 +400,37 @@
 
   function updateMAVMarker() {
     if (leafletMap && mavLocation && mavHeading) {
-
-      fetch('map/here.png').then((response) => {
-        return response.blob();
-      }).then((blob) => {
-        let url = URL.createObjectURL(blob);
-        let img = new Image();
-        img.src = url;
-        img.onload = () => {
-          let canvas = document.createElement('canvas');
-          canvas.width = img.width;
-          canvas.height = img.height;
-          let ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.translate(img.width / 2, img.height / 2);
-            ctx.rotate((mavHeading) * Math.PI / 180);
-            ctx.drawImage(img, -img.width / 2, -img.height / 2);
-            ctx.save();
-            let icon = L.icon({
-              iconUrl: canvas.toDataURL(),
-              iconSize: [45, 45],
-              iconAnchor: [23, 20],
-              popupAnchor: [0, -15],
-              shadowSize: [41, 41]
-            });
-            if (mavMarker) {
-              leafletMap.removeLayer(mavMarker);
-            }
-            mavMarker = L.marker(mavLocation as L.LatLng, { icon: icon })
-              .bindPopup('MAV is here: ' + mavLocation.lat + ', ' + mavLocation.lng);
-            leafletMap.addLayer(mavMarker);
-            updateMarkersAndPolylines();
-            if (!isDragging) {
-              leafletMap.setView(mavLocation as L.LatLng);
-            }
+      let img = new Image();
+      img.src = '/map/here.png'; // Use static path directly
+      img.onload = () => {
+        let canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        let ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.translate(img.width / 2, img.height / 2);
+          ctx.rotate((mavHeading) * Math.PI / 180);
+          ctx.drawImage(img, -img.width / 2, -img.height / 2);
+          ctx.save();
+          let icon = L.icon({
+            iconUrl: canvas.toDataURL(),
+            iconSize: [45, 45],
+            iconAnchor: [23, 20],
+            popupAnchor: [0, -15],
+            shadowSize: [41, 41]
+          });
+          if (mavMarker) {
+            leafletMap.removeLayer(mavMarker);
           }
-        };
-      });
+          mavMarker = L.marker(mavLocation as L.LatLng, { icon: icon })
+            .bindPopup('MAV is here: ' + mavLocation.lat + ', ' + mavLocation.lng);
+          leafletMap.addLayer(mavMarker);
+          updateMarkersAndPolylines();
+          if (!isDragging) {
+            leafletMap.setView(mavLocation as L.LatLng);
+          }
+        }
+      };
     }
   }
 </script>
