@@ -24,7 +24,7 @@
   </sveltekit:head>
 
   <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">
-    <div class="dashboard w-full grid grid-cols-12 grid-rows-7 gap-4 p-6 bg-[#121212] rounded-[30px] rounded-l-none overflow-auto max-h-[90vh]">
+    <div class="dashboard w-full grid grid-cols-12 grid-rows-7 gap-4 p-5 bg-[#121212] rounded-[30px] rounded-l-none overflow-auto max-h-[90vh]">
       <div class="map col-span-10 row-span-4">
         <Map {mavLocation} />
       </div>

@@ -110,6 +110,10 @@
   
   /* Mobile Styles */
   @media (max-width: 990px) {
+    .dpad-container {
+      width: auto;
+    }
+
     .d-pad {
       width: 150px;
       height: 150px;

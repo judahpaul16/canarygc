@@ -167,7 +167,7 @@
   <div class="container block">
     <input type="text" class="text-md font-bold mb-2 ml-4 focus:outline-none" placeholder="Untitled Flight Plan" id="flight-plan-title" bind:value={title} />
     <div class="flex items-center gap-2 float-right text-sm">
-      <a href="https://mavmanager.com/docs/how-to-create-a-flight-plan" target="_blank" class="text-[#61cd89] hover:underline mr-2">
+      <a href="https://ardupilot.org/planner/docs/common-planning-a-mission-with-waypoints-and-events.html" target="_blank" class="text-[#61cd89] hover:underline mr-2">
         <i class="fas fa-question-circle"></i>
         How do I create a flight plan?
       </a>
@@ -213,11 +213,11 @@
                 <div class="form-input text-center grid gap-1">
                     <div class="flex justify-between items-center gap-3">
                       <span class="text-[8pt]">Lat</span>
-                      <input type="number" step="0.001" id="lat-{index}" placeholder="eg. 33.749" value={actions[Number(index)].lat} on:change={updateLat} />
+                      <input type="number" step="0.0001" id="lat-{index}" placeholder="eg. 33.749" value={actions[Number(index)].lat} on:change={updateLat} />
                     </div>
                     <div class="flex justify-between items-center">
                       <span class="text-[8pt]">Lon</span>
-                      <input type="number" step="0.001" id="lon-{index}" placeholder="eg. -84.388" value={actions[Number(index)].lon} on:change={updateLon} />
+                      <input type="number" step="0.0001" id="lon-{index}" placeholder="eg. -84.388" value={actions[Number(index)].lon} on:change={updateLon} />
                     </div>
                 </div>
                 <div class="separator"></div>

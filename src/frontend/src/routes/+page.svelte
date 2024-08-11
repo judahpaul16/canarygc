@@ -38,7 +38,7 @@
         <ul class="styled-list">
           <li><a href="https://dronesafetymap.com" target="_blank">Drone Safety Map</a></li>
           <li><a href="https://ardupilot.org/copter/docs/common-prearm-safety-checks.html" target="_blank">Prearm Safety Checks</a></li>
-          <li><a href="https://www.airsight.com/blog/faa-rules-and-regulations-for-unmanned-aircraft-systems-uas" target="_blank">FAA Rules and Regulations for UAS</a></li>
+          <li><a href="https://www.faa.gov/uas" target="_blank">FAA Rules and Regulations for UAS</a></li>
         </ul>
       </div>
   </div>

@@ -7,7 +7,7 @@
   $: mavLocation = $mavLocationStore;
 </script>
 
-<div class="controls bg-[#1c1c1e] text-white px-10 rounded-lg h-full flex space-x-4 items-center overflow-x-auto">
+<div class="controls bg-[#1c1c1e] text-white px-10 rounded-lg h-full flex items-center overflow-x-auto gap-4">
   <div class="map-container flex-shrink-0 h-48 w-48">
     <Map {mavLocation} hideOverlay={true} />
   </div>
