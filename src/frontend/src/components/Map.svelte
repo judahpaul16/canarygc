@@ -468,7 +468,7 @@
   <div id="aamap" class="relative h-full"></div>
   <div id="map" class="relative h-full rounded-lg z-0"></div>
   <button class="map-btn absolute top-[3.2rem] right-2 text-white bg-black bg-opacity-75 p-2 px-3 hover:bg-[#1c1c1ee6] rounded-full" on:click={toggleDarkMode}>
-    <i class="fas fa-moon"></i>
+    {#if darkMode} <i class="fas fa-moon px-[2px]"></i> {:else} <i class="fas fa-sun"></i> {/if}
   </button>
   <button class="map-btn absolute top-2 right-2 text-white bg-black bg-opacity-75 p-2 px-3 hover:bg-[#1c1c1ee6] rounded-full" on:click={handleFullScreen}>
     <i class="fas fa-expand"></i>

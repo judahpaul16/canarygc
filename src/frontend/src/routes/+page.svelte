@@ -10,7 +10,7 @@
 </sveltekit:head>
 
 <div class="flex items-center justify-center h-full">
-  <div class="bg-[#121212bd] text-white p-8 rounded-2xl shadow-lg max-w-md w-full">
+  <div class="bg-[#121212bd] text-white p-8 rounded-3xl shadow-lg max-w-md w-full">
     <h1 class="text-3xl font-bold mb-4 text-center">MAV Manager GCS</h1>
     {#if user}
       <p class="text-lg text-center">Hello, {user?.record?.name || 'admin'}!
