@@ -131,11 +131,11 @@
 {:else}
   <div class="bg-[#1c1c1e] rounded-lg w-full h-full overflow-auto relative">
     <div class="relative border-b border-[#2d2d2d]">
-      <div class="title-container px-4 py-2 font-semibold text-white">
+      <div class="title-container p-4 pb-2 font-semibold text-white">
         {title}
       </div>
     </div>
-    <div class="p-2 text-white h-full max-h-[33vh] mb-2">
+    <div class="plans p-2 text-white h-full max-h-[63%] mb-2">
       <ul class="overflow-auto h-full p-2 text-sm">
         {#if flightPlans.length != 0}
           {#each flightPlans as plan (plan.id)}
@@ -166,7 +166,7 @@
         {/if}
       </ul>
     </div>
-    <div class="flex justify-center px-4 py-2 border-t border-[#2d2d2d]">
+    <div class="flex justify-center px-4 pt-1 border-t border-[#2d2d2d]">
       <button
           on:click={importPlan}
           class="bg-transparent hover:bg-[#4b5563] text-white px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
@@ -213,5 +213,21 @@
 
   .title-container {
     font-size: calc(0.5rem + 0.5vw);
+  }
+  .plans + div {
+    padding-block: 1rem;
+  }
+
+  /* Mobile Styles */
+  @media (max-width: 990px) {
+    .plans {
+      max-height: 33vh;
+    }
+    .plans + div {
+      padding-block: 0.5rem;
+    }
+    .title-container {
+      font-size: 1rem;
+    }
   }
 </style>
