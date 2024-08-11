@@ -55,6 +55,7 @@
 
   $: actions = $flightPlanActionsStore,
     removeAllMarkers(),
+    updateMAVMarker(),
     Object.keys(actions).forEach((index) => {
       updateMap(Number(index));
     });
