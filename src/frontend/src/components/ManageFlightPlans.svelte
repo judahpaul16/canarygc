@@ -135,8 +135,8 @@
         {title}
       </div>
     </div>
-    <div class="p-2 text-white">
-      <ul class="overflow-auto h-full max-h-[24vh] p-2 mb-[4em] text-sm">
+    <div class="p-2 text-white h-full max-h-[33vh] mb-2">
+      <ul class="overflow-auto h-full p-2 text-sm">
         {#if flightPlans.length != 0}
           {#each flightPlans as plan (plan.id)}
             <li class="inline-block justify-between items-center px-2 py-1 bg-gray-700 rounded mb-2 w-full">
@@ -166,13 +166,13 @@
         {/if}
       </ul>
     </div>
-    <div class="flex justify-center px-4 py-2 border-t border-[#2d2d2d] absolute bottom-0 left-0 right-0">
+    <div class="flex justify-center px-4 py-2 border-t border-[#2d2d2d]">
       <button
           on:click={importPlan}
           class="bg-transparent hover:bg-[#4b5563] text-white px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
         >
-        <i class="fas fa-upload text-sm" title="Import Flight Plan"></i>
-        <span class="import-btn-span text-sm ml-1">Import Flight Plan</span>
+        <i class="fas fa-upload text-xs" title="Import Flight Plan"></i>
+        <span class="import-btn-span text-xs ml-1">Import</span>
       </button>
     </div>
   </div>
@@ -213,11 +213,5 @@
 
   .title-container {
     font-size: calc(0.5rem + 0.5vw);
-  }
-
-  @media (max-width: 1400px) {
-    .import-btn-span {
-      display: none;
-    }
   }
 </style>
