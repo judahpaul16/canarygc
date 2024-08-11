@@ -56,3 +56,12 @@ iframe {
 .dashboard {
   opacity: 0;
 }
+
+.dark .leaflet-layer,
+.dark .leaflet-control-zoom-in,
+.dark .leaflet-control-zoom-out {
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+.leaflet-control-attribution {
+  display: none;
+}
