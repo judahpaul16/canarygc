@@ -1,6 +1,7 @@
 <script lang="ts">
   import PocketBase from "pocketbase";
   import { flightPlanTitleStore, flightPlanActionsStore, type FlightPlanAction } from "../stores/flightPlanStore";
+  import { onMount } from "svelte";
 
   const pb = new PocketBase("http://localhost:8090");
 
@@ -10,6 +11,10 @@
   let flightPlans: Array<{ id: string; title: string }> = [];
   let actions: any = {};
   export let onCancel: () => void = () => {};
+
+  onMount(() => {
+    getFlightPlans();
+  });
 
   async function getFlightPlans() {
     try {
@@ -66,10 +71,6 @@
       }
     };
     input.click();
-  }
-
-  $: if (isOpen) {
-    getFlightPlans();
   }
 
   const closeModal = () => {
