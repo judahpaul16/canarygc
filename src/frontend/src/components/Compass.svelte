@@ -5,11 +5,12 @@
   export let mavLocation: L.LatLng | { lat: number; lng: number };;
   let heading: string;
 
-  $: mavLocation = $mavLocationStore;
+  $: mavLocation = $mavLocationStore,
+    updateCompass($mavHeadingStore);
   $: heading = formatHeading($mavHeadingStore);
 
-  let currentLat = formatCoordinates(mavLocation.lat, true);
-  let currentLong = formatCoordinates(mavLocation.lng, false);
+  $: currentLat = formatCoordinates(mavLocation.lat, true);
+  $: currentLong = formatCoordinates(mavLocation.lng, false);
 
   onMount(() => {
     const updateHeading = (newHeading: number) => {
