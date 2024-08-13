@@ -1,6 +1,7 @@
 <script lang="ts">
     import PocketBase from "pocketbase";
-    import { mapStore, mavLocationStore, markersStore, polylinesStore } from "../stores/mapStore";
+    import { mapStore, markersStore, polylinesStore } from "../stores/mapStore";
+    import { mavLocationStore } from '../stores/mavlinkStore';
     import { flightPlanTitleStore, flightPlanActionsStore, type FlightPlanAction } from "../stores/flightPlanStore";
     import Modal from "./Modal.svelte";
     import ManageFlightPlans from "./ManageFlightPlans.svelte";

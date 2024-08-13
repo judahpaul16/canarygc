@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import '@fortawesome/fontawesome-free/css/all.min.css';
-  import { mapStore, mavLocationStore, mavHeadingStore, markersStore, polylinesStore } from '../stores/mapStore';
+  import { mapStore, markersStore, polylinesStore } from '../stores/mapStore';
+  import { mavLocationStore, mavHeadingStore } from '../stores/mavlinkStore';
   import { flightPlanTitleStore, flightPlanActionsStore } from '../stores/flightPlanStore';
   import { get } from 'svelte/store';
   import Modal from './Modal.svelte';

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { mapStore, mavLocationStore } from '../stores/mapStore';
+  import { mapStore } from '../stores/mapStore';
+  import { mavLocationStore } from '../stores/mavlinkStore';
   import { flightPlanTitleStore, flightPlanActionsStore } from '../stores/flightPlanStore';
   import { get } from 'svelte/store';
   import Modal from './Modal.svelte';

@@ -6,7 +6,7 @@
     import Compass from '../../components/Compass.svelte';
     import FlightPlan from '../../components/FlightPlan.svelte';
     import FlightPlanSettings from '../../components/FlightPlanSettings.svelte';
-    import { mavLocationStore } from '../../stores/mapStore';
+    import { mavLocationStore } from '../../stores/mavlinkStore';
   
     $: user = $authData;
     

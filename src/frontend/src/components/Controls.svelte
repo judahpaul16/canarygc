@@ -2,7 +2,7 @@
   import Map from './Map.svelte';
   import DPad from './DPad.svelte';
   import Weather from './Weather.svelte';
-  import { mavLocationStore } from '../stores/mapStore';
+  import { mavLocationStore } from '../stores/mavlinkStore';
 
   $: mavLocation = $mavLocationStore;
 </script>
