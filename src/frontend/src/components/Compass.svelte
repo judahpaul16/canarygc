@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { mavLocationStore, mavHeadingStore } from '../stores/mapStore';
   
-  export let mavLocation: L.LatLng | { lat: number; lng: number };;
+  export let mavLocation: L.LatLng | { lat: number; lng: number };
   let heading: string;
 
   $: mavLocation = $mavLocationStore,
@@ -39,18 +39,20 @@
   }
 
   function updateCompass(newHeading: number) {
-    const compassArrow = document.querySelector('.compass-arrow');
-    const directionDegree = document.getElementById('direction-degree');
-    const latLongElement = document.getElementById('lat-long');
+    if (typeof document !== 'undefined') {
+      const compassArrow = document.querySelector('.compass-arrow');
+      const directionDegree = document.getElementById('direction-degree');
+      const latLongElement = document.getElementById('lat-long');
 
-    if (compassArrow instanceof HTMLElement && directionDegree instanceof HTMLElement) {
-      compassArrow.style.transform = `translate(-50%, -50%) rotate(${newHeading}deg)`;
-      directionDegree.textContent = formatHeading(newHeading);
-      heading = formatHeading(newHeading);
-    }
+      if (compassArrow instanceof HTMLElement && directionDegree instanceof HTMLElement) {
+        compassArrow.style.transform = `translate(-50%, -50%) rotate(${newHeading}deg)`;
+        directionDegree.textContent = formatHeading(newHeading);
+        heading = formatHeading(newHeading);
+      }
 
-    if (latLongElement instanceof HTMLElement) {
-      latLongElement.textContent = `${currentLat} ${currentLong}`;
+      if (latLongElement instanceof HTMLElement) {
+        latLongElement.textContent = `${currentLat} ${currentLong}`;
+      }
     }
   }
 </script>
