@@ -1,17 +1,34 @@
 import { SerialPort } from 'serialport';
 import { connect } from 'net';
-import { MavLinkPacketSplitter, MavLinkPacketParser, type MavLinkPacketRegistry, type MavLinkPacket, minimal, common, ardupilotmega } from 'node-mavlink';
+import { MavLinkPacketSplitter, MavLinkPacketParser, type MavLinkPacketRegistry, type MavLinkPacket, minimal, common, ardupilotmega, MavLinkProtocolV2, send } from 'node-mavlink';
 import type { RequestHandler } from '@sveltejs/kit';
 
-let logs : string[] = [];
+let logs: string[] = [];
 
 const REGISTRY: MavLinkPacketRegistry = {
     ...minimal.REGISTRY,
     ...common.REGISTRY,
     ...ardupilotmega.REGISTRY,
-  }
+};
 
-export const POST: RequestHandler = async () => {
+interface HeartBeatData {
+    type: number;
+    autopilot: number;
+    baseMode: number;
+    customMode: number;
+    systemStatus: number;
+    mavlinkVersion: number;
+}
+
+interface ParamValueData {
+    paramId: string;
+    paramValue: string;
+    paramType: number;
+    paramCount: number;
+    paramIndex: number;
+}
+
+export const POST: RequestHandler = async (request) => {
     // Use UART serial port in production
     // const port = new SerialPort({ path: '/dev/ttyACM0', baudRate: 115200 });
     
@@ -23,17 +40,26 @@ export const POST: RequestHandler = async () => {
         .pipe(new MavLinkPacketParser());
 
     let streamClosed = false;
-    
+  
     const stream = new ReadableStream({
-        start(controller) {
+        async start(controller) {
+            // Sending a command
+            if (request.params.command) {
+                let command = request.params.command;
+                let command2Send: any = new common.CommandLong();
+                command2Send.command = common.MavCmd[command as keyof typeof common.MavCmd];
+                command2Send.target_system = 1;
+                await send(port, command2Send, new MavLinkProtocolV2());
+            }
+
             reader.on('data', (packet: MavLinkPacket) => {
                 if (!streamClosed) {
-                    // Push the packet data to the stream
-                    const clazz = REGISTRY[packet.header.msgid]
+                    const clazz = REGISTRY[packet.header.msgid];
                     if (clazz) {
-                        const data = packet.protocol.data(packet.payload, clazz)
+                        const data = packet.protocol.data(packet.payload, clazz);
                         const sanitizedData = convertBigIntToNumber(data);
-                        controller.enqueue(`${clazz.MSG_NAME}: ${JSON.stringify(sanitizedData)}\n`);
+                        let timestamp = new Date().toISOString();
+                        controller.enqueue(`${timestamp}::${clazz.MSG_NAME}(${clazz.MAGIC_NUMBER})::${JSON.stringify(sanitizedData as ParamValueData)}\n`);
                     }
                 }
             });

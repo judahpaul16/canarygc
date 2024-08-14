@@ -275,7 +275,7 @@
       <div>Flight Time: {`${Math.floor(flightTime / 3600)}h ${Math.floor((flightTime % 3600) / 60)}m ${flightTime % 60}s`}</div>
     </div>
     <hr class="border-[#2d2d2d] my-3" />
-      <div class="w-full mb-2">Loaded Flight Plan: <span class="text-[#66e1ff]">{flightPlanTitle || 'No flight plan loaded.'}</span></div>
+      <div class="w-full mb-2">Loaded Mission Plan: <span class="text-[#66e1ff]">{flightPlanTitle || 'No mission plan loaded.'}</span></div>
       <div class="flex flex-col items-center justify-end">
         <div class="w-full">
           <span>Flight Progress: {flightProgress}% (ETA 00:00:00)</span>

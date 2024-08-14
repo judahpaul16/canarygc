@@ -40,6 +40,7 @@
     }
     
     initializeFlightPlansCollection();
+    initializeMAVLinkLogsCollection();
     
     const dashboard = document.querySelector('.dashboard');
     if (dashboard) {
@@ -102,6 +103,30 @@
     }
   }
 
+  async function initializeMAVLinkLogsCollection() {
+    try {
+      const collections = await pb.collections.getFullList();
+      const collectionExists = collections.some(c => c.name === 'mavlink_logs');
+      
+      if (!collectionExists) {
+        const newCollection = {
+          name: 'mavlink_logs',
+          type: 'base',
+          schema: [
+            { name: 'title', type: 'text', options: { maxSize: 100000000 } },
+            { name: 'actions', type: 'json', required: true, options: { maxSize: 100000000 } }
+          ]
+        };
+        await pb.collections.create(newCollection);
+        console.log('Collection "mavlink_logs" created successfully.');
+      } else {
+        console.log('Collection "mavlink_logs" already exists.');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  }
+
   function handleNavigation(path: string) {
     if (currentPath !== path) {
       goto(path);
@@ -134,9 +159,9 @@
             <i class="nav-icon fas fa-tachometer-alt"></i>
             <div class="tooltip">Dashboard</div>
           </button>
-          <button on:click|preventDefault={() => handleNavigation('/flight-planner')} class="nav-button mb-4 {currentPath === '/flight-planner' ? 'active' : ''}">
+          <button on:click|preventDefault={() => handleNavigation('/mission-planner')} class="nav-button mb-4 {currentPath === '/mission-planner' ? 'active' : ''}">
             <i class="nav-icon fas fa-route"></i>
-            <div class="tooltip">Flight Planner</div>
+            <div class="tooltip">Mission Planner</div>
           </button>
           <button on:click|preventDefault={() => handleNavigation('/event-log')} class="nav-button mb-4 {currentPath === '/event-log' ? 'active' : ''}">
             <i class="nav-icon fas fa-bars-staggered"></i>
@@ -191,8 +216,8 @@
           <a href="/dashboard" on:click|preventDefault={() => handleNavigation('/dashboard')} class="nav-button mb-4 {currentPath === '/dashboard' ? 'active' : ''}">
             <i class="nav-icon fas fa-tachometer-alt"></i>&nbsp;&nbsp;Dashboard
           </a>
-          <a href="/flight-planner" on:click|preventDefault={() => handleNavigation('/flight-planner')} class="nav-button mb-4 {currentPath === '/flight-planner' ? 'active' : ''}">
-            <i class="nav-icon fas fa-route"></i>&nbsp;&nbsp;Flight Planner
+          <a href="/mission-planner" on:click|preventDefault={() => handleNavigation('/mission-planner')} class="nav-button mb-4 {currentPath === '/mission-planner' ? 'active' : ''}">
+            <i class="nav-icon fas fa-route"></i>&nbsp;&nbsp;Mission Planner
           </a>
           <a href="/event-log" on:click|preventDefault={() => handleNavigation('/event-log')} class="nav-button mb-4 {currentPath === '/event-log' ? 'active' : ''}">
             <i class="nav-icon fas fa-bars-staggered"></i>&nbsp;&nbsp;Event Log

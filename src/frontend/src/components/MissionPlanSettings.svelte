@@ -40,7 +40,7 @@
 
     async function saveFlightPlan() {
         // @ts-ignore
-        let title = document.querySelector("#flight-plan-title").value || "Untitled Flight Plan",
+        let title = document.querySelector("#flight-plan-title").value || "Untitled Mission Plan",
         plan = actions;
         handleSave(title, plan);
     }
@@ -48,11 +48,11 @@
     async function handleSave(title: string, plan: FlightPlanAction) {
         flightPlanTitleStore.set(title);
         flightPlanActionsStore.set(plan);
-        let flightPlan = {
+        let missionPlan = {
             title: title,
             actions: plan,
         };
-        let response = await pb.collection("flight_plans").create(flightPlan).catch((error) => {
+        let response = await pb.collection("flight_plans").create(missionPlan).catch((error) => {
             new Modal({
                 target: document.body,
                 props: {
@@ -68,8 +68,8 @@
             new Modal({
                 target: document.body,
                 props: {
-                    title: "Flight Plan Saved",
-                    content: "The flight plan has been saved successfully.",
+                    title: "Mission Plan Saved",
+                    content: "The mission plan has been saved successfully.",
                     isOpen: true,
                     confirmation: false,
                     notification: true,
@@ -136,8 +136,8 @@
         new Modal({
             target: document.body,
             props: {
-                title: "Clear Flight Plan",
-                content: "Are you sure you want to clear the flight plan?",
+                title: "Clear Mission Plan",
+                content: "Are you sure you want to clear the mission plan?",
                 isOpen: true,
                 confirmation: true,
                 notification: false,
@@ -152,23 +152,23 @@
 >
     <button on:click={toggleFlightPlans}>
         <i class="fas fa-tasks bg-[#5898e2]"></i>
-        Manage Flight Plans
+        Manage Mission Plans
     </button>
     <button on:click={saveFlightPlan}>
         <i class="fas fa-save"></i>
-        Save Flight Plan
+        Save Mission Plan
     </button>
     <button on:click={confirmClear}>
         <i class="fas fa-trash-alt"></i>
-        Clear Flight Plan
+        Clear Mission Plan
     </button>
     <button on:click={importPlan}>
         <i class="fas fa-upload"></i>
-        Import Flight Plan
+        Import Mission Plan
     </button>
     <button on:click={exportFlightPlan}>
         <i class="fas fa-download"></i>
-        Export Flight Plan
+        Export Mission Plan
     </button>
 </section>
 
