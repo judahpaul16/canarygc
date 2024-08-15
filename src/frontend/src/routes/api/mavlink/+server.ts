@@ -75,12 +75,15 @@ export const POST: RequestHandler = async (request) => {
         .pipe(new MavLinkPacketParser());
 
     let streamClosed = false;
-  
+
+    // A flag that determines if the remote system is alive
+    let online = false;
+    
     const stream = new ReadableStream({
         async start(controller) {
-            requestGpsData(port, reader);
             reader.on('data', (packet: MavLinkPacket) => {
                 if (!streamClosed) {
+                    online = true
                     const clazz = REGISTRY[packet.header.msgid];
                     if (clazz) {
                         const data = packet.protocol.data(packet.payload, clazz);
@@ -89,7 +92,11 @@ export const POST: RequestHandler = async (request) => {
                         controller.enqueue(`${clazz.MSG_NAME}(${clazz.MAGIC_NUMBER})::${timestamp}::${JSON.stringify(sanitizedData as ParamValueData)}\n`);
                     }
                 }
-            });
+            }); 
+            
+            await waitFor(() => online)
+            
+            requestGpsData(port, reader);
 
             reader.on('end', () => {
                 if (!streamClosed) {

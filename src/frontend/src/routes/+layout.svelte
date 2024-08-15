@@ -40,6 +40,8 @@
     let response = await fetch('/api/mavlink', { method: 'POST' });
     const reader = response.body?.getReader();
     const decoder = new TextDecoder();
+    let online = response.status === 200;
+    console.log('Stream is online:', online);
 
     // truncate old logs to save memory
     logs = logs.slice(-1000);
@@ -165,21 +167,40 @@
       console.error('Error:', error);
     }
   }
-
   async function updateBlackBoxCollection() {
     try {
       const collections = await pb.collections.getFullList();
-      const collectionExists = collections.some(c => c.name === 'blackbox');
-      
-      if (collectionExists) {
-        for (const log of logs) {
-          await pb.collection('blackbox').create({ log: log });
+      const collection = collections.find(c => c.name === 'blackbox');
+
+      if (collection) {
+        // Fetch all records from the 'blackbox' collection
+        const records = await pb.collection('blackbox').getFullList();
+
+        if (records.length > 10000) {
+          // Sort records by creation date (or timestamp) to find the oldest ones
+          records.sort((a, b) => new Date(a.created).getTime() - new Date(b.created).getTime());
+
+          // Keep the latest 10,000 records
+          const recordsToDelete = records.slice(0, records.length - 10000);
+
+          // Delete the selected records
+          const deletePromises = recordsToDelete.map(record => pb.collection('blackbox').delete(record.id));
+          await Promise.all(deletePromises);
         }
+
+        // Add new logs to the collection
+        const logPromises = logs.map(log => pb.collection('blackbox').create({ log }));
+        await Promise.all(logPromises);
       } else {
         console.error('Collection "blackbox" does not exist.');
       }
-    } catch (error) {
-      console.error('Error:', error);
+    } catch (error : any) {
+      if (error.message.includes('The request was autocancelled')) {
+        // ignore it
+      } else {
+        console.error('Error:', error.message || error);
+        console.error('Stack Trace:', error.stack || 'No stack trace available');
+      }
     }
   }
 
