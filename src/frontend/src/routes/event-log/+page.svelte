@@ -46,10 +46,15 @@
 
     async function triggerHeartbeat(log: string) {
         const heartbeat = document.querySelector('.heartbeat');
+        const icon = document.querySelector('.heartbeat i');
         if (heartbeat) {
+            heartbeat.classList.remove('text-white');
             heartbeat.classList.add('text-green-500');
+            icon?.classList.add('animate-ping');
             setTimeout(() => {
+                icon?.classList.remove('animate-ping');
                 heartbeat.classList.remove('text-green-500');
+                heartbeat.classList.add('text-white');
             }, 1000);
         }
     }
@@ -147,14 +152,15 @@
             logs = value;
         });
         queryMAVLink();
+        // queryMAVLink('GET_HOME_POSITION')
     });
 </script>
 
 <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">
     <div class="dashboard w-full gap-4 p-5 bg-[#121212] rounded-[30px] rounded-l-none overflow-auto h-[90vh] max-h-[90vh]">
-        <div class="event-log bg-[#1c1c1e] rounded-2xl h-full flex flex-col p-4">
+        <div class="event-log bg-[#1c1c1e] rounded-2xl h-full flex flex-col p-5">
             <div class="flex items-center justify-between gap-4 mb-4">
-                <h2 class="text-white text-xl">MAVLink Event Log</h2>
+                <h2 class="text-white text-xl">MAVLink Events</h2>
                 <div class="filters flex gap-4 justify-center items-center">
                     <input type="text" class="form-input" placeholder="Search" on:input={highlightText}/>
                     <div class="form-checkbox gap-2">
@@ -163,13 +169,16 @@
                         <input type="checkbox" class="form-checkbox" name="Toggle PARAM_VALUE" checked={showParamValue} on:change={(event) => handleShowMessage(event, 'PARAM_VALUE')}>
                         <label for="Toggle PARAM_VALUE" class="text-white">PARAM_VALUE</label>
                     </div>
-                    <button class="btn btn-primary bg-orange-300" on:click={confirmClear}>Clear</button>
-                    <button class="btn btn-primary bg-green-500" on:click={downloadLogs}>Download</button>
+                    <button class="btn btn-primary bg-orange-400 hover:bg-orange-500" on:click={confirmClear}>Clear</button>
+                    <button class="btn btn-primary bg-green-500 hover:bg-green-700" on:click={downloadLogs}>Download</button>
                 </div>
                 <div class="text-white w-fit flex gap-2">
                     HEARTBEAT Status:
-                    <div class="heartbeat text-white w-fit relative">
-                        <i class="fas fa-heart"></i>
+                    <div class="heartbeat text-white w-fit relative mr-5">
+                        <div>
+                            <i class="fas fa-heart absolute top-[0.15rem]"></i>
+                            <i class="fas fa-heart absolute top-[0.15rem]"></i>
+                        </div>
                         <span class="tooltip">{heartbeatInfo}</span>
                     </div>
                 </div>
@@ -226,61 +235,80 @@
         visibility: visible;
     }
 
-    
-
     .form-checkbox {
-    display: flex;
-    align-items: center;
-  }
+        display: flex;
+        align-items: center;
+    }
 
-  .form-checkbox:checked {
-    background-color: #61cd89;
-  }
+    .form-checkbox:checked {
+        background-color: #61cd89;
+    }
 
-  .form-input {
-    padding: 0.5rem;
-    font-size: 0.875rem;
-  }
+    .form-input {
+        padding: 0.5rem;
+        font-size: 0.875rem;
+    }
 
-  input {
-    border: none;
-    border-radius: 0.5rem;
-    padding-inline: 0.5em;
-    padding-block: 0.25em;
-    background-color: #2d2d2d;
-    color: white;
-  }
+    input {
+        border: none;
+        border-radius: 0.5rem;
+        padding-inline: 0.5em;
+        padding-block: 0.25em;
+        background-color: #2d2d2d;
+        color: white;
+    }
 
-  input:focus {
-    border-color: #61cd89;
-  }
+    input:focus {
+        border-color: #61cd89;
+    }
 
-  .form-input:focus {
-    outline: none;
-    border-color: #61cd89;
-  }
+    .form-input:focus {
+        outline: none;
+        border-color: #61cd89;
+    }
 
-  input[type="checkbox"] {
-    appearance: none;
-    width: 1rem;
-    height: 1rem;
-    border-radius: 0.25rem;
-    background-color: #2d2d2d;
-    cursor: pointer;
-  }
+    input[type="checkbox"] {
+        appearance: none;
+        width: 1rem;
+        height: 1rem;
+        border-radius: 0.25rem;
+        background-color: #2d2d2d;
+        cursor: pointer;
+    }
 
-  input[type="checkbox"]:checked {
-    background-color: #61cd89;
-  }
+    input[type="checkbox"]:checked {
+        background-color: #61cd89;
+    }
 
-  button {
-    padding: 5px 10px;
-    border-radius: 0.5rem;
-    color: white;
-    cursor: pointer;
-  }
+    button {
+        padding: 5px 10px;
+        border-radius: 0.5rem;
+        color: white;
+        cursor: pointer;
+    }
 
-  label {
-    font-size: 10pt;
-  }
+    label {
+        font-size: 10pt;
+    }
+
+    /* Mobile Styles */
+    @media (max-width: 990px) {
+        .dashboard {
+            height: 100%;
+            max-height: 95vh;
+            border-radius: 0;
+        }
+        .event-log {
+            height: 100%;
+            max-height: 88vh;
+        }
+        .event-log > div {
+            display: flex;
+            flex-direction: column;
+        }
+        .event-log > div > div:first-of-type {
+            display: flex;
+            flex-direction: column;
+        }
+    }
 </style>

@@ -59,7 +59,7 @@ export const POST: RequestHandler = async (request) => {
                         const data = packet.protocol.data(packet.payload, clazz);
                         const sanitizedData = convertBigIntToNumber(data);
                         let timestamp = new Date().toISOString();
-                        controller.enqueue(`${timestamp}::${clazz.MSG_NAME}(${clazz.MAGIC_NUMBER})::${JSON.stringify(sanitizedData as ParamValueData)}\n`);
+                        controller.enqueue(`${clazz.MSG_NAME}(${clazz.MAGIC_NUMBER})::${timestamp}::${JSON.stringify(sanitizedData as ParamValueData)}\n`);
                     }
                 }
             });
