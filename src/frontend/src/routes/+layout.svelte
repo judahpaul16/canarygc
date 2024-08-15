@@ -41,6 +41,9 @@
     const reader = response.body?.getReader();
     const decoder = new TextDecoder();
 
+    // truncate old logs to save memory
+    logs = logs.slice(-1000);
+
     if (reader) {
         while (true) {
             const { done, value } = await reader.read();
@@ -50,6 +53,7 @@
             const text = decoder.decode(value, { stream: true });
             logs = [...logs, text];
             mavlinkLogStore.set(logs);
+            updateBlackBoxCollection();
 
             if (text.includes('GPS_RAW_INT')) {
                 let lat: string | RegExpMatchArray | null = text.match(/"lat":\-?(\d+)/g);
@@ -75,7 +79,7 @@
     }
     
     initializeFlightPlansCollection();
-    initializeMAVLinkLogsCollection();
+    initializeBlackBoxCollection();
     getStream();
     
     const dashboard = document.querySelector('.dashboard');
@@ -139,24 +143,40 @@
     }
   }
 
-  async function initializeMAVLinkLogsCollection() {
+  async function initializeBlackBoxCollection() {
     try {
       const collections = await pb.collections.getFullList();
-      const collectionExists = collections.some(c => c.name === 'mavlink_logs');
+      const collectionExists = collections.some(c => c.name === 'blackbox');
       
       if (!collectionExists) {
         const newCollection = {
-          name: 'mavlink_logs',
+          name: 'blackbox',
           type: 'base',
           schema: [
-            { name: 'title', type: 'text', options: { maxSize: 100000000 } },
-            { name: 'actions', type: 'json', required: true, options: { maxSize: 100000000 } }
+            { name: 'log', type: 'text', options: { maxSize: 100000000 } }
           ]
         };
         await pb.collections.create(newCollection);
-        console.log('Collection "mavlink_logs" created successfully.');
+        console.log('Collection "blackbox" created successfully.');
       } else {
-        console.log('Collection "mavlink_logs" already exists.');
+        console.log('Collection "blackbox" already exists.');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  }
+
+  async function updateBlackBoxCollection() {
+    try {
+      const collections = await pb.collections.getFullList();
+      const collectionExists = collections.some(c => c.name === 'blackbox');
+      
+      if (collectionExists) {
+        for (const log of logs) {
+          await pb.collection('blackbox').create({ log: log });
+        }
+      } else {
+        console.error('Collection "blackbox" does not exist.');
       }
     } catch (error) {
       console.error('Error:', error);
