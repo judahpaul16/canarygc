@@ -25,7 +25,8 @@
     if (dashboard) {
       heightOfDashboard = dashboard.clientHeight;
       if (window.location.pathname !== '/') {
-        heightOfDashboard = dashboard.clientHeight + 1;
+        heightOfDashboard = dashboard.clientHeight;
+        if (window.location.pathname !== '/dashboard') heightOfDashboard += 1;
         let nav = document.querySelector('.desktop-nav');
         // @ts-ignore
         nav.style.opacity = 1;
