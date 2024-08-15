@@ -6,11 +6,14 @@
   import { onMount, onDestroy, afterUpdate } from 'svelte';
   import { goto } from '$app/navigation';
   import '../app.css';
+  import { get } from 'svelte/store';
+  import { mavHeadingStore, mavLocationStore, mavlinkLogStore, mavAltitudeStore } from '../stores/mavlinkStore';
 
   const pb = new PocketBase('http://localhost:8090');
 
   let currentPath = '';
   let heightOfDashboard = 1000;
+  let logs: string[] = [];
 
   $: currentPath = $page.url.pathname;
 
@@ -33,6 +36,38 @@
 
   let resizeObserver: ResizeObserver;
 
+  async function getStream() {
+    let response = await fetch('/api/mavlink', { method: 'POST' });
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+
+    if (reader) {
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            // Decode and process the data
+            const text = decoder.decode(value, { stream: true });
+            logs = [...logs, text];
+            mavlinkLogStore.set(logs);
+
+            if (text.includes('GPS_RAW_INT')) {
+                let lat: string | RegExpMatchArray | null = text.match(/"lat":\-?(\d+)/g);
+                let lon: string | RegExpMatchArray | null = text.match(/"lon":\-?(\d+)/g);
+                if (lat) lat = lat.toString().replace('"lat":', '').replace(/^(-?\d{2})(\d+)$/, '$1.$2');
+                if (lon) lon = lon.toString().replace('"lon":', '').replace(/^(-?\d{2})(\d+)$/, '$1.$2');
+                if (lat && lon) mavLocationStore.set({ lat: parseFloat(lat), lng: parseFloat(lon) });
+                let heading: string | RegExpMatchArray | null = text.match(/"cog":(\d+)/g);
+                if (heading) heading = heading.toString().replace('"cog":', '');
+                if (heading) mavHeadingStore.set(parseInt(heading));
+                let altitude: string | RegExpMatchArray | null = text.match(/"alt":(\d+)/g);
+                if (altitude) altitude = altitude.toString().replace('"alt":', '').replace(/^(\d{2})(\d+)$/, '$1.$2');
+                if (altitude) mavAltitudeStore.set(parseInt(altitude));
+            }
+        }
+    }
+  }
+
   onMount(() => {
     if (typeof window !== 'undefined' && authData.checkExpired() && window.location.pathname !== '/') {
       authData.set(null);
@@ -41,6 +76,7 @@
     
     initializeFlightPlansCollection();
     initializeMAVLinkLogsCollection();
+    getStream();
     
     const dashboard = document.querySelector('.dashboard');
     if (dashboard) {

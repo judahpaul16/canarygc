@@ -1,50 +1,34 @@
 <script lang="ts">
     import { onDestroy, onMount, afterUpdate } from 'svelte';
-    import { mavlinkLogStore } from '../../stores/mavlinkStore';
+    import { mavlinkLogStore, mavLocationStore, mavHeadingStore } from '../../stores/mavlinkStore';
     import Modal from '../../components/Modal.svelte';
     
     let logs: string[] = [];
     let logContainer: HTMLElement;
     let showTimeSync = true;
     let showParamValue = true;
+    let showGPSRawInt = true;
     let searchTerm = '';
 
     const heartbeatInfo = 'HEARTBEAT is a message sent by the autopilot to communicate its presence and status to the GCS.';
 
-    async function getStream() {
-        let response = await fetch('/api/mavlink', { method: 'POST' });
-        const reader = response.body?.getReader();
-        const decoder = new TextDecoder();
+    $: logs,
+        triggerHeartbeat();
 
-        if (reader) {
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                // Decode and process the data
-                const text = decoder.decode(value, { stream: true });
-                logs = [...logs, text];
-                mavlinkLogStore.set(logs);
-
-                if (text.includes('HEARTBEAT')) {
-                    triggerHeartbeat(text);
-                }
+    async function triggerHeartbeat() {
+        if (typeof document !== 'undefined') {
+            const heartbeat = document.querySelector('.heartbeat');
+            const icon = document.querySelector('.heartbeat i');
+            if (heartbeat) {
+                heartbeat.classList.add('text-green-500');
+                heartbeat.classList.remove('text-white');
+                icon?.classList.add('animate-ping');
+                setTimeout(() => {
+                    icon?.classList.remove('animate-ping');
+                    heartbeat.classList.remove('text-green-500');
+                    heartbeat.classList.add('text-white');
+                }, 2000);
             }
-        }
-    }
-
-    async function triggerHeartbeat(log: string) {
-        const heartbeat = document.querySelector('.heartbeat');
-        const icon = document.querySelector('.heartbeat i');
-        if (heartbeat) {
-            heartbeat.classList.add('text-green-500');
-            heartbeat.classList.remove('text-white');
-            icon?.classList.add('animate-ping');
-            setTimeout(() => {
-                icon?.classList.remove('animate-ping');
-                heartbeat.classList.remove('text-green-500');
-                heartbeat.classList.add('text-white');
-            }, 2000);
         }
     }
 
@@ -69,6 +53,8 @@
             showTimeSync = checked;
         } else if (message === 'PARAM_VALUE') {
             showParamValue = checked;
+        } else if (message === 'GPS_RAW_INT') {
+            showGPSRawInt = checked;
         }
     }
 
@@ -140,7 +126,19 @@
         mavlinkLogStore.subscribe((value) => {
             logs = value;
         });
-        getStream();
+
+        // POST a command to MAVLink
+        // setTimeout(() => {
+        //     fetch('/api/mavlink', {
+        //         method: 'POST',
+        //         headers: {
+        //             'Content-Type': 'application/json'
+        //         },
+        //         body: JSON.stringify({
+        //             command: 'NAV_LOITER_UNLIM'
+        //         })
+        //     });
+        // }, 5000);
     });
 
     // Cleanup Stream
@@ -154,7 +152,7 @@
 </script>
 
 <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">
-    <div class="dashboard w-full gap-4 p-5 bg-[#121212] rounded-[30px] rounded-l-none overflow-auto h-[90vh] max-h-[90vh]">
+    <div class="dashboard w-full gap-4 p-5 bg-[#121212] rounded-[30px] rounded-l-none overflow-hidden h-[90vh] max-h-[90vh]">
         <div class="event-log bg-[#1c1c1e] rounded-2xl h-full flex flex-col p-5">
             <div class="flex items-center justify-between gap-4 mb-4">
                 <h2 class="text-white text-xl">MAVLink Events</h2>
@@ -165,12 +163,16 @@
                         <label for="Toggle TIMESYNC" class="text-white mr-2">TIMESYNC</label>
                         <input type="checkbox" class="form-checkbox" name="Toggle PARAM_VALUE" checked={showParamValue} on:change={(event) => handleShowMessage(event, 'PARAM_VALUE')}>
                         <label for="Toggle PARAM_VALUE" class="text-white">PARAM_VALUE</label>
+                        <input type="checkbox" class="form-checkbox" name="Toggle GPS_RAW_INT" checked={showGPSRawInt} on:change={(event) => handleShowMessage(event, 'GPS_RAW_INT')}>
+                        <label for="Toggle GPS_RAW_INT" class="text-white">GPS_RAW_INT</label>
                     </div>
-                    <button class="btn btn-primary bg-orange-400 hover:bg-orange-500" on:click={confirmClear}>Clear</button>
-                    <button class="btn btn-primary bg-green-500 hover:bg-green-700" on:click={downloadLogs}>Download</button>
+                    <div class="btns flex gap-4">
+                        <button class="btn btn-primary bg-orange-400 hover:bg-orange-500" on:click={confirmClear}>Clear</button>
+                        <button class="btn btn-primary bg-green-500 hover:bg-green-700" on:click={downloadLogs}>Download</button>
+                    </div>
                 </div>
                 <div class="text-white w-fit flex gap-2">
-                    HEARTBEAT Status:
+                    HEARTBEAT
                     <div class="heartbeat text-white w-fit relative mr-5">
                         <div>
                             <i class="fas fa-heart absolute top-[0.15rem]"></i>
@@ -187,6 +189,8 @@
                             <span style="display: {showTimeSync ? 'block' : 'none'}">{@html getHighlightedLog(log)}</span>
                         {:else if log.indexOf('PARAM_VALUE') !== -1}
                             <span style="display: {showParamValue ? 'block' : 'none'}">{@html getHighlightedLog(log)}</span>
+                        {:else if log.indexOf('GPS_RAW_INT') !== -1}
+                            <span style="display: {showGPSRawInt ? 'block' : 'none'}">{@html getHighlightedLog(log)}</span>
                         {:else}
                             <span>{@html getHighlightedLog(log)}</span>
                         {/if}
@@ -291,6 +295,11 @@
     .heartbeat {
         transition: 0s;
     }
+    @media (min-width: 990px) {
+        .event-log > div {
+            overflow: hidden;
+        }
+    }
 
     /* Mobile Styles */
     @media (max-width: 990px) {
@@ -310,6 +319,10 @@
         .event-log > div > div:first-of-type {
             display: flex;
             flex-direction: column;
+        }
+        .form-checkbox {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
         }
     }
 </style>
