@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onDestroy, onMount } from 'svelte';
+    import { onDestroy, onMount, afterUpdate } from 'svelte';
     import { mavlinkLogStore } from '../../stores/mavlinkStore';
     import Modal from '../../components/Modal.svelte';
     
@@ -11,19 +11,8 @@
 
     const heartbeatInfo = 'HEARTBEAT is a message sent by the autopilot to communicate its presence and status to the GCS.';
 
-    async function queryMAVLink(command?: string) {
-        let response = null;
-        if (command) {
-            response = await fetch('/api/mavlink', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ command }),
-            });
-        } else {
-            response = await fetch('/api/mavlink', { method: 'POST' });
-        }
+    async function getStream() {
+        let response = await fetch('/api/mavlink', { method: 'POST' });
         const reader = response.body?.getReader();
         const decoder = new TextDecoder();
 
@@ -48,14 +37,14 @@
         const heartbeat = document.querySelector('.heartbeat');
         const icon = document.querySelector('.heartbeat i');
         if (heartbeat) {
-            heartbeat.classList.remove('text-white');
             heartbeat.classList.add('text-green-500');
+            heartbeat.classList.remove('text-white');
             icon?.classList.add('animate-ping');
             setTimeout(() => {
                 icon?.classList.remove('animate-ping');
                 heartbeat.classList.remove('text-green-500');
                 heartbeat.classList.add('text-white');
-            }, 1000);
+            }, 2000);
         }
     }
 
@@ -151,8 +140,16 @@
         mavlinkLogStore.subscribe((value) => {
             logs = value;
         });
-        queryMAVLink();
-        // queryMAVLink('GET_HOME_POSITION')
+        getStream();
+    });
+
+    // Cleanup Stream
+    onDestroy(() => {
+
+    });
+
+    afterUpdate(() => {
+        logContainer.scrollTop = logContainer.scrollHeight;
     });
 </script>
 
@@ -289,6 +286,10 @@
 
     label {
         font-size: 10pt;
+    }
+
+    .heartbeat {
+        transition: 0s;
     }
 
     /* Mobile Styles */

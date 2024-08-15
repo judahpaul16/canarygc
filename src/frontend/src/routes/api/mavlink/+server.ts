@@ -43,15 +43,6 @@ export const POST: RequestHandler = async (request) => {
   
     const stream = new ReadableStream({
         async start(controller) {
-            // Sending a command
-            if (request.params.command) {
-                let command = request.params.command;
-                let command2Send: any = new common.CommandLong();
-                command2Send.command = common.MavCmd[command as keyof typeof common.MavCmd];
-                command2Send.target_system = 1;
-                await send(port, command2Send, new MavLinkProtocolV2());
-            }
-
             reader.on('data', (packet: MavLinkPacket) => {
                 if (!streamClosed) {
                     const clazz = REGISTRY[packet.header.msgid];
