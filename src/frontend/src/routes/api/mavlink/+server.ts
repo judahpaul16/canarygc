@@ -74,9 +74,7 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
                 console.error(`Error connecting to the MAVLink server: ${err.message}`);
                 reject(new Response(`Error connecting to the MAVLink server: ${err.message}`, { status: 500 }));
             });
-            port.on('open', () => {
-                return resolve({ status: 200});
-            });
+            port.on('data', resolve);
         });
     } catch (err) {
         return err as Response;
