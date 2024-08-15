@@ -424,7 +424,7 @@
           leafletMap.addLayer(mavMarker);
           updateMarkersAndPolylines();
           if (!isDragging) {
-            leafletMap.setView(mavLocation as L.LatLng);
+            leafletMap.flyTo(mavLocation as L.LatLng);
           }
         }
       };
