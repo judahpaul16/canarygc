@@ -3,8 +3,6 @@ import { connect, type Socket } from 'net';
 import { MavLinkPacketSplitter, MavLinkPacketParser, type MavLinkPacketRegistry, type MavLinkPacket, minimal, common, ardupilotmega, waitFor, MavLinkProtocolV2, send } from 'node-mavlink';
 import type { RequestHandler } from '@sveltejs/kit';
 
-let logs: string[] = [];
-
 const REGISTRY: MavLinkPacketRegistry = {
     ...minimal.REGISTRY,
     ...common.REGISTRY,
@@ -63,12 +61,26 @@ async function sendMavlinkCommand(port: SerialPort | Socket, reader: MavLinkPack
     await send(port, commandMsg);
 }
 
-export const POST: RequestHandler = async (request) => {
+export const POST: RequestHandler = async (request): Promise<Response> => {
     // Use UART serial port in production
     // const port = new SerialPort({ path: '/dev/ttyACM0', baudRate: 115200 });
     
     // Uncomment for development
     const port = connect({ host: 'sitl', port: 5760 });
+    
+    try {
+        await new Promise((resolve, reject) => {
+            port.on('error', (err) => {
+                console.error(`Error connecting to the MAVLink server: ${err.message}`);
+                reject(new Response(`Error connecting to the MAVLink server: ${err.message}`, { status: 500 }));
+            });
+            port.on('open', () => {
+                return resolve({ status: 200});
+            });
+        });
+    } catch (err) {
+        return err as Response;
+    }
 
     const reader = port
         .pipe(new MavLinkPacketSplitter())

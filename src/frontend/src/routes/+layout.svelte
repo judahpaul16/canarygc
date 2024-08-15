@@ -8,6 +8,7 @@
   import '../app.css';
   import { get } from 'svelte/store';
   import { mavHeadingStore, mavLocationStore, mavlinkLogStore, mavAltitudeStore } from '../stores/mavlinkStore';
+  import Modal from '../components/Modal.svelte';
 
   const pb = new PocketBase('http://localhost:8090');
 
@@ -38,10 +39,27 @@
 
   async function getStream() {
     let response = await fetch('/api/mavlink', { method: 'POST' });
-    const reader = response.body?.getReader();
-    const decoder = new TextDecoder();
     let online = response.status === 200;
     console.log('Stream is online:', online);
+
+    if (!online) {
+      new Modal({
+        target: document.body,
+        props: {
+          title: 'Error',
+          content: `Error connecting to the MAVLink stream. Please make sure the MAVLink stream is running, verify the connection, and try again.`,
+          isOpen: true,
+          confirmation: false,
+          notification: true,
+        },
+      });
+      logs = [...logs, 'Error connecting to the MAVLink stream. Please make sure the MAVLink stream is running, verify the connection, and try again.'];
+      mavlinkLogStore.set(logs);
+      return;
+    }
+    
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
 
     // truncate old logs to save memory
     logs = logs.slice(-1000);
@@ -137,11 +155,13 @@
         };
         await pb.collections.create(newCollection);
         console.log('Collection "flight_plans" created successfully.');
-      } else {
-        console.log('Collection "flight_plans" already exists.');
       }
-    } catch (error) {
-      console.error('Error:', error);
+    } catch (error: any) {
+      if (error.message.includes('The request was autocancelled')) {
+        // ignore it
+      } else {
+        console.error('Error:', error);
+      }
     }
   }
 
@@ -160,11 +180,13 @@
         };
         await pb.collections.create(newCollection);
         console.log('Collection "blackbox" created successfully.');
-      } else {
-        console.log('Collection "blackbox" already exists.');
       }
-    } catch (error) {
-      console.error('Error:', error);
+    } catch (error: any) {
+      if (error.message.includes('The request was autocancelled')) {
+        // ignore it
+      } else {
+        console.error('Error:', error);
+      }
     }
   }
   async function updateBlackBoxCollection() {

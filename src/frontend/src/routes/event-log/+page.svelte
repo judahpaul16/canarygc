@@ -126,24 +126,6 @@
         mavlinkLogStore.subscribe((value) => {
             logs = value;
         });
-
-        // POST a command to MAVLink
-        // setTimeout(() => {
-        //     fetch('/api/mavlink', {
-        //         method: 'POST',
-        //         headers: {
-        //             'Content-Type': 'application/json'
-        //         },
-        //         body: JSON.stringify({
-        //             command: 'NAV_LOITER_UNLIM'
-        //         })
-        //     });
-        // }, 5000);
-    });
-
-    // Cleanup Stream
-    onDestroy(() => {
-
     });
 
     afterUpdate(() => {
