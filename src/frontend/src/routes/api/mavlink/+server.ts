@@ -1,6 +1,6 @@
 import { SerialPort } from 'serialport';
-import { connect } from 'net';
-import { MavLinkPacketSplitter, MavLinkPacketParser, type MavLinkPacketRegistry, type MavLinkPacket, minimal, common, ardupilotmega, MavLinkProtocolV2, send } from 'node-mavlink';
+import { connect, type Socket } from 'net';
+import { MavLinkPacketSplitter, MavLinkPacketParser, type MavLinkPacketRegistry, type MavLinkPacket, minimal, common, ardupilotmega, waitFor, MavLinkProtocolV2, send } from 'node-mavlink';
 import type { RequestHandler } from '@sveltejs/kit';
 
 let logs: string[] = [];
@@ -28,6 +28,25 @@ interface ParamValueData {
     paramIndex: number;
 }
 
+async function requestGpsData(port: SerialPort | Socket, reader: MavLinkPacketParser) {
+    // Create a REQUEST_DATA_STREAM message
+    const request = new common.SetMessageIntervalCommand;
+    request.targetSystem = 1;
+    request.targetComponent = 1;
+    request.messageId = common.GpsRawInt.MSG_ID;
+    request.interval = 1000000; // 1 Hz
+    request.responseTarget = 1;
+    await send(port, request);
+}
+
+async function requestParameters(port: SerialPort | Socket, reader: MavLinkPacketParser) {
+    // Create a PARAM_REQUEST_LIST message
+    const request = new common.ParamRequestList()
+    request.targetSystem = 1
+    request.targetComponent = 1
+    await send(port, request);
+}
+
 export const POST: RequestHandler = async (request) => {
     // Use UART serial port in production
     // const port = new SerialPort({ path: '/dev/ttyACM0', baudRate: 115200 });
@@ -43,6 +62,7 @@ export const POST: RequestHandler = async (request) => {
   
     const stream = new ReadableStream({
         async start(controller) {
+            requestGpsData(port, reader);
             reader.on('data', (packet: MavLinkPacket) => {
                 if (!streamClosed) {
                     const clazz = REGISTRY[packet.header.msgid];
