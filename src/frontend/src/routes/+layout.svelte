@@ -10,6 +10,9 @@
   import { mavHeadingStore, mavLocationStore, mavlinkLogStore, mavAltitudeStore } from '../stores/mavlinkStore';
   import Modal from '../components/Modal.svelte';
 
+  let offline_modal: Modal;
+  let error_modal: Modal;
+
   const pb = new PocketBase('http://localhost:8090');
 
   let currentPath = '';
@@ -38,58 +41,114 @@
 
   let resizeObserver: ResizeObserver;
 
-  async function getStream() {
-    let response = await fetch('/api/mavlink', { method: 'POST' });
-    let online = response.status === 200;
-    console.log('Stream is online:', online);
-
-    if (!online) {
-      new Modal({
-        target: document.body,
-        props: {
-          title: 'Error',
-          content: `Error connecting to the MAVLink stream. Please make sure the MAVLink stream is running, verify the connection, and try again.`,
-          isOpen: true,
-          confirmation: false,
-          notification: true,
-        },
+  async function checkOnlineStatus() {
+    try {
+      const response = await fetch('/api/mavlink', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
-      logs = [...logs, 'Error connecting to the MAVLink stream. Please make sure the MAVLink stream is running, verify the connection, and try again.'];
-      mavlinkLogStore.set(logs);
+      if (response.ok) {
+        const data = await response.json();
+        updateBlackBoxCollection(JSON.stringify(data));
+      } else {
+        if (!offline_modal) {
+          offline_modal = new Modal({
+            target: document.body,
+            props: {
+              title: 'Offline',
+              content: `The MAVLink stream is currently offline. Please make sure the MAVLink stream is running, verify the connection, and try again.`,
+              isOpen: true,
+              confirmation: false,
+              notification: true,
+            },
+          });
+        }
+        offline_modal.isOpen = true;
+        return;
+      }
+  } catch (error: any) {
+      if (!error_modal)
+        error_modal = new Modal({
+          target: document.body,
+          props: {
+            title: 'Error',
+            content: `Error connecting to the MAVLink stream.\n\n${error.message}`,
+            isOpen: true,
+            confirmation: false,
+            notification: true,
+          },
+        });
+      error_modal.isOpen = true;
       return;
     }
-    
-    const reader = response.body?.getReader();
-    const decoder = new TextDecoder();
+  }
 
+  async function updateBlackBoxCollection(log: string) {
+    try {
+      // // If more than 1000 pb records in batches of 100
+      // let records = await pb.collection('blackbox').getFullList();
+      // if (records.length > 1000) {
+      //   // Sort records by creation date (or timestamp) to find the oldest ones
+      //   records.sort((a, b) => new Date(a.created).getTime() - new Date(b.created).getTime());
+
+      //   // Keep the latest 10,000 records
+      //   const recordsToDelete = records.slice(0, records.length - 10000);
+
+      //   // Delete the selected records
+      //   const deletePromises = recordsToDelete.map(record => pb.collection('blackbox').delete(record.id));
+      //   await Promise.all(deletePromises);
+      // }
+
+      // Add new logs to the collection
+      await pb.collection('blackbox').create({ log: log });
+    } catch (error : any) {
+      if (error.message.includes('The request was autocancelled')) {
+          // ignore it
+      } else {
+          console.error('Error:', error.message || error);
+          console.error('Stack Trace:', error.stack || 'No stack trace available');
+      }
+    }
+  }
+
+  async function getLogs() {
+    let text: string | null = null;
+
+    try {
+      const response = await pb.collection('blackbox').getFullList();
+      if (response.length > 0) {
+        text = response[response.length - 1].log.replace(/\\"/g, '"') + '\n';
+      }
+    } catch (error: any) {
+      if (error.message.includes('The request was autocancelled')) {
+        // ignore it
+      } else {
+        console.error('Error:', error);
+      }
+    }
+    
     // truncate old logs to save memory
     logs = logs.slice(-1000);
 
-    if (reader) {
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
+    if (text && !logs.includes(text)) {
+      logs = [...logs, text];
+      mavlinkLogStore.set(logs);
 
-            // Decode and process the data
-            const text = decoder.decode(value, { stream: true });
-            logs = [...logs, text];
-            mavlinkLogStore.set(logs);
-            updateBlackBoxCollection();
-
-            if (text.includes('GPS_RAW_INT')) {
-                let lat: string | RegExpMatchArray | null = text.match(/"lat":\-?(\d+)/g);
-                let lon: string | RegExpMatchArray | null = text.match(/"lon":\-?(\d+)/g);
-                if (lat) lat = lat.toString().replace('"lat":', '').replace(/^(-?\d{2})(\d+)$/, '$1.$2');
-                if (lon) lon = lon.toString().replace('"lon":', '').replace(/^(-?\d{2})(\d+)$/, '$1.$2');
-                if (lat && lon) mavLocationStore.set({ lat: parseFloat(lat), lng: parseFloat(lon) });
-                let heading: string | RegExpMatchArray | null = text.match(/"cog":(\d+)/g);
-                if (heading) heading = heading.toString().replace('"cog":', '');
-                if (heading) mavHeadingStore.set(parseInt(heading));
-                let altitude: string | RegExpMatchArray | null = text.match(/"alt":(\d+)/g);
-                if (altitude) altitude = altitude.toString().replace('"alt":', '').replace(/^(\d{2})(\d+)$/, '$1.$2');
-                if (altitude) mavAltitudeStore.set(parseInt(altitude));
-            }
-        }
+      if ((text as string).includes('GPS_RAW_INT')) {
+          let lat: string | RegExpMatchArray | null = (text as string).match(/"lat":\-?(\d+)/g);
+          let lon: string | RegExpMatchArray | null = (text as string).match(/"lon":\-?(\d+)/g);
+          if (lat) lat = lat.toString().replace('"lat":', '').replace(/^(-?\d{2})(\d+)$/, '$1.$2');
+          if (lon) lon = lon.toString().replace('"lon":', '').replace(/^(-?\d{2})(\d+)$/, '$1.$2');
+          if (lat && lon) mavLocationStore.set({ lat: parseFloat(lat), lng: parseFloat(lon) });
+          let heading: string | RegExpMatchArray | null = (text as string).match(/"cog":(\d+)/g);
+          if (heading) heading = heading.toString().replace('"cog":', '');
+          if (heading) mavHeadingStore.set(parseInt(heading));
+          let altitude: string | RegExpMatchArray | null = (text as string).match(/"alt":(\d+)/g);
+          if (altitude) altitude = altitude.toString().replace('"alt":', '').replace(/^(\d{2})(\d+)$/, '$1.$2');
+          if (altitude) mavAltitudeStore.set(parseInt(altitude));
+      }
     }
   }
 
@@ -101,7 +160,11 @@
     
     initializeFlightPlansCollection();
     initializeBlackBoxCollection();
-    getStream();
+
+    setInterval(async () => {
+      await checkOnlineStatus();
+      await getLogs();
+    }, 500);
     
     const dashboard = document.querySelector('.dashboard');
     if (dashboard) {
@@ -187,42 +250,6 @@
         // ignore it
       } else {
         console.error('Error:', error);
-      }
-    }
-  }
-  async function updateBlackBoxCollection() {
-    try {
-      const collections = await pb.collections.getFullList();
-      const collection = collections.find(c => c.name === 'blackbox');
-
-      if (collection) {
-        // Fetch all records from the 'blackbox' collection
-        const records = await pb.collection('blackbox').getFullList();
-
-        if (records.length > 10000) {
-          // Sort records by creation date (or timestamp) to find the oldest ones
-          records.sort((a, b) => new Date(a.created).getTime() - new Date(b.created).getTime());
-
-          // Keep the latest 10,000 records
-          const recordsToDelete = records.slice(0, records.length - 10000);
-
-          // Delete the selected records
-          const deletePromises = recordsToDelete.map(record => pb.collection('blackbox').delete(record.id));
-          await Promise.all(deletePromises);
-        }
-
-        // Add new logs to the collection
-        const logPromises = logs.map(log => pb.collection('blackbox').create({ log }));
-        await Promise.all(logPromises);
-      } else {
-        console.error('Collection "blackbox" does not exist.');
-      }
-    } catch (error : any) {
-      if (error.message.includes('The request was autocancelled')) {
-        // ignore it
-      } else {
-        console.error('Error:', error.message || error);
-        console.error('Stack Trace:', error.stack || 'No stack trace available');
       }
     }
   }

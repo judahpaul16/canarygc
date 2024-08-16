@@ -12,8 +12,7 @@
 
     const heartbeatInfo = 'HEARTBEAT is a message sent by the autopilot to communicate its presence and status to the GCS.';
 
-    $: logs,
-        triggerHeartbeat();
+    $: if (logs[logs.length - 1]?.indexOf('HEARTBEAT') !== -1) triggerHeartbeat();
 
     async function triggerHeartbeat() {
         if (typeof document !== 'undefined') {

@@ -1,10 +1,28 @@
-<script>
+<script lang="ts">
   import Map from './Map.svelte';
   import DPad from './DPad.svelte';
   import Weather from './Weather.svelte';
   import { mavLocationStore } from '../stores/mavlinkStore';
 
   $: mavLocation = $mavLocationStore;
+
+  async function sendMavlinkCommand(command: string) {
+    const respone = await fetch(`/api/mavlink`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        command: command
+      })
+    });
+
+    if (respone.ok) {
+      console.log(`Mavlink command ${command} sent successfully`);
+    } else {
+      console.error(`Failed to send mavlink command ${command}`);
+    }
+  }
 </script>
 
 <div class="controls bg-[#1c1c1e] text-white px-10 rounded-lg h-full flex items-center overflow-x-auto gap-4">
@@ -29,15 +47,15 @@
     <div class="separator"></div>
     <div class="column flex flex-col items-center justify-center text-center space-y-4">
       <div class="flex flex-col items-center">
-        <label class="text-sm mb-1">Altitude Up</label>
+        <label class="text-sm mb-1" on:click={() => {sendMavlinkCommand("DO_CHANGE_ALTITUDE")}}>Altitude Up</label>
         <button class="alt-button rounded-full">
-          <i class="fas fa-arrow-up alt-up"></i>
+          <i class="fas fa-arrow-up-wide-short alt-up"></i>
         </button>
       </div>
       <div class="flex flex-col items-center justify-center">
-        <label class="text-sm mb-1">Altitude Down</label>
+        <label class="text-sm mb-1" on:click={() => {sendMavlinkCommand("DO_CHANGE_ALTITUDE")}}>Altitude Down</label>
         <button class="alt-button rounded-full">
-          <i class="fas fa-arrow-down alt-down"></i>
+          <i class="fas fa-arrow-down-short-wide alt-down"></i>
         </button>
       </div>
     </div>
@@ -45,11 +63,11 @@
     <div class="rotate-btns column flex flex-col items-center justify-center text-center space-y-4">
       <div id="rotate-left-button" class="flex flex-col items-center">
         <label class="text-sm mb-1">Rotate Left</label>
-        <button class="rotate-button rotate-left rounded-full">⟲</button>
+        <button class="rotate-button rotate-left rounded-full" on:click={() => {}}>⟲</button>
       </div>
       <div class="flex flex-col items-center">
         <label class="text-sm mb-1">Rotate Right</label>
-        <button class="rotate-button rotate-right rounded-full">⟳</button>
+        <button class="rotate-button rotate-right rounded-full" on:click={() => {}}>⟳</button>
       </div>
     </div>
   </div>
