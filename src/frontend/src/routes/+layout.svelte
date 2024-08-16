@@ -87,20 +87,6 @@
 
   async function updateBlackBoxCollection(log: string) {
     try {
-      // // If more than 1000 pb records in batches of 100
-      // let records = await pb.collection('blackbox').getFullList();
-      // if (records.length > 1000) {
-      //   // Sort records by creation date (or timestamp) to find the oldest ones
-      //   records.sort((a, b) => new Date(a.created).getTime() - new Date(b.created).getTime());
-
-      //   // Keep the latest 10,000 records
-      //   const recordsToDelete = records.slice(0, records.length - 10000);
-
-      //   // Delete the selected records
-      //   const deletePromises = recordsToDelete.map(record => pb.collection('blackbox').delete(record.id));
-      //   await Promise.all(deletePromises);
-      // }
-
       // Add new logs to the collection
       await pb.collection('blackbox').create({ log: log });
     } catch (error : any) {
@@ -110,6 +96,21 @@
           console.error('Error:', error.message || error);
           console.error('Stack Trace:', error.stack || 'No stack trace available');
       }
+    }
+  }
+
+  async function cleanupBlackBoxCollection() {
+    let records = await pb.collection('blackbox').getFullList();
+    if (records.length > 1000) {
+      // Sort records by creation date (or timestamp) to find the oldest ones
+      records.sort((a, b) => new Date(a.created).getTime() - new Date(b.created).getTime());
+
+      // Keep the latest 1,000 records
+      let recordsToDelete = records.slice(0, records.length - 1000);
+
+      // Delete the selected records
+      let deletePromises = recordsToDelete.map(record => pb.collection('blackbox').delete(record.id));
+      await Promise.all(deletePromises);
     }
   }
 
@@ -162,6 +163,7 @@
     initializeBlackBoxCollection();
 
     setInterval(async () => {
+      await cleanupBlackBoxCollection();
       await checkOnlineStatus();
       await getLogs();
     }, 500);

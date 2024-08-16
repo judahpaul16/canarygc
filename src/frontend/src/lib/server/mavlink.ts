@@ -29,11 +29,12 @@ interface ParamValueData {
 
 let port: SerialPort | Socket | null = null;
 let reader: MavLinkPacketParser | null = null;
+let online = false;
+let gpsRequested = false;
 let logs: string[] = [];
 
 async function initializePort(): Promise<void> {
     if (port) return; // Return if port is already initialized
-    let online = false;
 
     // Use UART serial port in production
     // port = new SerialPort({ path: '/dev/ttyACM0', baudRate: 115200 });
@@ -81,6 +82,7 @@ async function requestGpsData() {
     request.interval = 1000000; // 1 Hz
     request.responseTarget = 1;
     await send(port!, request);
+    gpsRequested = true;
 }
 
 async function requestParameters() {
@@ -128,5 +130,7 @@ export {
     requestGpsData,
     requestParameters,
     sendMavlinkCommand,
+    online,
+    gpsRequested,
     logs
 };
