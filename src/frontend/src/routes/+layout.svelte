@@ -43,7 +43,7 @@
 
   async function checkOnlineStatus() {
     try {
-      const response = await fetch('/api/mavlink', {
+      const response = await fetch('/api/mavlink/init', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

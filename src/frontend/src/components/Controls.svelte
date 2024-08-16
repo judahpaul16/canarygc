@@ -7,16 +7,13 @@
   $: mavLocation = $mavLocationStore;
 
   async function sendMavlinkCommand(command: string) {
-    const respone = await fetch(`/api/mavlink`, {
+    const respone = await fetch(`/api/mavlink/send_command`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'content-type': 'application/json',
+        'command': command,
       },
-      body: JSON.stringify({
-        command: command
-      })
     });
-
     if (respone.ok) {
       console.log(`Mavlink command ${command} sent successfully`);
     } else {
@@ -47,14 +44,14 @@
     <div class="separator"></div>
     <div class="column flex flex-col items-center justify-center text-center space-y-4">
       <div class="flex flex-col items-center">
-        <label class="text-sm mb-1" on:click={() => {sendMavlinkCommand("DO_CHANGE_ALTITUDE")}}>Altitude Up</label>
-        <button class="alt-button rounded-full">
+        <label class="text-sm mb-1">Altitude Up</label>
+        <button class="alt-button rounded-full" on:click={() => {sendMavlinkCommand("DO_CHANGE_ALTITUDE")}}>
           <i class="fas fa-arrow-up-wide-short alt-up"></i>
         </button>
       </div>
       <div class="flex flex-col items-center justify-center">
-        <label class="text-sm mb-1" on:click={() => {sendMavlinkCommand("DO_CHANGE_ALTITUDE")}}>Altitude Down</label>
-        <button class="alt-button rounded-full">
+        <label class="text-sm mb-1">Altitude Down</label>
+        <button class="alt-button rounded-full" on:click={() => {sendMavlinkCommand("DO_CHANGE_ALTITUDE")}}>
           <i class="fas fa-arrow-down-short-wide alt-down"></i>
         </button>
       </div>
