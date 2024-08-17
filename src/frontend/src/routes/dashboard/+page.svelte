@@ -22,15 +22,7 @@
       <LiveFeed />
     </div>
     <div class="stats col-span-4 row-span-4">
-      <Stats 
-        speed={20} 
-        altitude={80} 
-        flightTime={360} 
-        batteryStatus={100}
-        altitudeLimited={100}
-        mavName="CUAV X7 Running Ardupilot"
-        mavType="Multirotor"
-      />
+      <Stats />
     </div>
     <div class="manage-flight-plans col-span-2 row-span-4">
       <ManageFlightPlans />
