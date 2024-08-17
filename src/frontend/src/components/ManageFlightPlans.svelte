@@ -136,7 +136,7 @@
         {title}
       </div>
     </div>
-    <div class="plans p-2 text-white h-full max-h-[63%] mb-2">
+    <div class="plans p-2 text-white h-full max-h-[67%]">
       <ul class="overflow-auto h-full p-2 text-sm">
         {#if flightPlans.length != 0}
           {#each flightPlans as plan (plan.id)}
@@ -167,10 +167,10 @@
         {/if}
       </ul>
     </div>
-    <div class="flex justify-center px-4 pt-1 border-t border-[#2d2d2d]">
+    <div class="absolute left-0 right-0 bottom-0 flex justify-center border-t border-[#2d2d2d]">
       <button
           on:click={importPlan}
-          class="bg-transparent hover:bg-[#4b5563] text-white px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
+          class="bg-[#121212] hover:bg-[#4b5563] text-white px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
         >
         <i class="fas fa-upload text-xs" title="Import Mission Plan"></i>
         <span class="import-btn-span text-xs ml-1">Import</span>
@@ -223,6 +223,7 @@
   @media (max-width: 990px) {
     .plans {
       max-height: 33vh;
+      margin-bottom: 3.5em;
     }
     .plans + div {
       padding-block: 0.5rem;
