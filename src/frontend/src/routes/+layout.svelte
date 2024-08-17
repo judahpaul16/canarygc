@@ -6,11 +6,18 @@
   import { onMount, onDestroy, afterUpdate } from 'svelte';
   import { goto } from '$app/navigation';
   import '../app.css';
+  import { get } from 'svelte/store';
+  import { mavHeadingStore, mavLocationStore, mavlinkLogStore, mavAltitudeStore } from '../stores/mavlinkStore';
+  import Modal from '../components/Modal.svelte';
+
+  let offline_modal: Modal;
+  let error_modal: Modal;
 
   const pb = new PocketBase('http://localhost:8090');
 
   let currentPath = '';
   let heightOfDashboard = 1000;
+  let logs: string[] = [];
 
   $: currentPath = $page.url.pathname;
 
@@ -21,7 +28,8 @@
     if (dashboard) {
       heightOfDashboard = dashboard.clientHeight;
       if (window.location.pathname !== '/') {
-        heightOfDashboard = dashboard.clientHeight + 1;
+        heightOfDashboard = dashboard.clientHeight;
+        if (window.location.pathname !== '/dashboard') heightOfDashboard += 1;
         let nav = document.querySelector('.desktop-nav');
         // @ts-ignore
         nav.style.opacity = 1;
@@ -33,6 +41,118 @@
 
   let resizeObserver: ResizeObserver;
 
+  async function checkOnlineStatus() {
+    try {
+      const response = await fetch('/api/mavlink/init', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        updateBlackBoxCollection(JSON.stringify(data));
+      } else {
+        if (!offline_modal) {
+          offline_modal = new Modal({
+            target: document.body,
+            props: {
+              title: 'Offline',
+              content: `The MAVLink stream is currently offline. Please make sure the MAVLink stream is running, verify the connection, and try again.`,
+              isOpen: true,
+              confirmation: false,
+              notification: true,
+            },
+          });
+        }
+        offline_modal.isOpen = true;
+        return;
+      }
+  } catch (error: any) {
+      if (!error_modal)
+        error_modal = new Modal({
+          target: document.body,
+          props: {
+            title: 'Error',
+            content: `Error connecting to the MAVLink stream.\n\n${error.message}`,
+            isOpen: true,
+            confirmation: false,
+            notification: true,
+          },
+        });
+      error_modal.isOpen = true;
+      return;
+    }
+  }
+
+  async function updateBlackBoxCollection(log: string) {
+    try {
+      // Add new logs to the collection
+      await pb.collection('blackbox').create({ log: log });
+    } catch (error : any) {
+      if (error.message.includes('The request was autocancelled')) {
+          // ignore it
+      } else {
+          console.error('Error:', error.message || error);
+          console.error('Stack Trace:', error.stack || 'No stack trace available');
+      }
+    }
+  }
+
+  async function cleanupBlackBoxCollection() {
+    let records = await pb.collection('blackbox').getFullList();
+    if (records.length > 1000) {
+      // Sort records by creation date (or timestamp) to find the oldest ones
+      records.sort((a, b) => new Date(a.created).getTime() - new Date(b.created).getTime());
+
+      // Keep the latest 1,000 records
+      let recordsToDelete = records.slice(0, records.length - 1000);
+
+      // Delete the selected records
+      let deletePromises = recordsToDelete.map(record => pb.collection('blackbox').delete(record.id));
+      await Promise.all(deletePromises);
+    }
+  }
+
+  async function getLogs() {
+    let text: string | null = null;
+
+    try {
+      const response = await pb.collection('blackbox').getFullList();
+      if (response.length > 0) {
+        text = response[response.length - 1].log.replace(/\\"/g, '"') + '\n';
+      }
+    } catch (error: any) {
+      if (error.message.includes('The request was autocancelled')) {
+        // ignore it
+      } else {
+        console.error('Error:', error);
+      }
+    }
+    
+    // truncate old logs to save memory
+    logs = logs.slice(-1000);
+
+    if (text && !logs.includes(text)) {
+      logs = [...logs, text];
+      mavlinkLogStore.set(logs);
+
+      if ((text as string).includes('GPS_RAW_INT')) {
+          let lat: string | RegExpMatchArray | null = (text as string).match(/"lat":\-?(\d+)/g);
+          let lon: string | RegExpMatchArray | null = (text as string).match(/"lon":\-?(\d+)/g);
+          if (lat) lat = lat.toString().replace('"lat":', '').replace(/^(-?\d{2})(\d+)$/, '$1.$2');
+          if (lon) lon = lon.toString().replace('"lon":', '').replace(/^(-?\d{2})(\d+)$/, '$1.$2');
+          if (lat && lon) mavLocationStore.set({ lat: parseFloat(lat), lng: parseFloat(lon) });
+          let heading: string | RegExpMatchArray | null = (text as string).match(/"cog":(\d+)/g);
+          if (heading) heading = heading.toString().replace('"cog":', '');
+          if (heading) mavHeadingStore.set(parseInt(heading));
+          let altitude: string | RegExpMatchArray | null = (text as string).match(/"alt":(\d+)/g);
+          if (altitude) altitude = altitude.toString().replace('"alt":', '').replace(/^(\d{2})(\d+)$/, '$1.$2');
+          if (altitude) mavAltitudeStore.set(parseInt(altitude));
+      }
+    }
+  }
+
   onMount(() => {
     if (typeof window !== 'undefined' && authData.checkExpired() && window.location.pathname !== '/') {
       authData.set(null);
@@ -40,6 +160,13 @@
     }
     
     initializeFlightPlansCollection();
+    initializeBlackBoxCollection();
+
+    setInterval(async () => {
+      await cleanupBlackBoxCollection();
+      await checkOnlineStatus();
+      await getLogs();
+    }, 500);
     
     const dashboard = document.querySelector('.dashboard');
     if (dashboard) {
@@ -94,11 +221,38 @@
         };
         await pb.collections.create(newCollection);
         console.log('Collection "flight_plans" created successfully.');
-      } else {
-        console.log('Collection "flight_plans" already exists.');
       }
-    } catch (error) {
-      console.error('Error:', error);
+    } catch (error: any) {
+      if (error.message.includes('The request was autocancelled')) {
+        // ignore it
+      } else {
+        console.error('Error:', error);
+      }
+    }
+  }
+
+  async function initializeBlackBoxCollection() {
+    try {
+      const collections = await pb.collections.getFullList();
+      const collectionExists = collections.some(c => c.name === 'blackbox');
+      
+      if (!collectionExists) {
+        const newCollection = {
+          name: 'blackbox',
+          type: 'base',
+          schema: [
+            { name: 'log', type: 'text', options: { maxSize: 100000000 } }
+          ]
+        };
+        await pb.collections.create(newCollection);
+        console.log('Collection "blackbox" created successfully.');
+      }
+    } catch (error: any) {
+      if (error.message.includes('The request was autocancelled')) {
+        // ignore it
+      } else {
+        console.error('Error:', error);
+      }
     }
   }
 
@@ -134,9 +288,9 @@
             <i class="nav-icon fas fa-tachometer-alt"></i>
             <div class="tooltip">Dashboard</div>
           </button>
-          <button on:click|preventDefault={() => handleNavigation('/flight-planner')} class="nav-button mb-4 {currentPath === '/flight-planner' ? 'active' : ''}">
+          <button on:click|preventDefault={() => handleNavigation('/mission-planner')} class="nav-button mb-4 {currentPath === '/mission-planner' ? 'active' : ''}">
             <i class="nav-icon fas fa-route"></i>
-            <div class="tooltip">Flight Planner</div>
+            <div class="tooltip">Mission Planner</div>
           </button>
           <button on:click|preventDefault={() => handleNavigation('/event-log')} class="nav-button mb-4 {currentPath === '/event-log' ? 'active' : ''}">
             <i class="nav-icon fas fa-bars-staggered"></i>
@@ -191,8 +345,8 @@
           <a href="/dashboard" on:click|preventDefault={() => handleNavigation('/dashboard')} class="nav-button mb-4 {currentPath === '/dashboard' ? 'active' : ''}">
             <i class="nav-icon fas fa-tachometer-alt"></i>&nbsp;&nbsp;Dashboard
           </a>
-          <a href="/flight-planner" on:click|preventDefault={() => handleNavigation('/flight-planner')} class="nav-button mb-4 {currentPath === '/flight-planner' ? 'active' : ''}">
-            <i class="nav-icon fas fa-route"></i>&nbsp;&nbsp;Flight Planner
+          <a href="/mission-planner" on:click|preventDefault={() => handleNavigation('/mission-planner')} class="nav-button mb-4 {currentPath === '/mission-planner' ? 'active' : ''}">
+            <i class="nav-icon fas fa-route"></i>&nbsp;&nbsp;Mission Planner
           </a>
           <a href="/event-log" on:click|preventDefault={() => handleNavigation('/event-log')} class="nav-button mb-4 {currentPath === '/event-log' ? 'active' : ''}">
             <i class="nav-icon fas fa-bars-staggered"></i>&nbsp;&nbsp;Event Log

@@ -23,3 +23,25 @@ services:
     container_name: mmgcs_frontend
     environment:
       - CHOKIDAR_USEPOLLING=true
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+
+  # ArduPilot SITL Service - Uncomment for development
+  # https://ardupilot.org/dev/docs/sitl-simulator-software-in-the-loop.html
+  sitl:
+    image: radarku/ardupilot-sitl:latest
+    tty: true
+    container_name: mmgcs_sitl
+    environment:
+      - INSTANCE=0
+      - LAT=33.7909
+      - LON=-84.3722
+      - ALT=14
+      - DIR=270
+      - MODEL=+
+      - SPEEDUP=1
+      - VEHICLE=ArduCopter
+    ports:
+      - "5760:5760"

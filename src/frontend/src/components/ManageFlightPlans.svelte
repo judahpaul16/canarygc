@@ -5,7 +5,7 @@
 
   const pb = new PocketBase("http://localhost:8090");
 
-  export let title: string = "Manage Flight Plans";
+  export let title: string = "Manage Mission Plans";
   export let isModal = false;
   export let isOpen: boolean = true;
   let flightPlans: Array<{ id: string; title: string }> = [];
@@ -24,7 +24,7 @@
         title: record.title,
       }));
     } catch (error) {
-      console.error("Error fetching flight plans:", error);
+      console.error("Error fetching mission plans:", error);
     }
   }
 
@@ -37,11 +37,11 @@
   function handleSave(title: string, plan: FlightPlanAction) {
     flightPlanTitleStore.set(title);
     flightPlanActionsStore.set(plan);
-    let flightPlan = {
+    let missionPlan = {
       title: title,
       actions: plan,
     };
-    pb.collection("flight_plans").create(flightPlan).then(() => getFlightPlans());
+    pb.collection("flight_plans").create(missionPlan).then(() => getFlightPlans());
   }
 
   async function handleDelete(id: string) {
@@ -49,7 +49,7 @@
       await pb.collection("flight_plans").delete(id);
       flightPlans = flightPlans.filter((plan) => plan.id !== id);
     } catch (error) {
-      console.error("Error deleting flight plan:", error);
+      console.error("Error deleting mission plan:", error);
     }
   }
 
@@ -113,7 +113,7 @@
             {/each}
           {:else}
             <li class="px-2 py-1 bg-gray-700 rounded mb-2">
-              <span>No flight plans found.</span>
+              <span>No mission plans found.</span>
             </li>
           {/if}
         </ul>
@@ -124,7 +124,7 @@
             class="bg-transparent hover:bg-[#4b5563] text-white px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
           >
           <i class="fas fa-upload mr-1"></i>
-          Import Flight Plan
+          Import Mission Plan
         </button>
       </div>
     </div>
@@ -162,7 +162,7 @@
           {/each}
         {:else}
           <li class="px-2 py-1 bg-gray-700 rounded mb-2">
-            <span>No flight plans found.</span>
+            <span>No mission plans found.</span>
           </li>
         {/if}
       </ul>
@@ -172,7 +172,7 @@
           on:click={importPlan}
           class="bg-transparent hover:bg-[#4b5563] text-white px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
         >
-        <i class="fas fa-upload text-xs" title="Import Flight Plan"></i>
+        <i class="fas fa-upload text-xs" title="Import Mission Plan"></i>
         <span class="import-btn-span text-xs ml-1">Import</span>
       </button>
     </div>
