@@ -7,7 +7,8 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
             try {
                 if (!online) await initializePort();
                 if (online && !gpsRequested) await requestGpsData();
-                return new Response(JSON.stringify(logs.pop()), { status: 200, headers: { 'Content-Type': 'application/json' } });
+                if (logs.length > 0) return new Response(JSON.stringify(logs.pop()), { status: 200, headers: { 'Content-Type': 'application/json' } });
+                return new Response('No logs available', { status: 503 });
             } catch (err) {
                 console.error(err);
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
