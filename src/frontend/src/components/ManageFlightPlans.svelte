@@ -141,19 +141,19 @@
         {#if flightPlans.length != 0}
           {#each flightPlans as plan (plan.id)}
             <li class="inline-block justify-between items-center px-2 py-1 bg-gray-700 rounded mb-2 w-full">
-              <span class="mr-2" title={plan.title}>{plan.title.substring(0, 12)}{#if plan.title.length >= 12}...{/if}</span>
+              <span class="mr-2" title={plan.title}>{plan.title.substring(0, 11)}{#if plan.title.length >= 11}...{/if}</span>
               <div class="flex items-center gap-3 float-right">
                 <button
                   on:click={() => handleDelete(plan.id)}
-                  class="text-red-500 hover:text-red-700 relative">
+                  class="text-red-400 hover:text-red-600 relative">
                     <i class="fas fa-trash-alt text-sm"></i>
                     <div class="tooltip">Delete</div>
                   </button
                 >
                 <button
                   on:click={() => loadPlan(plan)}
-                  class="text-blue-500 hover:text-blue-700 relative">
-                    <i class="fas fa-upload text-sm"></i>
+                  class="text-[#62bbff] hover:text-[#377aad] relative">
+                    <i class="fas fa-cloud-arrow-up text-sm"></i>
                     <div class="tooltip">Load</div>
                   </button
                 >
