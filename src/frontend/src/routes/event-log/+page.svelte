@@ -2,6 +2,9 @@
     import { onDestroy, onMount, afterUpdate } from 'svelte';
     import { mavlinkLogStore, mavLocationStore, mavHeadingStore } from '../../stores/mavlinkStore';
     import Modal from '../../components/Modal.svelte';
+    import PocketBase from 'pocketbase';
+
+    const pb = new PocketBase('http://localhost:8090');
     
     let logs: string[] = [];
     let logContainer: HTMLElement;
@@ -82,6 +85,11 @@
     function clearLogs() {
         logs = [];
         mavlinkLogStore.set(logs);
+        pb.collection('blackbox').getFullList().then((list) => {
+            list.forEach((item) => {
+                pb.collection('blackbox').delete(item.id);
+            });
+        });
     }
 
     function confirmClear() {
