@@ -5,7 +5,7 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
     switch (request.params.type) {
         case 'init':
             try {
-                if (!online)await initializePort();
+                if (!online) await initializePort();
                 if (online && !gpsRequested) await requestGpsData();
                 return new Response(JSON.stringify(logs.pop()), { status: 200, headers: { 'Content-Type': 'application/json' } });
             } catch (err) {

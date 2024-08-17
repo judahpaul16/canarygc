@@ -1,5 +1,3 @@
-// src/lib/mavlinkService.ts
-
 import { SerialPort } from 'serialport';
 import { connect, type Socket } from 'net';
 import {
