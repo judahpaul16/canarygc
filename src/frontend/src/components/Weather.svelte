@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import weatherCodes from '../lib/weathercodes.json';
-  import { mavLocationStore } from '../stores/mapStore';
+  import { mavLocationStore } from '../stores/mavlinkStore';
 
   type WeatherCode = {
     day: {

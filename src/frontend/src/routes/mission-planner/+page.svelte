@@ -4,9 +4,9 @@
     import Map from '../../components/Map.svelte';
     import Weather from '../../components/Weather.svelte';
     import Compass from '../../components/Compass.svelte';
-    import FlightPlan from '../../components/FlightPlan.svelte';
-    import FlightPlanSettings from '../../components/FlightPlanSettings.svelte';
-    import { mavLocationStore } from '../../stores/mapStore';
+    import MissionPlan from '../../components/MissionPlan.svelte';
+    import MissionPlanSettings from '../../components/MissionPlanSettings.svelte';
+    import { mavLocationStore } from '../../stores/mavlinkStore';
   
     $: user = $authData;
     
@@ -35,11 +35,11 @@
         <Compass {mavLocation} />
       </div>
       <div class="flight-plan col-span-10 row-span-2">
-        <FlightPlan />
+        <MissionPlan />
       </div>
       <div class="flight-plan-settings col-span-2 row-span-2 flex justify-end items-end">
         <div class="w-full h-full">
-          <FlightPlanSettings />
+          <MissionPlanSettings />
         </div>
       </div>
     </div>

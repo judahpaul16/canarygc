@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { mavLocationStore, mavHeadingStore } from '../stores/mapStore';
+  import { mavLocationStore, mavHeadingStore } from '../stores/mavlinkStore';
   
   export let mavLocation: L.LatLng | { lat: number; lng: number };
   let heading: string;

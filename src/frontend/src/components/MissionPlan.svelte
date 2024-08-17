@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { mapStore, mavLocationStore } from '../stores/mapStore';
+  import { mapStore } from '../stores/mapStore';
+  import { mavLocationStore } from '../stores/mavlinkStore';
   import { flightPlanTitleStore, flightPlanActionsStore } from '../stores/flightPlanStore';
   import { get } from 'svelte/store';
   import Modal from './Modal.svelte';
@@ -165,15 +166,15 @@
 
 <div class="flightplan bg-[#1c1c1e] text-white p-4 rounded-lg space-x-4 items-center h-full">
   <div class="container block">
-    <input type="text" class="text-md font-bold mb-2 ml-4 focus:outline-none" placeholder="Untitled Flight Plan" id="flight-plan-title" bind:value={title} />
+    <input type="text" class="text-md font-bold mb-2 ml-4 focus:outline-none" placeholder="Untitled Mission Plan" id="flight-plan-title" bind:value={title} />
     <div class="flex items-center gap-2 float-right text-sm">
       <a href="https://ardupilot.org/planner/docs/common-planning-a-mission-with-waypoints-and-events.html" target="_blank" class="text-[#61cd89] hover:underline mr-2">
         <i class="fas fa-question-circle"></i>
-        How do I create a flight plan?
+        How do I create a mission plan?
       </a>
       <button class="px-2 py-1 bg-[#588ae7] text-white rounded-lg hover:bg-[#6f9ff9]" on:click={() => {}}>
         <i class="fas fa-check"></i>
-        <div class="tooltip">Validate Flight Plan</div>
+        <div class="tooltip">Validate Mission Plan</div>
       </button>
       <button class="px-2 py-1 bg-[#55b377] text-white rounded-lg hover:bg-[#61cd89]" on:click={() => {}}>
         <i class="fas fa-play"></i>

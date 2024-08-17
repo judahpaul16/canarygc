@@ -1,12 +1,13 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { flightPlanTitleStore, flightPlanActionsStore } from '../stores/flightPlanStore';
+  import { mavTypeStore, mavAltitudeStore } from '../stores/mavlinkStore';
   import { get } from 'svelte/store';
 
   import Modal from './Modal.svelte';
 
   export let mavName: string = "MAV 1";
-  export let mavType: string = "Multirotor";
+  export let mavType: string = "Unknown";
   export let speed: number;
   export let altitude: number;
   export let flightTime: number;
@@ -16,33 +17,13 @@
 
   let interval: number;
 
+  $: mavType = $mavTypeStore;
+  $: altitude = $mavAltitudeStore;
   $: flightPlanTitle = $flightPlanTitleStore;
 
   function getRandomInt(min: number, max: number): number {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
-
-  function mockDataUpdate() {
-    speed = Math.max(0, Math.min(20, speed + getRandomInt(-2, 2)));
-    altitude = Math.max(0, Math.min(100, altitude + getRandomInt(-5, 5)));
-    flightTime = flightTime + 1;
-    batteryStatus = Math.max(0, Math.min(100, batteryStatus - 1));
-    flightProgress = Math.max(0, Math.min(100, flightProgress + 1));
-  }
-
-  onMount(() => {
-    speed = 20;
-    altitude = 0;
-    batteryStatus = 100;
-    altitudeLimited = 100;
-    interval = window.setInterval(() => {
-      mockDataUpdate();
-    }, 1000);
-  });
-
-  onDestroy(() => {
-    clearInterval(interval);
-  });
 
   function stopFlight() {
     let modal = new Modal({
@@ -275,7 +256,7 @@
       <div>Flight Time: {`${Math.floor(flightTime / 3600)}h ${Math.floor((flightTime % 3600) / 60)}m ${flightTime % 60}s`}</div>
     </div>
     <hr class="border-[#2d2d2d] my-3" />
-      <div class="w-full mb-2">Loaded Flight Plan: <span class="text-[#66e1ff]">{flightPlanTitle || 'No flight plan loaded.'}</span></div>
+      <div class="w-full mb-2">Loaded Mission Plan: <span class="text-[#66e1ff]">{flightPlanTitle || 'No mission plan loaded.'}</span></div>
       <div class="flex flex-col items-center justify-end">
         <div class="w-full">
           <span>Flight Progress: {flightProgress}% (ETA 00:00:00)</span>

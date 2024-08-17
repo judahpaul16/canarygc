@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import '@fortawesome/fontawesome-free/css/all.min.css';
-  import { mapStore, mavLocationStore, mavHeadingStore, markersStore, polylinesStore } from '../stores/mapStore';
+  import { mapStore, markersStore, polylinesStore } from '../stores/mapStore';
+  import { mavLocationStore, mavHeadingStore } from '../stores/mavlinkStore';
   import { flightPlanTitleStore, flightPlanActionsStore } from '../stores/flightPlanStore';
   import { get } from 'svelte/store';
   import Modal from './Modal.svelte';
@@ -42,13 +43,15 @@
   let icons: L.Icon[] = [];
   let markers: Map<number, L.Marker> = new Map(); // Map to keep track of markers
   let polylines: Map<string, L.Polyline> = new Map(); // Map to keep track of polylines
+  let mavHeading: number = 0;
   let mavMarker: L.Marker;
   let isDragging = false;
   let darkMode = true;
   
   $: leafletMap = $mapStore;
 
-  $: mavHeading = $mavHeadingStore;
+  $: mavHeading = $mavHeadingStore,
+        updateMAVMarker();
 
   $: mavLocation = $mavLocationStore,
         updateMAVMarker();
@@ -126,12 +129,6 @@
     Object.keys(actions).forEach((index) => {
       updateMap(Number(index));
     });
-
-    setInterval(() => {
-      mavLocation.lat = mavLocation.lat + 0.00001;
-      mavLocation.lng = mavLocation.lng - 0.00001;
-      mavLocationStore.set(mavLocation);
-    }, 1000);
     
     document.addEventListener('mousedown', (event) => {
       isDragging = true;
@@ -399,7 +396,7 @@
   }
 
   function updateMAVMarker() {
-    if (leafletMap && mavLocation && mavHeading) {
+    if (leafletMap && mavLocation) {
       let img = new Image();
       img.src = '/map/here.png'; // Use static path directly
       img.onload = () => {
@@ -427,7 +424,7 @@
           leafletMap.addLayer(mavMarker);
           updateMarkersAndPolylines();
           if (!isDragging) {
-            leafletMap.setView(mavLocation as L.LatLng);
+            leafletMap.flyTo(mavLocation as L.LatLng);
           }
         }
       };
