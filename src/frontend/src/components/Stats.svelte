@@ -1,29 +1,26 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
   import { flightPlanTitleStore, flightPlanActionsStore } from '../stores/flightPlanStore';
-  import { mavTypeStore, mavAltitudeStore } from '../stores/mavlinkStore';
+  import { mavTypeStore, mavStateStore, mavAltitudeStore, mavSpeedStore } from '../stores/mavlinkStore';
   import { get } from 'svelte/store';
 
   import Modal from './Modal.svelte';
 
-  export let mavName: string = "MAV 1";
-  export let mavType: string = "Unknown";
-  export let speed: number;
-  export let altitude: number;
-  export let flightTime: number;
-  export let batteryStatus: number;
-  export let altitudeLimited: number;
+  export let mavName: string = "CUAV X7 Running Ardupilot";
+  export let mavType: string = get(mavTypeStore);
+  export let speed: number = get(mavSpeedStore);
+  export let altitude: number = get(mavAltitudeStore);
+  export let systemState: string = get(mavStateStore);
+  export let batteryStatus: number = 100;
+  export let altitudeLimited: number = 100;
   export let flightProgress: number = 50;
 
   let interval: number;
 
   $: mavType = $mavTypeStore;
+  $: systemState = $mavStateStore;
   $: altitude = $mavAltitudeStore;
+  $: speed = $mavSpeedStore;
   $: flightPlanTitle = $flightPlanTitleStore;
-
-  function getRandomInt(min: number, max: number): number {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  }
 
   function stopFlight() {
     let modal = new Modal({
@@ -249,11 +246,11 @@
   <div class="h-full flex flex-col justify-evenly">
     <div class="grid grid-cols-2 gap-2">
       <div>MAV Type: {mavType}</div>
+      <div>System State: {systemState}</div>
       <div>Speed: {speed} m/s</div>
       <div>Altitude: {altitude} m</div>
-      <div>Altitude Limited: {altitudeLimited} m</div>
       <div class="battery-status {batteryStatus < 20 ? 'red' : batteryStatus < 50 ? 'yellow' : 'green'}">Battery Status: {batteryStatus}%</div>
-      <div>Flight Time: {`${Math.floor(flightTime / 3600)}h ${Math.floor((flightTime % 3600) / 60)}m ${flightTime % 60}s`}</div>
+      <div>Altitude Limited: {altitudeLimited} m</div>
     </div>
     <hr class="border-[#2d2d2d] my-3" />
       <div class="w-full mb-2">Loaded Mission Plan: <span class="text-[#66e1ff]">{flightPlanTitle || 'No mission plan loaded.'}</span></div>

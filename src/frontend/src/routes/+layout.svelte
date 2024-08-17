@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { MavType, MavState } from '$lib/mavlinkMappings/minimal';
   import PocketBase from 'pocketbase';
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import { authData } from '../stores/authStore';
@@ -6,8 +7,15 @@
   import { onMount, onDestroy, afterUpdate } from 'svelte';
   import { goto } from '$app/navigation';
   import '../app.css';
-  import { get } from 'svelte/store';
-  import { mavHeadingStore, mavLocationStore, mavlinkLogStore, mavAltitudeStore } from '../stores/mavlinkStore';
+  import {
+    mavHeadingStore,
+    mavLocationStore,
+    mavlinkLogStore,
+    mavAltitudeStore,
+    mavSpeedStore,
+    mavTypeStore,
+    mavStateStore
+  } from '../stores/mavlinkStore';
   import Modal from '../components/Modal.svelte';
 
   let offline_modal: Modal;
@@ -22,6 +30,11 @@
   $: currentPath = $page.url.pathname;
 
   $: isNavHidden = currentPath === '/' || currentPath === '/login';
+
+  // @ts-ignore
+  String.prototype.toProperCase = function () {
+    return this.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
+  };
 
   function updateDashboardHeight() {
     const dashboard = document.querySelector('.dashboard');
@@ -143,12 +156,23 @@
           if (lat) lat = lat.toString().replace('"lat":', '').replace(/^(-?\d{2})(\d+)$/, '$1.$2');
           if (lon) lon = lon.toString().replace('"lon":', '').replace(/^(-?\d{2})(\d+)$/, '$1.$2');
           if (lat && lon) mavLocationStore.set({ lat: parseFloat(lat), lng: parseFloat(lon) });
-          let heading: string | RegExpMatchArray | null = (text as string).match(/"cog":(\d+)/g);
-          if (heading) heading = heading.toString().replace('"cog":', '');
+          let heading: string | RegExpMatchArray | null = (text as string).match(/"hdgAcc":(\d+)/g);
+          if (heading) heading = heading.toString().replace('"hdgAcc":', '');
           if (heading) mavHeadingStore.set(parseInt(heading));
           let altitude: string | RegExpMatchArray | null = (text as string).match(/"alt":(\d+)/g);
           if (altitude) altitude = altitude.toString().replace('"alt":', '').replace(/^(\d{2})(\d+)$/, '$1.$2');
           if (altitude) mavAltitudeStore.set(parseInt(altitude));
+          let speed: string | RegExpMatchArray | null = (text as string).match(/"vel":(\d+)/g);
+          if (speed) speed = speed.toString().replace('"vel":', '');
+          if (speed) mavSpeedStore.set(parseInt(speed));
+      } else if ((text as string).includes('HEARTBEAT')) {
+          let type: string | RegExpMatchArray | null = (text as string).match(/"type":(\d+)/g);
+          // @ts-ignore
+          if (type) type = MavType[parseInt(type.toString().replace('"type":', ''))].toProperCase();
+          if (type) mavTypeStore.set(type as string);
+          let state: string | RegExpMatchArray | null = (text as string).match(/"systemStatus":(\d+)/g);
+          if (state) state = MavState[parseInt(state.toString().replace('"systemStatus":', ''))];
+          if (state) mavStateStore.set(state as string);
       }
     }
   }
