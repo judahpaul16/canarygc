@@ -60,7 +60,9 @@ async function initializePort(): Promise<void> {
             let timestamp = new Date().toISOString();
             let logEntry = `${clazz.MSG_NAME}(${clazz.MAGIC_NUMBER})::${timestamp}::${JSON.stringify(sanitizedData as ParamValueData)}`;
             logs.push(logEntry); // Store log entries
-            if (logs.length > 1000) logs.shift(); // Limit logs to the latest 1000 entries
+            if (logs.length > 1000) {
+                logs = logs.slice(-1000); // Limit logs to the latest 1000 entries
+            }
         }
     });
 
