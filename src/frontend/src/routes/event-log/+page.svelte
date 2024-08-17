@@ -1,8 +1,9 @@
 <script lang="ts">
     import { onDestroy, onMount, afterUpdate } from 'svelte';
-    import { mavlinkLogStore, mavLocationStore, mavHeadingStore } from '../../stores/mavlinkStore';
+    import { mavlinkLogStore, mavStateStore } from '../../stores/mavlinkStore';
     import Modal from '../../components/Modal.svelte';
     import PocketBase from 'pocketbase';
+    import { get } from 'svelte/store';
 
     const pb = new PocketBase('http://localhost:8090');
     
@@ -12,6 +13,9 @@
     let showParamValue = true;
     let showGPSRawInt = true;
     let searchTerm = '';
+    let systemState = get(mavStateStore);
+
+    $: systemState = $mavStateStore;
 
     const heartbeatInfo = 'HEARTBEAT is a message sent by the autopilot to communicate its presence and status to the GCS.';
 
@@ -160,8 +164,8 @@
                         <button class="btn btn-primary bg-green-500 hover:bg-green-700" on:click={downloadLogs}>Download</button>
                     </div>
                 </div>
-                <div class="text-white w-fit flex gap-2">
-                    HEARTBEAT
+                <div class="text-white w-fit flex">
+                    HEARTBEAT Status:<span class="text-[#61cd89] ml-1 mr-3">{systemState}</span>
                     <div class="heartbeat text-white w-fit relative mr-5">
                         <div>
                             <i class="fas fa-heart absolute top-[0.15rem]"></i>
@@ -210,14 +214,14 @@
         margin-bottom: 0.5rem;
         background-color: black;
         color: white;
-        padding: 0.5rem;
+        padding: 0.3rem;
         border-radius: 0.25rem;
         white-space: nowrap;
         opacity: 0;
         visibility: hidden;
         transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
         z-index: 1;
-        transform: translateY(25px);
+        transform: translate(-15px, -6px);
     }
 
     .heartbeat:hover .tooltip {
@@ -271,7 +275,8 @@
     }
 
     button {
-        padding: 5px 10px;
+        font-size: small;
+        padding: 4px 8px;
         border-radius: 0.5rem;
         color: white;
         cursor: pointer;
