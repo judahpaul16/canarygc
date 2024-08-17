@@ -92,20 +92,20 @@ async function requestParameters() {
     await send(port!, request);
 }
 
-async function sendMavlinkCommand(command: string) {
+async function sendMavlinkCommand(command: string, params: any) {
     if (!port || !reader) throw new Error('Port or reader is not initialized');
 
     let commandMsg = new common.CommandLong();
     commandMsg.targetSystem = 1;
     commandMsg.targetComponent = 1;
     commandMsg.command = common.MavCmd[command as keyof typeof common.MavCmd];
-    commandMsg._param1 = 1;
-    commandMsg._param2 = 0;
-    commandMsg._param3 = 0;
-    commandMsg._param4 = 0;
-    commandMsg._param5 = 0;
-    commandMsg._param6 = 0;
-    commandMsg._param7 = 0;
+    commandMsg._param1 = params[1] || 0;
+    commandMsg._param2 = params[2] || 0;
+    commandMsg._param3 = params[3] || 0;
+    commandMsg._param4 = params[4] || 0;
+    commandMsg._param5 = params[5] || 0;
+    commandMsg._param6 = params[6] || 0;
+    commandMsg._param7 = params[7] || 0;
     await send(port, commandMsg);
 }
 

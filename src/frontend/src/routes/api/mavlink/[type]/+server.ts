@@ -14,9 +14,10 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
             }
         case 'send_command':
             let command = request.request.headers.get('command');
+            let params = request.request.headers.get('params');
             try {
                 if (command) {
-                    await sendMavlinkCommand(command);
+                    await sendMavlinkCommand(command, params);
                     console.log(`MAVLink Command sent: ${command}`);
                     return new Response('Command sent', { status: 200 });
                 } else {

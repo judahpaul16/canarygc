@@ -6,12 +6,13 @@
 
   $: mavLocation = $mavLocationStore;
 
-  async function sendMavlinkCommand(command: string) {
+  async function sendMavlinkCommand(command: string, params: any = null) {
     const respone = await fetch(`/api/mavlink/send_command`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         'command': command,
+        'params': params
       },
     });
     if (respone.ok) {
