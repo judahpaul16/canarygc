@@ -124,7 +124,6 @@
             },
         }
         });
-        document.body.appendChild(modal.$$.fragment);
     }
 
     function downloadLogs() {
