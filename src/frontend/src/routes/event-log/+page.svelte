@@ -326,4 +326,18 @@
             grid-template-columns: repeat(2, 1fr);
         }
     }
+
+    @media (max-width: 1440px) {
+        @media (min-width: 990px) {
+            .event-log > div {
+                display: block;
+                text-align: center;
+                height: 10%;
+            }
+
+            .filters + div {
+                display: inline-flex;
+            }
+        }
+    }
 </style>
