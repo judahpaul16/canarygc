@@ -15,14 +15,17 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
             }
         case 'send_command':
             let command = request.request.headers.get('command');
-            let params = request.request.headers.get('params');
+            let params: string | number[] | null = request.request.headers.get('params');
+            if (params) params = params.split(',').map((param) => {
+                return parseInt(param);
+            });
             try {
-                if (command) {
-                    await sendMavlinkCommand(command, params);
-                    console.log(`MAVLink Command sent: ${command}`);
+                if (command && params) {
+                    await sendMavlinkCommand(command, params as number[]);
+                    console.log(`MAVLink Command sent: ${command}, ${params}`);
                     return new Response('Command sent', { status: 200 });
                 } else {
-                    return new Response('Command not provided', { status: 400 });
+                    return new Response('Command or params not provided', { status: 400 });
                 }
             } catch (err) {
                 console.error(err);
