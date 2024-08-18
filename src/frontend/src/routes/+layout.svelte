@@ -14,7 +14,8 @@
     mavAltitudeStore,
     mavSpeedStore,
     mavTypeStore,
-    mavStateStore
+    mavStateStore,
+    mavBatteryStore
   } from '../stores/mavlinkStore';
   import Modal from '../components/Modal.svelte';
 
@@ -123,7 +124,7 @@
 
       // Delete the selected records
       let deletePromises = recordsToDelete.map(record => pb.collection('blackbox').delete(record.id));
-      await Promise.all(deletePromises);
+      Promise.all(deletePromises);
     }
   }
 
@@ -173,6 +174,10 @@
           let state: string | RegExpMatchArray | null = (text as string).match(/"systemStatus":(\d+)/g);
           if (state) state = MavState[parseInt(state.toString().replace('"systemStatus":', ''))];
           if (state) mavStateStore.set(state as string);
+      } else if ((text as string).includes('SYS_STATUS')) {
+          let battery: string | RegExpMatchArray | null = (text as string).match(/"batteryRemaining":(\d+)/g);
+          if (battery) battery = battery.toString().replace('"batteryRemaining":', '');
+          if (battery) mavBatteryStore.set(parseInt(battery));
       }
     }
   }

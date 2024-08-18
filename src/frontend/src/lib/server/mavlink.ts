@@ -28,7 +28,7 @@ interface ParamValueData {
 let port: SerialPort | Socket | null = null;
 let reader: MavLinkPacketParser | null = null;
 let online = false;
-let gpsRequested = false;
+let statusRequested = false;
 let logs: string[] = [];
 
 async function initializePort(): Promise<void> {
@@ -72,17 +72,25 @@ async function initializePort(): Promise<void> {
     });
 }
 
-async function requestGpsData() {
+async function requestSysStatus() {
     if (!port || !reader) throw new Error('Port or reader is not initialized');
 
-    const request = new common.SetMessageIntervalCommand();
+    let request = new common.SetMessageIntervalCommand();
     request.targetSystem = 1;
     request.targetComponent = 1;
     request.messageId = common.GpsRawInt.MSG_ID;
     request.interval = 1000000; // 1 Hz
     request.responseTarget = 1;
     await send(port!, request);
-    gpsRequested = true;
+
+    request = new common.SetMessageIntervalCommand();
+    request.targetSystem = 1;
+    request.targetComponent = 1;
+    request.messageId = common.SysStatus.MSG_ID;
+    request.interval = 1000000; // 1 Hz
+    request.responseTarget = 1;
+    await send(port!, request);
+    statusRequested = true;
 }
 
 async function requestParameters() {
@@ -127,10 +135,10 @@ function convertBigIntToNumber(obj: any): any {
 
 export {
     initializePort,
-    requestGpsData,
+    requestSysStatus,
     requestParameters,
     sendMavlinkCommand,
     online,
-    gpsRequested,
+    statusRequested,
     logs
 };
