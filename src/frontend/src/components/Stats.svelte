@@ -41,25 +41,42 @@
         isOpen: true,
         confirmation: true,
         notification: false,
-        onConfirm: toggleArmDisarm,
+        onConfirm: () => {
+          modal.$destroy();
+          sendMavlinkCommand('DO_SET_MODE', `${[isArmed ? 88 : 216, 0, 0]}`);
+        }
       }
     });
     document.body.appendChild(modal.$$.fragment);
   }
 
-  async function toggleArmDisarm() {
-    const response = await fetch(`/api/mavlink/arm-disarm`, {
+  async function sendMavlinkCommand(command: string, params: string | null = null) {
+    if (params === null) {
+        new Modal({
+          target: document.body,
+          props: {
+            title: 'Error',
+            content: `Error: No parameters provided for command ${command}`,
+            isOpen: true,
+            confirmation: false,
+            notification: true,
+          },
+        });
+    } else {
+      const response = await fetch(`/api/mavlink/send_command`, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          'isArmed': `${isArmed}`,
+          'command': command,
+          'params': params
         },
       });
       if (response.ok) {
         console.log(await response.text());
       } else {
-        console.error(`Failed to set guided mode.`);
+        console.error(`Error: ${await response.text()}`);
       }
+    }
   }
 
   function stopFlight() {
