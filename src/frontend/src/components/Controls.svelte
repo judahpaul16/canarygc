@@ -2,23 +2,46 @@
   import Map from './Map.svelte';
   import DPad from './DPad.svelte';
   import Weather from './Weather.svelte';
-  import { mavLocationStore } from '../stores/mavlinkStore';
+  import { mavAltitudeStore, mavLocationStore } from '../stores/mavlinkStore';
+  import { get } from 'svelte/store';
+  import Modal from './Modal.svelte';
+    import { onMount } from 'svelte';
 
   $: mavLocation = $mavLocationStore;
+  $: altitude = $mavAltitudeStore;
 
-  async function sendMavlinkCommand(command: string, params: any = null) {
-    const respone = await fetch(`/api/mavlink/send_command`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'command': command,
-        'params': params
-      },
+  onMount(() => {
+    mavAltitudeStore.subscribe((value) => {
+      altitude = value;
     });
-    if (respone.ok) {
-      console.log(`Mavlink command ${command} sent successfully`);
+  });
+
+  async function sendMavlinkCommand(command: string, params: string | null = null) {
+    if (params === null) {
+        new Modal({
+          target: document.body,
+          props: {
+            title: 'Error',
+            content: `Error: No parameters provided for command ${command}`,
+            isOpen: true,
+            confirmation: false,
+            notification: true,
+          },
+        });
     } else {
-      console.error(`Failed to send mavlink command ${command}`);
+      const respone = await fetch(`/api/mavlink/send_command`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'command': command,
+          'params': params
+        },
+      });
+      if (respone.ok) {
+        console.log(`Mavlink command ${command} sent successfully`);
+      } else {
+        console.error(`Failed to send mavlink command ${command}`);
+      }
     }
   }
 </script>
@@ -46,13 +69,15 @@
     <div class="column flex flex-col items-center justify-center text-center space-y-4">
       <div class="flex flex-col items-center">
         <label class="text-sm mb-1">Altitude Up</label>
-        <button class="alt-button rounded-full" on:click={() => {sendMavlinkCommand("DO_CHANGE_ALTITUDE")}}>
+        <button class="alt-button rounded-full"
+            on:click={() => {sendMavlinkCommand("DO_CHANGE_ALTITUDE", `${altitude + 1},0`)}}>
           <i class="fas fa-arrow-up-wide-short alt-up"></i>
         </button>
       </div>
       <div class="flex flex-col items-center justify-center">
         <label class="text-sm mb-1">Altitude Down</label>
-        <button class="alt-button rounded-full" on:click={() => {sendMavlinkCommand("DO_CHANGE_ALTITUDE")}}>
+        <button class="alt-button rounded-full"
+            on:click={() => {sendMavlinkCommand("DO_CHANGE_ALTITUDE", `${altitude - 1},0`)}}>
           <i class="fas fa-arrow-down-short-wide alt-down"></i>
         </button>
       </div>
