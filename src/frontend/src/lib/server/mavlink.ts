@@ -54,7 +54,6 @@ async function initializePort(): Promise<void> {
 
     reader.on('data', (packet: MavLinkPacket) => {
         online = true;
-        sendMavlinkCommand('DO_SET_MODE', [common.MavMode.GUIDED_DISARMED, 0, 0])
         const clazz = REGISTRY[packet.header.msgid];
         if (clazz) {
             const data = packet.protocol.data(packet.payload, clazz);
@@ -93,6 +92,8 @@ async function requestSysStatus() {
     request.responseTarget = 1;
     await send(port!, request);
     statusRequested = true;
+    
+    sendMavlinkCommand('DO_SET_MODE', [common.MavMode.GUIDED_DISARMED, 0, 0])
 }
 
 async function requestParameters() {
