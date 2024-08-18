@@ -48,15 +48,15 @@
   }
 
   async function toggleArmDisarm() {
-    const respone = await fetch(`/api/mavlink/arm-disarm`, {
+    const response = await fetch(`/api/mavlink/arm-disarm`, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          'isArmed': `${!isArmed}`,
+          'isArmed': `${isArmed}`,
         },
       });
-      if (respone.ok) {
-        console.log(`Guided mode set successfully`);
+      if (response.ok) {
+        console.log(await response.text());
       } else {
         console.error(`Failed to set guided mode.`);
       }

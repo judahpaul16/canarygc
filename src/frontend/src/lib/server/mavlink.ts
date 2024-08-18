@@ -80,7 +80,7 @@ async function requestSysStatus() {
     request.targetSystem = 1;
     request.targetComponent = 1;
     request.messageId = common.GpsRawInt.MSG_ID;
-    request.interval = 1000000; // 1 Hz
+    request.interval = 1000000; // 1.0 Hz
     request.responseTarget = 1;
     await send(port!, request);
 
@@ -88,12 +88,10 @@ async function requestSysStatus() {
     request.targetSystem = 1;
     request.targetComponent = 1;
     request.messageId = common.SysStatus.MSG_ID;
-    request.interval = 1000000; // 1 Hz
+    request.interval = 1500000; // 1.5 Hz
     request.responseTarget = 1;
     await send(port!, request);
     statusRequested = true;
-    
-    sendMavlinkCommand('DO_SET_MODE', [common.MavMode.GUIDED_DISARMED, 0, 0])
 }
 
 async function requestParameters() {

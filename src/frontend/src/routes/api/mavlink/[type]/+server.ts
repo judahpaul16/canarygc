@@ -44,10 +44,14 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
                 return new Response(`No value provided for 'isArmed'`, { status: 400 });
             } else {
                 let isArmed = true ? request.request.headers.get('isArmed')!.includes('true') : false;
-                let params = isArmed
-                    ? [common.MavMode.GUIDED_DISARMED, 0, 0]
-                    : [common.MavMode.GUIDED_ARMED, 0, 0];
-                sendMavlinkCommand('DO_SET_MODE', params)
+                // await sendMavlinkCommand('NAV_GUIDED_ENABLE', [1])
+                // let params = isArmed
+                //     ? [common.MavMode.GUIDED_DISARMED, 0, 0]
+                //     : [common.MavMode.GUIDED_ARMED, 0, 0];
+                // await sendMavlinkCommand('DO_SET_MODE', params)
+                
+                await sendMavlinkCommand('ARM_AUTHORIZATION_REQUEST', [1]);
+                return new Response(`MAV ${isArmed ? 'disarmed' : 'armed'} successfully!`, { status: 200 });
             }
         default:
             return new Response(`Invalid request type: ${request.params.type}`, { status: 400 });
