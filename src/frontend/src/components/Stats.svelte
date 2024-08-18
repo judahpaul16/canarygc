@@ -280,7 +280,7 @@
   }
 </style>
 
-<div class="stats bg-[#1c1c1e] text-white p-4 rounded-lg flex flex-col space-y-2 h-full overflow-y-auto text-sm">
+<div class="stats bg-[#1c1c1e] text-white p-4 rounded-lg flex flex-col space-y-2 h-full overflow-y-auto overflow-x-hidden text-sm">
   <h2 class="text-lg font-bold">{mavName}</h2>
   <hr class="border-[#2d2d2d]" />
   <div class="h-full flex flex-col justify-evenly">
@@ -304,7 +304,7 @@
         <div class="button-container mt-6">
           <div class="relative group">
             <button class="circular-button" on:click={confirmToggleArmDisarm}>
-              <i class="fas fa-key"></i>
+              <i class="fas fa-key text-yellow-500"></i>
               <div class="tooltip">Arm / Disarm</div>
             </button>
           </div>
