@@ -12,6 +12,7 @@
     let showTimeSync = true;
     let showParamValue = true;
     let showGPSRawInt = true;
+    let showSysStatus = true;
     let searchTerm = '';
     let systemState = get(mavStateStore);
 
@@ -61,6 +62,8 @@
             showParamValue = checked;
         } else if (message === 'GPS_RAW_INT') {
             showGPSRawInt = checked;
+        } else if (message === 'SYS_STATUS') {
+            showSysStatus = checked;
         }
     }
 
@@ -158,6 +161,8 @@
                         <label for="Toggle PARAM_VALUE" class="text-white">PARAM_VALUE</label>
                         <input type="checkbox" class="form-checkbox" name="Toggle GPS_RAW_INT" checked={showGPSRawInt} on:change={(event) => handleShowMessage(event, 'GPS_RAW_INT')}>
                         <label for="Toggle GPS_RAW_INT" class="text-white">GPS_RAW_INT</label>
+                        <input type="checkbox" class="form-checkbox" name="Toggle SYS_STATUS" checked={showSysStatus} on:change={(event) => handleShowMessage(event, 'SYS_STATUS')}>
+                        <label for="Toggle SYS_STATUS" class="text-white">SYS_STATUS</label>
                     </div>
                     <div class="btns flex gap-4">
                         <button class="btn btn-primary bg-orange-400 hover:bg-orange-500" on:click={confirmClear}>Clear</button>
@@ -165,7 +170,7 @@
                     </div>
                 </div>
                 <div class="text-white w-fit flex">
-                    HEARTBEAT Status:<span class="text-[#61cd89] ml-1 mr-3">{systemState}</span>
+                    System State:<span class="text-[#61cd89] ml-1 mr-3">{systemState}</span>
                     <div class="heartbeat text-white w-fit relative mr-5">
                         <div>
                             <i class="fas fa-heart absolute top-[0.15rem]"></i>
@@ -184,6 +189,8 @@
                             <span style="display: {showParamValue ? 'block' : 'none'}">{@html getHighlightedLog(log)}</span>
                         {:else if log.indexOf('GPS_RAW_INT') !== -1}
                             <span style="display: {showGPSRawInt ? 'block' : 'none'}">{@html getHighlightedLog(log)}</span>
+                        {:else if log.indexOf('SYS_STATUS') !== -1}
+                            <span style="display: {showSysStatus ? 'block' : 'none'}">{@html getHighlightedLog(log)}</span>
                         {:else}
                             <span>{@html getHighlightedLog(log)}</span>
                         {/if}

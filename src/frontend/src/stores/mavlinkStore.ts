@@ -16,5 +16,6 @@ export const mavLocationStore = writable<L.LatLng | { lat: number; lng: number }
 export const mavHeadingStore = writable<number>(320);
 export const mavAltitudeStore = writable<number>(0);
 export const mavSpeedStore = writable<number>(0);
+export const mavBatteryStore = writable<number>(0);
 
 export const mavlinkLogStore = writable<string[]>([]);

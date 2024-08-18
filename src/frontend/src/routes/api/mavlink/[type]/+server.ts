@@ -1,12 +1,12 @@
 import type { RequestHandler } from '@sveltejs/kit';
-import { initializePort, requestGpsData, sendMavlinkCommand, online, gpsRequested, logs } from '$lib/server/mavlink';
+import { initializePort, requestSysStatus, sendMavlinkCommand, online, statusRequested, logs } from '$lib/server/mavlink';
 
 export const POST: RequestHandler = async (request): Promise<Response> => {
     switch (request.params.type) {
         case 'init':
             try {
                 if (!online) await initializePort();
-                if (online && !gpsRequested) await requestGpsData();
+                if (online && !statusRequested) await requestSysStatus();
                 if (logs.length > 0) return new Response(JSON.stringify(logs.pop()), { status: 200, headers: { 'Content-Type': 'application/json' } });
                 return new Response('No logs available', { status: 503 });
             } catch (err) {

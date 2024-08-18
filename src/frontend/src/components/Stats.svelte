@@ -1,6 +1,6 @@
 <script lang="ts">
   import { flightPlanTitleStore, flightPlanActionsStore } from '../stores/flightPlanStore';
-  import { mavTypeStore, mavStateStore, mavAltitudeStore, mavSpeedStore } from '../stores/mavlinkStore';
+  import { mavTypeStore, mavStateStore, mavAltitudeStore, mavSpeedStore, mavBatteryStore } from '../stores/mavlinkStore';
   import { get } from 'svelte/store';
 
   import Modal from './Modal.svelte';
@@ -10,7 +10,7 @@
   export let speed: number = get(mavSpeedStore);
   export let altitude: number = get(mavAltitudeStore);
   export let systemState: string = get(mavStateStore);
-  export let batteryStatus: number = 100;
+  export let batteryStatus: number = get(mavBatteryStore);
   export let altitudeLimited: number = 100;
   export let flightProgress: number = 50;
 
@@ -18,6 +18,7 @@
 
   $: mavType = $mavTypeStore;
   $: systemState = $mavStateStore;
+  $: batteryStatus = $mavBatteryStore;
   $: altitude = $mavAltitudeStore;
   $: speed = $mavSpeedStore;
   $: flightPlanTitle = $flightPlanTitleStore;
