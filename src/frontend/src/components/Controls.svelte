@@ -29,7 +29,7 @@
           },
         });
     } else {
-      const respone = await fetch(`/api/mavlink/send_command`, {
+      const response = await fetch(`/api/mavlink/send_command`, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
@@ -37,10 +37,10 @@
           'params': params
         },
       });
-      if (respone.ok) {
-        console.log(`Mavlink command ${command} sent successfully`);
+      if (response.ok) {
+        console.log(await response.text());
       } else {
-        console.error(`Failed to send mavlink command ${command}`);
+        console.error(`Error: ${await response.text()}`);
       }
     }
   }
