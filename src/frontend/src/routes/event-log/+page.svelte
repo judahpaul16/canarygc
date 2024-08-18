@@ -9,10 +9,10 @@
     
     let logs: string[] = [];
     let logContainer: HTMLElement;
-    let showTimeSync = true;
-    let showParamValue = true;
-    let showGPSRawInt = true;
-    let showSysStatus = true;
+    let showTimeSync = false;
+    let showParamValue = false;
+    let showGPSRawInt = false;
+    let showSysStatus = false;
     let searchTerm = '';
     let systemState = get(mavStateStore);
 
