@@ -11,6 +11,7 @@ if (typeof window !== 'undefined') {
 }
 
 export const mavTypeStore = writable<string>('Unknown');
+export const mavArmedStateStore = writable<boolean>(false);
 export const mavStateStore = writable<string>('Unknown');
 export const mavLocationStore = writable<L.LatLng | { lat: number; lng: number }>(latLng);
 export const mavHeadingStore = writable<number>(320);
