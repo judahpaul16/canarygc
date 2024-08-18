@@ -182,14 +182,14 @@
     }
   }
 
-  onMount(() => {
+  onMount(async () => {
     if (typeof window !== 'undefined' && authData.checkExpired() && window.location.pathname !== '/') {
       authData.set(null);
       goto('/login');
     }
     
-    initializeFlightPlansCollection();
-    initializeBlackBoxCollection();
+    await initializeFlightPlansCollection();
+    await initializeBlackBoxCollection();
 
     setInterval(async () => {
       await cleanupBlackBoxCollection();
