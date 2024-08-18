@@ -47,7 +47,6 @@
         }
       }
     });
-    document.body.appendChild(modal.$$.fragment);
   }
 
   async function sendMavlinkCommand(command: string, params: string | null = null) {
@@ -103,7 +102,6 @@
         },
       }
     });
-    document.body.appendChild(modal.$$.fragment);
   }
 
   function pauseFlight() {
@@ -130,7 +128,6 @@
         },
       }
     });
-    document.body.appendChild(modal.$$.fragment);
   }
 
   function resumeFlight() {
@@ -183,7 +180,6 @@
         },
       }
     });
-    document.body.appendChild(modal.$$.fragment);
   }
 
   function initLanding() {
@@ -210,7 +206,6 @@
         },
       }
     });
-    document.body.appendChild(modal.$$.fragment);
   }
 </script>
 
