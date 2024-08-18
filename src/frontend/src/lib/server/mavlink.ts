@@ -29,6 +29,7 @@ let port: SerialPort | Socket | null = null;
 let reader: MavLinkPacketParser | null = null;
 let online = false;
 let statusRequested = false;
+let guidedModeSet = false;
 let logs: string[] = [];
 
 async function initializePort(): Promise<void> {
@@ -53,6 +54,7 @@ async function initializePort(): Promise<void> {
 
     reader.on('data', (packet: MavLinkPacket) => {
         online = true;
+        sendMavlinkCommand('DO_SET_MODE', [common.MavMode.GUIDED_DISARMED, 0, 0])
         const clazz = REGISTRY[packet.header.msgid];
         if (clazz) {
             const data = packet.protocol.data(packet.payload, clazz);
@@ -140,5 +142,6 @@ export {
     sendMavlinkCommand,
     online,
     statusRequested,
-    logs
+    logs,
+    common
 };

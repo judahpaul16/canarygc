@@ -1,12 +1,20 @@
 <script lang="ts">
   import { flightPlanTitleStore, flightPlanActionsStore } from '../stores/flightPlanStore';
-  import { mavTypeStore, mavStateStore, mavAltitudeStore, mavSpeedStore, mavBatteryStore } from '../stores/mavlinkStore';
+  import {
+    mavTypeStore,
+    mavStateStore,
+    mavAltitudeStore,
+    mavSpeedStore,
+    mavBatteryStore,
+    mavArmedStateStore
+  } from '../stores/mavlinkStore';
   import { get } from 'svelte/store';
 
   import Modal from './Modal.svelte';
 
   export let mavName: string = "CUAV X7 Running Ardupilot";
   export let mavType: string = get(mavTypeStore);
+  export let isArmed: boolean = get(mavArmedStateStore)
   export let speed: number = get(mavSpeedStore);
   export let altitude: number = get(mavAltitudeStore);
   export let systemState: string = get(mavStateStore);
@@ -17,11 +25,42 @@
   let interval: number;
 
   $: mavType = $mavTypeStore;
+  $: isArmed = $mavArmedStateStore;
   $: systemState = $mavStateStore;
   $: batteryStatus = $mavBatteryStore;
   $: altitude = $mavAltitudeStore;
   $: speed = $mavSpeedStore;
   $: flightPlanTitle = $flightPlanTitleStore;
+
+  function confirmToggleArmDisarm() {
+    let modal = new Modal({
+      target: document.body,
+      props: {
+        title: 'Arm / Disarm',
+        content: 'Are you sure you want to arm/disarm the MAV?',
+        isOpen: true,
+        confirmation: true,
+        notification: false,
+        onConfirm: toggleArmDisarm,
+      }
+    });
+    document.body.appendChild(modal.$$.fragment);
+  }
+
+  async function toggleArmDisarm() {
+    const respone = await fetch(`/api/mavlink/arm-disarm`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'isArmed': `${!isArmed}`,
+        },
+      });
+      if (respone.ok) {
+        console.log(`Guided mode set successfully`);
+      } else {
+        console.error(`Failed to set guided mode.`);
+      }
+  }
 
   function stopFlight() {
     let modal = new Modal({
@@ -263,6 +302,12 @@
           </div>
         </div>
         <div class="button-container mt-6">
+          <div class="relative group">
+            <button class="circular-button" on:click={confirmToggleArmDisarm}>
+              <i class="fas fa-key"></i>
+              <div class="tooltip">Arm / Disarm</div>
+            </button>
+          </div>
           <div class="relative group">
             <button class="circular-button" on:click={releasePayload}>
               <i class="fas fa-parachute-box"></i>

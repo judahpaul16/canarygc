@@ -1,5 +1,13 @@
 import type { RequestHandler } from '@sveltejs/kit';
-import { initializePort, requestSysStatus, sendMavlinkCommand, online, statusRequested, logs } from '$lib/server/mavlink';
+import {
+    initializePort,
+    requestSysStatus,
+    sendMavlinkCommand,
+    online,
+    statusRequested,
+    logs,
+    common
+} from '$lib/server/mavlink';
 
 export const POST: RequestHandler = async (request): Promise<Response> => {
     switch (request.params.type) {
@@ -30,6 +38,16 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
             } catch (err) {
                 console.error(err);
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
+            }
+        case 'arm-disarm':
+            if (!request.request.headers.get('isArmed')) {
+                return new Response(`No value provided for 'isArmed'`, { status: 400 });
+            } else {
+                let isArmed = true ? request.request.headers.get('isArmed')!.includes('true') : false;
+                let params = isArmed
+                    ? [common.MavMode.GUIDED_DISARMED, 0, 0]
+                    : [common.MavMode.GUIDED_ARMED, 0, 0];
+                sendMavlinkCommand('DO_SET_MODE', params)
             }
         default:
             return new Response(`Invalid request type: ${request.params.type}`, { status: 400 });
