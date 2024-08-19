@@ -111,6 +111,21 @@ async function sendMavlinkCommand(command: string, params: any) {
     await send(port, commandMsg);
 }
 
+async function sendManualControl(x: number, y: number, z: number, r: number, buttons: number, mode: number) {
+    if (!port || !reader) throw new Error('Port or reader is not initialized');
+
+    const msg = new common.ManualControl();
+    msg.target = 1;
+    msg.x = x;
+    msg.y = y;
+    msg.z = z;
+    msg.r = r;
+    msg.buttons = buttons;
+    msg.mode = mode;
+    await send(port, msg);
+}
+
+
 function convertBigIntToNumber(obj: any): any {
     if (typeof obj === 'bigint') {
         return Number(obj);
@@ -130,6 +145,7 @@ export {
     requestGpsData,
     requestParameters,
     sendMavlinkCommand,
+    sendManualControl,
     online,
     gpsRequested,
     logs
