@@ -164,8 +164,14 @@
                         <label for="Toggle SYS_STATUS" class="text-white">SYS_STATUS</label>
                     </div>
                     <div class="btns flex gap-4">
-                        <button class="btn btn-primary bg-orange-400 hover:bg-orange-500" on:click={confirmClear}>Clear</button>
-                        <button class="btn btn-primary bg-green-500 hover:bg-green-700" on:click={downloadLogs}>Download</button>
+                        <button class="btn btn-primary bg-red-400 hover:bg-red-500 relative" on:click={confirmClear}>
+                            <i class="fas fa-trash-alt"></i>
+                            <span class="tooltip">Clear</span>
+                        </button>
+                        <button class="btn btn-primary bg-blue-400 hover:bg-blue-500 relative" on:click={downloadLogs}>
+                            <i class="fas fa-download"></i>
+                            <span class="tooltip">Download</span>
+                        </button>
                     </div>
                 </div>
                 <div class="text-white w-fit flex">
@@ -231,6 +237,18 @@
     }
 
     .heartbeat:hover .tooltip {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    button:first-of-type > .tooltip {
+        transform: translateX(-35px);
+    }
+    button:last-of-type > .tooltip {
+        transform: translateX(75px);
+    }
+
+    button:hover .tooltip {
         opacity: 1;
         visibility: visible;
     }
