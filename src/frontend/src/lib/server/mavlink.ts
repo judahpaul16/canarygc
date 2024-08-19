@@ -108,7 +108,7 @@ async function sendMavlinkCommand(command: string, params: number[]) {
 
     let commandMsg = new common.CommandLong();
     commandMsg.targetSystem = 1;
-    commandMsg.targetComponent = 1;
+    commandMsg.targetComponent = 0;
     commandMsg.command = common.MavCmd[command as keyof typeof common.MavCmd];
     if (params[0]) commandMsg._param1 = params[0];
     if (params[1]) commandMsg._param2 = params[1];
