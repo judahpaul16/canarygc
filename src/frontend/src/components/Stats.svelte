@@ -51,32 +51,19 @@
     });
   }
 
-  async function sendMavlinkCommand(command: string, params: string | null = null) {
-    if (params === null) {
-        new Modal({
-          target: document.body,
-          props: {
-            title: 'Error',
-            content: `Error: No parameters provided for command ${command}`,
-            isOpen: true,
-            confirmation: false,
-            notification: true,
-          },
-        });
+  async function sendMavlinkCommand(command: string, params: string  = '') {
+    const response = await fetch(`/api/mavlink/send_command`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'command': command,
+        'params': params
+      },
+    });
+    if (response.ok) {
+      console.log(await response.text());
     } else {
-      const response = await fetch(`/api/mavlink/send_command`, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'command': command,
-          'params': params
-        },
-      });
-      if (response.ok) {
-        console.log(await response.text());
-      } else {
-        console.error(`Error: ${await response.text()}`);
-      }
+      console.error(`Error: ${await response.text()}`);
     }
   }
 
