@@ -1,6 +1,6 @@
-FROM ubuntu:23.04
+FROM ubuntu:18.04
 
-ARG COPTER_TAG=Copter-4.5.5
+ARG COPTER_TAG=Copter-4.0.7
 
 # install git 
 RUN apt-get update && apt-get install -y git; git config --global url."https://github.com/".insteadOf git://github.com/
