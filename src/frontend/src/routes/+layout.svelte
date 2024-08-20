@@ -64,8 +64,10 @@
         }
       });
       if (response.ok) {
-        const data = await response.json();
-        updateBlackBoxCollection(JSON.stringify(data));
+        try {
+          const data = await response.json();
+          updateBlackBoxCollection(JSON.stringify(data));
+        } catch (error: any) {}
       } else {
         if (!offline_modal) {
           offline_modal = new Modal({

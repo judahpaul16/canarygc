@@ -80,7 +80,7 @@ async function requestSysStatus() {
     request.targetSystem = 1;
     request.targetComponent = 1;
     request.messageId = common.GpsRawInt.MSG_ID;
-    request.interval = 1000000; // 1.0 Hz
+    request.interval = 5220000;
     request.responseTarget = 1;
     await send(port!, request);
 
@@ -88,7 +88,7 @@ async function requestSysStatus() {
     request.targetSystem = 1;
     request.targetComponent = 1;
     request.messageId = common.SysStatus.MSG_ID;
-    request.interval = 1500000; // 1.5 Hz
+    request.interval = 5550000;
     request.responseTarget = 1;
     await send(port!, request);
     statusRequested = true;
@@ -103,10 +103,20 @@ async function requestParameters() {
     await send(port!, request);
 }
 
+async function sendSetModeCommand(mode: string) {
+    if (!port || !reader) throw new Error('Port or reader is not initialized');
+
+    const commandMsg = new common.DoSetModeCommand();
+    commandMsg.targetSystem = 1;
+    commandMsg.targetComponent = 0;
+    commandMsg.mode = common.MavMode[mode as keyof typeof common.MavMode];
+    await send(port, commandMsg);
+}
+
 async function sendMavlinkCommand(command: string, params: number[]) {
     if (!port || !reader) throw new Error('Port or reader is not initialized');
 
-    let commandMsg = new common.CommandLong();
+    const commandMsg = new common.CommandLong();
     commandMsg.targetSystem = 1;
     commandMsg.targetComponent = 0;
     commandMsg.command = common.MavCmd[command as keyof typeof common.MavCmd];
@@ -139,6 +149,7 @@ export {
     requestSysStatus,
     requestParameters,
     sendMavlinkCommand,
+    sendSetModeCommand,
     online,
     statusRequested,
     logs,

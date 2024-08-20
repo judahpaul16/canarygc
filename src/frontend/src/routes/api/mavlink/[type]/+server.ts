@@ -3,6 +3,7 @@ import {
     initializePort,
     requestSysStatus,
     sendMavlinkCommand,
+    sendSetModeCommand,
     online,
     statusRequested,
     logs,
@@ -16,7 +17,7 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
                 if (!online) await initializePort();
                 if (online && !statusRequested) await requestSysStatus();
                 if (logs.length > 0) return new Response(JSON.stringify(logs.pop()), { status: 200, headers: { 'Content-Type': 'application/json' } });
-                return new Response('No logs available', { status: 503 });
+                return new Response('No logs available', { status: 200 });
             } catch (err) {
                 console.error(err);
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
@@ -34,6 +35,20 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
                     return new Response(`MAVLink Command sent: ${command}, params: [${params}]`, { status: 200 });
                 } else {
                     return new Response('Command or params not provided', { status: 400 });
+                }
+            } catch (err) {
+                console.error(err);
+                return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
+            }
+        case 'set_mode':
+            let mode = request.request.headers.get('mode');
+            try {
+                if (mode) {
+                    await sendSetModeCommand(mode);
+                    console.log(`Mode set to: ${mode}`);
+                    return new Response(`Mode set to: ${mode}`, { status: 200 });
+                } else {
+                    return new Response('Mode not provided', { status: 400 });
                 }
             } catch (err) {
                 console.error(err);
