@@ -57,25 +57,25 @@
     <div class="separator"></div>
     <div class="inputs column h-full flex flex-col items-center justify-center text-center min-w-[150px] overflow-auto gap-2 self-center">
       <div id="max-speed-container" class="flex flex-col items-center">
-        <label class="text-sm mb-1">Max Speed<span class="text-xs text-gray-400 mt-1 ml-1">(m/s)</span></label>
+        <div class="label text-sm mb-1">Max Speed<span class="text-xs text-gray-400 mt-1 ml-1">(m/s)</span></div>
         <input type="number"  min="0" class="form-input" placeholder="Default: 10" />
       </div>
       <div class="flex flex-col items-center justify-center">
-        <label class="text-sm mb-1">Max Altitude<span class="text-xs text-gray-400 mt-1 ml-1">(m)</span></label>
+        <div class="label text-sm mb-1">Max Altitude<span class="text-xs text-gray-400 mt-1 ml-1">(m)</span></div>
         <input type="number"  min="0" class="form-input" placeholder="Default: 100" />
       </div>
     </div>
     <div class="separator"></div>
     <div class="column flex flex-col items-center justify-center text-center space-y-4">
       <div class="flex flex-col items-center">
-        <label class="text-sm mb-1">Altitude Up</label>
+        <div class="label text-sm mb-1">Altitude Up</div>
         <button class="alt-button rounded-full"
             on:click={() => {sendMavlinkCommand("DO_CHANGE_ALTITUDE", `${[altitude + 1]}`)}}>
           <i class="fas fa-arrow-up-wide-short alt-up"></i>
         </button>
       </div>
       <div class="flex flex-col items-center justify-center">
-        <label class="text-sm mb-1">Altitude Down</label>
+        <div class="label text-sm mb-1">Altitude Down</div>
         <button class="alt-button rounded-full"
             on:click={() => {sendMavlinkCommand("DO_CHANGE_ALTITUDE", `${[altitude - 1]}`)}}>
           <i class="fas fa-arrow-down-short-wide alt-down"></i>
@@ -85,11 +85,11 @@
     <div class="separator"></div>
     <div class="rotate-btns column flex flex-col items-center justify-center text-center space-y-4">
       <div id="rotate-left-button" class="flex flex-col items-center">
-        <label class="text-sm mb-1">Rotate Left</label>
+        <div class="label text-sm mb-1">Rotate Left</div>
         <button class="rotate-button rotate-left rounded-full" on:click={() => {}}>⟲</button>
       </div>
       <div class="flex flex-col items-center">
-        <label class="text-sm mb-1">Rotate Right</label>
+        <div class="label text-sm mb-1">Rotate Right</div>
         <button class="rotate-button rotate-right rounded-full" on:click={() => {}}>⟳</button>
       </div>
     </div>
@@ -196,7 +196,7 @@
     color: #66e1ff;
   }
   
-  label {
+  .label {
     font-size: 0.8rem;
   }
 
