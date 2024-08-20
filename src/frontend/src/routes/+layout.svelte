@@ -17,7 +17,10 @@
     mavTypeStore,
     mavStateStore,
     mavModeStore,
-    mavBatteryStore
+    mavBatteryStore,
+
+    mavArmedStateStore
+
   } from '../stores/mavlinkStore';
   import Modal from '../components/Modal.svelte';
 
@@ -179,8 +182,12 @@
           if (state) state = MavState[parseInt(state.toString().replace('"systemStatus":', ''))];
           if (state) mavStateStore.set(state as string);
           let mode: string | RegExpMatchArray | null = (text as string).match(/"baseMode":(\d+)/g);
-          if (mode) mode = MavMode[parseInt(mode.toString().replace('"baseMode":', ''))];
-          if (mode) mavModeStore.set(mode as string);
+          if (mode) {
+            mode = mode.toString().replace('"baseMode":', '');
+            mavModeStore.set(mode);
+            mavArmedStateStore.set(parseInt(mode) === 209);
+          }
+
       } else if ((text as string).includes('SYS_STATUS')) {
           let battery: string | RegExpMatchArray | null = (text as string).match(/"batteryRemaining":(\d+)/g);
           if (battery) battery = battery.toString().replace('"batteryRemaining":', '');
