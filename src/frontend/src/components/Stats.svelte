@@ -43,9 +43,7 @@
         notification: false,
         onConfirm: async () => {
           modal.$destroy();
-          await sendMavlinkCommand('DO_SET_MODE', `${[isArmed ? 88 : 216]}`);
-          // await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[isArmed ? 0 : 1, 21196]}`);
-          // await sendMavlinkCommand('NAV_TAKEOFF', `${[0, 0, 0, 0, 33.79315, -84.3744, 20]}`);
+          await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[isArmed ? 0 : 1, 21196]}`); // 21196 bypasses pre-arm checks
         }
       }
     });

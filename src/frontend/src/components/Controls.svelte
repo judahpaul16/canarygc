@@ -70,14 +70,14 @@
       <div class="flex flex-col items-center">
         <label class="text-sm mb-1">Altitude Up</label>
         <button class="alt-button rounded-full"
-            on:click={() => {sendMavlinkCommand("DO_CHANGE_ALTITUDE", `${altitude + 1},0`)}}>
+            on:click={() => {sendMavlinkCommand("DO_CHANGE_ALTITUDE", `${[altitude + 1]}`)}}>
           <i class="fas fa-arrow-up-wide-short alt-up"></i>
         </button>
       </div>
       <div class="flex flex-col items-center justify-center">
         <label class="text-sm mb-1">Altitude Down</label>
         <button class="alt-button rounded-full"
-            on:click={() => {sendMavlinkCommand("DO_CHANGE_ALTITUDE", `${altitude - 1},0`)}}>
+            on:click={() => {sendMavlinkCommand("DO_CHANGE_ALTITUDE", `${[altitude - 1]}`)}}>
           <i class="fas fa-arrow-down-short-wide alt-down"></i>
         </button>
       </div>
