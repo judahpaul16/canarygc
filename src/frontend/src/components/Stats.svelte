@@ -3,6 +3,7 @@
   import {
     mavTypeStore,
     mavStateStore,
+    mavModeStore,
     mavAltitudeStore,
     mavSpeedStore,
     mavBatteryStore,
@@ -19,7 +20,7 @@
   export let altitude: number = get(mavAltitudeStore);
   export let systemState: string = get(mavStateStore);
   export let batteryStatus: number = get(mavBatteryStore);
-  export let altitudeLimited: number = 100;
+  export let mavMode: string = get(mavModeStore);
   export let flightProgress: number = 50;
 
   let interval: number;
@@ -27,6 +28,7 @@
   $: mavType = $mavTypeStore;
   $: isArmed = $mavArmedStateStore;
   $: systemState = $mavStateStore;
+  $: mavMode = $mavModeStore;
   $: batteryStatus = $mavBatteryStore;
   $: altitude = $mavAltitudeStore;
   $: speed = $mavSpeedStore;
@@ -302,7 +304,7 @@
       <div>Speed: {speed} m/s</div>
       <div>Altitude: {altitude} m</div>
       <div class="battery-status {batteryStatus < 20 ? 'red' : batteryStatus < 50 ? 'yellow' : 'green'}">Battery Status: {batteryStatus}%</div>
-      <div>Altitude Limited: {altitudeLimited} m</div>
+      <div>Mode: <span  class="text-orange-300">{mavMode}</span></div>
     </div>
     <hr class="border-[#2d2d2d] my-3" />
       <div class="w-full mb-2">Loaded Mission Plan: <span class="text-[#66e1ff]">{flightPlanTitle || 'No mission plan loaded.'}</span></div>

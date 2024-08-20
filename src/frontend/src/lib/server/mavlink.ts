@@ -88,7 +88,7 @@ async function requestSysStatus() {
     request.targetSystem = 1;
     request.targetComponent = 1;
     request.messageId = common.SysStatus.MSG_ID;
-    request.interval = 5550000;
+    request.interval = 2550000;
     request.responseTarget = 1;
     await send(port!, request);
     statusRequested = true;

@@ -1,9 +1,9 @@
 <div class="dpad-container relative flex items-center justify-center w-48 h-48">
   <nav class="d-pad relative">
-    <a class="up" href="#"><i class="fas fa-chevron-up"></i></a>
-    <a class="right" href="#"><i class="fas fa-chevron-right"></i></a>
-    <a class="down" href="#"><i class="fas fa-chevron-down"></i></a>
-    <a class="left" href="#"><i class="fas fa-chevron-left"></i></a>
+    <button class="up"><i class="fas fa-chevron-up"></i></button>
+    <button class="right"><i class="fas fa-chevron-right"></i></button>
+    <button class="down"><i class="fas fa-chevron-down"></i></button>
+    <button class="left"><i class="fas fa-chevron-left"></i></button>
     <div class="center-circle">
       <span class="move-text">Move</span>
     </div>
@@ -31,7 +31,7 @@
     transform: translate(-50%) rotate(45deg);
   }
 
-  .d-pad a {
+  .d-pad button {
     position: absolute;
     display: flex;
     justify-content: center;
@@ -41,51 +41,51 @@
     transition: all 0.2s ease;
   }
 
-  .d-pad a i {
+  .d-pad button i {
     transform: rotate(-45deg);
   }
 
-  .d-pad a.up {
+  .d-pad button.up {
     top: 0;
     left: 50%;
     transform: translateX(-50%) rotate(45deg);
   }
 
-  .d-pad a.right {
+  .d-pad button.right {
     top: 50%;
     right: 0;
     transform: translateY(-50%) rotate(45deg);
   }
 
-  .d-pad a.down {
+  .d-pad button.down {
     bottom: 0;
     left: 50%;
     transform: translateX(-50%) rotate(45deg);
   }
 
-  .d-pad a.left {
+  .d-pad button.left {
     top: 50%;
     left: 0;
     transform: translateY(-50%) rotate(45deg);
   }
 
-  .d-pad a:hover.up {
+  .d-pad button:hover.up {
     top: -5px;
   }
 
-  .d-pad a:hover.right {
+  .d-pad button:hover.right {
     right: -5px;
   }
 
-  .d-pad a:hover.down {
+  .d-pad button:hover.down {
     bottom: -5px;
   }
 
-  .d-pad a:hover.left {
+  .d-pad button:hover.left {
     left: -5px;
   }
 
-  .d-pad a:hover {
+  .d-pad button:hover {
     color: #66e1ff;
   }
 
@@ -119,7 +119,7 @@
       height: 150px;
     }
 
-    .d-pad a {
+    .d-pad button {
       font-size: 20px;
     }
 
