@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { MavType, MavState } from '$lib/mavlinkMappings/minimal';
+  import { MavType, MavState } from 'mavlink-mappings/dist/lib/minimal';
+  import { MavMode } from 'mavlink-mappings/dist/lib/common';
   import PocketBase from 'pocketbase';
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import { authData } from '../stores/authStore';
@@ -15,6 +16,7 @@
     mavSpeedStore,
     mavTypeStore,
     mavStateStore,
+    mavModeStore,
     mavBatteryStore
   } from '../stores/mavlinkStore';
   import Modal from '../components/Modal.svelte';
@@ -176,6 +178,9 @@
           let state: string | RegExpMatchArray | null = (text as string).match(/"systemStatus":(\d+)/g);
           if (state) state = MavState[parseInt(state.toString().replace('"systemStatus":', ''))];
           if (state) mavStateStore.set(state as string);
+          let mode: string | RegExpMatchArray | null = (text as string).match(/"baseMode":(\d+)/g);
+          if (mode) mode = MavMode[parseInt(mode.toString().replace('"baseMode":', ''))];
+          if (mode) mavModeStore.set(mode as string);
       } else if ((text as string).includes('SYS_STATUS')) {
           let battery: string | RegExpMatchArray | null = (text as string).match(/"batteryRemaining":(\d+)/g);
           if (battery) battery = battery.toString().replace('"batteryRemaining":', '');
