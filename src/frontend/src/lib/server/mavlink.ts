@@ -28,7 +28,8 @@ interface ParamValueData {
 let port: SerialPort | Socket | null = null;
 let reader: MavLinkPacketParser | null = null;
 let online = false;
-let gpsRequested = false;
+let statusRequested = false;
+let guidedModeSet = false;
 let logs: string[] = [];
 
 async function initializePort(): Promise<void> {
@@ -60,8 +61,8 @@ async function initializePort(): Promise<void> {
             let timestamp = new Date().toISOString();
             let logEntry = `${clazz.MSG_NAME}(${clazz.MAGIC_NUMBER})::${timestamp}::${JSON.stringify(sanitizedData as ParamValueData)}`;
             logs.push(logEntry); // Store log entries
-            if (logs.length > 1000) {
-                logs = logs.slice(-1000); // Limit logs to the latest 1000 entries
+            if (logs.length > 100) {
+                logs = logs.slice(-100); // Limit logs to the latest 100 entries
             }
         }
     });
@@ -72,17 +73,25 @@ async function initializePort(): Promise<void> {
     });
 }
 
-async function requestGpsData() {
+async function requestSysStatus() {
     if (!port || !reader) throw new Error('Port or reader is not initialized');
 
-    const request = new common.SetMessageIntervalCommand();
+    let request = new common.SetMessageIntervalCommand();
     request.targetSystem = 1;
     request.targetComponent = 1;
     request.messageId = common.GpsRawInt.MSG_ID;
-    request.interval = 1000000; // 1 Hz
+    request.interval = 5220000;
     request.responseTarget = 1;
     await send(port!, request);
-    gpsRequested = true;
+
+    request = new common.SetMessageIntervalCommand();
+    request.targetSystem = 1;
+    request.targetComponent = 1;
+    request.messageId = common.SysStatus.MSG_ID;
+    request.interval = 2550000;
+    request.responseTarget = 1;
+    await send(port!, request);
+    statusRequested = true;
 }
 
 async function requestParameters() {
@@ -94,20 +103,30 @@ async function requestParameters() {
     await send(port!, request);
 }
 
-async function sendMavlinkCommand(command: string, params: any) {
+async function sendSetModeCommand(mode: string) {
     if (!port || !reader) throw new Error('Port or reader is not initialized');
 
-    let commandMsg = new common.CommandLong();
+    const commandMsg = new common.DoSetModeCommand();
     commandMsg.targetSystem = 1;
-    commandMsg.targetComponent = 1;
+    commandMsg.targetComponent = 0;
+    commandMsg.mode = common.MavMode[mode as keyof typeof common.MavMode];
+    await send(port, commandMsg);
+}
+
+async function sendMavlinkCommand(command: string, params: number[]) {
+    if (!port || !reader) throw new Error('Port or reader is not initialized');
+
+    const commandMsg = new common.CommandLong();
+    commandMsg.targetSystem = 1;
+    commandMsg.targetComponent = 0;
     commandMsg.command = common.MavCmd[command as keyof typeof common.MavCmd];
-    commandMsg._param1 = params[1] || 0;
-    commandMsg._param2 = params[2] || 0;
-    commandMsg._param3 = params[3] || 0;
-    commandMsg._param4 = params[4] || 0;
-    commandMsg._param5 = params[5] || 0;
-    commandMsg._param6 = params[6] || 0;
-    commandMsg._param7 = params[7] || 0;
+    if (params[0]) commandMsg._param1 = params[0];
+    if (params[1]) commandMsg._param2 = params[1];
+    if (params[2]) commandMsg._param3 = params[2];
+    if (params[3]) commandMsg._param4 = params[3];
+    if (params[4]) commandMsg._param5 = params[4];
+    if (params[5]) commandMsg._param6 = params[5];
+    if (params[6]) commandMsg._param7 = params[6];
     await send(port, commandMsg);
 }
 
@@ -142,11 +161,13 @@ function convertBigIntToNumber(obj: any): any {
 
 export {
     initializePort,
-    requestGpsData,
+    requestSysStatus,
     requestParameters,
     sendMavlinkCommand,
     sendManualControl,
+    sendSetModeCommand,
     online,
-    gpsRequested,
-    logs
+    statusRequested,
+    logs,
+    common
 };

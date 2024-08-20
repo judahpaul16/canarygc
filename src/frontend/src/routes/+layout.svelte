@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { MavType, MavState } from '$lib/mavlinkMappings/minimal';
+  import { MavType, MavState } from 'mavlink-mappings/dist/lib/minimal';
+  import { MavMode } from 'mavlink-mappings/dist/lib/common';
   import PocketBase from 'pocketbase';
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import { authData } from '../stores/authStore';
@@ -14,7 +15,12 @@
     mavAltitudeStore,
     mavSpeedStore,
     mavTypeStore,
-    mavStateStore
+    mavStateStore,
+    mavModeStore,
+    mavBatteryStore,
+
+    mavArmedStateStore
+
   } from '../stores/mavlinkStore';
   import Modal from '../components/Modal.svelte';
 
@@ -63,8 +69,10 @@
         }
       });
       if (response.ok) {
-        const data = await response.json();
-        updateBlackBoxCollection(JSON.stringify(data));
+        try {
+          const data = await response.json();
+          updateBlackBoxCollection(JSON.stringify(data));
+        } catch (error: any) {}
       } else {
         if (!offline_modal) {
           offline_modal = new Modal({
@@ -123,7 +131,7 @@
 
       // Delete the selected records
       let deletePromises = recordsToDelete.map(record => pb.collection('blackbox').delete(record.id));
-      await Promise.all(deletePromises);
+      Promise.all(deletePromises);
     }
   }
 
@@ -173,18 +181,29 @@
           let state: string | RegExpMatchArray | null = (text as string).match(/"systemStatus":(\d+)/g);
           if (state) state = MavState[parseInt(state.toString().replace('"systemStatus":', ''))];
           if (state) mavStateStore.set(state as string);
+          let mode: string | RegExpMatchArray | null = (text as string).match(/"baseMode":(\d+)/g);
+          if (mode) {
+            mode = mode.toString().replace('"baseMode":', '');
+            mavModeStore.set(mode);
+            mavArmedStateStore.set(parseInt(mode) === 209);
+          }
+
+      } else if ((text as string).includes('SYS_STATUS')) {
+          let battery: string | RegExpMatchArray | null = (text as string).match(/"batteryRemaining":(\d+)/g);
+          if (battery) battery = battery.toString().replace('"batteryRemaining":', '');
+          if (battery) mavBatteryStore.set(parseInt(battery));
       }
     }
   }
 
-  onMount(() => {
+  onMount(async () => {
     if (typeof window !== 'undefined' && authData.checkExpired() && window.location.pathname !== '/') {
       authData.set(null);
       goto('/login');
     }
     
-    initializeFlightPlansCollection();
-    initializeBlackBoxCollection();
+    await initializeFlightPlansCollection();
+    await initializeBlackBoxCollection();
 
     setInterval(async () => {
       await cleanupBlackBoxCollection();

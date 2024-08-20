@@ -1,28 +1,54 @@
 import type { RequestHandler } from '@sveltejs/kit';
-import { initializePort, requestGpsData, sendMavlinkCommand, online, gpsRequested, logs } from '$lib/server/mavlink';
+import {
+    initializePort,
+    requestSysStatus,
+    sendMavlinkCommand,
+    sendSetModeCommand,
+    online,
+    statusRequested,
+    logs,
+    common
+} from '$lib/server/mavlink';
 
 export const POST: RequestHandler = async (request): Promise<Response> => {
     switch (request.params.type) {
         case 'init':
             try {
                 if (!online) await initializePort();
-                if (online && !gpsRequested) await requestGpsData();
+                if (online && !statusRequested) await requestSysStatus();
                 if (logs.length > 0) return new Response(JSON.stringify(logs.pop()), { status: 200, headers: { 'Content-Type': 'application/json' } });
-                return new Response('No logs available', { status: 503 });
+                return new Response('No logs available', { status: 200 });
             } catch (err) {
                 console.error(err);
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
             }
         case 'send_command':
             let command = request.request.headers.get('command');
-            let params = request.request.headers.get('params');
+            let params: string | number[] | null = request.request.headers.get('params');
+            if (params) params = params.split(',').map((param) => {
+                return parseInt(param);
+            });
             try {
-                if (command) {
-                    await sendMavlinkCommand(command, params);
-                    console.log(`MAVLink Command sent: ${command}`);
-                    return new Response('Command sent', { status: 200 });
+                if (command && params) {
+                    await sendMavlinkCommand(command, params as number[]);
+                    console.log(`MAVLink Command sent: ${command}, params: [${params}]`);
+                    return new Response(`MAVLink Command sent: ${command}, params: [${params}]`, { status: 200 });
                 } else {
-                    return new Response('Command not provided', { status: 400 });
+                    return new Response('Command or params not provided', { status: 400 });
+                }
+            } catch (err) {
+                console.error(err);
+                return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
+            }
+        case 'set_mode':
+            let mode = request.request.headers.get('mode');
+            try {
+                if (mode) {
+                    await sendSetModeCommand(mode);
+                    console.log(`Mode set to: ${mode}`);
+                    return new Response(`Mode set to: ${mode}`, { status: 200 });
+                } else {
+                    return new Response('Mode not provided', { status: 400 });
                 }
             } catch (err) {
                 console.error(err);

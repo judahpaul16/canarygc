@@ -49,11 +49,11 @@
 
     const input = document.querySelector('input[type="text"]') as HTMLInputElement;
     function resizeInput() {
-      input.style.width = '162px';
       input.style.width = `${input.scrollWidth}px`;
     }
     resizeInput();
-    input.style.width = '162px';
+      let width = Math.max(140, input.scrollWidth - 88);
+      input.style.width = `${width}px`;
     input.addEventListener('input', resizeInput);
   });
 
@@ -166,7 +166,7 @@
 
 <div class="flightplan bg-[#1c1c1e] text-white p-4 rounded-lg space-x-4 items-center h-full">
   <div class="container block">
-    <input type="text" class="text-md font-bold mb-2 ml-4 focus:outline-none" placeholder="Untitled Mission Plan" id="flight-plan-title" bind:value={title} />
+    <input type="text" class="text-md font-bold mb-2 ml-4 focus:outline-none" placeholder="Untitled Mission" id="flight-plan-title" bind:value={title} />
     <div class="flex items-center gap-2 float-right text-sm">
       <a href="https://ardupilot.org/planner/docs/common-planning-a-mission-with-waypoints-and-events.html" target="_blank" class="text-[#61cd89] hover:underline mr-2">
         <i class="fas fa-question-circle"></i>

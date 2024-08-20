@@ -399,6 +399,7 @@
     if (leafletMap && mavLocation) {
       let img = new Image();
       img.src = '/map/here.png'; // Use static path directly
+      try { L.icon } catch (e) { return; }
       img.onload = () => {
         let canvas = document.createElement('canvas');
         canvas.width = img.width;
