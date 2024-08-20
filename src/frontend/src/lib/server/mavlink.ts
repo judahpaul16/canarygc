@@ -140,7 +140,6 @@ async function sendManualControl(x: number, y: number, z: number, r: number, but
     msg.z = z;
     msg.r = r;
     msg.buttons = buttons;
-    msg.mode = mode;
     await send(port, msg);
 }
 
