@@ -347,7 +347,7 @@
     @media (max-width: 1440px) {
         @media (min-width: 990px) {
             .event-log > div {
-                display: block;
+                display: inline-table;
                 text-align: center;
                 height: 10%;
             }
