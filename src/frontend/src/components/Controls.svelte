@@ -57,7 +57,7 @@
       <div class="flex flex-col items-center">
         <div class="label text-sm mb-1">Altitude Up</div>
         <button class="alt-button rounded-full"
-            on:click={() => {sendMavlinkCommand('DO_REPOSITION', `${[-1 , 1, NaN, NaN, 33.79315, -84.3744, 40]}`)}}>
+            on:click={() => {sendMavlinkCommand('DO_CHANGE_ALTITUDE', `${[40]}`)}}>
           <i class="fas fa-arrow-up-wide-short alt-up"></i>
         </button>
       </div>

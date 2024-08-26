@@ -7,8 +7,10 @@ import {
     online,
     statusRequested,
     logs,
-    common
+    newLogs
 } from '$lib/server/mavlink';
+
+let previousLogLength = 0;
 
 export const POST: RequestHandler = async (request): Promise<Response> => {
     switch (request.params.type) {
@@ -16,7 +18,16 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
             try {
                 if (!online) await initializePort();
                 if (online && !statusRequested) await requestSysStatus();
-                if (logs.length > 0) return new Response(JSON.stringify(logs.pop()), { status: 200, headers: { 'Content-Type': 'application/json' } });
+
+                // Return new logs and clear newLogs
+                const currentLogLength = logs.length;
+                if (newLogs.length > 0) {
+                    const logsToSend = newLogs.slice();
+                    newLogs.length = 0; // Clear newLogs
+                    previousLogLength = currentLogLength; // Update previous length
+                    return new Response(JSON.stringify(logsToSend), { status: 200, headers: { 'Content-Type': 'application/json' } });
+                }
+
                 return new Response('No logs available', { status: 503 });
             } catch (err) {
                 console.error(err);

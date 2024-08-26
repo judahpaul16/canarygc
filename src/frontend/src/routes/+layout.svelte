@@ -1,6 +1,7 @@
 <script lang="ts">
   import { MavType, MavState } from 'mavlink-mappings/dist/lib/minimal';
-  import { MavMode } from 'mavlink-mappings/dist/lib/common';
+  import { MissionState } from 'mavlink-mappings/dist/lib/common';
+  import { CopterMode } from 'mavlink-mappings/dist/lib/ardupilotmega';
   import PocketBase from 'pocketbase';
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import { authData } from '../stores/authStore';
@@ -16,12 +17,13 @@
     mavSpeedStore,
     mavTypeStore,
     mavStateStore,
+    missionStateStore,
     mavModeStore,
     mavBatteryStore,
-
     mavArmedStateStore
 
   } from '../stores/mavlinkStore';
+  import { get } from 'svelte/store';
   import Modal from '../components/Modal.svelte';
 
   let offline_modal: Modal;
@@ -70,7 +72,9 @@
       });
       if (response.ok) {
         const data = await response.json();
-        updateBlackBoxCollection(JSON.stringify(data));
+        Object.keys(data).forEach(key => {
+          updateBlackBoxCollection(JSON.stringify(data[key]));
+        });
       } else {
         if (!offline_modal) {
           offline_modal = new Modal({
@@ -179,13 +183,20 @@
           let state: string | RegExpMatchArray | null = (text as string).match(/"systemStatus":(\d+)/g);
           if (state) state = MavState[parseInt(state.toString().replace('"systemStatus":', ''))];
           if (state) mavStateStore.set(state as string);
-          let mode: string | RegExpMatchArray | null = (text as string).match(/"baseMode":(\d+)/g);
-          if (mode) {
-            mode = mode.toString().replace('"baseMode":', '');
-            mavModeStore.set(mode);
-            mavArmedStateStore.set(parseInt(mode) === 209);
+          let baseMode: string | RegExpMatchArray | null = (text as string).match(/"baseMode":(\d+)/g);
+          let customMode: string | RegExpMatchArray | null = (text as string).match(/"customMode":(\d+)/g);
+          if (baseMode) {
+            baseMode = baseMode.toString().replace('"baseMode":', '');
+            mavArmedStateStore.set(parseInt(baseMode) === 209);
           }
-
+          if (customMode) {
+            customMode = customMode.toString().replace('"customMode":', '');
+            mavModeStore.set(CopterMode[parseInt(customMode)]);
+          }
+      } else if ((text as string).includes('MISSION_CURRENT')) {
+          let missionState: string | RegExpMatchArray | null = (text as string).match(/"mission_state":(\d+)/g);
+          if (missionState) missionState = missionState.toString().replace('"mission_state":', '');
+          if (missionState) missionStateStore.set(MissionState[parseInt(missionState)]);
       } else if ((text as string).includes('SYS_STATUS')) {
           let battery: string | RegExpMatchArray | null = (text as string).match(/"batteryRemaining":(\d+)/g);
           if (battery) battery = battery.toString().replace('"batteryRemaining":', '');
@@ -249,11 +260,11 @@
   async function initializeFlightPlansCollection() {
     try {
       const collections = await pb.collections.getFullList();
-      const collectionExists = collections.some(c => c.name === 'flight_plans');
+      const collectionExists = collections.some(c => c.name === 'mission_plans');
       
       if (!collectionExists) {
         const newCollection = {
-          name: 'flight_plans',
+          name: 'mission_plans',
           type: 'base',
           schema: [
             { name: 'title', type: 'text', options: { maxSize: 100000000 } },
@@ -261,7 +272,7 @@
           ]
         };
         await pb.collections.create(newCollection);
-        console.log('Collection "flight_plans" created successfully.');
+        console.log('Collection "mission_plans" created successfully.');
       }
     } catch (error: any) {
       if (error.message.includes('The request was autocancelled')) {
