@@ -18,7 +18,7 @@
 
   async function getFlightPlans() {
     try {
-      const records = await pb.collection("flight_plans").getFullList();
+      const records = await pb.collection("mission_plans").getFullList();
       flightPlans = records.map((record) => ({
         id: record.id,
         title: record.title,
@@ -29,7 +29,7 @@
   }
 
   async function loadPlan(plan: any) {
-    actions = await pb.collection("flight_plans").getFirstListItem(`id = "${plan.id}"`);
+    actions = await pb.collection("mission_plans").getFirstListItem(`id = "${plan.id}"`);
     flightPlanActionsStore.set(actions.actions);
     flightPlanTitleStore.set(plan.title);
   }
@@ -41,12 +41,12 @@
       title: title,
       actions: plan,
     };
-    pb.collection("flight_plans").create(missionPlan).then(() => getFlightPlans());
+    pb.collection("mission_plans").create(missionPlan).then(() => getFlightPlans());
   }
 
   async function handleDelete(id: string) {
     try {
-      await pb.collection("flight_plans").delete(id);
+      await pb.collection("mission_plans").delete(id);
       flightPlans = flightPlans.filter((plan) => plan.id !== id);
     } catch (error) {
       console.error("Error deleting mission plan:", error);

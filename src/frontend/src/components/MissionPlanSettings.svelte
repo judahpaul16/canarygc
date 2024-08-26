@@ -4,7 +4,7 @@
     import { mavLocationStore } from '../stores/mavlinkStore';
     import { flightPlanTitleStore, flightPlanActionsStore, type FlightPlanAction } from "../stores/flightPlanStore";
     import Modal from "./Modal.svelte";
-    import ManageFlightPlans from "./ManageFlightPlans.svelte";
+    import ManageFlightPlans from "./ManageMissionPlans.svelte";
 
     const pb = new PocketBase("http://localhost:8090");
 
@@ -52,7 +52,7 @@
             title: title,
             actions: plan,
         };
-        let response = await pb.collection("flight_plans").create(missionPlan).catch((error) => {
+        let response = await pb.collection("mission_plans").create(missionPlan).catch((error) => {
             new Modal({
                 target: document.body,
                 props: {

@@ -33,16 +33,16 @@ services:
   sitl:
     build:
       context: ./src/sitl
+      args:
+        - INSTANCE=0
+        - LAT=33.7909
+        - LON=-84.3722
+        - ALT=0
+        - DIR=130
+        - MODEL=quad
+        - SPEEDUP=1
+        - VEHICLE=ArduCopter
     tty: true
     container_name: mmgcs_sitl
-    environment:
-      - INSTANCE=0
-      - LAT=33.7909
-      - LON=-84.3722
-      - ALT=14
-      - DIR=270
-      - MODEL=+
-      - SPEEDUP=1
-      - VEHICLE=ArduCopter
     ports:
       - "5760:5760"
