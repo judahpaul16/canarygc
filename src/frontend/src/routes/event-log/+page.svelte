@@ -60,7 +60,7 @@
             showTimeSync = checked;
         } else if (message === 'PARAM_VALUE') {
             showParamValue = checked;
-        } else if (message === 'GPS_RAW_INT') {
+        } else if (message === 'GLOBAL_POSITION_INT') {
             showGPSRawInt = checked;
         } else if (message === 'SYS_STATUS') {
             showSysStatus = checked;
@@ -158,8 +158,8 @@
                         <label for="Toggle TIMESYNC" class="text-white mr-2">TIMESYNC</label>
                         <input type="checkbox" class="form-checkbox" name="Toggle PARAM_VALUE" checked={showParamValue} on:change={(event) => handleShowMessage(event, 'PARAM_VALUE')}>
                         <label for="Toggle PARAM_VALUE" class="text-white">PARAM_VALUE</label>
-                        <input type="checkbox" class="form-checkbox" name="Toggle GPS_RAW_INT" checked={showGPSRawInt} on:change={(event) => handleShowMessage(event, 'GPS_RAW_INT')}>
-                        <label for="Toggle GPS_RAW_INT" class="text-white">GPS_RAW_INT</label>
+                        <input type="checkbox" class="form-checkbox" name="Toggle GLOBAL_POSITION_INT" checked={showGPSRawInt} on:change={(event) => handleShowMessage(event, 'GLOBAL_POSITION_INT')}>
+                        <label for="Toggle GLOBAL_POSITION_INT" class="text-white">GLOBAL_POSITION_INT</label>
                         <input type="checkbox" class="form-checkbox" name="Toggle SYS_STATUS" checked={showSysStatus} on:change={(event) => handleShowMessage(event, 'SYS_STATUS')}>
                         <label for="Toggle SYS_STATUS" class="text-white">SYS_STATUS</label>
                     </div>
@@ -192,7 +192,7 @@
                             <span style="display: {showTimeSync ? 'block' : 'none'}">{@html getHighlightedLog(log)}</span>
                         {:else if log.indexOf('PARAM_VALUE') !== -1}
                             <span style="display: {showParamValue ? 'block' : 'none'}">{@html getHighlightedLog(log)}</span>
-                        {:else if log.indexOf('GPS_RAW_INT') !== -1}
+                        {:else if log.indexOf('GLOBAL_POSITION_INT') !== -1}
                             <span style="display: {showGPSRawInt ? 'block' : 'none'}">{@html getHighlightedLog(log)}</span>
                         {:else if log.indexOf('SYS_STATUS') !== -1}
                             <span style="display: {showSysStatus ? 'block' : 'none'}">{@html getHighlightedLog(log)}</span>

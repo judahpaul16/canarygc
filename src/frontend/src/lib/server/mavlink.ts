@@ -79,7 +79,7 @@ async function requestSysStatus() {
     let request = new common.SetMessageIntervalCommand();
     request.targetSystem = 1;
     request.targetComponent = 1;
-    request.messageId = common.GpsRawInt.MSG_ID;
+    request.messageId = common.GlobalPositionInt.MSG_ID;
     request.interval = 1000000; // 1 Hz (every 1 seconds)
     request.responseTarget = 1;
     await send(port!, request);
