@@ -72,7 +72,9 @@
       });
       if (response.ok) {
         const data = await response.json();
-        updateBlackBoxCollection(JSON.stringify(data));
+        Object.keys(data).forEach(key => {
+          updateBlackBoxCollection(JSON.stringify(data[key]));
+        });
       } else {
         if (!offline_modal) {
           offline_modal = new Modal({

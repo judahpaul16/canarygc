@@ -31,6 +31,7 @@ let online = false;
 let statusRequested = false;
 let guidedModeSet = false;
 let logs: string[] = [];
+let newLogs: string[] = [];
 
 async function initializePort(): Promise<void> {
     if (port) return; // Return if port is already initialized
@@ -61,6 +62,7 @@ async function initializePort(): Promise<void> {
             let timestamp = new Date().toISOString();
             let logEntry = `${clazz.MSG_NAME}(${clazz.MAGIC_NUMBER})::${timestamp}::${JSON.stringify(sanitizedData as ParamValueData)}`;
             logs.push(logEntry); // Store log entries
+            newLogs.push(logEntry);
             if (logEntry.includes('COMMAND_ACK')) console.log(logEntry);
         }
     });
@@ -173,5 +175,6 @@ export {
     online,
     statusRequested,
     logs,
+    newLogs,
     common
 };
