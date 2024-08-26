@@ -21,7 +21,7 @@
   export let altitude: number = get(mavAltitudeStore);
   export let systemState: string = get(mavStateStore);
   export let missionState: string = get(missionStateStore);
-  export let batteryStatus: number = get(mavBatteryStore);
+  export let batteryStatus: number | null = get(mavBatteryStore);
   export let mavMode: string = get(mavModeStore);
   export let flightProgress: number = 50;
 
@@ -247,7 +247,7 @@
       <div>System State: {systemState}</div>
       <div>Speed: {speed} m/s</div>
       <div>Altitude: {altitude} m</div>
-      <div class="battery-status {batteryStatus < 20 ? 'red' : batteryStatus < 50 ? 'yellow' : 'green'}">Battery Status: {batteryStatus}%</div>
+      <div class="battery-status {batteryStatus === null ? 'red' : ''} {batteryStatus !== null && batteryStatus < 20 ? 'red' : batteryStatus !== null && batteryStatus < 50 ? 'yellow' : 'green'}">Battery Status: {batteryStatus !== null ? batteryStatus : '--'}%</div>
       <div>Mode: <span  class="text-orange-300">{mavMode}</span></div>
     </div>
     <hr class="border-[#2d2d2d] my-3" />
