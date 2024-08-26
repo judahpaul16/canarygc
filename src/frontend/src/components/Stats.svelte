@@ -248,7 +248,7 @@
       <div>Speed: {speed} m/s</div>
       <div>Altitude: {altitude} m</div>
       <div class="battery-status {batteryStatus < 20 ? 'red' : batteryStatus < 50 ? 'yellow' : 'green'}">Battery Status: {batteryStatus}%</div>
-      <div>Mode: <span  class="text-orange-300">{isArmed ? 'ARMED' : 'DISARMED'}</span></div>
+      <div>Mode: <span  class="text-orange-300">{mavMode}</span></div>
     </div>
     <hr class="border-[#2d2d2d] my-3" />
       <div class="w-full mb-2">Loaded Mission Plan: <span class="text-[#66e1ff]">{flightPlanTitle || 'No mission plan loaded.'}</span></div>

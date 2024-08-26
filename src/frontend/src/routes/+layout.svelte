@@ -1,6 +1,7 @@
 <script lang="ts">
   import { MavType, MavState } from 'mavlink-mappings/dist/lib/minimal';
   import { MissionState } from 'mavlink-mappings/dist/lib/common';
+  import { CopterMode } from 'mavlink-mappings/dist/lib/ardupilotmega';
   import PocketBase from 'pocketbase';
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import { authData } from '../stores/authStore';
@@ -180,11 +181,15 @@
           let state: string | RegExpMatchArray | null = (text as string).match(/"systemStatus":(\d+)/g);
           if (state) state = MavState[parseInt(state.toString().replace('"systemStatus":', ''))];
           if (state) mavStateStore.set(state as string);
-          let mode: string | RegExpMatchArray | null = (text as string).match(/"baseMode":(\d+)/g);
-          if (mode) {
-            mode = mode.toString().replace('"baseMode":', '');
-            mavModeStore.set(mode);
-            mavArmedStateStore.set(parseInt(mode) === 209);
+          let baseMode: string | RegExpMatchArray | null = (text as string).match(/"baseMode":(\d+)/g);
+          let customMode: string | RegExpMatchArray | null = (text as string).match(/"customMode":(\d+)/g);
+          if (baseMode) {
+            baseMode = baseMode.toString().replace('"baseMode":', '');
+            mavArmedStateStore.set(parseInt(baseMode) === 209);
+          }
+          if (customMode) {
+            customMode = customMode.toString().replace('"customMode":', '');
+            mavModeStore.set(CopterMode[parseInt(customMode)]);
           }
       } else if ((text as string).includes('MISSION_CURRENT')) {
           let missionState: string | RegExpMatchArray | null = (text as string).match(/"mission_state":(\d+)/g);
