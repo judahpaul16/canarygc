@@ -20,7 +20,7 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
 
                 // Return new logs and clear newLogs
                 const currentLogLength = logs.length;
-                if (newLogs.length > 0) {
+                if (logs.length > 0) {
                     const logsToSend = newLogs.slice();
                     newLogs.length = 0; // Clear newLogs
                     previousLogLength = currentLogLength; // Update previous length
