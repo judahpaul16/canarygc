@@ -218,7 +218,7 @@
       await cleanupBlackBoxCollection();
       await checkOnlineStatus();
       await getLogs();
-    }, 1000);
+    }, 1100);
     
     const dashboard = document.querySelector('.dashboard');
     if (dashboard) {
