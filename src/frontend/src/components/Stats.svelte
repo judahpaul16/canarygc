@@ -272,7 +272,7 @@
               <div class="tooltip">Release Payload</div>
             </button>
           </div>
-          {#if !checkState(['ACTIVE'], 'mission', missionState)}
+          {#if !checkState(['ACTIVE'], 'system', systemState)}
             <div class="relative group flex flex-col items-center">
               <button class="circular-button" on:click={initTakeoff} disabled={!checkState(['STANDBY'], 'system', systemState)}>
                 <i class="fas fa-plane-departure"></i>
@@ -281,7 +281,7 @@
             </div>
           {:else}
             <div class="relative group flex flex-col items-center">
-              <button class="circular-button" on:click={initLanding} disabled={!checkState(['ACTIVE'], 'mission', missionState)}>
+              <button class="circular-button" on:click={initLanding} disabled={!checkState(['ACTIVE'], 'system', missionState)}>
                 <i class="fas fa-plane-arrival"></i>
                 <div class="tooltip">Initiate Landing</div>
               </button>
