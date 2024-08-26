@@ -111,16 +111,6 @@ async function requestParameters() {
     await send(port!, request);
 }
 
-async function sendSetModeCommand(mode: string) {
-    if (!port || !reader) throw new Error('Port or reader is not initialized');
-
-    const commandMsg = new common.DoSetModeCommand();
-    commandMsg.targetSystem = 1;
-    commandMsg.targetComponent = 0;
-    commandMsg.mode = common.MavMode[mode as keyof typeof common.MavMode];
-    await send(port, commandMsg);
-}
-
 async function sendMavlinkCommand(command: string, params: number[], useArduPilotMega = false) {
     if (!port || !reader) throw new Error('Port or reader is not initialized');
 
@@ -175,7 +165,6 @@ export {
     requestParameters,
     sendMavlinkCommand,
     sendManualControl,
-    sendSetModeCommand,
     online,
     statusRequested,
     logs,
