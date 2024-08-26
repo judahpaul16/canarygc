@@ -5,8 +5,12 @@
   export let isOpen: boolean = false;
   export let confirmation: boolean = false;
   export let notification: boolean = false;
+  export let input: { type: string, placeholder: string } | null = null;
+  export let inputValue: number | string | null = null;
   export let onConfirm: () => void = () => {};
   export let onCancel: () => void = () => {};
+
+  $: inputValue = inputValue ?? '';
 
   const closeModal = () => {
     isOpen = false;
@@ -34,6 +38,15 @@
       </div>
       <div class="px-4 py-2 text-white">
         {content}
+        {#if input}
+          <div class="flex items-center justify-center w-full">
+            {#if input.type === 'number'}
+              <input type="number" placeholder={input.placeholder} bind:value={inputValue} class="form-input" />
+            {:else if input.type === 'text'}
+              <input type="text" placeholder={input.placeholder} bind:value={inputValue} class="form-input" />
+            {/if}
+          </div>
+        {/if}
       </div>
       {#if confirmation}
         <div class="flex justify-end px-4 py-2 border-t border-[#2d2d2d]">
@@ -58,5 +71,29 @@
     background: none;
     cursor: pointer;
     transition: background-color 0.3s, color 0.3s;
+  }
+
+  .form-input {
+    appearance: none;
+    width: fit-content;
+    margin-block: 0.75em;
+    padding: 0.5rem;
+    border: 1px solid #2d2d2d;
+    border-radius: 1em;
+    background-color: #3f3f40;
+    color: white;
+    font-size: calc(0.4rem + 0.5vw);
+    transition: border-color 0.3s;
+    transition: background-color 0.3s ease;
+  }
+
+  .form-input {
+    border: 1px solid #374151;
+    padding: 0.5rem;
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: #66e1ff;
   }
 </style>
