@@ -8,7 +8,10 @@
     mavAltitudeStore,
     mavSpeedStore,
     mavBatteryStore,
-    mavArmedStateStore
+    mavArmedStateStore,
+
+    mavLocationStore
+
   } from '../stores/mavlinkStore';
   import { get } from 'svelte/store';
 
@@ -36,14 +39,16 @@
   $: altitude = $mavAltitudeStore;
   $: speed = $mavSpeedStore;
   $: flightPlanTitle = $flightPlanTitleStore;
+  $: mavLocation = $mavLocationStore;
 
-  async function sendMavlinkCommand(command: string, params: string  = '') {
+  async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
     const response = await fetch(`/api/mavlink/send_command`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         'command': command,
-        'params': params
+        'params': params,
+        'useArduPilotMega': useArduPilotMega
       },
     });
     if (response.ok) {
@@ -206,18 +211,9 @@
         isOpen: true,
         confirmation: true,
         notification: false,
-        onConfirm: () => {
-          modal.$destroy();
-          const newModal = new Modal({
-            target: document.body,
-            props: {
-              title: 'Landing',
-              content: 'The MAV is landing.',
-              isOpen: true,
-              confirmation: false,
-              notification: true,
-            }
-          });
+        onConfirm: async () => {
+          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+          await sendMavlinkCommand('NAV_LAND', `${[0, 0, 0, 0, mavLocation.lat, mavLocation.lng, 0]}`);
         },
       }
     });
