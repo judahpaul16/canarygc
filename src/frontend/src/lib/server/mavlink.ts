@@ -121,13 +121,17 @@ async function sendSetModeCommand(mode: string) {
     await send(port, commandMsg);
 }
 
-async function sendMavlinkCommand(command: string, params: number[]) {
+async function sendMavlinkCommand(command: string, params: number[], useArduPilotMega = false) {
     if (!port || !reader) throw new Error('Port or reader is not initialized');
 
     const commandMsg = new common.CommandLong();
     commandMsg.targetSystem = 1;
     commandMsg.targetComponent = 0;
-    commandMsg.command = common.MavCmd[command as keyof typeof common.MavCmd];
+    if (useArduPilotMega) { 
+        commandMsg.command = parseInt(`${ardupilotmega.MavCmd[command as keyof typeof ardupilotmega.MavCmd]}`);
+    } else {
+        commandMsg.command = common.MavCmd[command as keyof typeof common.MavCmd];
+    }
     if (params[0]) commandMsg._param1 = params[0];
     if (params[1]) commandMsg._param2 = params[1];
     if (params[2]) commandMsg._param3 = params[2];

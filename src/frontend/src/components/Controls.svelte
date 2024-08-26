@@ -5,7 +5,7 @@
   import { mavAltitudeStore, mavLocationStore } from '../stores/mavlinkStore';
   import { get } from 'svelte/store';
   import Modal from './Modal.svelte';
-    import { onMount } from 'svelte';
+  import { onMount } from 'svelte';
 
   $: mavLocation = $mavLocationStore;
   $: altitude = $mavAltitudeStore;
@@ -16,13 +16,14 @@
     });
   });
 
-  async function sendMavlinkCommand(command: string, params: string  = '') {
+  async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
     const response = await fetch(`/api/mavlink/send_command`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         'command': command,
-        'params': params
+        'params': params,
+        'useArduPilotMega': useArduPilotMega
       },
     });
     if (response.ok) {
@@ -57,14 +58,14 @@
       <div class="flex flex-col items-center">
         <div class="label text-sm mb-1">Altitude Up</div>
         <button class="alt-button rounded-full"
-            on:click={() => {sendMavlinkCommand('DO_CHANGE_ALTITUDE', `${[40]}`)}}>
+            on:click={() => {sendMavlinkCommand('GUIDED_CHANGE_ALTITUDE', `${[NaN, NaN, 1, NaN, NaN, NaN, altitude + 1]}`, 'true')}}>
           <i class="fas fa-arrow-up-wide-short alt-up"></i>
         </button>
       </div>
       <div class="flex flex-col items-center justify-center">
         <div class="label text-sm mb-1">Altitude Down</div>
         <button class="alt-button rounded-full"
-            on:click={() => {}}>
+            on:click={() => {sendMavlinkCommand('GUIDED_CHANGE_ALTITUDE', `${[NaN, NaN, 1, NaN, NaN, NaN, altitude - 1]}`, 'true')}}>
           <i class="fas fa-arrow-down-short-wide alt-down"></i>
         </button>
       </div>

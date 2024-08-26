@@ -36,12 +36,13 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
         case 'send_command':
             let command = request.request.headers.get('command');
             let params: string | number[] | null = request.request.headers.get('params');
+            let useArduPilotMega = request.request.headers.get('useArduPilotMega') === 'true';
             if (params) params = params.split(',').map((param) => {
                 return parseInt(param);
             });
             try {
                 if (command && params) {
-                    await sendMavlinkCommand(command, params as number[]);
+                    await sendMavlinkCommand(command, params as number[], useArduPilotMega);
                     console.log(`MAVLink Command sent: ${command}, params: [${params}]`);
                     return new Response(`MAVLink Command sent: ${command}, params: [${params}]`, { status: 200 });
                 } else {
