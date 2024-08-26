@@ -19,7 +19,19 @@
     }
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = (event: Event) => {
+    event.preventDefault();
+    // Form validation logic
+    const form = event.target as HTMLFormElement;
+    if (!form.checkValidity()) {
+      return;
+    }
+    
+    if (input && inputValue === '') {
+      alert('Please enter a valid value.');
+      return;
+    }
+    
     onConfirm();
     closeModal();
   };
@@ -36,29 +48,31 @@
           &times;
         </button>
       </div>
-      <div class="px-4 py-2 text-white">
-        {content}
-        {#if input}
-          <div class="flex items-center justify-center w-full">
-            {#if input.type === 'number'}
-              <input type="number" placeholder={input.placeholder} bind:value={inputValue} class="form-input" />
-            {:else if input.type === 'text'}
-              <input type="text" placeholder={input.placeholder} bind:value={inputValue} class="form-input" />
-            {/if}
+      <form>
+        <div class="px-4 py-2 text-white">
+          {content}
+          {#if input}
+            <div class="flex items-center justify-center w-full">
+              {#if input.type === 'number'}
+                <input type="number" placeholder={input.placeholder} bind:value={inputValue} class="form-input" required />
+              {:else if input.type === 'text'}
+                <input type="text" placeholder={input.placeholder} bind:value={inputValue} class="form-input" required />
+              {/if}
+            </div>
+          {/if}
+        </div>
+        {#if confirmation}
+          <div class="flex justify-end px-4 py-2 border-t border-[#2d2d2d]">
+            <button type="submit" on:click={handleConfirm} class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 mr-2">Confirm</button>
+            <button on:click={closeModal} class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400">Cancel</button>
           </div>
         {/if}
-      </div>
-      {#if confirmation}
-        <div class="flex justify-end px-4 py-2 border-t border-[#2d2d2d]">
-          <button on:click={handleConfirm} class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 mr-2">Confirm</button>
-          <button on:click={closeModal} class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400">Cancel</button>
-        </div>
-      {/if}
-      {#if notification}
-        <div class="flex justify-end px-4 py-2 border-t border-[#2d2d2d]">
-          <button on:click={closeModal} class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400">Okay</button>
-        </div>
-      {/if}
+        {#if notification}
+          <div class="flex justify-end px-4 py-2 border-t border-[#2d2d2d]">
+            <button on:click={closeModal} class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400">Okay</button>
+          </div>
+        {/if}
+      </form>
     </div>
   </div>
 {/if}
