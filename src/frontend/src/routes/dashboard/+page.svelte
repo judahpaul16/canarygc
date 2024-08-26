@@ -4,7 +4,7 @@
   import Stats from '../../components/Stats.svelte';
   import Controls from '../../components/Controls.svelte';
   import Compass from '../../components/Compass.svelte';
-  import ManageFlightPlans from '../../components/ManageFlightPlans.svelte';
+  import ManageFlightPlans from '../../components/ManageMissionPlans.svelte';
   import { mavLocationStore } from '../../stores/mavlinkStore';
 
   $: user = $authData;
