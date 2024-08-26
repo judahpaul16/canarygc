@@ -75,6 +75,9 @@
         Object.keys(data).forEach(key => {
           updateBlackBoxCollection(JSON.stringify(data[key]));
         });
+        data.forEach((log: string) => {
+          getLogs(log.replace(/\\"/g, '"') + '\n');
+        });
       } else {
         if (!offline_modal) {
           offline_modal = new Modal({
@@ -137,22 +140,7 @@
     }
   }
 
-  async function getLogs() {
-    let text: string | null = null;
-
-    try {
-      const response = await pb.collection('blackbox').getFullList();
-      if (response.length > 0) {
-        text = response[response.length - 1].log.replace(/\\"/g, '"') + '\n';
-      }
-    } catch (error: any) {
-      if (error.message.includes('The request was autocancelled')) {
-        // ignore it
-      } else {
-        console.error('Error:', error);
-      }
-    }
-    
+  async function getLogs(text: string) {
     // truncate old logs to save memory
     logs = logs.slice(-1000);
 
@@ -219,7 +207,6 @@
     setInterval(async () => {
       await cleanupBlackBoxCollection();
       await checkOnlineStatus();
-      await getLogs();
     }, 1100);
     
     const dashboard = document.querySelector('.dashboard');
