@@ -160,21 +160,23 @@
       logs = [...logs, text];
       mavlinkLogStore.set(logs);
 
-      if ((text as string).includes('GPS_RAW_INT')) {
+      if ((text as string).includes('GLOBAL_POSITION_INT')) {
           let lat: string | RegExpMatchArray | null = (text as string).match(/"lat":\-?(\d+)/g);
           let lon: string | RegExpMatchArray | null = (text as string).match(/"lon":\-?(\d+)/g);
-          if (lat) lat = lat.toString().replace('"lat":', '').replace(/^(-?\d{2})(\d+)$/, '$1.$2');
-          if (lon) lon = lon.toString().replace('"lon":', '').replace(/^(-?\d{2})(\d+)$/, '$1.$2');
-          if (lat && lon) mavLocationStore.set({ lat: parseFloat(lat), lng: parseFloat(lon) });
-          let heading: string | RegExpMatchArray | null = (text as string).match(/"hdgAcc":(\d+)/g);
-          if (heading) heading = heading.toString().replace('"hdgAcc":', '');
-          if (heading) mavHeadingStore.set(parseInt(heading));
+          if (lat) lat = lat.toString().replace('"lat":', '');
+          if (lon) lon = lon.toString().replace('"lon":', '');
+          if (lat && lon) mavLocationStore.set({ lat: parseFloat(lat)/10000000, lng: parseFloat(lon)/10000000 });
+          let heading: string | RegExpMatchArray | null = (text as string).match(/"hdg":(\d+)/g);
+          if (heading) heading = heading.toString().replace('"hdg":', '');
+          if (heading) mavHeadingStore.set(parseFloat(heading)/100);
           let altitude: string | RegExpMatchArray | null = (text as string).match(/"alt":(\d+)/g);
-          if (altitude) altitude = altitude.toString().replace('"alt":', '').replace(/^(\d{2})(\d+)$/, '$1.$2');
-          if (altitude) mavAltitudeStore.set(parseInt(altitude));
-          let speed: string | RegExpMatchArray | null = (text as string).match(/"vel":(\d+)/g);
-          if (speed) speed = speed.toString().replace('"vel":', '');
-          if (speed) mavSpeedStore.set(parseInt(speed));
+          if (altitude) altitude = altitude.toString().replace('"alt":', '');
+          if (altitude) mavAltitudeStore.set(parseFloat(altitude)/1000);
+          let vx: number | string | RegExpMatchArray | null = parseInt((text as string).match(/"vx":(\-?\d+)/g)!.toString().replace('"vx":', '')) / 100;
+          let vy: number | string | RegExpMatchArray | null = parseInt((text as string).match(/"vy":(\-?\d+)/g)!.toString().replace('"vy":', '')) / 100;
+          let vz: number | string | RegExpMatchArray | null = parseInt((text as string).match(/"vz":(\-?\d+)/g)!.toString().replace('"vz":', '')) / 100;
+          let speed: number = Math.sqrt(Math.pow(vx, 2) + Math.pow(vy, 2) + Math.pow(vz, 2));
+          if (speed) mavSpeedStore.set(parseFloat(speed.toFixed(2)));
       } else if ((text as string).includes('HEARTBEAT')) {
           let type: string | RegExpMatchArray | null = (text as string).match(/"type":(\d+)/g);
           // @ts-ignore

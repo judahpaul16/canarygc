@@ -74,11 +74,23 @@
     <div class="rotate-btns column flex flex-col items-center justify-center text-center space-y-4">
       <div id="rotate-left-button" class="flex flex-col items-center">
         <div class="label text-sm mb-1">Rotate Left</div>
-        <button class="rotate-button rotate-left rounded-full" on:click={() => {}}>⟲</button>
+        <button class="rotate-button rotate-left rounded-full"
+          on:click={() => {
+            sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
+            sendMavlinkCommand('CONDITION_YAW', `${[10, 1, -1, 1]}`);
+            }}>
+          ⟲
+        </button>
       </div>
       <div class="flex flex-col items-center">
         <div class="label text-sm mb-1">Rotate Right</div>
-        <button class="rotate-button rotate-right rounded-full" on:click={() => {}}>⟳</button>
+        <button class="rotate-button rotate-right rounded-full"
+          on:click={() => {
+            sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
+            sendMavlinkCommand('CONDITION_YAW', `${[10, 1, 1, 1]}`);
+            }}>
+          ⟳
+        </button>
       </div>
     </div>
   </div>
