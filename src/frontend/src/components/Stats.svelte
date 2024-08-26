@@ -153,7 +153,7 @@
     let modal = new Modal({
       target: document.body,
       props: {
-        title: 'Release Payload',
+        title: 'Confirm Release Payload',
         content: 'Are you sure you want to release the payload?\nUse caution and ensure the drop zone is clear.',
         isOpen: true,
         confirmation: true,
@@ -179,24 +179,29 @@
     let modal = new Modal({
       target: document.body,
       props: {
-        title: 'Takeoff',
-        content: 'Are you sure you want to takeoff the MAV?',
+        title: 'Confirm Takeoff',
+        content: 'Are you sure you want to initiate takeoff? If so please specify the altitude.',
         isOpen: true,
         confirmation: true,
         notification: false,
+        input: {
+          type: 'number',
+          placeholder: 'Altitude (m)',
+        },
         onConfirm: async () => {
           await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[1, 0]}`); // param2: 21196 bypasses pre-arm checks
-          await sendMavlinkCommand('NAV_TAKEOFF', `${[0, 0, 0, 0, 0, 0, 40]}`);
+          await sendMavlinkCommand('NAV_TAKEOFF', `${[0, 0, 0, 0, 0, 0, modal.inputValue]}`);
         },
       }
     });
   }
+  
   function initLanding() {
     let modal = new Modal({
       target: document.body,
       props: {
-        title: 'Land',
+        title: 'Confirm Landing',
         content: 'Are you sure you want to land the MAV?',
         isOpen: true,
         confirmation: true,
