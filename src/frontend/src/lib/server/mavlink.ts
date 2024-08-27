@@ -29,7 +29,6 @@ let port: SerialPort | Socket | null = null;
 let reader: MavLinkPacketParser | null = null;
 let online = false;
 let statusRequested = false;
-let guidedModeSet = false;
 let logs: string[] = [];
 let newLogs: string[] = [];
 
