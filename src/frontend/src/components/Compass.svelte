@@ -35,7 +35,7 @@
   function formatHeading(heading: number) {
     const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
     const index = Math.round(((heading % 360) / 45) % 8);
-    return `${heading}° ${directions[index]}`;
+    return `${heading}° ${directions[index] === undefined ? 'N' : directions[index]}`;
   }
 
   function updateCompass(newHeading: number) {
