@@ -77,7 +77,7 @@
         <button class="rotate-button rotate-left rounded-full"
           on:click={() => {
             sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
-            sendMavlinkCommand('CONDITION_YAW', `${[10, 1, -1, 1]}`);
+            sendMavlinkCommand('CONDITION_YAW', `${[10, 10, -1, 1]}`);
             }}>
           ⟲
         </button>
@@ -87,7 +87,7 @@
         <button class="rotate-button rotate-right rounded-full"
           on:click={() => {
             sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
-            sendMavlinkCommand('CONDITION_YAW', `${[10, 1, 1, 1]}`);
+            sendMavlinkCommand('CONDITION_YAW', `${[10, 10, 1, 1]}`);
             }}>
           ⟳
         </button>
