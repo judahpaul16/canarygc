@@ -38,7 +38,7 @@
         });
     }
 
-    async function saveFlightPlan() {
+    async function loadFlightPlan() {
         // @ts-ignore
         let title = document.querySelector("#flight-plan-title").value || "Untitled Mission Plan",
         plan = actions;
@@ -151,12 +151,12 @@
     class="flight-plan-settings bg-[#1c1c1e] rounded-lg p-4 h-full text-white"
 >
     <button on:click={toggleFlightPlans}>
-        <i class="fas fa-tasks bg-[#5898e2]"></i>
+        <i class="fas fa-globe text-[#5398e6]"></i>
         Manage Mission Plans
     </button>
-    <button on:click={saveFlightPlan}>
+    <button on:click={loadFlightPlan}>
         <i class="fas fa-save"></i>
-        Save Mission Plan
+        Load Mission Plan
     </button>
     <button on:click={confirmClear}>
         <i class="fas fa-trash-alt"></i>
