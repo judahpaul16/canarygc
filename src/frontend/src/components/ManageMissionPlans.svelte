@@ -34,7 +34,7 @@
     flightPlanTitleStore.set(plan.title);
   }
 
-  function handleSave(title: string, plan: FlightPlanAction) {
+  function handleLoad(title: string, plan: FlightPlanAction) {
     flightPlanTitleStore.set(title);
     flightPlanActionsStore.set(plan);
     let missionPlan = {
@@ -65,7 +65,7 @@
           const data = e.target?.result;
           const plan = JSON.parse(data as string);
           const title = file.name.replace(".json", "").replace(/_/g, " ");
-          await handleSave(title, plan);
+          await handleLoad(title, plan);
         };
         reader.readAsText(file);
       }
