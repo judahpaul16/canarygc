@@ -1,6 +1,8 @@
 <script lang="ts">
   import PocketBase from "pocketbase";
-  import { flightPlanTitleStore, flightPlanActionsStore, type FlightPlanAction } from "../stores/flightPlanStore";
+  import { missionPlanTitleStore, missionPlanActionsStore, type MissionPlanActions } from "../stores/missionPlanStore";
+  import { get } from "svelte/store";
+  import Modal from "./Modal.svelte";
   import { onMount } from "svelte";
 
   const pb = new PocketBase("http://localhost:8090");
@@ -8,18 +10,20 @@
   export let title: string = "Manage Mission Plans";
   export let isModal = false;
   export let isOpen: boolean = true;
-  let flightPlans: Array<{ id: string; title: string }> = [];
-  let actions: any = {};
   export let onCancel: () => void = () => {};
+  let missionPlans: Array<{ id: string; title: string }> = [];
+  let actions: MissionPlanActions = {};
+
+  $: actions = $missionPlanActionsStore;
 
   onMount(() => {
-    getFlightPlans();
+    getMissionPlans();
   });
 
-  async function getFlightPlans() {
+  async function getMissionPlans() {
     try {
       const records = await pb.collection("mission_plans").getFullList();
-      flightPlans = records.map((record) => ({
+      missionPlans = records.map((record) => ({
         id: record.id,
         title: record.title,
       }));
@@ -27,27 +31,74 @@
       console.error("Error fetching mission plans:", error);
     }
   }
-
-  async function loadPlan(plan: any) {
-    actions = await pb.collection("mission_plans").getFirstListItem(`id = "${plan.id}"`);
-    flightPlanActionsStore.set(actions.actions);
-    flightPlanTitleStore.set(plan.title);
+  
+  async function loadMissionPlan(plan: any) {
+    const modal = new Modal({
+      target: document.body,
+      props: {
+        title: "Load Mission Plan",
+        content: "Are you sure you want to load this mission plan? This action will overwrite the currently loaded mission plan.",
+        isOpen: true,
+        confirmation: true,
+        notification: false,
+        onConfirm: async (p: any = plan) => {
+          let response = await pb.collection("mission_plans").getFirstListItem(`id = "${p.id}"`);
+          let { title, actions } = response;
+          await handleLoad(title, actions);
+          isOpen = false;
+        },
+        onCancel: () => {
+          modal.$destroy();
+        },
+      },
+    });
   }
 
-  function handleSave(title: string, plan: FlightPlanAction) {
-    flightPlanTitleStore.set(title);
-    flightPlanActionsStore.set(plan);
-    let missionPlan = {
-      title: title,
-      actions: plan,
-    };
-    pb.collection("mission_plans").create(missionPlan).then(() => getFlightPlans());
+  async function handleLoad(title: string, actions: MissionPlanActions) {
+    missionPlanTitleStore.set(title);
+    missionPlanActionsStore.set(actions);
+    try {
+        let response = await fetch("/api/mavlink/load_mission", {
+            method: "POST",
+            headers: {
+                "content-type": "application/json",
+                "actions": JSON.stringify(actions),
+            },
+        });
+        if (response.ok) {
+            console.log(await response.text());
+        } else {
+            console.error(`Error: ${await response.text()}`);
+        }
+    } catch (error) {
+        console.error("Error:", error);
+    }
+  }
+
+  async function deleteMissionPlan(id: string) {
+    const modal = new Modal({
+      target: document.body,
+      props: {
+        title: "Delete Mission Plan",
+        content: "Are you sure you want to delete this mission plan?",
+        isOpen: true,
+        confirmation: true,
+        notification: false,
+        onConfirm: async () => {
+          await handleDelete(id);
+          modal.$destroy();
+        },
+        onCancel: () => {
+          modal.$destroy();
+        },
+      },
+    });
   }
 
   async function handleDelete(id: string) {
     try {
       await pb.collection("mission_plans").delete(id);
-      flightPlans = flightPlans.filter((plan) => plan.id !== id);
+      missionPlans = missionPlans.filter((plan) => plan.id !== id);
     } catch (error) {
       console.error("Error deleting mission plan:", error);
     }
@@ -65,7 +116,7 @@
           const data = e.target?.result;
           const plan = JSON.parse(data as string);
           const title = file.name.replace(".json", "").replace(/_/g, " ");
-          await handleSave(title, plan);
+          handleLoad(title, plan);
         };
         reader.readAsText(file);
       }
@@ -95,17 +146,17 @@
       </div>
       <div class="px-4 py-2 text-white max-h-[40vh] overflow-auto">
         <ul class="overflow-auto">
-          {#if flightPlans.length != 0}
-            {#each flightPlans as plan (plan.id)}
+          {#if missionPlans.length != 0}
+            {#each missionPlans as plan (plan.id)}
               <li class="flex justify-between items-center px-2 py-1 bg-gray-700 rounded mb-2">
                 <span>{plan.title}</span>
                 <div class="flex items-center gap-2">
                   <button
-                    on:click={() => handleDelete(plan.id)}
+                    on:click={() => deleteMissionPlan(plan.id)}
                     class="text-red-500 hover:text-red-700">Delete</button
                   >
                   <button
-                    on:click={() => loadPlan(plan)}
+                    on:click={() => loadMissionPlan(plan)}
                     class="text-blue-500 hover:text-blue-700">Load</button
                   >
                 </div>
@@ -138,20 +189,20 @@
     </div>
     <div class="plans p-2 text-white h-full max-h-[67%]">
       <ul class="overflow-auto h-full p-2 text-sm">
-        {#if flightPlans.length != 0}
-          {#each flightPlans as plan (plan.id)}
+        {#if missionPlans.length != 0}
+          {#each missionPlans as plan (plan.id)}
             <li class="inline-block justify-between items-center px-2 py-1 bg-gray-700 rounded mb-2 w-full">
               <span class="mr-2" title={plan.title}>{plan.title.substring(0, 11)}{#if plan.title.length >= 11}...{/if}</span>
               <div class="flex items-center gap-3 float-right">
                 <button
-                  on:click={() => handleDelete(plan.id)}
+                  on:click={() => deleteMissionPlan(plan.id)}
                   class="text-red-400 hover:text-red-600 relative">
                     <i class="fas fa-trash-alt text-sm"></i>
                     <div class="tooltip">Delete</div>
                   </button
                 >
                 <button
-                  on:click={() => loadPlan(plan)}
+                  on:click={() => loadMissionPlan(plan)}
                   class="text-[#62bbff] hover:text-[#377aad] relative">
                     <i class="fas fa-cloud-arrow-up text-sm"></i>
                     <div class="tooltip">Load</div>
