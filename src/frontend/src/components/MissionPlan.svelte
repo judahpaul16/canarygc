@@ -1,34 +1,26 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { mapStore } from '../stores/mapStore';
-  import { mavLocationStore } from '../stores/mavlinkStore';
-  import { flightPlanTitleStore, flightPlanActionsStore } from '../stores/flightPlanStore';
-  import { get } from 'svelte/store';
+  import { mavLocationStore, mavStateStore, missionStateStore } from '../stores/mavlinkStore';
+  import { missionPlanTitleStore, missionPlanActionsStore, type MissionPlanItem, type MissionPlanActions } from '../stores/missionPlanStore';
   import Modal from './Modal.svelte';
+  import { get } from 'svelte/store';
 
   export let title: string = '';
-  let actions: {
-      [key: number]: {
-          type: string;
-          lat: number;
-          lon: number;
-          altitude: number;
-          notes: string;
-          notify: boolean;
-      };
-  } = {};
+  let actions: MissionPlanActions = {};
   let action_types = [
-    'WAYPOINT', 'SPLINE_WAYPOINT', 'TAKEOFF', 'RETURN_TO_LAUNCH', 'GUIDED_ENABLE', 'LAND',
-    'LOITER_TIME', 'LOITER_TURNS', 'LOITER_UNLIM', 'PAYLOAD_PLACE', 'DO_WINCH', 'DO_SET_CAM_TRIGG_DIST',
+    'NAV_WAYPOINT', 'NAV_SPLINE_WAYPOINT', 'NAV_TAKEOFF', 'NAV_RETURN_TO_LAUNCH', 'NAV_GUIDED_ENABLE', 'NAV_LAND',
+    'NAV_LOITER_TIME', 'NAV_LOITER_TURNS', 'NAV_LOITER_UNLIM', 'NAV_PAYLOAD_PLACE', 'DO_WINCH', 'DO_SET_CAM_TRIGG_DIST',
     'DO_SET_SERVO', 'DO_REPEAT_SERVO', 'DO_DIGICAM_CONFIGURE', 'DO_DIGICAM_CONTROL', 'DO_FENCE_ENABLE',
     'DO_ENGINE_CONTROL', 'CONDITION_DELAY', 'CONDITION_CHANGE_ALT', 'CONDITION_DISTANCE', 'CONDITION_YAW'
   ];
   
   $: map = $mapStore;
-
   $: mavLocation = $mavLocationStore;
-
-  $: actions = $flightPlanActionsStore;
+  $: title = $missionPlanTitleStore;
+  $: actions = $missionPlanActionsStore;
+  $: systemState = $mavStateStore;
+  $: missionState = $missionStateStore;
 
   onMount(async () => {
     mapStore.subscribe((value: L.Map | null) => {
@@ -39,11 +31,11 @@
       mavLocation = value;
     });
 
-    flightPlanTitleStore.subscribe((value) => {
+    missionPlanTitleStore.subscribe((value) => {
       title = value;
     });
 
-    flightPlanActionsStore.subscribe((value) => {
+    missionPlanActionsStore.subscribe((value) => {
       actions = value;
     });
 
@@ -59,7 +51,7 @@
 
   function addAction() {
     mavLocation = get(mavLocationStore)!;
-    actions = get(flightPlanActionsStore);
+    actions = get(missionPlanActionsStore);
 
     // Determine the next index
     const newIndex = Object.keys(actions).length + 1;
@@ -68,19 +60,42 @@
     actions = { 
       ...actions, 
       [newIndex]: {
-        type: 'WAYPOINT',
+        type: 'NAV_WAYPOINT',
         lat: mavLocation.lat + 0.00225,
         lon: mavLocation.lng - 0.00225,
-        altitude: 100,
+        alt: null,
         notes: '',
-        notify: false,
+        param1: null,
+        param2: null,
+        param3: null,
+        param4: null
       }
     };
 
-    flightPlanActionsStore.set(actions);
+    missionPlanActionsStore.set(actions);
   }
 
-  function removeAction(index: number) {
+  async function removeAction(id: string) {
+    const modal = new Modal({
+      target: document.body,
+      props: {
+        title: "Delete Action",
+        content: "Are you sure you want to delete this action?",
+        isOpen: true,
+        confirmation: true,
+        notification: false,
+        onConfirm: () => {
+          handleRemove(parseInt(id));
+          modal.$destroy();
+        },
+        onCancel: () => {
+          modal.$destroy();
+        },
+      },
+    });
+  }
+
+  function handleRemove(index: number) {
     // Remove the corresponding DOM element
     const actionElement = document.querySelector(`#action-${index}`) as HTMLSelectElement;
     if (actionElement) {
@@ -96,19 +111,12 @@
   }
 
   function reindexActions() {
-    const newActions: { [key: number]: {
-      type: string;
-      lat: number;
-      lon: number;
-      altitude: number;
-      notes: string;
-      notify: boolean;
-    } } = {};
+    const newActions: MissionPlanActions = {};
     Object.values(actions).forEach((action, index) => {
       newActions[index + 1] = action;
     });
     actions = newActions;
-    flightPlanActionsStore.set(actions);
+    missionPlanActionsStore.set(actions);
   
     // Update UI to reflect new indexes
     updateActionUI();
@@ -142,31 +150,77 @@
     });
   }
 
+  function updateTitle(event: Event) {
+    const input = event.target as HTMLInputElement;
+    title = input.value;
+    missionPlanTitleStore.set(title);
+  }
+
   function updateActionType(event: Event) {
     const select = event.target as HTMLSelectElement;
     const index = Number(select.id.split('-')[1]);
     actions[index].type = select.value;
-    flightPlanActionsStore.set(actions);
+    missionPlanActionsStore.set(actions);
   }
 
   function updateLat(event: Event) {
     const input = event.target as HTMLInputElement;
     const index = Number(input.id.split('-')[1]);
     actions[index].lat = Number(input.value);
-    flightPlanActionsStore.set(actions);
+    missionPlanActionsStore.set(actions);
   }
 
   function updateLon(event: Event) {
     const input = event.target as HTMLInputElement;
     const index = Number(input.id.split('-')[1]);
     actions[index].lon = Number(input.value);
-    flightPlanActionsStore.set(actions);
+    missionPlanActionsStore.set(actions);
+  }
+
+  function updateAltitude(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const index = Number(input.id.split('-')[1]);
+    actions[index].alt = Number(input.value);
+    missionPlanActionsStore.set(actions);
+  }
+
+  function updateNotes(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const index = Number(input.id.split('-')[1]);
+    actions[index].notes = input.value;
+    missionPlanActionsStore.set(actions);
+  }
+
+  function updateParam(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const index = Number(input.id[-1]);
+    actions[index][`${input.id.split('-')[0]}`] = Number(input.value);
+    missionPlanActionsStore.set(actions);
+  }
+  
+  function checkState(states: string[], type: string, state: string) {
+    // state arg is unused; only included for triggering reactivity
+    if (type === 'system') {
+      for (let state of states) {
+        if (systemState.search(state) !== -1) {
+          return true;
+        }
+      }
+      return false;
+    } else if (type === 'mission') {
+      for (let state of states) {
+        if (missionState.search(state) !== -1) {
+          return true;
+        }
+      }
+      return false;
+    }
   }
 </script>
 
-<div class="flightplan bg-[#1c1c1e] text-white p-4 rounded-lg space-x-4 items-center h-full">
+<div class="missionPlan bg-[#1c1c1e] text-white p-4 rounded-lg space-x-4 items-center h-full">
   <div class="container block">
-    <input type="text" class="text-md font-bold mb-2 ml-4 focus:outline-none" placeholder="Untitled Mission" id="flight-plan-title" bind:value={title} />
+    <input type="text" class="text-md font-bold mb-2 ml-4 focus:outline-none" placeholder="Untitled Mission" id="flight-plan-title" bind:value={title} on:input={(event) => updateTitle(event)} />
     <div class="flex items-center gap-2 float-right text-sm">
       <a href="https://ardupilot.org/planner/docs/common-planning-a-mission-with-waypoints-and-events.html" target="_blank" class="text-[#61cd89] hover:underline mr-2">
         <i class="fas fa-question-circle"></i>
@@ -176,17 +230,23 @@
         <i class="fas fa-check"></i>
         <div class="tooltip">Validate Mission Plan</div>
       </button>
-      <button class="px-2 py-1 bg-[#55b377] text-white rounded-lg hover:bg-[#61cd89]" on:click={() => {}}>
-        <i class="fas fa-play"></i>
-        <div class="tooltip">Start/Resume Flight</div>
-      </button>
-      <button class="px-2 py-1 bg-[#da864e] text-white rounded-lg hover:bg-[#ff995e]" on:click={() => {}}>
-        <i class="fas fa-pause"></i>
-        <div class="tooltip">Pause Flight (Loiter)</div>
-      </button>
-      <button class="px-2 py-1 bg-[#f87171] text-white rounded-lg hover:bg-[#ff7e7e]" on:click={() => {}}>
+      {#if !checkState(['ACTIVE'], 'mission', missionState)}
+        <button class="px-2 py-1 bg-[#55b377] text-white rounded-lg hover:bg-[#61cd89]"
+          disabled={!checkState(['PAUSED', 'NOT_STARTED'], 'mission', missionState)} on:click={() => {}}>
+            <i class="fas fa-play"></i>
+            <div class="tooltip">Start/Resume Mission</div>
+        </button>
+      {:else}
+        <button class="px-2 py-1 bg-[#da864e] text-white rounded-lg hover:bg-[#ff995e]"
+          disabled={!checkState(['ACTIVE'], 'mission', missionState)} on:click={() => {}}>
+            <i class="fas fa-pause"></i>
+            <div class="tooltip">Pause Mission (Loiter)</div>
+        </button>
+      {/if}
+      <button class="px-2 py-1 bg-[#f87171] text-white rounded-lg hover:bg-[#ff7e7e]"
+          disabled={!checkState(['ACTIVE'], 'mission', missionState)} on:click={() => {}}>
         <i class="fas fa-stop"></i>
-        <div class="tooltip">Stop Flight (RTL)</div>
+        <div class="tooltip">Stop Mission (RTL)</div>
       </button>
     </div>
     <div class="column overflow-auto" id="flight-plan-actions">
@@ -209,35 +269,66 @@
                         <option value="{action_type}">{action_type}</option>
                     {/each}
                     </select>
+                    <div class="text-center flex justify-center items-center gap-2 mt-2">
+                      <label for="altitude" class="text-[9pt] mr-1">Altitude</label>
+                      <input type="number" min="0" name="altitude" id="altitude-{index}" class="altitude" placeholder="0: current alt" value={String(actions[Number(index)].alt)} on:change={updateAltitude}>
+                      <span class="text-xs text-gray-400">m</span>
+                    </div>
                 </div>
                 <div class="separator"></div>
                 <div class="form-input text-center grid gap-1">
-                    <div class="flex justify-between items-center gap-3">
-                      <span class="text-[8pt]">Lat</span>
-                      <input type="number" step="0.0001" id="lat-{index}" placeholder="eg. 33.749" value={actions[Number(index)].lat} on:change={updateLat} />
-                    </div>
-                    <div class="flex justify-between items-center">
-                      <span class="text-[8pt]">Lon</span>
-                      <input type="number" step="0.0001" id="lon-{index}" placeholder="eg. -84.388" value={actions[Number(index)].lon} on:change={updateLon} />
-                    </div>
+                  <h2 class="text-[9pt]">
+                    Coordinates
+                    <a href="https://www.latlong.net/" target="_blank" class="text-[#61cd89] ml-1" title="Get Coordinates">
+                      <i class="fas fa-info-circle"></i>
+                    </a>
+                  </h2>
+                  <div class="flex justify-between items-center gap-1">
+                    <span class="text-[8pt] mr-2">Lat</span>
+                    <input type="number" step="0.0001" id="lat-{index}" placeholder="eg. 33.749" value={actions[Number(index)].lat} on:change={updateLat} />
+                    <span class="text-lg text-gray-400">°</span>
+                  </div>
+                  <div class="flex justify-between items-center gap-1">
+                    <span class="text-[8pt] mr-2">Lon</span>
+                    <input type="number" step="0.0001" id="lon-{index}" placeholder="eg. -84.388" value={actions[Number(index)].lon} on:change={updateLon} />
+                    <span class="text-lg text-gray-400">°</span>
+                  </div>
                 </div>
                 <div class="separator"></div>
-                <div class="form-input text-center flex gap-2 justify-center items-center">
-                    <label for="altitude">Altitude</label>
-                    <input type="number" min="0" name="altitude" id="altitude-{index}" class="altitude" value={String(actions[Number(index)].altitude)}>
-                    <span class="text-xs text-gray-400">m</span>
+                <div class="form-input text-center grid gap-1">
+                  <h2 class="text-[9pt] mb-1">
+                    Parameters
+                    <a href="https://mavlink.io/en/messages/common.html#mav_commands" target="_blank" class="text-[#61cd89] ml-1" title="More Information">
+                      <i class="fas fa-info-circle"></i>
+                    </a>
+                  </h2>
+                  <div class="flex justify-between items-center gap-3">
+                    <div class="flex justify-between items-center gap-3">
+                      <span class="text-[8pt]">P1</span>
+                      <input type="number" id="param1-{index}" placeholder="Empty" value={actions[Number(index)].param1} on:change={updateParam} />
+                    </div>
+                    <div class="flex justify-between items-center gap-3">
+                      <span class="text-[8pt]">P2</span>
+                      <input type="number" id="param2-{index}" placeholder="Empty" value={actions[Number(index)].param2} on:change={updateParam} />
+                    </div>
+                  </div>
+                  <div class="flex justify-between items-center gap-3">
+                    <div class="flex justify-between items-center gap-3">
+                      <span class="text-[8pt]">P3</span>
+                      <input type="number" id="param3-{index}" placeholder="Empty" value={actions[Number(index)].param3} on:change={updateParam} />
+                    </div>
+                    <div class="flex justify-between items-center gap-3">
+                      <span class="text-[8pt]">P4</span>
+                      <input type="number" id="param4-{index}" placeholder="Empty" value={actions[Number(index)].param4} on:change={updateParam} />
+                    </div>
+                  </div>
                 </div>
                 <div class="separator"></div>
                 <div class="form-input flex items-center justify-center">
-                    <textarea placeholder="Notes" value={actions[Number(index)].notes} />
+                    <textarea placeholder="Notes" value={actions[Number(index)].notes} id="notes-{index}" on:change={updateNotes}></textarea>
                 </div>
                 <div class="separator"></div>
-                <div class="form-input w-[fit-content] flex items-center gap-3">
-                    <input type="checkbox" id="action-{index}-notify" checked={actions[Number(index)].notify} />
-                    <label for="action-{index}-notify" class="text-sm flex">Notify on complete?</label>
-                </div>
-                <div class="separator"></div>
-                <button class="bg-[#2d2d2d] text-white rounded-lg px-3 py-2 text-sm" on:click={() => removeAction(Number(index))}>
+                <button class="bg-[#2d2d2d] text-white rounded-lg px-3 py-2 text-sm" on:click={() => removeAction(index)}>
                     <i class="fas fa-trash-alt text-red-400"></i>
                 </button>
             </div>
@@ -305,26 +396,13 @@
     border-color: #61cd89;
   }
 
-  input[type="checkbox"] {
-    appearance: none;
-    width: 1rem;
-    height: 1rem;
-    border-radius: 0.25rem;
-    background-color: #2d2d2d;
-    cursor: pointer;
-  }
-
-  input[type="checkbox"]:checked {
-    background-color: #61cd89;
-  }
-  
   input[type='number'] {
     width: 100px;
     font-size: 9pt;
   }
 
   .altitude {
-    width: 60px !important;
+    width: 100px !important;
   }
 
   textarea {
@@ -360,6 +438,11 @@
   button {
     position: relative;
   }
+  
+  button:disabled, button:disabled:hover {
+    filter: brightness(0.5);
+    cursor: not-allowed;
+  }
 
   #flight-plan-actions {
     max-height: 200px;
@@ -367,7 +450,7 @@
 
   /* Mobile Styles */
   @media (max-width: 990px) {
-    .flightplan {
+    .missionPlan {
       overflow: hidden;
       overflow-y: auto;
     }

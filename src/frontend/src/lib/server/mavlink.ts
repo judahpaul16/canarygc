@@ -29,7 +29,6 @@ let port: SerialPort | Socket | null = null;
 let reader: MavLinkPacketParser | null = null;
 let online = false;
 let statusRequested = false;
-let guidedModeSet = false;
 let logs: string[] = [];
 let newLogs: string[] = [];
 
@@ -55,60 +54,10 @@ async function initializePort(): Promise<void> {
             port!.on('data', () => resolve());
         });
 
-        setupReaderAndListeners();
-        console.log("Connection established successfully.");
-    } catch (error) {
-        console.error("Failed to initialize port:", error);
-        scheduleReconnect();
-    }
-}
-
-function setupReaderAndListeners() {
-    if (!port) return;
-
     reader = port
         .pipe(new MavLinkPacketSplitter())
         .pipe(new MavLinkPacketParser());
 
-    reader.on('data', handlePacket);
-
-    port.on('close', handleDisconnect);
-    port.on('error', handleError);
-}
-
-function handlePacket(packet: MavLinkPacket) {
-    online = true;
-    const clazz = REGISTRY[packet.header.msgid];
-    if (clazz) {
-        const data = packet.protocol.data(packet.payload, clazz);
-        const sanitizedData = convertBigIntToNumber(data);
-        let timestamp = new Date().toISOString();
-        let logEntry = `${clazz.MSG_NAME}(${clazz.MAGIC_NUMBER})::${timestamp}::${JSON.stringify(sanitizedData as ParamValueData)}`;
-        logs.push(logEntry);
-        newLogs.push(logEntry);
-        if (logEntry.includes('COMMAND_ACK')) console.log(logEntry);
-    }
-}
-
-function handleDisconnect() {
-    console.log("Connection closed. Attempting to reconnect...");
-    online = false;
-    scheduleReconnect();
-}
-
-function handleError(error: Error) {
-    console.error("Connection error:", error);
-    online = false;
-    scheduleReconnect();
-}
-
-async function closeConnection(): Promise<void> {
-    if (port) {
-        port.removeAllListeners();
-        if (port instanceof SerialPort) {
-            await new Promise<void>((resolve) => port!.close(() => resolve()));
-        } else {
-            port.destroy();
         }
     }
     if (reader) {
@@ -164,16 +113,6 @@ async function requestParameters() {
     await send(port!, request);
 }
 
-async function sendSetModeCommand(mode: string) {
-    if (!port || !reader) throw new Error('Port or reader is not initialized');
-
-    const commandMsg = new common.DoSetModeCommand();
-    commandMsg.targetSystem = 1;
-    commandMsg.targetComponent = 0;
-    commandMsg.mode = common.MavMode[mode as keyof typeof common.MavMode];
-    await send(port, commandMsg);
-}
-
 async function sendMavlinkCommand(command: string, params: number[], useArduPilotMega = false) {
     if (!port || !reader) throw new Error('Port or reader is not initialized');
 
@@ -193,6 +132,37 @@ async function sendMavlinkCommand(command: string, params: number[], useArduPilo
     if (params[5]) commandMsg._param6 = params[5];
     if (params[6]) commandMsg._param7 = params[6];
     await send(port, commandMsg);
+}
+
+async function loadMissionItem(item: any, index: number) {
+    if (!port || !reader) throw new Error('Port or reader is not initialized');
+
+    const msg = new common.MissionItemInt();
+    msg.targetSystem = 1;
+    msg.targetComponent = 1;
+    msg.seq = index - 1;
+    msg.frame = 3 // MAV_FRAME_GLOBAL_RELATIVE_ALT;
+    msg.command = common.MavCmd[`${item.type}` as keyof typeof common.MavCmd];
+    msg.current = index - 1 === 0 ? 1 : 0;
+    msg.autocontinue = 1;
+    if (item.param1 !== null) msg.param1 = item.param1;
+    if (item.param2 !== null) msg.param2 = item.param2;
+    if (item.param3 !== null) msg.param3 = item.param3;
+    if (item.param4 !== null) msg.param4 = item.param4;
+    msg.x = item.lat * 1e7;
+    msg.y = item.lon * 1e7;
+    msg.z = item.alt;
+    msg.missionType = 0;
+    await send(port, msg);
+}
+
+async function clearAllMissions() {
+    if (!port || !reader) throw new Error('Port or reader is not initialized');
+
+    const msg = new common.MissionClearAll();
+    msg.targetSystem = 1;
+    msg.targetComponent = 1;
+    await send(port, msg);
 }
 
 async function sendManualControl(x: number, y: number, z: number, r: number, buttons: number, mode: number) {
@@ -227,8 +197,9 @@ export {
     requestSysStatus,
     requestParameters,
     sendMavlinkCommand,
+    loadMissionItem,
+    clearAllMissions,
     sendManualControl,
-    sendSetModeCommand,
     online,
     statusRequested,
     logs,

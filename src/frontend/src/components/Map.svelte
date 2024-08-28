@@ -3,7 +3,7 @@
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import { mapStore, markersStore, polylinesStore } from '../stores/mapStore';
   import { mavLocationStore, mavHeadingStore } from '../stores/mavlinkStore';
-  import { flightPlanTitleStore, flightPlanActionsStore } from '../stores/flightPlanStore';
+  import { missionPlanTitleStore, missionPlanActionsStore, type MissionPlanActions } from '../stores/missionPlanStore';
   import { get } from 'svelte/store';
   import Modal from './Modal.svelte';
 
@@ -18,19 +18,10 @@
   let currentMap: 'altitudeAngel' | 'leaflet' = 'leaflet'; // Default to Leaflet
   let zoom = 17;
 
-  let actions: {
-      [key: number]: {
-          type: string;
-          lat: number;
-          lon: number;
-          altitude: number;
-          notes: string;
-          notify: boolean;
-      };
-  } = {};
+  let actions: MissionPlanActions = {};
   let action_types = [
-    'WAYPOINT', 'SPLINE_WAYPOINT', 'TAKEOFF', 'RETURN_TO_LAUNCH', 'GUIDED_ENABLE', 'LAND',
-    'LOITER_TIME', 'LOITER_TURNS', 'LOITER_UNLIM', 'PAYLOAD_PLACE', 'DO_WINCH', 'DO_SET_CAM_TRIGG_DIST',
+    'NAV_WAYPOINT', 'NAV_SPLINE_WAYPOINT', 'NAV_TAKEOFF', 'NAV_RETURN_TO_LAUNCH', 'NAV_GUIDED_ENABLE', 'NAV_LAND',
+    'NAV_LOITER_TIME', 'NAV_LOITER_TURNS', 'NAV_LOITER_UNLIM', 'NAV_PAYLOAD_PLACE', 'DO_WINCH', 'DO_SET_CAM_TRIGG_DIST',
     'DO_SET_SERVO', 'DO_REPEAT_SERVO', 'DO_DIGICAM_CONFIGURE', 'DO_DIGICAM_CONTROL', 'DO_FENCE_ENABLE',
     'DO_ENGINE_CONTROL', 'CONDITION_DELAY', 'CONDITION_CHANGE_ALT', 'CONDITION_DISTANCE', 'CONDITION_YAW'
   ];
@@ -56,7 +47,7 @@
   $: mavLocation = $mavLocationStore,
         updateMAVMarker();
 
-  $: actions = $flightPlanActionsStore,
+  $: actions = $missionPlanActionsStore,
     removeAllMarkers(),
     updateMAVMarker(),
     Object.keys(actions).forEach((index) => {
@@ -316,7 +307,7 @@
   }
 
   async function updateMap(index: number) {
-    flightPlanActionsStore.subscribe((value) => {
+    missionPlanActionsStore.subscribe((value) => {
       actions = value;
     });
 

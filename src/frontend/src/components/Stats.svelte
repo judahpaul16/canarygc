@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { flightPlanTitleStore, flightPlanActionsStore } from '../stores/flightPlanStore';
+  import { missionPlanTitleStore, missionPlanActionsStore } from '../stores/missionPlanStore';
   import {
     mavTypeStore,
     mavStateStore,
@@ -38,7 +38,7 @@
   $: batteryStatus = $mavBatteryStore;
   $: altitude = $mavAltitudeStore;
   $: speed = $mavSpeedStore;
-  $: flightPlanTitle = $flightPlanTitleStore;
+  $: missionPlanTitle = $missionPlanTitleStore;
   $: mavLocation = $mavLocationStore;
 
   async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
@@ -189,10 +189,12 @@
         isOpen: true,
         confirmation: true,
         notification: false,
-        input: {
-          type: 'number',
-          placeholder: 'Altitude (m)',
-        },
+        inputs: [
+          {
+            type: 'number',
+            placeholder: 'Altitude (m)',
+          }
+        ],
         onConfirm: async () => {
           await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[1, 0]}`); // param2: 21196 bypasses pre-arm checks
@@ -252,7 +254,7 @@
       <div>Mode: <span  class="text-orange-300">{mavMode}</span></div>
     </div>
     <hr class="border-[#2d2d2d] my-3" />
-      <div class="w-full mb-2">Loaded Mission Plan: <span class="text-[#66e1ff]">{flightPlanTitle || 'No mission plan loaded.'}</span></div>
+      <div class="w-full mb-2">Loaded Mission Plan: <span class="text-[#66e1ff]">{missionPlanTitle || 'No mission plan loaded.'}</span></div>
       <div class="flex flex-col items-center justify-end">
         <div class="w-full">
           <span>Flight Progress: {missionState !== 'Unknown' ? flightProgress : '--'}% (ETA 00:00:00)</span>
