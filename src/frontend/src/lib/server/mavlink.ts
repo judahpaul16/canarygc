@@ -45,7 +45,10 @@ async function initializePort(): Promise<void> {
         port!.on('error', (err) => {
             reject(new Error(`Error connecting to the MAVLink server: ${err.message}`));
         });
-        port!.on('data', () => resolve());
+        port!.on('data', () => {
+            logs.push('MAVLink connection initialized');
+            resolve();
+        });
     });
 
     reader = port
