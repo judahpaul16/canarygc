@@ -45,6 +45,7 @@
           let response = await pb.collection("mission_plans").getFirstListItem(`id = "${p.id}"`);
           let { title, actions } = response;
           await handleLoad(title, actions);
+          isOpen = false;
         },
         onCancel: () => {
           modal.$destroy();
