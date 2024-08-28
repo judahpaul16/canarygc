@@ -1,6 +1,6 @@
 <script lang="ts">
   import PocketBase from "pocketbase";
-  import { flightPlanTitleStore, flightPlanActionsStore, type FlightPlanAction } from "../stores/flightPlanStore";
+  import { missionPlanTitleStore, missionPlanActionsStore, type MissionPlanActions } from "../stores/missionPlanStore";
   import { onMount } from "svelte";
 
   const pb = new PocketBase("http://localhost:8090");
@@ -8,18 +8,17 @@
   export let title: string = "Manage Mission Plans";
   export let isModal = false;
   export let isOpen: boolean = true;
-  let flightPlans: Array<{ id: string; title: string }> = [];
-  let actions: any = {};
+  let missionPlans: Array<{ id: string; title: string }> = [];
   export let onCancel: () => void = () => {};
 
   onMount(() => {
-    getFlightPlans();
+    getMissionPlans();
   });
 
-  async function getFlightPlans() {
+  async function getMissionPlans() {
     try {
       const records = await pb.collection("mission_plans").getFullList();
-      flightPlans = records.map((record) => ({
+      missionPlans = records.map((record) => ({
         id: record.id,
         title: record.title,
       }));
@@ -29,25 +28,24 @@
   }
 
   async function loadPlan(plan: any) {
-    actions = await pb.collection("mission_plans").getFirstListItem(`id = "${plan.id}"`);
-    flightPlanActionsStore.set(actions.actions);
-    flightPlanTitleStore.set(plan.title);
+    let mp = await pb.collection("mission_plans").getFirstListItem(`id = "${plan.id}"`);
+    handleLoad(mp.title, mp.actions);
   }
 
-  function handleLoad(title: string, plan: FlightPlanAction) {
-    flightPlanTitleStore.set(title);
-    flightPlanActionsStore.set(plan);
+  function handleLoad(title: string, actions: MissionPlanActions) {
+    missionPlanTitleStore.set(title);
+    missionPlanActionsStore.set(actions);
     let missionPlan = {
       title: title,
-      actions: plan,
+      actions: actions,
     };
-    pb.collection("mission_plans").create(missionPlan).then(() => getFlightPlans());
+    pb.collection("mission_plans").create(missionPlan).then(() => getMissionPlans());
   }
 
   async function handleDelete(id: string) {
     try {
       await pb.collection("mission_plans").delete(id);
-      flightPlans = flightPlans.filter((plan) => plan.id !== id);
+      missionPlans = missionPlans.filter((plan) => plan.id !== id);
     } catch (error) {
       console.error("Error deleting mission plan:", error);
     }
@@ -95,8 +93,8 @@
       </div>
       <div class="px-4 py-2 text-white max-h-[40vh] overflow-auto">
         <ul class="overflow-auto">
-          {#if flightPlans.length != 0}
-            {#each flightPlans as plan (plan.id)}
+          {#if missionPlans.length != 0}
+            {#each missionPlans as plan (plan.id)}
               <li class="flex justify-between items-center px-2 py-1 bg-gray-700 rounded mb-2">
                 <span>{plan.title}</span>
                 <div class="flex items-center gap-2">
@@ -138,8 +136,8 @@
     </div>
     <div class="plans p-2 text-white h-full max-h-[67%]">
       <ul class="overflow-auto h-full p-2 text-sm">
-        {#if flightPlans.length != 0}
-          {#each flightPlans as plan (plan.id)}
+        {#if missionPlans.length != 0}
+          {#each missionPlans as plan (plan.id)}
             <li class="inline-block justify-between items-center px-2 py-1 bg-gray-700 rounded mb-2 w-full">
               <span class="mr-2" title={plan.title}>{plan.title.substring(0, 11)}{#if plan.title.length >= 11}...{/if}</span>
               <div class="flex items-center gap-3 float-right">

@@ -201,7 +201,7 @@
       goto('/login');
     }
     
-    await initializeFlightPlansCollection();
+    await initializeMissionPlansCollection();
     await initializeBlackBoxCollection();
 
     setInterval(async () => {
@@ -246,7 +246,7 @@
     }
   });
 
-  async function initializeFlightPlansCollection() {
+  async function initializeMissionPlansCollection() {
     try {
       const collections = await pb.collections.getFullList();
       const collectionExists = collections.some(c => c.name === 'mission_plans');

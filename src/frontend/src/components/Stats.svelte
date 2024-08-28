@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { flightPlanTitleStore, flightPlanActionsStore } from '../stores/flightPlanStore';
+  import { missionPlanTitleStore, missionPlanActionsStore } from '../stores/missionPlanStore';
   import {
     mavTypeStore,
     mavStateStore,
@@ -38,7 +38,7 @@
   $: batteryStatus = $mavBatteryStore;
   $: altitude = $mavAltitudeStore;
   $: speed = $mavSpeedStore;
-  $: flightPlanTitle = $flightPlanTitleStore;
+  $: missionPlanTitle = $missionPlanTitleStore;
   $: mavLocation = $mavLocationStore;
 
   async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
@@ -254,7 +254,7 @@
       <div>Mode: <span  class="text-orange-300">{mavMode}</span></div>
     </div>
     <hr class="border-[#2d2d2d] my-3" />
-      <div class="w-full mb-2">Loaded Mission Plan: <span class="text-[#66e1ff]">{flightPlanTitle || 'No mission plan loaded.'}</span></div>
+      <div class="w-full mb-2">Loaded Mission Plan: <span class="text-[#66e1ff]">{missionPlanTitle || 'No mission plan loaded.'}</span></div>
       <div class="flex flex-col items-center justify-end">
         <div class="w-full">
           <span>Flight Progress: {missionState !== 'Unknown' ? flightProgress : '--'}% (ETA 00:00:00)</span>
