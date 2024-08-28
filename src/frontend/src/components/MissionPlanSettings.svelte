@@ -39,15 +39,58 @@
     }
 
     async function loadFlightPlan() {
+        const modal = new Modal({
+            target: document.body,
+            props: {
+                title: "Load Mission Plan",
+                content: "Are you sure you want to load this mission plan? This action will overwrite the currently loaded mission plan.",
+                isOpen: true,
+                confirmation: true,
+                notification: false,
+                onConfirm: async () => {
+                    // @ts-ignore
+                    let title = document.querySelector("#flight-plan-title").value || "Untitled Mission Plan",
+                    plan = actions;
+                    await handleLoad(title, plan)
+                    let newModal = new Modal({
+                        target: document.body,
+                        props: {
+                            title: "Mission Plan Loaded",
+                            content: "The mission plan has been loaded successfully.",
+                            isOpen: true,
+                            confirmation: false,
+                            notification: true,
+                        },
+                    });
+                    setTimeout(() => {
+                        newModal.$destroy();
+                    }, 3000);
+                },
+                onCancel: () => {
+                    modal.$destroy();
+                },
+            },
+        });
+    }
+
+    async function saveFlightPlan() {
         // @ts-ignore
         let title = document.querySelector("#flight-plan-title").value || "Untitled Mission Plan",
         plan = actions;
         handleSave(title, plan);
     }
 
-    async function handleSave(title: string, plan: FlightPlanAction) {
+    async function handleLoad(title: string, plan: FlightPlanAction) {
         flightPlanTitleStore.set(title);
         flightPlanActionsStore.set(plan);
+        let missionPlan = {
+            title: title,
+            actions: plan,
+        };
+        pb.collection("mission_plans").create(missionPlan);
+    }
+        
+    async function handleSave(title: string, plan: FlightPlanAction) {
         let missionPlan = {
             title: title,
             actions: plan,
@@ -65,7 +108,7 @@
             });
         });
         if (response) {
-            new Modal({
+            let modal = new Modal({
                 target: document.body,
                 props: {
                     title: "Mission Plan Saved",
@@ -75,6 +118,9 @@
                     notification: true,
                 },
             });
+            setTimeout(() => {
+                modal.$destroy();
+            }, 3000);
         }
     }
 
@@ -115,7 +161,7 @@
         URL.revokeObjectURL(url);
     }
 
-    async function removeAllActions() {
+    async function removeAllActions(clearLoadedPlan: boolean = false) {
         actions = {};
 
         document.querySelectorAll(".action-container").forEach((el) => {
@@ -130,18 +176,45 @@
         mapStore.set(map);
         flightPlanTitleStore.set("");
         flightPlanActionsStore.set(actions);
+
+        if (clearLoadedPlan) {
+            try {
+                let response = await fetch("/api/mavlink/clear_missions", {
+                    method: "POST",
+                    headers: {
+                        "content-type": "application/json",
+                    },
+                });
+                if (response.ok) {
+                    console.log(await response.text());
+                } else {
+                    console.error(`Error: ${await response.text()}`);
+                }
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        }
     }
 
     function confirmClear() {
-        new Modal({
+        let modal = new Modal({
             target: document.body,
             props: {
                 title: "Clear Mission Plan",
-                content: "Are you sure you want to clear the mission plan?",
+                content: "Are you sure you want to clear the current mission plan? This action will remove all actions from the map. Check the box to also clear the currently loaded mission plan.",
                 isOpen: true,
                 confirmation: true,
                 notification: false,
-                onConfirm: removeAllActions,
+                inputs: [
+                    {
+                        type: "checkbox",
+                        placeholder: "Clear Loaded Mission Plan",
+                    },
+                ],
+                onConfirm: () => {
+                    removeAllActions(modal.inputValue === "true");
+                    modal.$destroy();
+                },
             },
         });
     }
@@ -155,21 +228,27 @@
         Manage Mission Plans
     </button>
     <button on:click={loadFlightPlan}>
-        <i class="fas fa-save"></i>
+        <i class="fas fa-cloud-arrow-up text-[#53c3f0]"></i>
         Load Mission Plan
     </button>
+    <button on:click={saveFlightPlan}>
+        <i class="fas fa-save text-[#61cd89]"></i>
+        Save Mission Plan
+    </button>
     <button on:click={confirmClear}>
-        <i class="fas fa-trash-alt"></i>
+        <i class="fas fa-trash-alt text-[#f87171]"></i>
         Clear Mission Plan
     </button>
-    <button on:click={importPlan}>
-        <i class="fas fa-upload"></i>
-        Import Mission Plan
-    </button>
-    <button on:click={exportFlightPlan}>
-        <i class="fas fa-download"></i>
-        Export Mission Plan
-    </button>
+    <div id="import-export" class="flex items-center justify-center gap-2">
+        <button on:click={importPlan}>
+            <i class="fas fa-upload"></i>
+            <span class="text-[8.5pt]">Import</span>
+        </button>
+        <button on:click={exportFlightPlan}>
+            <i class="fas fa-download"></i>
+            <span class="text-[8.5pt]">Export</span>
+        </button>
+    </div>
 </section>
 
 <style>
@@ -197,14 +276,6 @@
         background-color: #3d3d3d;
     }
 
-    button:nth-of-type(2) i {
-        color: #61cd89;
-    }
-
-    button:nth-of-type(3) i {
-        color: #f87171;
-    }
-
     /* Mobile Styles */
     @media (max-width: 990px) {
         .flight-plan-settings {
@@ -213,11 +284,21 @@
         button {
             font-size: 1rem;
         }
+        #import-export {
+            flex-direction: row;
+        }
     }
     @media (max-width: 1300px) {
         .flight-plan-settings {
             max-height: 330px;
             overflow: auto;
+        }
+    }
+    @media (max-width: 1500px) {
+        @media (min-width: 990px) {
+            #import-export {
+                flex-direction: column;
+            }
         }
     }
 </style>

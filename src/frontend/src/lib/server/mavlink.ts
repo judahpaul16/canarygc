@@ -62,7 +62,7 @@ async function initializePort(): Promise<void> {
             let logEntry = `${clazz.MSG_NAME}(${clazz.MAGIC_NUMBER})::${timestamp}::${JSON.stringify(sanitizedData as ParamValueData)}`;
             logs.push(logEntry); // Store log entries
             newLogs.push(logEntry);
-            if (logEntry.includes('COMMAND_ACK')) console.log(logEntry);
+            if (logEntry.includes('_ACK')) console.log(logEntry);
         }
     });
 
@@ -131,6 +131,15 @@ async function sendMavlinkCommand(command: string, params: number[], useArduPilo
     await send(port, commandMsg);
 }
 
+async function clearAllMissions() {
+    if (!port || !reader) throw new Error('Port or reader is not initialized');
+
+    const msg = new common.MissionClearAll();
+    msg.targetSystem = 1;
+    msg.targetComponent = 1;
+    await send(port, msg);
+}
+
 async function sendManualControl(x: number, y: number, z: number, r: number, buttons: number, mode: number) {
     if (!port || !reader) throw new Error('Port or reader is not initialized');
 
@@ -163,6 +172,7 @@ export {
     requestSysStatus,
     requestParameters,
     sendMavlinkCommand,
+    clearAllMissions,
     sendManualControl,
     online,
     statusRequested,
