@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { mapStore } from '../stores/mapStore';
   import { mavLocationStore, mavStateStore, missionStateStore } from '../stores/mavlinkStore';
-  import { flightPlanTitleStore, flightPlanActionsStore } from '../stores/flightPlanStore';
+  import { missionPlanTitleStore, missionPlanActionsStore } from '../stores/missionPlanStore';
   import { get } from 'svelte/store';
   import Modal from './Modal.svelte';
 
@@ -26,7 +26,7 @@
   
   $: map = $mapStore;
   $: mavLocation = $mavLocationStore;
-  $: actions = $flightPlanActionsStore;
+  $: actions = $missionPlanActionsStore;
   $: systemState = $mavStateStore;
   $: missionState = $missionStateStore;
 
@@ -39,11 +39,11 @@
       mavLocation = value;
     });
 
-    flightPlanTitleStore.subscribe((value) => {
+    missionPlanTitleStore.subscribe((value) => {
       title = value;
     });
 
-    flightPlanActionsStore.subscribe((value) => {
+    missionPlanActionsStore.subscribe((value) => {
       actions = value;
     });
 
@@ -59,7 +59,7 @@
 
   function addAction() {
     mavLocation = get(mavLocationStore)!;
-    actions = get(flightPlanActionsStore);
+    actions = get(missionPlanActionsStore);
 
     // Determine the next index
     const newIndex = Object.keys(actions).length + 1;
@@ -77,7 +77,7 @@
       }
     };
 
-    flightPlanActionsStore.set(actions);
+    missionPlanActionsStore.set(actions);
   }
 
   function removeAction(index: number) {
@@ -108,7 +108,7 @@
       newActions[index + 1] = action;
     });
     actions = newActions;
-    flightPlanActionsStore.set(actions);
+    missionPlanActionsStore.set(actions);
   
     // Update UI to reflect new indexes
     updateActionUI();
@@ -146,21 +146,21 @@
     const select = event.target as HTMLSelectElement;
     const index = Number(select.id.split('-')[1]);
     actions[index].type = select.value;
-    flightPlanActionsStore.set(actions);
+    missionPlanActionsStore.set(actions);
   }
 
   function updateLat(event: Event) {
     const input = event.target as HTMLInputElement;
     const index = Number(input.id.split('-')[1]);
     actions[index].lat = Number(input.value);
-    flightPlanActionsStore.set(actions);
+    missionPlanActionsStore.set(actions);
   }
 
   function updateLon(event: Event) {
     const input = event.target as HTMLInputElement;
     const index = Number(input.id.split('-')[1]);
     actions[index].lon = Number(input.value);
-    flightPlanActionsStore.set(actions);
+    missionPlanActionsStore.set(actions);
   }
   
   function checkState(states: string[], type: string, state: string) {
@@ -183,7 +183,7 @@
   }
 </script>
 
-<div class="flightplan bg-[#1c1c1e] text-white p-4 rounded-lg space-x-4 items-center h-full">
+<div class="missionPlan bg-[#1c1c1e] text-white p-4 rounded-lg space-x-4 items-center h-full">
   <div class="container block">
     <input type="text" class="text-md font-bold mb-2 ml-4 focus:outline-none" placeholder="Untitled Mission" id="flight-plan-title" bind:value={title} />
     <div class="flex items-center gap-2 float-right text-sm">
@@ -397,7 +397,7 @@
 
   /* Mobile Styles */
   @media (max-width: 990px) {
-    .flightplan {
+    .missionPlan {
       overflow: hidden;
       overflow-y: auto;
     }

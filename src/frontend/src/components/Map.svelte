@@ -3,7 +3,7 @@
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import { mapStore, markersStore, polylinesStore } from '../stores/mapStore';
   import { mavLocationStore, mavHeadingStore } from '../stores/mavlinkStore';
-  import { flightPlanTitleStore, flightPlanActionsStore } from '../stores/flightPlanStore';
+  import { missionPlanTitleStore, missionPlanActionsStore } from '../stores/missionPlanStore';
   import { get } from 'svelte/store';
   import Modal from './Modal.svelte';
 
@@ -56,7 +56,7 @@
   $: mavLocation = $mavLocationStore,
         updateMAVMarker();
 
-  $: actions = $flightPlanActionsStore,
+  $: actions = $missionPlanActionsStore,
     removeAllMarkers(),
     updateMAVMarker(),
     Object.keys(actions).forEach((index) => {
@@ -316,7 +316,7 @@
   }
 
   async function updateMap(index: number) {
-    flightPlanActionsStore.subscribe((value) => {
+    missionPlanActionsStore.subscribe((value) => {
       actions = value;
     });
 

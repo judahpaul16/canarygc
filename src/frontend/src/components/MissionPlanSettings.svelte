@@ -2,9 +2,9 @@
     import PocketBase from "pocketbase";
     import { mapStore, markersStore, polylinesStore } from "../stores/mapStore";
     import { mavLocationStore } from '../stores/mavlinkStore';
-    import { flightPlanTitleStore, flightPlanActionsStore, type FlightPlanAction } from "../stores/flightPlanStore";
+    import { missionPlanTitleStore, missionPlanActionsStore, type MissionPlanActions } from "../stores/missionPlanStore";
     import Modal from "./Modal.svelte";
-    import ManageFlightPlans from "./ManageMissionPlans.svelte";
+    import ManageMissionPlans from "./ManageMissionPlans.svelte";
 
     const pb = new PocketBase("http://localhost:8090");
 
@@ -22,14 +22,14 @@
     let markers: Map<number, L.Marker> = new Map(); // Map to keep track of markers
     let polylines: Map<string, L.Polyline> = new Map(); // Map to keep track of polylines
 
-    $: actions = $flightPlanActionsStore;
+    $: actions = $missionPlanActionsStore;
 
     $: map = $mapStore;
 
     $: mavLocation = $mavLocationStore;
 
-    function toggleFlightPlans() {
-        const modal = new ManageFlightPlans({
+    function toggleMissionPlans() {
+        const modal = new ManageMissionPlans({
             target: document.body,
             props: {
                 isModal: true,
@@ -38,7 +38,7 @@
         });
     }
 
-    async function loadFlightPlan() {
+    async function loadMissionPlan() {
         const modal = new Modal({
             target: document.body,
             props: {
@@ -73,24 +73,24 @@
         });
     }
 
-    async function saveFlightPlan() {
+    async function saveMissionPlan() {
         // @ts-ignore
         let title = document.querySelector("#flight-plan-title").value || "Untitled Mission Plan",
         plan = actions;
         handleSave(title, plan);
     }
 
-    async function handleLoad(title: string, plan: FlightPlanAction) {
-        flightPlanTitleStore.set(title);
-        flightPlanActionsStore.set(plan);
+    async function handleLoad(title: string, actions: MissionPlanActions) {
+        missionPlanTitleStore.set(title);
+        missionPlanActionsStore.set(actions);
         let missionPlan = {
             title: title,
-            actions: plan,
+            actions: actions,
         };
         pb.collection("mission_plans").create(missionPlan);
     }
         
-    async function handleSave(title: string, plan: FlightPlanAction) {
+    async function handleSave(title: string, plan: MissionPlanActions) {
         let missionPlan = {
             title: title,
             actions: plan,
@@ -144,8 +144,8 @@
         input.click();
     }
 
-    async function exportFlightPlan() {
-        flightPlanActionsStore.subscribe((value) => {
+    async function exportMissionPlan() {
+        missionPlanActionsStore.subscribe((value) => {
             actions = value;
         });
         
@@ -174,8 +174,8 @@
         });
 
         mapStore.set(map);
-        flightPlanTitleStore.set("");
-        flightPlanActionsStore.set(actions);
+        missionPlanTitleStore.set("");
+        missionPlanActionsStore.set(actions);
 
         if (clearLoadedPlan) {
             try {
@@ -223,15 +223,15 @@
 <section
     class="flight-plan-settings bg-[#1c1c1e] rounded-lg p-4 h-full text-white"
 >
-    <button on:click={toggleFlightPlans}>
+    <button on:click={toggleMissionPlans}>
         <i class="fas fa-globe text-[#5398e6]"></i>
         Manage Mission Plans
     </button>
-    <button on:click={loadFlightPlan}>
+    <button on:click={loadMissionPlan}>
         <i class="fas fa-cloud-arrow-up text-[#53c3f0]"></i>
         Load Mission Plan
     </button>
-    <button on:click={saveFlightPlan}>
+    <button on:click={saveMissionPlan}>
         <i class="fas fa-save text-[#61cd89]"></i>
         Save Mission Plan
     </button>
@@ -244,7 +244,7 @@
             <i class="fas fa-upload"></i>
             <span class="text-[8.5pt]">Import</span>
         </button>
-        <button on:click={exportFlightPlan}>
+        <button on:click={exportMissionPlan}>
             <i class="fas fa-download"></i>
             <span class="text-[8.5pt]">Export</span>
         </button>
