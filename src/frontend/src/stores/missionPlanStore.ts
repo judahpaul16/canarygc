@@ -1,12 +1,16 @@
 import { writable } from 'svelte/store';
 
-interface MissionPlanItem {
+export interface MissionPlanItem {
     type: string;
     lat: number;
     lon: number;
-    altitude: number;
+    alt: number | null;
     notes: string;
-    notify: boolean;
+    param1: number | null;
+    param2: number | null;
+    param3: number | null;
+    param4: number | null;
+    [key: string]: any; // Allow string indexing
 }
 
 export type MissionPlanActions = { [key: number]: MissionPlanItem };

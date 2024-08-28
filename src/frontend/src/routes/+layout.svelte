@@ -153,7 +153,7 @@
           let lon: string | RegExpMatchArray | null = (text as string).match(/"lon":\-?(\d+)/g);
           if (lat) lat = lat.toString().replace('"lat":', '');
           if (lon) lon = lon.toString().replace('"lon":', '');
-          if (lat && lon) mavLocationStore.set({ lat: parseFloat(lat)/10000000, lng: parseFloat(lon)/10000000 });
+          if (lat && lon) mavLocationStore.set({ lat: parseFloat(lat)/1e7, lng: parseFloat(lon)/1e7 });
           let heading: string | RegExpMatchArray | null = (text as string).match(/"hdg":(\d+)/g);
           if (heading) heading = heading.toString().replace('"hdg":', '');
           if (heading) mavHeadingStore.set(parseFloat(heading)/100);
