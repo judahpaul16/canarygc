@@ -131,6 +131,28 @@ async function sendMavlinkCommand(command: string, params: number[], useArduPilo
     await send(port, commandMsg);
 }
 
+async function loadMissionItem(item: any, index: number) {
+    if (!port || !reader) throw new Error('Port or reader is not initialized');
+
+    const msg = new common.MissionItemInt();
+    msg.targetSystem = 1;
+    msg.targetComponent = 1;
+    msg.seq = index - 1;
+    msg.frame = 3 // MAV_FRAME_GLOBAL_RELATIVE_ALT;
+    msg.command = common.MavCmd[`${item.type}` as keyof typeof common.MavCmd];
+    msg.current = index - 1 === 0 ? 1 : 0;
+    msg.autocontinue = 1;
+    if (item.param1 !== null) msg.param1 = item.param1;
+    if (item.param2 !== null) msg.param2 = item.param2;
+    if (item.param3 !== null) msg.param3 = item.param3;
+    if (item.param4 !== null) msg.param4 = item.param4;
+    msg.x = item.lat * 1e7;
+    msg.y = item.lon * 1e7;
+    msg.z = item.alt;
+    msg.missionType = 0;
+    await send(port, msg);
+}
+
 async function clearAllMissions() {
     if (!port || !reader) throw new Error('Port or reader is not initialized');
 
@@ -172,6 +194,7 @@ export {
     requestSysStatus,
     requestParameters,
     sendMavlinkCommand,
+    loadMissionItem,
     clearAllMissions,
     sendManualControl,
     online,

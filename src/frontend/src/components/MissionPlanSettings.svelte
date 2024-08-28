@@ -8,16 +8,7 @@
 
     const pb = new PocketBase("http://localhost:8090");
 
-    let actions: {
-        [key: number]: {
-            type: string;
-            lat: number;
-            lon: number;
-            altitude: number;
-            notes: string;
-            notify: boolean;
-        };
-    } = {};
+    let actions: MissionPlanActions = {};
 
     let markers: Map<number, L.Marker> = new Map(); // Map to keep track of markers
     let polylines: Map<string, L.Polyline> = new Map(); // Map to keep track of polylines
@@ -51,20 +42,7 @@
                     // @ts-ignore
                     let title = document.querySelector("#flight-plan-title").value || "Untitled Mission Plan",
                     plan = actions;
-                    await handleLoad(title, plan)
-                    let newModal = new Modal({
-                        target: document.body,
-                        props: {
-                            title: "Mission Plan Loaded",
-                            content: "The mission plan has been loaded successfully.",
-                            isOpen: true,
-                            confirmation: false,
-                            notification: true,
-                        },
-                    });
-                    setTimeout(() => {
-                        newModal.$destroy();
-                    }, 3000);
+                    await handleLoad(title, plan);
                 },
                 onCancel: () => {
                     modal.$destroy();
@@ -83,11 +61,22 @@
     async function handleLoad(title: string, actions: MissionPlanActions) {
         missionPlanTitleStore.set(title);
         missionPlanActionsStore.set(actions);
-        let missionPlan = {
-            title: title,
-            actions: actions,
-        };
-        pb.collection("mission_plans").create(missionPlan);
+        try {
+            let response = await fetch("/api/mavlink/load_mission", {
+                method: "POST",
+                headers: {
+                    "content-type": "application/json",
+                    "actions": JSON.stringify(actions),
+                },
+            });
+            if (response.ok) {
+                console.log(await response.text());
+            } else {
+                console.error(`Error: ${await response.text()}`);
+            }
+        } catch (error) {
+            console.error("Error:", error);
+        }
     }
         
     async function handleSave(title: string, plan: MissionPlanActions) {

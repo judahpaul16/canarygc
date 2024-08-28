@@ -2,24 +2,15 @@
   import { onMount } from 'svelte';
   import { mapStore } from '../stores/mapStore';
   import { mavLocationStore, mavStateStore, missionStateStore } from '../stores/mavlinkStore';
-  import { missionPlanTitleStore, missionPlanActionsStore } from '../stores/missionPlanStore';
-  import { get } from 'svelte/store';
+  import { missionPlanTitleStore, missionPlanActionsStore, type MissionPlanItem, type MissionPlanActions } from '../stores/missionPlanStore';
   import Modal from './Modal.svelte';
+  import { get } from 'svelte/store';
 
   export let title: string = '';
-  let actions: {
-      [key: number]: {
-          type: string;
-          lat: number;
-          lon: number;
-          altitude: number;
-          notes: string;
-          notify: boolean;
-      };
-  } = {};
+  let actions: MissionPlanActions = {};
   let action_types = [
-    'WAYPOINT', 'SPLINE_WAYPOINT', 'TAKEOFF', 'RETURN_TO_LAUNCH', 'GUIDED_ENABLE', 'LAND',
-    'LOITER_TIME', 'LOITER_TURNS', 'LOITER_UNLIM', 'PAYLOAD_PLACE', 'DO_WINCH', 'DO_SET_CAM_TRIGG_DIST',
+    'NAV_WAYPOINT', 'NAV_SPLINE_WAYPOINT', 'NAV_TAKEOFF', 'NAV_RETURN_TO_LAUNCH', 'NAV_GUIDED_ENABLE', 'NAV_LAND',
+    'NAV_LOITER_TIME', 'NAV_LOITER_TURNS', 'NAV_LOITER_UNLIM', 'NAV_PAYLOAD_PLACE', 'DO_WINCH', 'DO_SET_CAM_TRIGG_DIST',
     'DO_SET_SERVO', 'DO_REPEAT_SERVO', 'DO_DIGICAM_CONFIGURE', 'DO_DIGICAM_CONTROL', 'DO_FENCE_ENABLE',
     'DO_ENGINE_CONTROL', 'CONDITION_DELAY', 'CONDITION_CHANGE_ALT', 'CONDITION_DISTANCE', 'CONDITION_YAW'
   ];
@@ -68,19 +59,42 @@
     actions = { 
       ...actions, 
       [newIndex]: {
-        type: 'WAYPOINT',
+        type: 'NAV_WAYPOINT',
         lat: mavLocation.lat + 0.00225,
         lon: mavLocation.lng - 0.00225,
-        altitude: 100,
+        alt: null,
         notes: '',
-        notify: false,
+        param1: null,
+        param2: null,
+        param3: null,
+        param4: null
       }
     };
 
     missionPlanActionsStore.set(actions);
   }
 
-  function removeAction(index: number) {
+  async function removeAction(id: string) {
+    const modal = new Modal({
+      target: document.body,
+      props: {
+        title: "Delete Action",
+        content: "Are you sure you want to delete this action?",
+        isOpen: true,
+        confirmation: true,
+        notification: false,
+        onConfirm: () => {
+          handleRemove(parseInt(id));
+          modal.$destroy();
+        },
+        onCancel: () => {
+          modal.$destroy();
+        },
+      },
+    });
+  }
+
+  function handleRemove(index: number) {
     // Remove the corresponding DOM element
     const actionElement = document.querySelector(`#action-${index}`) as HTMLSelectElement;
     if (actionElement) {
@@ -96,14 +110,7 @@
   }
 
   function reindexActions() {
-    const newActions: { [key: number]: {
-      type: string;
-      lat: number;
-      lon: number;
-      altitude: number;
-      notes: string;
-      notify: boolean;
-    } } = {};
+    const newActions: MissionPlanActions = {};
     Object.values(actions).forEach((action, index) => {
       newActions[index + 1] = action;
     });
@@ -160,6 +167,27 @@
     const input = event.target as HTMLInputElement;
     const index = Number(input.id.split('-')[1]);
     actions[index].lon = Number(input.value);
+    missionPlanActionsStore.set(actions);
+  }
+
+  function updateAltitude(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const index = Number(input.id.split('-')[1]);
+    actions[index].alt = Number(input.value);
+    missionPlanActionsStore.set(actions);
+  }
+
+  function updateNotes(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const index = Number(input.id.split('-')[1]);
+    actions[index].notes = input.value;
+    missionPlanActionsStore.set(actions);
+  }
+
+  function updateParam(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const index = Number(input.id[-1]);
+    actions[index][`${input.id.split('-')[0]}`] = Number(input.value);
     missionPlanActionsStore.set(actions);
   }
   
@@ -237,32 +265,57 @@
                 </div>
                 <div class="separator"></div>
                 <div class="form-input text-center grid gap-1">
-                    <div class="flex justify-between items-center gap-3">
-                      <span class="text-[8pt]">Lat</span>
-                      <input type="number" step="0.0001" id="lat-{index}" placeholder="eg. 33.749" value={actions[Number(index)].lat} on:change={updateLat} />
-                    </div>
-                    <div class="flex justify-between items-center">
-                      <span class="text-[8pt]">Lon</span>
-                      <input type="number" step="0.0001" id="lon-{index}" placeholder="eg. -84.388" value={actions[Number(index)].lon} on:change={updateLon} />
-                    </div>
+                  <div class="flex justify-between items-center gap-3">
+                    <span class="text-[8pt]">Lat</span>
+                    <input type="number" step="0.0001" id="lat-{index}" placeholder="eg. 33.749" value={actions[Number(index)].lat} on:change={updateLat} />
+                    <span class="text-lg text-gray-400">°</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-[8pt]">Lon</span>
+                    <input type="number" step="0.0001" id="lon-{index}" placeholder="eg. -84.388" value={actions[Number(index)].lon} on:change={updateLon} />
+                    <span class="text-lg text-gray-400">°</span>
+                  </div>
+                  <div class="text-center flex justify-between items-center gap-2">
+                    <label for="altitude" class="text-[9pt]">Alt</label>
+                    <input type="number" min="0" name="altitude" id="altitude-{index}" class="altitude" placeholder="0: current alt" value={String(actions[Number(index)].alt)} on:change={updateAltitude}>
+                    <span class="text-xs text-gray-400">m</span>
+                  </div>
                 </div>
                 <div class="separator"></div>
-                <div class="form-input text-center flex gap-2 justify-center items-center">
-                    <label for="altitude">Altitude</label>
-                    <input type="number" min="0" name="altitude" id="altitude-{index}" class="altitude" value={String(actions[Number(index)].altitude)}>
-                    <span class="text-xs text-gray-400">m</span>
+                <div class="form-input text-center grid gap-1">
+                  <h2 class="text-[9pt] mb-1">
+                    Parameters
+                    <a href="https://mavlink.io/en/messages/common.html#mav_commands" target="_blank" class="text-[#61cd89] ml-1" title="More Information">
+                      <i class="fas fa-info-circle"></i>
+                    </a>
+                  </h2>
+                  <div class="flex justify-between items-center gap-3">
+                    <div class="flex justify-between items-center gap-3">
+                      <span class="text-[8pt]">P1</span>
+                      <input type="number" id="param1-{index}" placeholder="Empty" value={actions[Number(index)].param1} on:change={updateParam} />
+                    </div>
+                    <div class="flex justify-between items-center gap-3">
+                      <span class="text-[8pt]">P2</span>
+                      <input type="number" id="param2-{index}" placeholder="Empty" value={actions[Number(index)].param2} on:change={updateParam} />
+                    </div>
+                  </div>
+                  <div class="flex justify-between items-center gap-3">
+                    <div class="flex justify-between items-center gap-3">
+                      <span class="text-[8pt]">P3</span>
+                      <input type="number" id="param3-{index}" placeholder="Empty" value={actions[Number(index)].param3} on:change={updateParam} />
+                    </div>
+                    <div class="flex justify-between items-center gap-3">
+                      <span class="text-[8pt]">P4</span>
+                      <input type="number" id="param4-{index}" placeholder="Empty" value={actions[Number(index)].param4} on:change={updateParam} />
+                    </div>
+                  </div>
                 </div>
                 <div class="separator"></div>
                 <div class="form-input flex items-center justify-center">
-                    <textarea placeholder="Notes" value={actions[Number(index)].notes} />
+                    <textarea placeholder="Notes" value={actions[Number(index)].notes} id="notes-{index}" on:change={updateNotes}></textarea>
                 </div>
                 <div class="separator"></div>
-                <div class="form-input w-[fit-content] flex items-center gap-3">
-                    <input type="checkbox" id="action-{index}-notify" checked={actions[Number(index)].notify} />
-                    <label for="action-{index}-notify" class="text-sm flex">Notify on complete?</label>
-                </div>
-                <div class="separator"></div>
-                <button class="bg-[#2d2d2d] text-white rounded-lg px-3 py-2 text-sm" on:click={() => removeAction(Number(index))}>
+                <button class="bg-[#2d2d2d] text-white rounded-lg px-3 py-2 text-sm" on:click={() => removeAction(index)}>
                     <i class="fas fa-trash-alt text-red-400"></i>
                 </button>
             </div>
@@ -330,26 +383,13 @@
     border-color: #61cd89;
   }
 
-  input[type="checkbox"] {
-    appearance: none;
-    width: 1rem;
-    height: 1rem;
-    border-radius: 0.25rem;
-    background-color: #2d2d2d;
-    cursor: pointer;
-  }
-
-  input[type="checkbox"]:checked {
-    background-color: #61cd89;
-  }
-  
   input[type='number'] {
     width: 100px;
     font-size: 9pt;
   }
 
   .altitude {
-    width: 60px !important;
+    width: 100px !important;
   }
 
   textarea {

@@ -3,6 +3,7 @@ import {
     initializePort,
     requestSysStatus,
     sendMavlinkCommand,
+    loadMissionItem,
     clearAllMissions,
     online,
     statusRequested,
@@ -58,6 +59,17 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
                 await clearAllMissions();
                 console.log(`MAVLink missions cleared`);
                 return new Response('MAVLink missions cleared', { status: 200 });
+            } catch (err) {
+                console.error(err);
+                return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
+            }
+        case 'load_mission':
+            try {
+                Object.entries(JSON.parse(request.request.headers.get('actions')!)).forEach(async ([key, val]) => {
+                    await loadMissionItem(val,  parseInt(key));
+                    console.log(`Mission item ${parseInt(key) - 1} loaded: ${JSON.stringify(val)}`);
+                    return new Response('MAVLink mission loaded', { status: 200 });
+                });
             } catch (err) {
                 console.error(err);
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
