@@ -17,6 +17,7 @@
   
   $: map = $mapStore;
   $: mavLocation = $mavLocationStore;
+  $: title = $missionPlanTitleStore;
   $: actions = $missionPlanActionsStore;
   $: systemState = $mavStateStore;
   $: missionState = $missionStateStore;
@@ -149,6 +150,12 @@
     });
   }
 
+  function updateTitle(event: Event) {
+    const input = event.target as HTMLInputElement;
+    title = input.value;
+    missionPlanTitleStore.set(title);
+  }
+
   function updateActionType(event: Event) {
     const select = event.target as HTMLSelectElement;
     const index = Number(select.id.split('-')[1]);
@@ -213,7 +220,7 @@
 
 <div class="missionPlan bg-[#1c1c1e] text-white p-4 rounded-lg space-x-4 items-center h-full">
   <div class="container block">
-    <input type="text" class="text-md font-bold mb-2 ml-4 focus:outline-none" placeholder="Untitled Mission" id="flight-plan-title" bind:value={title} />
+    <input type="text" class="text-md font-bold mb-2 ml-4 focus:outline-none" placeholder="Untitled Mission" id="flight-plan-title" bind:value={title} on:input={(event) => updateTitle(event)} />
     <div class="flex items-center gap-2 float-right text-sm">
       <a href="https://ardupilot.org/planner/docs/common-planning-a-mission-with-waypoints-and-events.html" target="_blank" class="text-[#61cd89] hover:underline mr-2">
         <i class="fas fa-question-circle"></i>

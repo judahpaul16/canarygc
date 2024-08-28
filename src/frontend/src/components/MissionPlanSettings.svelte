@@ -1,23 +1,19 @@
 <script lang="ts">
     import PocketBase from "pocketbase";
-    import { mapStore, markersStore, polylinesStore } from "../stores/mapStore";
-    import { mavLocationStore } from '../stores/mavlinkStore';
+    import { mapStore} from "../stores/mapStore";
     import { missionPlanTitleStore, missionPlanActionsStore, type MissionPlanActions } from "../stores/missionPlanStore";
+    import { get } from "svelte/store";
     import Modal from "./Modal.svelte";
     import ManageMissionPlans from "./ManageMissionPlans.svelte";
 
     const pb = new PocketBase("http://localhost:8090");
 
     let actions: MissionPlanActions = {};
+    let title: string = "";
 
-    let markers: Map<number, L.Marker> = new Map(); // Map to keep track of markers
-    let polylines: Map<string, L.Polyline> = new Map(); // Map to keep track of polylines
-
+    $: title = $missionPlanTitleStore
     $: actions = $missionPlanActionsStore;
-
     $: map = $mapStore;
-
-    $: mavLocation = $mavLocationStore;
 
     function toggleMissionPlans() {
         const modal = new ManageMissionPlans({
@@ -39,10 +35,7 @@
                 confirmation: true,
                 notification: false,
                 onConfirm: async () => {
-                    // @ts-ignore
-                    let title = document.querySelector("#flight-plan-title").value || "Untitled Mission Plan",
-                    plan = actions;
-                    await handleLoad(title, plan);
+                    await handleLoad(title, actions);
                 },
                 onCancel: () => {
                     modal.$destroy();
@@ -52,10 +45,8 @@
     }
 
     async function saveMissionPlan() {
-        // @ts-ignore
-        let title = document.querySelector("#flight-plan-title").value || "Untitled Mission Plan",
-        plan = actions;
-        handleSave(title, plan);
+        let title = get(missionPlanTitleStore) || "Untitled Mission";
+        handleSave(title, actions);
     }
 
     async function handleLoad(title: string, actions: MissionPlanActions) {
@@ -145,7 +136,7 @@
         const a = document.createElement("a");
         a.href = url;
         // @ts-ignore
-        a.download = document.querySelector("#flight-plan-title").value.replace(/\s/g, "_") || "Untitled_Flight_Plan" + ".json";
+        a.download = mp.title.replace(/\s/g, "_") || "Untitled_Flight_Plan" + ".json";
         a.click();
         URL.revokeObjectURL(url);
     }

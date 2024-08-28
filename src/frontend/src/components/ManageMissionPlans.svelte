@@ -1,6 +1,7 @@
 <script lang="ts">
   import PocketBase from "pocketbase";
   import { missionPlanTitleStore, missionPlanActionsStore, type MissionPlanActions } from "../stores/missionPlanStore";
+  import { get } from "svelte/store";
   import Modal from "./Modal.svelte";
   import { onMount } from "svelte";
 
@@ -9,8 +10,11 @@
   export let title: string = "Manage Mission Plans";
   export let isModal = false;
   export let isOpen: boolean = true;
-  let missionPlans: Array<{ id: string; title: string }> = [];
   export let onCancel: () => void = () => {};
+  let missionPlans: Array<{ id: string; title: string }> = [];
+  let actions: MissionPlanActions = {};
+
+  $: actions = $missionPlanActionsStore;
 
   onMount(() => {
     getMissionPlans();
@@ -29,7 +33,6 @@
   }
   
   async function loadMissionPlan(plan: any) {
-    let mp = await pb.collection("mission_plans").getFirstListItem(`id = "${plan.id}"`);
     const modal = new Modal({
       target: document.body,
       props: {
@@ -38,11 +41,10 @@
         isOpen: true,
         confirmation: true,
         notification: false,
-        onConfirm: async () => {
-          // @ts-ignore
-          let title = document.querySelector("#flight-plan-title").value || "Untitled Mission Plan",
-          plan = mp.actions;
-          await handleLoad(title, plan);
+        onConfirm: async (p: any = plan) => {
+          let response = await pb.collection("mission_plans").getFirstListItem(`id = "${p.id}"`);
+          let { title, actions } = response;
+          await handleLoad(title, actions);
         },
         onCancel: () => {
           modal.$destroy();

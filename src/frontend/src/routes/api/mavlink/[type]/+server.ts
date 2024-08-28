@@ -64,12 +64,15 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
             }
         case 'load_mission':
+            let actions = request.request.headers.get('actions');
             try {
-                Object.entries(JSON.parse(request.request.headers.get('actions')!)).forEach(async ([key, val]) => {
-                    await loadMissionItem(val,  parseInt(key));
-                    console.log(`Mission item ${parseInt(key) - 1} loaded: ${JSON.stringify(val)}`);
+                if (actions) {
+                    Object.entries(JSON.parse(actions)).forEach(async ([key, val]) => {
+                        await loadMissionItem(val,  parseInt(key));
+                        console.log(`Mission item ${parseInt(key) - 1} loaded: ${JSON.stringify(val)}`);
+                    });
                     return new Response('MAVLink mission loaded', { status: 200 });
-                });
+                }
             } catch (err) {
                 console.error(err);
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
