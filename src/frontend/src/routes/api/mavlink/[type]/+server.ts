@@ -3,6 +3,7 @@ import {
     initializePort,
     requestSysStatus,
     sendMavlinkCommand,
+    clearAllMissions,
     online,
     statusRequested,
     logs,
@@ -40,13 +41,23 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
                 return parseInt(param);
             });
             try {
-                if (command && params) {
+                if (command) {
+                    if (params === null) params = [];
                     await sendMavlinkCommand(command, params as number[], useArduPilotMega);
                     console.log(`MAVLink Command sent: ${command}, params: [${params}]`);
                     return new Response(`MAVLink Command sent: ${command}, params: [${params}]`, { status: 200 });
                 } else {
-                    return new Response('Command or params not provided', { status: 400 });
+                    return new Response('Command not provided', { status: 400 });
                 }
+            } catch (err) {
+                console.error(err);
+                return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
+            }
+        case 'clear_missions':
+            try {
+                await clearAllMissions();
+                console.log(`MAVLink missions cleared`);
+                return new Response('MAVLink missions cleared', { status: 200 });
             } catch (err) {
                 console.error(err);
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });

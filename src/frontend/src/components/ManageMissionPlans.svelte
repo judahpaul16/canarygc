@@ -65,7 +65,7 @@
           const data = e.target?.result;
           const plan = JSON.parse(data as string);
           const title = file.name.replace(".json", "").replace(/_/g, " ");
-          await handleLoad(title, plan);
+          handleLoad(title, plan);
         };
         reader.readAsText(file);
       }

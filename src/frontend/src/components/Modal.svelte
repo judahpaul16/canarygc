@@ -5,7 +5,7 @@
   export let isOpen: boolean = false;
   export let confirmation: boolean = false;
   export let notification: boolean = false;
-  export let input: { type: string, placeholder: string } | null = null;
+  export let inputs: { type: string, placeholder: string }[] | null = null;
   export let inputValue: number | string | null = null;
   export let onConfirm: () => void = () => {};
   export let onCancel: () => void = () => {};
@@ -27,9 +27,11 @@
       return;
     }
     
-    if (input && inputValue === '') {
+    if (inputs && inputValue === '' && inputs.some(input => input.type !== 'checkbox')) {
       alert('Please enter a valid value.');
       return;
+    } else if (inputs && inputs.some(input => input.type === 'checkbox')) {
+      inputValue = `${(document.querySelector(`#${inputs.find(input => input.type === 'checkbox')!.placeholder.toLowerCase().replaceAll(" ", "-")}`) as HTMLInputElement).checked}`;
     }
     
     onConfirm();
@@ -51,13 +53,18 @@
       <form>
         <div class="px-4 py-2 text-white">
           {content}
-          {#if input}
+          {#if inputs}
             <div class="flex items-center justify-center w-full">
-              {#if input.type === 'number'}
-                <input type="number" placeholder={input.placeholder} bind:value={inputValue} class="form-input" required />
-              {:else if input.type === 'text'}
-                <input type="text" placeholder={input.placeholder} bind:value={inputValue} class="form-input" required />
-              {/if}
+              {#each inputs as input}
+                {#if input.type === 'number'}
+                  <input type="number" placeholder={input.placeholder} bind:value={inputValue} class="form-input" required />
+                {:else if input.type === 'text'}
+                  <input type="text" placeholder={input.placeholder} bind:value={inputValue} class="form-input" required />
+                {:else if input.type === 'checkbox'}
+                  <input type="checkbox" id={input.placeholder.toLowerCase().replaceAll(" ", "-")} class="form-input" />
+                  <label for={input.placeholder} class="text-white ml-2">{input.placeholder}</label>
+                {/if}
+              {/each}
             </div>
           {/if}
         </div>
@@ -109,5 +116,18 @@
   .form-input:focus {
     outline: none;
     border-color: #66e1ff;
+  }
+
+  input[type="checkbox"] {
+      appearance: none;
+      width: 1rem;
+      height: 1rem;
+      border-radius: 0.25rem;
+      background-color: #2d2d2d;
+      cursor: pointer;
+  }
+
+  input[type="checkbox"]:checked {
+      background-color: #66e1ff;
   }
 </style>
