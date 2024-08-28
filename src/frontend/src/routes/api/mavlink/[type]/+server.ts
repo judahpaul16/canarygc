@@ -3,7 +3,8 @@ import {
     initializePort,
     requestSysStatus,
     sendMavlinkCommand,
-    sendSetModeCommand,
+    loadMissionItem,
+    clearAllMissions,
     online,
     statusRequested,
     logs,
@@ -21,7 +22,7 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
 
                 // Return new logs and clear newLogs
                 const currentLogLength = logs.length;
-                if (newLogs.length > 0) {
+                if (logs.length > 0) {
                     const logsToSend = newLogs.slice();
                     newLogs.length = 0; // Clear newLogs
                     previousLogLength = currentLogLength; // Update previous length
@@ -41,26 +42,36 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
                 return parseInt(param);
             });
             try {
-                if (command && params) {
+                if (command) {
+                    if (params === null) params = [];
                     await sendMavlinkCommand(command, params as number[], useArduPilotMega);
                     console.log(`MAVLink Command sent: ${command}, params: [${params}]`);
                     return new Response(`MAVLink Command sent: ${command}, params: [${params}]`, { status: 200 });
                 } else {
-                    return new Response('Command or params not provided', { status: 400 });
+                    return new Response('Command not provided', { status: 400 });
                 }
             } catch (err) {
                 console.error(err);
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
             }
-        case 'set_mode':
-            let mode = request.request.headers.get('mode');
+        case 'clear_missions':
             try {
-                if (mode) {
-                    await sendSetModeCommand(mode);
-                    console.log(`Mode set to: ${mode}`);
-                    return new Response(`Mode set to: ${mode}`, { status: 200 });
-                } else {
-                    return new Response('Mode not provided', { status: 400 });
+                await clearAllMissions();
+                console.log(`MAVLink missions cleared`);
+                return new Response('MAVLink missions cleared', { status: 200 });
+            } catch (err) {
+                console.error(err);
+                return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
+            }
+        case 'load_mission':
+            let actions = request.request.headers.get('actions');
+            try {
+                if (actions) {
+                    Object.entries(JSON.parse(actions)).forEach(async ([key, val]) => {
+                        await loadMissionItem(val,  parseInt(key));
+                        console.log(`Mission item ${parseInt(key) - 1} loaded: ${JSON.stringify(val)}`);
+                    });
+                    return new Response('MAVLink mission loaded', { status: 200 });
                 }
             } catch (err) {
                 console.error(err);

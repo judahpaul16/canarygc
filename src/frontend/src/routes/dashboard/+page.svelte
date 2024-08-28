@@ -4,7 +4,7 @@
   import Stats from '../../components/Stats.svelte';
   import Controls from '../../components/Controls.svelte';
   import Compass from '../../components/Compass.svelte';
-  import ManageFlightPlans from '../../components/ManageMissionPlans.svelte';
+  import ManageMissionPlans from '../../components/ManageMissionPlans.svelte';
   import { mavLocationStore } from '../../stores/mavlinkStore';
 
   $: user = $authData;
@@ -25,7 +25,7 @@
       <Stats />
     </div>
     <div class="manage-flight-plans col-span-2 row-span-4">
-      <ManageFlightPlans />
+      <ManageMissionPlans />
     </div>
     <div class="controls col-span-10 row-span-3">
       <Controls />
