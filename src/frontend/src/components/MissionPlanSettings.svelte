@@ -181,14 +181,14 @@
             target: document.body,
             props: {
                 title: "Clear Mission Plan",
-                content: "Are you sure you want to clear the current mission plan? This action will remove all actions from the map. Check the box to also clear the currently loaded mission plan.",
+                content: "Are you sure you want to clear the current mission plan? This action will remove all actions from the map. Check the box to also clear the mission plan on the flight controller.",
                 isOpen: true,
                 confirmation: true,
                 notification: false,
                 inputs: [
                     {
                         type: "checkbox",
-                        placeholder: "Clear Loaded Mission Plan",
+                        placeholder: "Clear on Flight Controller",
                     },
                 ],
                 onConfirm: () => {
