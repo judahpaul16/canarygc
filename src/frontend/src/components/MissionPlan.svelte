@@ -260,9 +260,9 @@
                 </div>
                 <div class="separator"></div>
                 <div class="form-input text-center">
-                    <label for="action">Action Type</label>
+                    <label for="action" class="text-[9pt]">Action Type</label>
                     <a href="https://ardupilot.org/copter/docs/mission-command-list.html" target="_blank" class="text-[#61cd89] ml-1" title="More Information">
-                        <i class="fas fa-info-circle"></i>
+                        <i class="fas fa-info-circle text-[9pt]"></i>
                     </a>
                     <select class="mt-1" name="action" id="action-{index}-type" on:change={updateActionType} value={actions[Number(index)].type}>
                     {#each action_types as action_type}
@@ -324,12 +324,14 @@
                   </div>
                 </div>
                 <div class="separator"></div>
-                <div class="form-input flex items-center justify-center">
+                <div class="form-input flex flex-col gap-1 items-center justify-center">
+                    <h2 class="text-[9pt]">Additional Notes</h2>
                     <textarea placeholder="Notes" value={actions[Number(index)].notes} id="notes-{index}" on:change={updateNotes}></textarea>
                 </div>
                 <div class="separator"></div>
-                <button class="bg-[#2d2d2d] text-white rounded-lg px-3 py-2 text-sm" on:click={() => removeAction(index)}>
+                <button class="delete-action relative bg-[#2d2d2d] text-white rounded-lg px-3 py-2 text-sm" on:click={() => removeAction(index)}>
                     <i class="fas fa-trash-alt text-red-400"></i>
+                    <span class="tooltip">Delete Action</span>
                 </button>
             </div>
             <hr>
@@ -433,6 +435,16 @@
     opacity: 1;
     visibility: visible;
     transform: translateX(-50%) translateY(-0.25em);
+  }
+
+  .delete-action .tooltip {
+    bottom: 0;
+    left: 0;
+    margin-bottom: 0;
+  }
+
+  .delete-action:hover .tooltip {
+    transform: translateX(-108%);
   }
 
   button {
