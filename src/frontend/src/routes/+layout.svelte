@@ -23,7 +23,6 @@
     mavArmedStateStore
 
   } from '../stores/mavlinkStore';
-  import { get } from 'svelte/store';
   import Modal from '../components/Modal.svelte';
 
   let offline_modal: Modal;
@@ -41,7 +40,7 @@
 
   // @ts-ignore
   String.prototype.toProperCase = function () {
-    return this.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
+    return this.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase();});
   };
 
   function updateDashboardHeight() {
@@ -257,7 +256,8 @@
           type: 'base',
           schema: [
             { name: 'title', type: 'text', options: { maxSize: 100000000 } },
-            { name: 'actions', type: 'json', required: true, options: { maxSize: 100000000 } }
+            { name: 'actions', type: 'json', required: true, options: { maxSize: 100000000 } },
+            { name: 'isLoaded', type: 'bool', required: true, default: false }
           ]
         };
         await pb.collections.create(newCollection);
