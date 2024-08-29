@@ -10,6 +10,7 @@ import {
     ardupilotmega,
     send
 } from 'node-mavlink';
+import type { MissionPlanActions } from '../../stores/missionPlanStore';
 
 const REGISTRY: MavLinkPacketRegistry = {
     ...minimal.REGISTRY,
@@ -156,7 +157,7 @@ async function loadMissionItem(item: any, index: number) {
     await send(port, msg);
 }
 
-async function clearAllMissions() {
+async function clearAllMissionItems() {
     if (!port || !reader) throw new Error('Port or reader is not initialized');
 
     const msg = new common.MissionClearAll();
@@ -198,11 +199,11 @@ export {
     requestParameters,
     sendMavlinkCommand,
     loadMissionItem,
-    clearAllMissions,
+    clearAllMissionItems,
     sendManualControl,
     online,
     statusRequested,
     logs,
     newLogs,
-    common
+    common,
 };

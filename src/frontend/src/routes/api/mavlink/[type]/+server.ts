@@ -4,11 +4,11 @@ import {
     requestSysStatus,
     sendMavlinkCommand,
     loadMissionItem,
-    clearAllMissions,
+    clearAllMissionItems,
     online,
     statusRequested,
     logs,
-    newLogs
+    newLogs,
 } from '$lib/server/mavlink';
 
 let previousLogLength = 0;
@@ -54,9 +54,9 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
                 console.error(err);
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
             }
-        case 'clear_missions':
+        case 'clear_mission':
             try {
-                await clearAllMissions();
+                await clearAllMissionItems();
                 console.log(`MAVLink missions cleared`);
                 return new Response('MAVLink missions cleared', { status: 200 });
             } catch (err) {
@@ -69,7 +69,7 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
                 if (actions) {
                     Object.entries(JSON.parse(actions)).forEach(async ([key, val]) => {
                         await loadMissionItem(val,  parseInt(key));
-                        console.log(`Mission item ${parseInt(key) - 1} loaded: ${JSON.stringify(val)}`);
+                        console.log(`Mission item ${parseInt(key) - 1} loaded:\n${JSON.stringify(val, null, 2)}`);
                     });
                     return new Response('MAVLink mission loaded', { status: 200 });
                 }
