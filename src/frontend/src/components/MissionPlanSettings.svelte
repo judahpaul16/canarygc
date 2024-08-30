@@ -280,12 +280,17 @@
                         type: "number",
                         placeholder: "Longitude",
                     },
+                    {
+                        type: "number",
+                        placeholder: "Altitude",
+                    },
                 ],
                 onConfirm: async () => {
                     let lat = Number((parseFloat(modal.inputValues![0]) * 1e7).toFixed(0));
                     let lon = Number((parseFloat(modal.inputValues![1]) * 1e7).toFixed(0));
-                    if (isNaN(lat) || isNaN(lon)) {
-                        alert("Please enter a valid latitude and longitude.");
+                    let alt = Number(parseFloat(modal.inputValues![2]).toFixed(0));
+                    if (isNaN(lat) || isNaN(lon) || isNaN(alt)) {
+                        alert("Please enter a valid latitude, longitude, and altitude.");
                         return;
                     }
                     try {
@@ -294,7 +299,7 @@
                             headers: {
                                 "content-type": "application/json",
                                 "command": "DO_SET_HOME",
-                                "params": `${[0, 0, 0, 0, lat, lon, 0]}`,
+                                "params": `${[0, 0, 0, 0, lat, lon, alt]}`,
                                 "useCmdLong": "false",
                             },
                         });
