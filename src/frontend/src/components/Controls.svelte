@@ -212,7 +212,7 @@
   }
   
   .label {
-    font-size: 0.8rem;
+    font-size: 10px;
   }
 
   .map-container {
