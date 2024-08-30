@@ -193,7 +193,7 @@
 
   function updateParam(event: Event) {
     const input = event.target as HTMLInputElement;
-    const index = Number(input.id[-1]);
+    const index = Number(input.id.split('-')[1]);
     actions[index][`${input.id.split('-')[0]}`] = Number(input.value);
     missionPlanActionsStore.set(actions);
   }
