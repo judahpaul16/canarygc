@@ -1,9 +1,42 @@
+<script lang="ts">
+  import { mavAltitudeStore } from '../stores/mavlinkStore';
+  import { get } from 'svelte/store';
+
+  let altitude: number = get(mavAltitudeStore);
+  $: altitude = $mavAltitudeStore;
+
+  async function setPositionLocal(x: string, y: string, z: string) {
+    const response = await fetch("/api/mavlink/set_position_local", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x": x,
+        "y": y,
+        "z": z,
+      },
+    });
+    if (response.ok) {
+      console.log(`Local position set successfully: x: ${x}, y: ${y}, z: ${z}`);
+    } else {
+      console.error("Failed to set local position");
+    }
+  }
+</script>
+
 <div class="dpad-container relative flex items-center justify-center w-48 h-48">
   <nav class="d-pad relative">
-    <button class="up"><i class="fas fa-chevron-up"></i></button>
-    <button class="right"><i class="fas fa-chevron-right"></i></button>
-    <button class="down"><i class="fas fa-chevron-down"></i></button>
-    <button class="left"><i class="fas fa-chevron-left"></i></button>
+    <button class="up" on:click={() => {setPositionLocal('10', '0', `-${altitude}`)}}>
+      <i class="fas fa-chevron-up"></i>
+    </button>
+    <button class="right" on:click={() => {setPositionLocal('0', '10', `-${altitude}`)}}>
+      <i class="fas fa-chevron-right"></i>
+    </button>
+    <button class="down" on:click={() => {setPositionLocal('-10', '0', `-${altitude}`)}}>
+      <i class="fas fa-chevron-down"></i>
+    </button>
+    <button class="left" on:click={() => {setPositionLocal('0', '-10', `-${altitude}`)}}>
+      <i class="fas fa-chevron-left"></i>
+    </button>
     <div class="center-circle">
       <span class="move-text">Move</span>
     </div>

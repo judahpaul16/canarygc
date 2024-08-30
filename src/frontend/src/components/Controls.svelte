@@ -3,8 +3,6 @@
   import DPad from './DPad.svelte';
   import Weather from './Weather.svelte';
   import { mavAltitudeStore, mavLocationStore } from '../stores/mavlinkStore';
-  import { get } from 'svelte/store';
-  import Modal from './Modal.svelte';
   import { onMount } from 'svelte';
 
   $: mavLocation = $mavLocationStore;
@@ -30,6 +28,22 @@
       console.log(await response.text());
     } else {
       console.error(`Error: ${await response.text()}`);
+    }
+  }
+  async function setPositionLocal(x: string, y: string, z: string) {
+    const response = await fetch("/api/mavlink/set_position_local", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x": x,
+        "y": y,
+        "z": z,
+      },
+    });
+    if (response.ok) {
+      console.log(`Local position set successfully: x: ${x}, y: ${y}, z: ${z}`);
+    } else {
+      console.error("Failed to set local position");
     }
   }
 </script>
@@ -58,14 +72,14 @@
       <div class="flex flex-col items-center">
         <div class="label text-sm mb-1">Altitude Up</div>
         <button class="alt-button rounded-full"
-            on:click={() => {sendMavlinkCommand('GUIDED_CHANGE_ALTITUDE', `${[NaN, NaN, 1, NaN, NaN, NaN, altitude + 1]}`, 'true')}}>
+            on:click={() => {setPositionLocal('0', '0', `-${altitude + 10}`)}}>
           <i class="fas fa-arrow-up-wide-short alt-up"></i>
         </button>
       </div>
       <div class="flex flex-col items-center justify-center">
         <div class="label text-sm mb-1">Altitude Down</div>
         <button class="alt-button rounded-full"
-            on:click={() => {sendMavlinkCommand('GUIDED_CHANGE_ALTITUDE', `${[NaN, NaN, 1, NaN, NaN, NaN, altitude - 1]}`, 'true')}}>
+            on:click={() => {setPositionLocal('0', '0', `-${altitude - 10}`)}}>
           <i class="fas fa-arrow-down-short-wide alt-down"></i>
         </button>
       </div>
