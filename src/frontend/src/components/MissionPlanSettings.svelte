@@ -352,7 +352,7 @@
     </button>
     <button on:click={toggleMissionPlans}>
         <i class="fas fa-globe text-[#5398e6]"></i>
-        Manage Mission Plans
+        Manage Plans
     </button>
     <button on:click={saveMissionPlan}>
         <i class="fas fa-save text-[#61cd89]"></i>
