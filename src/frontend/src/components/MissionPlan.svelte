@@ -61,8 +61,8 @@
       ...actions, 
       [newIndex]: {
         type: 'NAV_WAYPOINT',
-        lat: mavLocation.lat + 0.00225,
-        lon: mavLocation.lng - 0.00225,
+        lat: mavLocation.lat + 0.000725,
+        lon: mavLocation.lng - 0.000725,
         alt: null,
         notes: '',
         param1: null,
