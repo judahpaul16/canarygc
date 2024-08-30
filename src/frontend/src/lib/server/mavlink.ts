@@ -83,7 +83,7 @@ async function requestSysStatus() {
     request.targetSystem = 1;
     request.targetComponent = 1;
     request.messageId = common.GlobalPositionInt.MSG_ID;
-    request.interval = 1000000; // 1 Hz (every 1 seconds)
+    request.interval = 1000000; // 1 Hz (every 1 seconds)
     request.responseTarget = 1;
     await send(port!, request);
     
@@ -91,7 +91,7 @@ async function requestSysStatus() {
     request.targetSystem = 1;
     request.targetComponent = 1;
     request.messageId = common.MissionCurrent.MSG_ID;
-    request.interval = 1000000; // 1 Hz (every 1 seconds)
+    request.interval = 1000000; // 1 Hz (every 1 seconds)
     request.responseTarget = 1;
     await send(port!, request);
 
@@ -99,7 +99,7 @@ async function requestSysStatus() {
     request.targetSystem = 1;
     request.targetComponent = 1;
     request.messageId = common.SysStatus.MSG_ID;
-    request.interval = 1000000; // 1 Hz (every 1 seconds)
+    request.interval = 1000000; // 1 Hz (every 1 seconds)
     request.responseTarget = 1;
     await send(port!, request);
     statusRequested = true;
@@ -183,18 +183,24 @@ async function clearAllMissionItems() {
     await send(port, msg);
 }
 
-async function sendManualControl(x: number, y: number, z: number, r: number, buttons: number, mode: number) {
+async function setPositionLocal(x: number, y: number, z: number) {
     if (!port || !reader) throw new Error('Port or reader is not initialized');
-
-    const msg = new common.ManualControl();
-    msg.target = 1;
+    const msg = new common.SetPositionTargetLocalNed();
+    
+    // Set parameters for the command
+    msg.timeBootMs = 0;
+    msg.targetSystem = 1;
+    msg.targetComponent = 1;
+    msg.coordinateFrame = 1; // MAV_FRAME_LOCAL_NED
+    // ignore velocity and acceleration and yaw
+    // @ts-ignore
+    msg.typeMask = 0b110111111000;
     msg.x = x;
     msg.y = y;
     msg.z = z;
-    msg.r = r;
-    msg.buttons = buttons;
+    // Send the command to the drone
     await send(port, msg);
-}
+  }
 
 function convertBigIntToNumber(obj: any): any {
     if (typeof obj === 'bigint') {
@@ -218,7 +224,7 @@ export {
     setMissionCount,
     loadMissionItem,
     clearAllMissionItems,
-    sendManualControl,
+    setPositionLocal,
     online,
     statusRequested,
     logs,
