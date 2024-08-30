@@ -178,6 +178,25 @@ async function sendManualControl(x: number, y: number, z: number, r: number, but
     await send(port, msg);
 }
 
+async function flyForward(distance: number) {
+    const msg = new ardupilotmega.SetPositionTargetLocalNED()
+    
+    // Set parameters for the command
+    msg.time_boot_ms = Date.now(); // Current time in milliseconds
+    msg.target_system = 1; // Target system ID
+    msg.target_component = 1; // Target component ID
+    msg.coordinate_frame = 9; // MAV_FRAME_BODY_OFFSET_NED
+    msg.type_mask = 3576; // Ignore all but position fields
+  
+    // Move forward (North) by the specified distance
+    msg.x = distance; // Forward in meters
+    msg.y = 0; // No lateral movement
+    msg.z = 0; // No altitude change
+  
+    // Send the command to the drone
+    await send(port, msg);
+  }
+
 function convertBigIntToNumber(obj: any): any {
     if (typeof obj === 'bigint') {
         return Number(obj);
