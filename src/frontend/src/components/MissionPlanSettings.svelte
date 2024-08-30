@@ -266,8 +266,8 @@
                     },
                 ],
                 onConfirm: async () => {
-                    let lat = parseFloat(modal.inputValues![0]);
-                    let lon = parseFloat(modal.inputValues![1]);
+                    let lat = Number((parseFloat(modal.inputValues![0]) * 1e7).toFixed(0));
+                    let lon = Number((parseFloat(modal.inputValues![1]) * 1e7).toFixed(0));
                     if (isNaN(lat) || isNaN(lon)) {
                         alert("Please enter a valid latitude and longitude.");
                         return;
@@ -279,15 +279,46 @@
                                 "content-type": "application/json",
                                 "command": "DO_SET_HOME",
                                 "params": `${[0, 0, 0, 0, lat, lon, 0]}`,
+                                "useCmdLong": "false",
                             },
                         });
                         if (response.ok) {
-                            console.log(await response.text());
+                            let newModal = new Modal({
+                                target: document.body,
+                                props: {
+                                    title: "Home Location Set",
+                                    content: "The home location has been set successfully.",
+                                    isOpen: true,
+                                    confirmation: false,
+                                    notification: true,
+                                },
+                            });
+                            setTimeout(() => {
+                                newModal.$destroy();
+                            }, 3000);
                         } else {
-                            console.error(`Error: ${await response.text()}`);
+                            new Modal({
+                                target: document.body,
+                                props: {
+                                    title: "Error",
+                                    content: "An error occurred while setting the home location.",
+                                    isOpen: true,
+                                    confirmation: false,
+                                    notification: true,
+                                },
+                            });
                         }
-                    } catch (error) {
-                        console.error("Error:", error);
+                    } catch (error: any) {
+                        new Modal({
+                            target: document.body,
+                            props: {
+                                title: "Error",
+                                content: error.message,
+                                isOpen: true,
+                                confirmation: false,
+                                notification: true,
+                            },
+                        });
                     }
                     modal.$destroy();
                 },

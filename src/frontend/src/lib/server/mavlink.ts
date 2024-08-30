@@ -114,17 +114,22 @@ async function requestParameters() {
     await send(port!, request);
 }
 
-async function sendMavlinkCommand(command: string, params: number[], useArduPilotMega = false) {
+async function sendMavlinkCommand(command: string, params: number[], useArduPilotMega = false, useCmdLong = true) {
     if (!port || !reader) throw new Error('Port or reader is not initialized');
 
-    const commandMsg = new common.CommandLong();
+    let commandMsg: common.CommandInt | common.CommandLong;
+    if (useCmdLong) commandMsg = new common.CommandLong();
+    else {
+        commandMsg = new common.CommandInt();
+        commandMsg.frame = 0; // MAV_FRAME_GLOBAL;
+    };
+    
     commandMsg.targetSystem = 1;
-    commandMsg.targetComponent = 0;
-    if (useArduPilotMega) { 
-        commandMsg.command = parseInt(`${ardupilotmega.MavCmd[command as keyof typeof ardupilotmega.MavCmd]}`);
-    } else {
-        commandMsg.command = common.MavCmd[command as keyof typeof common.MavCmd];
-    }
+    commandMsg.targetComponent = 1;
+
+    if (useArduPilotMega) commandMsg.command = parseInt(`${ardupilotmega.MavCmd[command as keyof typeof ardupilotmega.MavCmd]}`);
+    else commandMsg.command = common.MavCmd[command as keyof typeof common.MavCmd];
+
     if (params[0]) commandMsg._param1 = params[0];
     if (params[1]) commandMsg._param2 = params[1];
     if (params[2]) commandMsg._param3 = params[2];
@@ -133,6 +138,18 @@ async function sendMavlinkCommand(command: string, params: number[], useArduPilo
     if (params[5]) commandMsg._param6 = params[5];
     if (params[6]) commandMsg._param7 = params[6];
     await send(port, commandMsg);
+}
+
+async function setMissionCount(numItems: number) {
+    if (!port || !reader) throw new Error('Port or reader is not initialized');
+
+    const count = new common.MissionCount();
+    count.targetSystem = 1;
+    count.targetComponent = 1;
+    count.count = numItems;
+    count.opaqueId = 0;
+    await send(port, count);
+    await new Promise((resolve) => setTimeout(resolve, 250)); // Wait for 250 ms
 }
 
 async function loadMissionItem(item: any, index: number) {
@@ -150,9 +167,9 @@ async function loadMissionItem(item: any, index: number) {
     if (item.param2 !== null) msg.param2 = item.param2;
     if (item.param3 !== null) msg.param3 = item.param3;
     if (item.param4 !== null) msg.param4 = item.param4;
-    msg.x = item.lat * 1e7;
-    msg.y = item.lon * 1e7;
-    msg.z = item.alt;
+    msg.x = Number((item.lat * 1e7).toFixed(0));
+    msg.y = Number((item.lon * 1e7).toFixed(0));
+    msg.z = item.alt === null ? 0 : item.alt;
     msg.missionType = 0;
     await send(port, msg);
 }
@@ -198,6 +215,7 @@ export {
     requestSysStatus,
     requestParameters,
     sendMavlinkCommand,
+    setMissionCount,
     loadMissionItem,
     clearAllMissionItems,
     sendManualControl,

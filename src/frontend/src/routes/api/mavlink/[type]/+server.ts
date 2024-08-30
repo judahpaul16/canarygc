@@ -3,6 +3,7 @@ import {
     initializePort,
     requestSysStatus,
     sendMavlinkCommand,
+    setMissionCount,
     loadMissionItem,
     clearAllMissionItems,
     online,
@@ -37,14 +38,16 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
         case 'send_command':
             let command = request.request.headers.get('command');
             let params: string | number[] | null = request.request.headers.get('params');
-            let useArduPilotMega = request.request.headers.get('useArduPilotMega') === 'true';
+            let useArduPilotMega = request.request.headers.get('useArduPilotMega');
+            let useCmdLong = request.request.headers.get('useCmdLong');
+            if (useCmdLong === null) useCmdLong = 'true';
             if (params) params = params.split(',').map((param) => {
-                return parseInt(param);
+                return parseFloat(param);
             });
             try {
                 if (command) {
                     if (params === null) params = [];
-                    await sendMavlinkCommand(command, params as number[], useArduPilotMega);
+                    await sendMavlinkCommand(command, params as number[], useArduPilotMega === 'true', useCmdLong === 'true');
                     console.log(`MAVLink Command sent: ${command}, params: [${params}]`);
                     return new Response(`MAVLink Command sent: ${command}, params: [${params}]`, { status: 200 });
                 } else {
@@ -67,9 +70,10 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
             let actions = request.request.headers.get('actions');
             try {
                 if (actions) {
+                    await setMissionCount(Object.keys(JSON.parse(actions)).length);
                     Object.entries(JSON.parse(actions)).forEach(async ([key, val]) => {
+                        await new Promise((resolve) => setTimeout(resolve, 250)); // Wait for 250 ms
                         await loadMissionItem(val,  parseInt(key));
-                        console.log(`Mission item ${parseInt(key) - 1} loaded:\n${JSON.stringify(val, null, 2)}`);
                     });
                     return new Response('MAVLink mission loaded', { status: 200 });
                 }
