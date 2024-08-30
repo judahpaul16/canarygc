@@ -24,7 +24,7 @@
 
     let ids: string[] = [];
     if (inputs) inputs.forEach((input) => {
-      ids.push(input.placeholder.toLowerCase().replaceAll(" ", "-").replaceAll(/\(?\)?/g, ""));
+      ids.push(`input-${input.type}-${inputs.indexOf(input)}`);
     });
     
     if (inputs && inputValues.length < inputs.length && inputs.some(input => input.type !== 'checkbox')) {
@@ -65,20 +65,20 @@
                   <input type="number" step="0.0001"
                     placeholder={input.placeholder}
                     value={inputValues[inputs.indexOf(input)]}
-                    id={input.placeholder.toLowerCase().replaceAll(" ", "-").replaceAll(/\(?\)?/g, "")}
+                    id={`input-${input.type}-${inputs.indexOf(input)}`}
                     class="form-input"
                   required />
                 {:else if input.type === 'text'}
                   <input type="text"
                     placeholder={input.placeholder}
                     value={inputValues[inputs.indexOf(input)]}
-                    id={input.placeholder.toLowerCase().replaceAll(" ", "-").replaceAll(/\(?\)?/g, "")}
+                    id={`input-${input.type}-${inputs.indexOf(input)}`}
                     class="form-input"
                   required />
                 {:else if input.type === 'checkbox'}
                   <div class="flex justify-center items-center">
                     <input type="checkbox"
-                      id={input.placeholder.toLowerCase().replaceAll(" ", "-").replaceAll(/\(?\)?/g, "")}
+                      id={`input-${input.type}-${inputs.indexOf(input)}`}
                       class="form-input"
                     />
                     <label for={input.placeholder} class="text-white ml-2">{input.placeholder}</label>
