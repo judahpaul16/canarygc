@@ -239,7 +239,56 @@
                     },
                 ],
                 onConfirm: () => {
-                    removeAllActions(modal.inputValue === "true");
+                    removeAllActions(modal.inputValues![0] === "true");
+                    modal.$destroy();
+                },
+            },
+        });
+    }
+
+    function setHomeLocation() {
+        let modal = new Modal({
+            target: document.body,
+            props: {
+                title: "Set Home Location",
+                content: "Please enter the latitude and longitude for home. This is where the MAV will return in RTL mode.",
+                isOpen: true,
+                confirmation: true,
+                notification: false,
+                inputs: [
+                    {
+                        type: "number",
+                        placeholder: "Latitude",
+                    },
+                    {
+                        type: "number",
+                        placeholder: "Longitude",
+                    },
+                ],
+                onConfirm: async () => {
+                    let lat = parseFloat(modal.inputValues![0]);
+                    let lon = parseFloat(modal.inputValues![1]);
+                    if (isNaN(lat) || isNaN(lon)) {
+                        alert("Please enter a valid latitude and longitude.");
+                        return;
+                    }
+                    try {
+                        let response = await fetch("/api/mavlink/send_command", {
+                            method: "POST",
+                            headers: {
+                                "content-type": "application/json",
+                                "command": "DO_SET_HOME",
+                                "params": `${[0, 0, 0, 0, lat, lon, 0]}`,
+                            },
+                        });
+                        if (response.ok) {
+                            console.log(await response.text());
+                        } else {
+                            console.error(`Error: ${await response.text()}`);
+                        }
+                    } catch (error) {
+                        console.error("Error:", error);
+                    }
                     modal.$destroy();
                 },
             },
@@ -250,6 +299,10 @@
 <section
     class="flight-plan-settings bg-[#1c1c1e] rounded-lg p-4 h-full text-white"
 >
+    <button on:click={setHomeLocation}>
+        <i class="fas fa-home text-[#e6dc53]"></i>
+        Set Home Location
+    </button>
     <button on:click={toggleMissionPlans}>
         <i class="fas fa-globe text-[#5398e6]"></i>
         Manage Mission Plans
