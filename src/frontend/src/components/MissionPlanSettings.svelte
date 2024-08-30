@@ -25,28 +25,23 @@
         });
     }
 
-    async function loadMissionPlan() {
+    async function saveMissionPlan() {
         const modal = new Modal({
             target: document.body,
             props: {
-                title: "Load Mission Plan",
-                content: "Are you sure you want to load this mission plan? This action will overwrite the currently loaded mission plan.",
+                title: "Save & Load Mission Plan",
+                content: "Are you sure you want to save and load this mission plan? This action will overwrite the currently loaded mission plan.",
                 isOpen: true,
                 confirmation: true,
                 notification: false,
                 onConfirm: async () => {
-                    await handleLoad(title, actions);
+                    await handleSave(title, actions);
                 },
                 onCancel: () => {
                     modal.$destroy();
                 },
             },
         });
-    }
-
-    async function saveMissionPlan() {
-        let title = get(missionPlanTitleStore) || "Untitled Mission";
-        handleSave(title, actions);
     }
 
     async function handleLoad(title: string, actions: MissionPlanActions) {
@@ -71,11 +66,63 @@
     }
         
     async function handleSave(title: string, plan: MissionPlanActions) {
+        await handleLoad(title, plan);
+        let id = "";
+        let missionExists = async () => {
+            let exists = false;
+            await pb.collection("mission_plans").getFirstListItem(`title = "${title}"`).then((response) => {
+                if (response) {
+                    exists = true;
+                    id = response.id;
+                }
+            });
+            return exists;
+        };
+        if (await missionExists()) {
+            await handleUpdate(id, title, plan);
+        } else {
+            let missionPlan = {
+                title: title,
+                actions: plan,
+                isLoaded: true,
+            };
+            let response = await pb.collection("mission_plans").create(missionPlan).catch((error) => {
+                new Modal({
+                    target: document.body,
+                    props: {
+                        title: "Error",
+                        content: error.message,
+                        isOpen: true,
+                        confirmation: false,
+                        notification: true,
+                    },
+                });
+            });
+            if (response) {
+                let modal = new Modal({
+                    target: document.body,
+                    props: {
+                        title: "Mission Plan Saved",
+                        content: "The mission plan has been saved successfully.",
+                        isOpen: true,
+                        confirmation: false,
+                        notification: true,
+                    },
+                });
+                setTimeout(() => {
+                    modal.$destroy();
+                }, 3000);
+            }
+        }
+    }
+
+    async function handleUpdate(id: string, title: string, plan: MissionPlanActions) {
         let missionPlan = {
             title: title,
             actions: plan,
+            isLoaded: true,
         };
-        let response = await pb.collection("mission_plans").create(missionPlan).catch((error) => {
+        let response = await pb.collection("mission_plans").update(id, missionPlan).catch((error) => {
             new Modal({
                 target: document.body,
                 props: {
@@ -91,8 +138,8 @@
             let modal = new Modal({
                 target: document.body,
                 props: {
-                    title: "Mission Plan Saved",
-                    content: "The mission plan has been saved successfully.",
+                    title: "Mission Plan Updated",
+                    content: "The mission plan has been updated successfully.",
                     isOpen: true,
                     confirmation: false,
                     notification: true,
@@ -159,7 +206,7 @@
 
         if (clearLoadedPlan) {
             try {
-                let response = await fetch("/api/mavlink/clear_missions", {
+                let response = await fetch("/api/mavlink/clear_mission", {
                     method: "POST",
                     headers: {
                         "content-type": "application/json",
@@ -181,18 +228,98 @@
             target: document.body,
             props: {
                 title: "Clear Mission Plan",
-                content: "Are you sure you want to clear the current mission plan? This action will remove all actions from the map. Check the box to also clear the currently loaded mission plan.",
+                content: "Are you sure you want to clear the current mission plan? This action will remove all actions from the map. Check the box to also clear the mission plan on the flight controller.",
                 isOpen: true,
                 confirmation: true,
                 notification: false,
                 inputs: [
                     {
                         type: "checkbox",
-                        placeholder: "Clear Loaded Mission Plan",
+                        placeholder: "Clear on Flight Controller",
                     },
                 ],
                 onConfirm: () => {
-                    removeAllActions(modal.inputValue === "true");
+                    removeAllActions(modal.inputValues![0] === "true");
+                    modal.$destroy();
+                },
+            },
+        });
+    }
+
+    function setHomeLocation() {
+        let modal = new Modal({
+            target: document.body,
+            props: {
+                title: "Set Home Location",
+                content: "Please enter the latitude and longitude for home. This is where the MAV will return in RTL mode.",
+                isOpen: true,
+                confirmation: true,
+                notification: false,
+                inputs: [
+                    {
+                        type: "number",
+                        placeholder: "Latitude",
+                    },
+                    {
+                        type: "number",
+                        placeholder: "Longitude",
+                    },
+                ],
+                onConfirm: async () => {
+                    let lat = Number((parseFloat(modal.inputValues![0]) * 1e7).toFixed(0));
+                    let lon = Number((parseFloat(modal.inputValues![1]) * 1e7).toFixed(0));
+                    if (isNaN(lat) || isNaN(lon)) {
+                        alert("Please enter a valid latitude and longitude.");
+                        return;
+                    }
+                    try {
+                        let response = await fetch("/api/mavlink/send_command", {
+                            method: "POST",
+                            headers: {
+                                "content-type": "application/json",
+                                "command": "DO_SET_HOME",
+                                "params": `${[0, 0, 0, 0, lat, lon, 0]}`,
+                                "useCmdLong": "false",
+                            },
+                        });
+                        if (response.ok) {
+                            let newModal = new Modal({
+                                target: document.body,
+                                props: {
+                                    title: "Home Location Set",
+                                    content: "The home location has been set successfully.",
+                                    isOpen: true,
+                                    confirmation: false,
+                                    notification: true,
+                                },
+                            });
+                            setTimeout(() => {
+                                newModal.$destroy();
+                            }, 3000);
+                        } else {
+                            new Modal({
+                                target: document.body,
+                                props: {
+                                    title: "Error",
+                                    content: "An error occurred while setting the home location.",
+                                    isOpen: true,
+                                    confirmation: false,
+                                    notification: true,
+                                },
+                            });
+                        }
+                    } catch (error: any) {
+                        new Modal({
+                            target: document.body,
+                            props: {
+                                title: "Error",
+                                content: error.message,
+                                isOpen: true,
+                                confirmation: false,
+                                notification: true,
+                            },
+                        });
+                    }
                     modal.$destroy();
                 },
             },
@@ -203,13 +330,13 @@
 <section
     class="flight-plan-settings bg-[#1c1c1e] rounded-lg p-4 h-full text-white"
 >
+    <button on:click={setHomeLocation}>
+        <i class="fas fa-home text-[#e6dc53]"></i>
+        Set Home Location
+    </button>
     <button on:click={toggleMissionPlans}>
         <i class="fas fa-globe text-[#5398e6]"></i>
         Manage Mission Plans
-    </button>
-    <button on:click={loadMissionPlan}>
-        <i class="fas fa-cloud-arrow-up text-[#53c3f0]"></i>
-        Load Mission Plan
     </button>
     <button on:click={saveMissionPlan}>
         <i class="fas fa-save text-[#61cd89]"></i>
