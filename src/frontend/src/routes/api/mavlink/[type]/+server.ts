@@ -6,6 +6,7 @@ import {
     setMissionCount,
     loadMissionItem,
     clearAllMissionItems,
+    setPositionLocal,
     online,
     statusRequested,
     logs,
@@ -77,6 +78,20 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
                     });
                     return new Response('MAVLink mission loaded', { status: 200 });
                 }
+            } catch (err) {
+                console.error(err);
+                return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
+            }
+        case 'set_position_local':
+            let x: number = parseInt(request.request.headers.get('x')!);
+            let y: number = parseInt(request.request.headers.get('y')!);
+            let z: number = parseInt(request.request.headers.get('z')!);
+            if (isNaN(x) || isNaN(y) || isNaN(z)) {
+                return new Response('Invalid coordinates', { status: 400 });
+            }
+            try {
+                await setPositionLocal(x, y, z);
+                return new Response(`Local position set manually: x: ${x}, y: ${y}, z: ${z}`, { status: 200 });
             } catch (err) {
                 console.error(err);
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
