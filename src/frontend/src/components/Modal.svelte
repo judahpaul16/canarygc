@@ -6,11 +6,11 @@
   export let confirmation: boolean = false;
   export let notification: boolean = false;
   export let inputs: { type: string, placeholder: string }[] | null = null;
-  export let inputValue: number | string | null = null;
+  export let inputValues: string[] = [];
   export let onConfirm: () => void = () => {};
   export let onCancel: () => void = () => {};
 
-  $: inputValue = inputValue ?? '';
+  $: inputValues = inputs ? inputs.map(() => {return ''}) : [];
 
   const closeModal = () => {
     isOpen = false;
@@ -26,12 +26,23 @@
     if (!form.checkValidity()) {
       return;
     }
+
+    let ids: string[] = [];
+    if (inputs) inputs.forEach((input) => {
+      ids.push(input.placeholder.toLowerCase().replaceAll(" ", "-").replaceAll(/\(?\)?/g, ""));
+    });
     
-    if (inputs && inputValue === '' && inputs.some(input => input.type !== 'checkbox')) {
-      alert('Please enter a valid value.');
+    if (inputs && inputValues.length < inputs.length && inputs.some(input => input.type !== 'checkbox')) {
+      alert('Please enter a valid value for all inputs.');
       return;
-    } else if (inputs && inputs.some(input => input.type === 'checkbox')) {
-      inputValue = `${(document.querySelector(`#${inputs.find(input => input.type === 'checkbox')!.placeholder.toLowerCase().replaceAll(" ", "-")}`) as HTMLInputElement).checked}`;
+    } else if (inputs) {
+      for (let i = 0; i < inputs.length; i++) {
+        if (inputs[i].type === 'checkbox') {
+          inputValues[i] = `${(document.querySelector(`#${ids[i]}`) as HTMLInputElement).checked}`;
+        } else if (document.querySelector(`#${ids[i]}`)) {
+          inputValues[i] = (document.querySelector(`#${ids[i]}`) as HTMLInputElement).value;
+        }
+      }
     }
     
     onConfirm();
@@ -54,15 +65,30 @@
         <div class="px-4 py-2 text-white">
           {content}
           {#if inputs}
-            <div class="flex items-center justify-center w-full">
+            <div class="flex flex-col items-center justify-center w-full">
               {#each inputs as input}
                 {#if input.type === 'number'}
-                  <input type="number" placeholder={input.placeholder} bind:value={inputValue} class="form-input" required />
+                  <input type="number" step="0.0001"
+                    placeholder={input.placeholder}
+                    value={inputValues[inputs.indexOf(input)]}
+                    id={input.placeholder.toLowerCase().replaceAll(" ", "-").replaceAll(/\(?\)?/g, "")}
+                    class="form-input"
+                  required />
                 {:else if input.type === 'text'}
-                  <input type="text" placeholder={input.placeholder} bind:value={inputValue} class="form-input" required />
+                  <input type="text"
+                    placeholder={input.placeholder}
+                    value={inputValues[inputs.indexOf(input)]}
+                    id={input.placeholder.toLowerCase().replaceAll(" ", "-").replaceAll(/\(?\)?/g, "")}
+                    class="form-input"
+                  required />
                 {:else if input.type === 'checkbox'}
-                  <input type="checkbox" id={input.placeholder.toLowerCase().replaceAll(" ", "-")} class="form-input" />
-                  <label for={input.placeholder} class="text-white ml-2">{input.placeholder}</label>
+                  <div class="flex justify-center items-center">
+                    <input type="checkbox"
+                      id={input.placeholder.toLowerCase().replaceAll(" ", "-").replaceAll(/\(?\)?/g, "")}
+                      class="form-input"
+                    />
+                    <label for={input.placeholder} class="text-white ml-2">{input.placeholder}</label>
+                  </div>
                 {/if}
               {/each}
             </div>
@@ -97,7 +123,7 @@
   .form-input {
     appearance: none;
     width: fit-content;
-    margin-block: 0.75em;
+    margin-block: 0.5em;
     padding: 0.5rem;
     border: 1px solid #2d2d2d;
     border-radius: 1em;
