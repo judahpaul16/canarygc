@@ -198,7 +198,7 @@
         onConfirm: async () => {
           await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[1, 0]}`); // param2: 21196 bypasses pre-arm checks
-          await sendMavlinkCommand('NAV_TAKEOFF', `${[0, 0, 0, 0, 0, 0, modal.inputValue]}`);
+          await sendMavlinkCommand('NAV_TAKEOFF', `${[0, 0, 0, 0, 0, 0, parseInt(modal.inputValues![0])]}`);
         },
       }
     });

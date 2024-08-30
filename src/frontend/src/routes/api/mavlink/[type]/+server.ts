@@ -3,12 +3,14 @@ import {
     initializePort,
     requestSysStatus,
     sendMavlinkCommand,
+    setMissionCount,
     loadMissionItem,
-    clearAllMissions,
+    clearAllMissionItems,
+    setPositionLocal,
     online,
     statusRequested,
     logs,
-    newLogs
+    newLogs,
 } from '$lib/server/mavlink';
 
 let previousLogLength = 0;
@@ -37,14 +39,16 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
         case 'send_command':
             let command = request.request.headers.get('command');
             let params: string | number[] | null = request.request.headers.get('params');
-            let useArduPilotMega = request.request.headers.get('useArduPilotMega') === 'true';
+            let useArduPilotMega = request.request.headers.get('useArduPilotMega');
+            let useCmdLong = request.request.headers.get('useCmdLong');
+            if (useCmdLong === null) useCmdLong = 'true';
             if (params) params = params.split(',').map((param) => {
-                return parseInt(param);
+                return parseFloat(param);
             });
             try {
                 if (command) {
                     if (params === null) params = [];
-                    await sendMavlinkCommand(command, params as number[], useArduPilotMega);
+                    await sendMavlinkCommand(command, params as number[], useArduPilotMega === 'true', useCmdLong === 'true');
                     console.log(`MAVLink Command sent: ${command}, params: [${params}]`);
                     return new Response(`MAVLink Command sent: ${command}, params: [${params}]`, { status: 200 });
                 } else {
@@ -54,9 +58,9 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
                 console.error(err);
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
             }
-        case 'clear_missions':
+        case 'clear_mission':
             try {
-                await clearAllMissions();
+                await clearAllMissionItems();
                 console.log(`MAVLink missions cleared`);
                 return new Response('MAVLink missions cleared', { status: 200 });
             } catch (err) {
@@ -67,12 +71,27 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
             let actions = request.request.headers.get('actions');
             try {
                 if (actions) {
+                    await setMissionCount(Object.keys(JSON.parse(actions)).length);
                     Object.entries(JSON.parse(actions)).forEach(async ([key, val]) => {
+                        await new Promise((resolve) => setTimeout(resolve, 250)); // Wait for 250 ms
                         await loadMissionItem(val,  parseInt(key));
-                        console.log(`Mission item ${parseInt(key) - 1} loaded: ${JSON.stringify(val)}`);
                     });
                     return new Response('MAVLink mission loaded', { status: 200 });
                 }
+            } catch (err) {
+                console.error(err);
+                return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
+            }
+        case 'set_position_local':
+            let x: number = parseInt(request.request.headers.get('x')!);
+            let y: number = parseInt(request.request.headers.get('y')!);
+            let z: number = parseInt(request.request.headers.get('z')!);
+            if (isNaN(x) || isNaN(y) || isNaN(z)) {
+                return new Response('Invalid coordinates', { status: 400 });
+            }
+            try {
+                await setPositionLocal(x, y, z);
+                return new Response(`Local position set manually: x: ${x}, y: ${y}, z: ${z}`, { status: 200 });
             } catch (err) {
                 console.error(err);
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
