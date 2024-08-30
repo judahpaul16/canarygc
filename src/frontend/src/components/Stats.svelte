@@ -69,7 +69,7 @@
         notification: false,
         onConfirm: async () => {
           modal.$destroy();
-          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[isArmed ? 0 : 1, 0]}`); // param2: 21196 bypasses pre-arm checks
         }
       }
@@ -85,7 +85,8 @@
         isOpen: true,
         confirmation: true,
         notification: false,
-        onConfirm: () => {
+        onConfirm: async () => {
+          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 6]}`); // 6 is RTL: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           modal.$destroy();
           const newModal = new Modal({
             target: document.body,
@@ -111,7 +112,8 @@
         isOpen: true,
         confirmation: true,
         notification: false,
-        onConfirm: () => {
+        onConfirm: async () => {
+          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 16]}`); // 16 is POSHOLD: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           modal.$destroy();
           const newModal = new Modal({
             target: document.body,
@@ -137,7 +139,8 @@
         isOpen: true,
         confirmation: true,
         notification: false,
-        onConfirm: () => {
+        onConfirm: async () => {
+          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 3]}`); // 3 is AUTO Mode: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           modal.$destroy();
           const newModal = new Modal({
             target: document.body,
@@ -163,7 +166,8 @@
         isOpen: true,
         confirmation: true,
         notification: false,
-        onConfirm: () => {
+        onConfirm: async () => {
+          await sendMavlinkCommand('DO_SET_SERVO' , `${[1, 9, 2000]}`); // 9 is the servo number for the payload release mechanism
           modal.$destroy();
           const newModal = new Modal({
             target: document.body,
@@ -196,7 +200,7 @@
           }
         ],
         onConfirm: async () => {
-          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[1, 0]}`); // param2: 21196 bypasses pre-arm checks
           await sendMavlinkCommand('NAV_TAKEOFF', `${[0, 0, 0, 0, 0, 0, parseInt(modal.inputValues![0])]}`);
         },
@@ -214,7 +218,7 @@
         confirmation: true,
         notification: false,
         onConfirm: async () => {
-          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           await sendMavlinkCommand('NAV_LAND', `${[0, 0, 0, 0, mavLocation.lat, mavLocation.lng, 0]}`);
         },
       }
