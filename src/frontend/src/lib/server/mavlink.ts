@@ -194,7 +194,7 @@ async function setPositionLocal(x: number, y: number, z: number) {
     msg.coordinateFrame = 1; // MAV_FRAME_LOCAL_NED
     // ignore velocity and acceleration and yaw
     // @ts-ignore
-    msg.typeMask = 0b110111111000;
+    msg.typeMask = 0b111111111000;
     msg.x = x;
     msg.y = y;
     msg.z = z;
