@@ -271,7 +271,7 @@
                     </select>
                     <div class="text-center flex justify-center items-center gap-2 mt-2">
                       <label for="altitude" class="text-[9pt] mr-1">Altitude</label>
-                      <input type="number" min="0" name="altitude" id="altitude-{index}" class="altitude" placeholder="0: current alt" value={String(actions[Number(index)].alt)} on:change={updateAltitude}>
+                      <input type="number" min="0" name="altitude" id="altitude-{index}" class="altitude" placeholder="0: current alt" value={String(actions[Number(index)].alt ?? '')} on:change={updateAltitude}>
                       <span class="text-xs text-gray-400">m</span>
                     </div>
                 </div>

@@ -35,6 +35,8 @@
                 confirmation: true,
                 notification: false,
                 onConfirm: async () => {
+                    // @ts-ignore
+                    let title = document.getElementById("flight-plan-title")!.value === '' ? "Untitled Mission" : document.getElementById("flight-plan-title")!.value;
                     await handleSave(title, actions);
                 },
                 onCancel: () => {
@@ -45,6 +47,17 @@
     }
 
     async function handleLoad(title: string, actions: MissionPlanActions) {
+        
+        await pb.collection("mission_plans").getFullList().then((response) => {
+            if (response.length > 0) {
+                response.forEach(async (item) => {
+                    if (item.isLoaded === 1) {
+                        await pb.collection("mission_plans").update(item.id, { isLoaded: 0 });
+                    }
+                });
+            }
+        });
+
         missionPlanTitleStore.set(title);
         missionPlanActionsStore.set(actions);
         try {
@@ -67,24 +80,27 @@
         
     async function handleSave(title: string, plan: MissionPlanActions) {
         await handleLoad(title, plan);
+
         let id = "";
         let missionExists = async () => {
             let exists = false;
-            await pb.collection("mission_plans").getFirstListItem(`title = "${title}"`).then((response) => {
+            await pb.collection("mission_plans").getFirstListItem(`title = "${title}"`).catch((error) => {
+                exists = false;
+            }).then((response) => {
                 if (response) {
                     exists = true;
                     id = response.id;
                 }
             });
             return exists;
-        };
+        };        
         if (await missionExists()) {
             await handleUpdate(id, title, plan);
         } else {
             let missionPlan = {
                 title: title,
                 actions: plan,
-                isLoaded: true,
+                isLoaded: 1,
             };
             let response = await pb.collection("mission_plans").create(missionPlan).catch((error) => {
                 new Modal({
@@ -120,7 +136,7 @@
         let missionPlan = {
             title: title,
             actions: plan,
-            isLoaded: true,
+            isLoaded: 1,
         };
         let response = await pb.collection("mission_plans").update(id, missionPlan).catch((error) => {
             new Modal({

@@ -23,6 +23,10 @@
     mavArmedStateStore
 
   } from '../stores/mavlinkStore';
+  import {
+    missionPlanTitleStore,
+    missionPlanActionsStore
+  } from '../stores/missionPlanStore';
   import Modal from '../components/Modal.svelte';
 
   let offline_modal: Modal;
@@ -107,6 +111,26 @@
         });
       error_modal.isOpen = true;
       return;
+    }
+  }
+
+  async function checkLoadedMission() {
+    try {
+      const response = await pb.collection('mission_plans').getFullList();
+      if (response.length > 0) {
+        const loadedMission = response.find((mission: any) => mission.isLoaded === 1);
+        if (loadedMission) {
+          missionPlanTitleStore.set(loadedMission.title);
+          missionPlanActionsStore.set(loadedMission.actions);
+        }
+      }
+    } catch (error: any) {
+      if (error.message.includes('The request was autocancelled')) {
+        // ignore it
+      } else {
+        console.error('Error:', error.message || error);
+        console.error('Stack Trace:', error.stack || 'No stack trace available');
+      }
     }
   }
 
@@ -207,6 +231,8 @@
       await cleanupBlackBoxCollection();
       await checkOnlineStatus();
     }, 1100);
+
+    await checkLoadedMission();
     
     const dashboard = document.querySelector('.dashboard');
     if (dashboard) {
@@ -255,9 +281,9 @@
           name: 'mission_plans',
           type: 'base',
           schema: [
-            { name: 'title', type: 'text', options: { maxSize: 100000000 } },
+            { name: 'title', type: 'text', default: 'Untitled Mission', options: { maxSize: 100000000 } },
             { name: 'actions', type: 'json', required: true, options: { maxSize: 100000000 } },
-            { name: 'isLoaded', type: 'bool', required: true, default: false }
+            { name: 'isLoaded', type: 'number', default: 0 }
           ]
         };
         await pb.collections.create(newCollection);
