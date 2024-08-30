@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { mapStore } from '../stores/mapStore';
-  import { mavLocationStore, mavStateStore, missionStateStore } from '../stores/mavlinkStore';
+  import { mavLocationStore, mavModeStore, mavStateStore, missionStateStore } from '../stores/mavlinkStore';
   import { missionPlanTitleStore, missionPlanActionsStore, type MissionPlanItem, type MissionPlanActions } from '../stores/missionPlanStore';
   import Modal from './Modal.svelte';
   import { get } from 'svelte/store';
@@ -17,6 +17,7 @@
   
   $: map = $mapStore;
   $: mavLocation = $mavLocationStore;
+  $: mavMode = $mavModeStore;
   $: title = $missionPlanTitleStore;
   $: actions = $missionPlanActionsStore;
   $: systemState = $mavStateStore;
@@ -29,6 +30,10 @@
 
     mavLocationStore.subscribe((value) => {
       mavLocation = value;
+    });
+
+    mavModeStore.subscribe((value) => {
+      mavMode = value;
     });
 
     missionPlanTitleStore.subscribe((value) => {
@@ -48,6 +53,104 @@
       input.style.width = `${width}px`;
     input.addEventListener('input', resizeInput);
   });
+
+  async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
+    const response = await fetch(`/api/mavlink/send_command`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'command': command,
+        'params': params,
+        'useArduPilotMega': useArduPilotMega
+      },
+    });
+    if (response.ok) {
+      console.log(await response.text());
+    } else {
+      console.error(`Error: ${await response.text()}`);
+    }
+  }
+  
+  function stopMission() {
+    let modal = new Modal({
+      target: document.body,
+      props: {
+        title: 'Stop Flight',
+        content: 'Are you sure you want to stop the flight?',
+        isOpen: true,
+        confirmation: true,
+        notification: false,
+        onConfirm: async () => {
+          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 6]}`); // 6 is RTL: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+          modal.$destroy();
+          const newModal = new Modal({
+            target: document.body,
+            props: {
+              title: 'Flight Stopped',
+              content: 'The flight has been stopped.',
+              isOpen: true,
+              confirmation: false,
+              notification: true,
+            }
+          });
+        },
+      }
+    });
+  }
+
+  function pauseMission() {
+    let modal = new Modal({
+      target: document.body,
+      props: {
+        title: 'Pause Flight',
+        content: 'Are you sure you want to pause the flight?',
+        isOpen: true,
+        confirmation: true,
+        notification: false,
+        onConfirm: async () => {
+          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 16]}`); // 16 is POSHOLD: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+          modal.$destroy();
+          const newModal = new Modal({
+            target: document.body,
+            props: {
+              title: 'Flight Paused',
+              content: 'The flight has been paused.',
+              isOpen: true,
+              confirmation: false,
+              notification: true,
+            }
+          });
+        },
+      }
+    });
+  }
+
+  function resumeMission() {
+    let modal = new Modal({
+      target: document.body,
+      props: {
+        title: 'Resume Flight',
+        content: 'Are you sure you want to resume the flight?',
+        isOpen: true,
+        confirmation: true,
+        notification: false,
+        onConfirm: async () => {
+          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 3]}`); // 3 is AUTO Mode: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+          modal.$destroy();
+          const newModal = new Modal({
+            target: document.body,
+            props: {
+              title: 'Flight Resumed',
+              content: 'The flight has been resumed.',
+              isOpen: true,
+              confirmation: false,
+              notification: true,
+            }
+          });
+        },
+      }
+    });
+  }
 
   function addAction() {
     mavLocation = get(mavLocationStore)!;
@@ -198,23 +301,8 @@
     missionPlanActionsStore.set(actions);
   }
   
-  function checkState(states: string[], type: string, state: string) {
-    // state arg is unused; only included for triggering reactivity
-    if (type === 'system') {
-      for (let state of states) {
-        if (systemState.search(state) !== -1) {
-          return true;
-        }
-      }
-      return false;
-    } else if (type === 'mission') {
-      for (let state of states) {
-        if (missionState.search(state) !== -1) {
-          return true;
-        }
-      }
-      return false;
-    }
+  function checkMode(target: string, mode: string) {
+    return target.includes(mode);
   }
 </script>
 
@@ -227,24 +315,24 @@
         How do I create a mission plan?
       </a>
       <button class="px-2 py-1 bg-[#588ae7] text-white rounded-lg hover:bg-[#6f9ff9]" on:click={() => {}}>
-        <i class="fas fa-check"></i>
-        <div class="tooltip">Validate Mission Plan</div>
+          <i class="fas fa-check"></i>
+          <div class="tooltip">Validate Mission Plan</div>
       </button>
-      {#if !checkState(['ACTIVE'], 'mission', missionState)}
+      {#if !checkMode('AUTO', mavMode)}
         <button class="px-2 py-1 bg-[#55b377] text-white rounded-lg hover:bg-[#61cd89]"
-          disabled={!checkState(['PAUSED', 'NOT_STARTED'], 'mission', missionState)} on:click={() => {}}>
-            <i class="fas fa-play"></i>
-            <div class="tooltip">Start/Resume Mission</div>
+          disabled={checkMode('AUTO', mavMode)} on:click={() => {resumeMission()}}>
+              <i class="fas fa-play"></i>
+              <div class="tooltip">Start/Resume Mission</div>
         </button>
       {:else}
         <button class="px-2 py-1 bg-[#da864e] text-white rounded-lg hover:bg-[#ff995e]"
-          disabled={!checkState(['ACTIVE'], 'mission', missionState)} on:click={() => {}}>
-            <i class="fas fa-pause"></i>
-            <div class="tooltip">Pause Mission (Loiter)</div>
+          disabled={!checkMode('AUTO', mavMode)} on:click={() => {pauseMission()}}>
+              <i class="fas fa-pause"></i>
+              <div class="tooltip">Pause Mission (Loiter)</div>
         </button>
       {/if}
       <button class="px-2 py-1 bg-[#f87171] text-white rounded-lg hover:bg-[#ff7e7e]"
-          disabled={!checkState(['ACTIVE'], 'mission', missionState)} on:click={() => {}}>
+          disabled={!checkMode('AUTO', mavMode)} on:click={() => {stopMission()}}>
         <i class="fas fa-stop"></i>
         <div class="tooltip">Stop Mission (RTL)</div>
       </button>

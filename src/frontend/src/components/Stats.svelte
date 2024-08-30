@@ -76,7 +76,7 @@
     });
   }
 
-  function stopFlight() {
+  function stopMission() {
     let modal = new Modal({
       target: document.body,
       props: {
@@ -103,7 +103,7 @@
     });
   }
 
-  function pauseFlight() {
+  function pauseMission() {
     let modal = new Modal({
       target: document.body,
       props: {
@@ -130,7 +130,7 @@
     });
   }
 
-  function resumeFlight() {
+  function resumeMission() {
     let modal = new Modal({
       target: document.body,
       props: {
@@ -224,24 +224,9 @@
       }
     });
   }
-
-  function checkState(states: string[], type: string, state: string) {
-    // state arg is unused; only included for triggering reactivity
-    if (type === 'system') {
-      for (let state of states) {
-        if (systemState.search(state) !== -1) {
-          return true;
-        }
-      }
-      return false;
-    } else if (type === 'mission') {
-      for (let state of states) {
-        if (missionState.search(state) !== -1) {
-          return true;
-        }
-      }
-      return false;
-    }
+  
+  function checkMode(target: string, mode: string) {
+    return target.includes(mode);
   }
 </script>
 
@@ -261,7 +246,7 @@
       <div class="w-full mb-2">Loaded Mission Plan: <span class="text-[#66e1ff]">{missionPlanTitle || 'No mission plan loaded.'}</span></div>
       <div class="flex flex-col items-center justify-end">
         <div class="w-full">
-          <span>Flight Progress: {missionState !== 'Unknown' ? flightProgress : '--'}% (ETA 00:00:00)</span>
+          <span>Mission Progress: {missionState !== 'Unknown' ? flightProgress : '--'}% (ETA 00:00:00)</span>
           <div class="progress-bar bg-gray-700 rounded-full h-2.5 mt-3">
             <div class="progress-bar-inner h-2.5 rounded-full" style="width: {missionState !== 'Unknown' ? flightProgress : 0}%;"></div>
           </div>
@@ -279,38 +264,38 @@
               <div class="tooltip">Release Payload</div>
             </button>
           </div>
-          {#if !checkState(['ACTIVE'], 'system', systemState)}
+          {#if !checkMode('AUTO', mavMode)}
             <div class="relative group flex flex-col items-center">
-              <button class="circular-button" on:click={initTakeoff} disabled={!checkState(['STANDBY'], 'system', systemState)}>
+              <button class="circular-button" on:click={initTakeoff} disabled={checkMode('AUTO', mavMode)}>
                 <i class="fas fa-plane-departure"></i>
                 <div class="tooltip">Initiate Takeoff</div>
               </button>
             </div>
           {:else}
             <div class="relative group flex flex-col items-center">
-              <button class="circular-button" on:click={initLanding} disabled={!checkState(['ACTIVE'], 'system', missionState)}>
+              <button class="circular-button" on:click={initLanding} disabled={checkMode('AUTO', mavMode)}>
                 <i class="fas fa-plane-arrival"></i>
                 <div class="tooltip">Initiate Landing</div>
               </button>
             </div>
           {/if}
-          {#if !checkState(['ACTIVE'], 'mission', missionState)}
+          {#if !checkMode('AUTO', mavMode)}
             <div class="relative group">
-              <button class="circular-button" on:click={resumeFlight} disabled={!checkState(['PAUSED', 'NOT_STARTED'], 'mission', missionState)}>
+              <button class="circular-button" on:click={resumeMission} disabled={checkMode('AUTO', mavMode)}>
                 <i class="fas fa-play"></i>
                 <div class="tooltip">Start/Resume Flight</div>
               </button>
             </div>
           {:else}
             <div class="relative group">
-              <button class="circular-button" on:click={pauseFlight} disabled={!checkState(['ACTIVE'], 'mission', missionState)}>
+              <button class="circular-button" on:click={pauseMission} disabled={!checkMode('AUTO', mavMode)}>
                 <i class="fas fa-pause"></i>
                 <div class="tooltip">Pause Flight (Loiter)</div>
               </button>
             </div>
           {/if}
           <div class="relative group">
-            <button class="circular-button" on:click={stopFlight} disabled={!checkState(['ACTIVE'], 'mission', missionState)}>
+            <button class="circular-button" on:click={stopMission} disabled={!checkMode('AUTO', mavMode)}>
               <i class="fas fa-stop text-red-400"></i>
               <div class="tooltip">Stop Flight (RTL)</div>
             </button>
