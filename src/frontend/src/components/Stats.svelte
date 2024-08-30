@@ -349,7 +349,6 @@
     display: inline-flex;
     justify-content: center;
     width: 100%;
-    padding-bottom: 1.0em;
     margin-top: 1.5rem;
   }
 
