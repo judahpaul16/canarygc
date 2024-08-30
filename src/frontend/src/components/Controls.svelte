@@ -66,6 +66,7 @@
         <div class="label text-sm mb-1">Max Altitude<span class="text-xs text-gray-400 mt-1 ml-1">(m)</span></div>
         <input type="number"  min="0" class="form-input" placeholder="Default: 100" />
       </div>
+      <button class="bg-[#2d2d2d] hover:brightness-150 text-xs text-white rounded-full py-1 px-4 mt-1">Set</button>
     </div>
     <div class="separator"></div>
     <div class="column flex flex-col items-center justify-center text-center space-y-4">
