@@ -157,13 +157,16 @@
     // Determine the next index
     const newIndex = Object.keys(actions).length + 1;
 
+    let type = 'NAV_WAYPOINT';
+    if (newIndex === 1) type = 'NAV_TAKEOFF';
+
     // Add new action
     actions = { 
       ...actions, 
       [newIndex]: {
-        type: 'NAV_WAYPOINT',
-        lat: mavLocation.lat + 0.000725,
-        lon: mavLocation.lng - 0.000725,
+        type: type,
+        lat: mavLocation.lat,
+        lon: mavLocation.lng,
         alt: null,
         notes: '',
         param1: null,
