@@ -281,7 +281,7 @@
             </div>
           {:else}
             <div class="relative group flex flex-col items-center">
-              <button class="circular-button" on:click={initLanding} disabled={checkMode('AUTO', mavMode)}>
+              <button class="circular-button" on:click={initLanding} disabled={checkMode('AUTO', mavMode) || checkMode('LAND', mavMode)}>
                 <i class="fas fa-plane-arrival"></i>
                 <div class="tooltip">Initiate Landing</div>
               </button>
