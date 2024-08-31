@@ -35,6 +35,8 @@
                 confirmation: true,
                 notification: false,
                 onConfirm: async () => {
+                    // @ts-ignore
+                    let title = document.getElementById("flight-plan-title")!.value === '' ? "Untitled Mission" : document.getElementById("flight-plan-title")!.value;
                     await handleSave(title, actions);
                 },
                 onCancel: () => {
@@ -45,6 +47,17 @@
     }
 
     async function handleLoad(title: string, actions: MissionPlanActions) {
+        
+        await pb.collection("mission_plans").getFullList().then((response) => {
+            if (response.length > 0) {
+                response.forEach(async (item) => {
+                    if (item.isLoaded === 1) {
+                        await pb.collection("mission_plans").update(item.id, { isLoaded: 0 });
+                    }
+                });
+            }
+        });
+
         missionPlanTitleStore.set(title);
         missionPlanActionsStore.set(actions);
         try {
@@ -67,24 +80,27 @@
         
     async function handleSave(title: string, plan: MissionPlanActions) {
         await handleLoad(title, plan);
+
         let id = "";
         let missionExists = async () => {
             let exists = false;
-            await pb.collection("mission_plans").getFirstListItem(`title = "${title}"`).then((response) => {
+            await pb.collection("mission_plans").getFirstListItem(`title = "${title}"`).catch((error) => {
+                exists = false;
+            }).then((response) => {
                 if (response) {
                     exists = true;
                     id = response.id;
                 }
             });
             return exists;
-        };
+        };        
         if (await missionExists()) {
             await handleUpdate(id, title, plan);
         } else {
             let missionPlan = {
                 title: title,
                 actions: plan,
-                isLoaded: true,
+                isLoaded: 1,
             };
             let response = await pb.collection("mission_plans").create(missionPlan).catch((error) => {
                 new Modal({
@@ -120,7 +136,7 @@
         let missionPlan = {
             title: title,
             actions: plan,
-            isLoaded: true,
+            isLoaded: 1,
         };
         let response = await pb.collection("mission_plans").update(id, missionPlan).catch((error) => {
             new Modal({
@@ -264,12 +280,17 @@
                         type: "number",
                         placeholder: "Longitude",
                     },
+                    {
+                        type: "number",
+                        placeholder: "Altitude",
+                    },
                 ],
                 onConfirm: async () => {
                     let lat = Number((parseFloat(modal.inputValues![0]) * 1e7).toFixed(0));
                     let lon = Number((parseFloat(modal.inputValues![1]) * 1e7).toFixed(0));
-                    if (isNaN(lat) || isNaN(lon)) {
-                        alert("Please enter a valid latitude and longitude.");
+                    let alt = Number(parseFloat(modal.inputValues![2]).toFixed(0));
+                    if (isNaN(lat) || isNaN(lon) || isNaN(alt)) {
+                        alert("Please enter a valid latitude, longitude, and altitude.");
                         return;
                     }
                     try {
@@ -278,7 +299,7 @@
                             headers: {
                                 "content-type": "application/json",
                                 "command": "DO_SET_HOME",
-                                "params": `${[0, 0, 0, 0, lat, lon, 0]}`,
+                                "params": `${[0, 0, 0, 0, lat, lon, alt]}`,
                                 "useCmdLong": "false",
                             },
                         });
@@ -336,7 +357,7 @@
     </button>
     <button on:click={toggleMissionPlans}>
         <i class="fas fa-globe text-[#5398e6]"></i>
-        Manage Mission Plans
+        Manage Plans
     </button>
     <button on:click={saveMissionPlan}>
         <i class="fas fa-save text-[#61cd89]"></i>

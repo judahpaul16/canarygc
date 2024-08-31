@@ -59,7 +59,7 @@
         <div class="px-4 py-2 text-white">
           {content}
           {#if inputs}
-            <div class="flex flex-col items-center justify-center w-full">
+            <div class="text-center gap-2 items-center justify-center w-full">
               {#each inputs as input}
                 {#if input.type === 'number'}
                   <input type="number" step="0.0001"
@@ -116,7 +116,8 @@
   .form-input {
     appearance: none;
     width: fit-content;
-    margin-block: 0.5em;
+    max-width: 150px;
+    margin: 0.5em;
     padding: 0.5rem;
     border: 1px solid #2d2d2d;
     border-radius: 1em;
