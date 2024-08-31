@@ -86,7 +86,7 @@ async function requestSysStatus() {
     request.interval = 1000000; // 1 Hz (every 1 seconds)
     request.responseTarget = 1;
     await send(port!, request);
-    
+
     request = new common.SetMessageIntervalCommand();
     request.targetSystem = 1;
     request.targetComponent = 1;

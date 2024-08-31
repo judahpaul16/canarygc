@@ -1,45 +1,47 @@
 <script lang="ts">
-  import { missionPlanTitleStore, missionPlanActionsStore } from '../stores/missionPlanStore';
   import {
+    missionPlanTitleStore,
+    missionCountStore,
+    missionIndexStore
+  } from '../stores/missionPlanStore';
+  import {
+    mavModelStore,
     mavTypeStore,
     mavStateStore,
-    missionStateStore,
     mavModeStore,
     mavAltitudeStore,
     mavSpeedStore,
     mavBatteryStore,
     mavArmedStateStore,
-
-    mavLocationStore
-
+    mavLocationStore,
+    mavReadyForTakeoffStore
   } from '../stores/mavlinkStore';
   import { get } from 'svelte/store';
 
   import Modal from './Modal.svelte';
 
-  export let mavName: string = "CUAV X7 Running Ardupilot";
+  export let mavModel: string = get(mavModelStore);
   export let mavType: string = get(mavTypeStore);
   export let isArmed: boolean = get(mavArmedStateStore)
   export let speed: number = get(mavSpeedStore);
   export let altitude: number = get(mavAltitudeStore);
   export let systemState: string = get(mavStateStore);
-  export let missionState: string = get(missionStateStore);
   export let batteryStatus: number | null = get(mavBatteryStore);
   export let mavMode: string = get(mavModeStore);
-  export let flightProgress: number = 50;
+  let readyForTakeoff = false;
 
-  let interval: number;
-
+  $: mavModel = $mavModelStore;
   $: mavType = $mavTypeStore;
   $: isArmed = $mavArmedStateStore;
   $: systemState = $mavStateStore;
-  $: missionState = $missionStateStore;
   $: mavMode = $mavModeStore;
   $: batteryStatus = $mavBatteryStore;
   $: altitude = $mavAltitudeStore;
   $: speed = $mavSpeedStore;
   $: missionPlanTitle = $missionPlanTitleStore;
   $: mavLocation = $mavLocationStore;
+  $: missionProgress = Math.round(($missionIndexStore / $missionCountStore) * 100)
+  $: readyForTakeoff = $mavReadyForTakeoffStore;
 
   async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
     const response = await fetch(`/api/mavlink/send_command`, {
@@ -69,28 +71,29 @@
         notification: false,
         onConfirm: async () => {
           modal.$destroy();
-          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[isArmed ? 0 : 1, 0]}`); // param2: 21196 bypasses pre-arm checks
         }
       }
     });
   }
 
-  function stopFlight() {
+  function stopMission() {
     let modal = new Modal({
       target: document.body,
       props: {
-        title: 'Stop Flight',
+        title: 'Stop Mission',
         content: 'Are you sure you want to stop the flight?',
         isOpen: true,
         confirmation: true,
         notification: false,
-        onConfirm: () => {
+        onConfirm: async () => {
+          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 6]}`); // 6 is RTL: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           modal.$destroy();
           const newModal = new Modal({
             target: document.body,
             props: {
-              title: 'Flight Stopped',
+              title: 'Mission Stopped',
               content: 'The flight has been stopped.',
               isOpen: true,
               confirmation: false,
@@ -102,21 +105,22 @@
     });
   }
 
-  function pauseFlight() {
+  function pauseMission() {
     let modal = new Modal({
       target: document.body,
       props: {
-        title: 'Pause Flight',
+        title: 'Pause Mission',
         content: 'Are you sure you want to pause the flight?',
         isOpen: true,
         confirmation: true,
         notification: false,
-        onConfirm: () => {
+        onConfirm: async () => {
+          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 16]}`); // 16 is POSHOLD: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           modal.$destroy();
           const newModal = new Modal({
             target: document.body,
             props: {
-              title: 'Flight Paused',
+              title: 'Mission Paused',
               content: 'The flight has been paused.',
               isOpen: true,
               confirmation: false,
@@ -128,21 +132,22 @@
     });
   }
 
-  function resumeFlight() {
+  function resumeMission() {
     let modal = new Modal({
       target: document.body,
       props: {
-        title: 'Resume Flight',
+        title: 'Start / Resume Mission',
         content: 'Are you sure you want to resume the flight?',
         isOpen: true,
         confirmation: true,
         notification: false,
-        onConfirm: () => {
+        onConfirm: async () => {
+          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 3]}`); // 3 is AUTO Mode: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           modal.$destroy();
           const newModal = new Modal({
             target: document.body,
             props: {
-              title: 'Flight Resumed',
+              title: 'Mission Resumed',
               content: 'The flight has been resumed.',
               isOpen: true,
               confirmation: false,
@@ -163,7 +168,8 @@
         isOpen: true,
         confirmation: true,
         notification: false,
-        onConfirm: () => {
+        onConfirm: async () => {
+          await sendMavlinkCommand('DO_SET_SERVO' , `${[1, 9, 2000]}`); // 9 is the servo number for the payload release mechanism
           modal.$destroy();
           const newModal = new Modal({
             target: document.body,
@@ -196,7 +202,7 @@
           }
         ],
         onConfirm: async () => {
-          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[1, 0]}`); // param2: 21196 bypasses pre-arm checks
           await sendMavlinkCommand('NAV_TAKEOFF', `${[0, 0, 0, 0, 0, 0, parseInt(modal.inputValues![0])]}`);
         },
@@ -214,35 +220,25 @@
         confirmation: true,
         notification: false,
         onConfirm: async () => {
-          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           await sendMavlinkCommand('NAV_LAND', `${[0, 0, 0, 0, mavLocation.lat, mavLocation.lng, 0]}`);
         },
       }
     });
   }
-
-  function checkState(states: string[], type: string, state: string) {
-    // state arg is unused; only included for triggering reactivity
-    if (type === 'system') {
-      for (let state of states) {
-        if (systemState.search(state) !== -1) {
-          return true;
-        }
-      }
-      return false;
-    } else if (type === 'mission') {
-      for (let state of states) {
-        if (missionState.search(state) !== -1) {
-          return true;
-        }
-      }
-      return false;
-    }
+  
+  function checkMode(target: string, mode: string) {
+    return target.includes(mode);
   }
 </script>
 
 <div class="stats bg-[#1c1c1e] text-white p-4 rounded-lg flex flex-col space-y-2 h-full overflow-y-auto overflow-x-hidden text-sm">
-  <h2 class="text-lg font-bold">{mavName}</h2>
+  <h2 class="text-lg font-bold">
+    <a href="https://mavlink.io/en/messages/common.html#MAV_AUTOPILOT" target="_blank" title="More Information">
+      <i class="fas fa-info-circle text-gray-500 hover:text-[#62bbff] mr-[0.2em]"></i>
+    </a>
+    <span class="text-gray-500">Autopilot Model:</span>&nbsp;{mavModel}
+  </h2>
   <hr class="border-[#2d2d2d]" />
   <div class="h-full flex flex-col justify-evenly">
     <div class="grid grid-cols-2 gap-2">
@@ -257,9 +253,9 @@
       <div class="w-full mb-2">Loaded Mission Plan: <span class="text-[#66e1ff]">{missionPlanTitle || 'No mission plan loaded.'}</span></div>
       <div class="flex flex-col items-center justify-end">
         <div class="w-full">
-          <span>Flight Progress: {missionState !== 'Unknown' ? flightProgress : '--'}% (ETA 00:00:00)</span>
+          <span>Mission Progress: {missionProgress === 0 && mavMode === 'AUTO' ? '--' : missionProgress}% (ETA 00:00:00)</span>
           <div class="progress-bar bg-gray-700 rounded-full h-2.5 mt-3">
-            <div class="progress-bar-inner h-2.5 rounded-full" style="width: {missionState !== 'Unknown' ? flightProgress : 0}%;"></div>
+            <div class="progress-bar-inner h-2.5 rounded-full" style="width: {missionProgress}%;"></div>
           </div>
         </div>
         <div class="button-container mt-6">
@@ -275,40 +271,40 @@
               <div class="tooltip">Release Payload</div>
             </button>
           </div>
-          {#if !checkState(['ACTIVE'], 'system', systemState)}
+          {#if systemState === 'STANDBY'}
             <div class="relative group flex flex-col items-center">
-              <button class="circular-button" on:click={initTakeoff} disabled={!checkState(['STANDBY'], 'system', systemState)}>
+              <button class="circular-button" on:click={initTakeoff} disabled={checkMode('AUTO', mavMode) || !readyForTakeoff}>
                 <i class="fas fa-plane-departure"></i>
                 <div class="tooltip">Initiate Takeoff</div>
               </button>
             </div>
           {:else}
             <div class="relative group flex flex-col items-center">
-              <button class="circular-button" on:click={initLanding} disabled={!checkState(['ACTIVE'], 'system', missionState)}>
+              <button class="circular-button" on:click={initLanding} disabled={checkMode('AUTO', mavMode) || checkMode('LAND', mavMode)}>
                 <i class="fas fa-plane-arrival"></i>
                 <div class="tooltip">Initiate Landing</div>
               </button>
             </div>
           {/if}
-          {#if !checkState(['ACTIVE'], 'mission', missionState)}
+          {#if !checkMode('AUTO', mavMode)}
             <div class="relative group">
-              <button class="circular-button" on:click={resumeFlight} disabled={!checkState(['PAUSED', 'NOT_STARTED'], 'mission', missionState)}>
+              <button class="circular-button" on:click={resumeMission} disabled={checkMode('AUTO', mavMode)}>
                 <i class="fas fa-play"></i>
-                <div class="tooltip">Start/Resume Flight</div>
+                <div class="tooltip">Start/Resume Mission</div>
               </button>
             </div>
           {:else}
             <div class="relative group">
-              <button class="circular-button" on:click={pauseFlight} disabled={!checkState(['ACTIVE'], 'mission', missionState)}>
+              <button class="circular-button" on:click={pauseMission} disabled={!checkMode('AUTO', mavMode)}>
                 <i class="fas fa-pause"></i>
-                <div class="tooltip">Pause Flight (Loiter)</div>
+                <div class="tooltip">Pause Mission (Loiter)</div>
               </button>
             </div>
           {/if}
           <div class="relative group">
-            <button class="circular-button" on:click={stopFlight} disabled={!checkState(['ACTIVE'], 'mission', missionState)}>
+            <button class="circular-button" on:click={stopMission} disabled={!checkMode('AUTO', mavMode)}>
               <i class="fas fa-stop text-red-400"></i>
-              <div class="tooltip">Stop Flight (RTL)</div>
+              <div class="tooltip">Stop Mission (RTL)</div>
             </button>
           </div>
         </div>
@@ -349,7 +345,6 @@
     display: inline-flex;
     justify-content: center;
     width: 100%;
-    padding-bottom: 1.0em;
     margin-top: 1.5rem;
   }
 

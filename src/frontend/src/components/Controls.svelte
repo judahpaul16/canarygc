@@ -66,21 +66,22 @@
         <div class="label text-sm mb-1">Max Altitude<span class="text-xs text-gray-400 mt-1 ml-1">(m)</span></div>
         <input type="number"  min="0" class="form-input" placeholder="Default: 100" />
       </div>
+      <button class="bg-[#2d2d2d] hover:brightness-150 text-xs text-white rounded-full py-1 px-4 mt-1">Set</button>
     </div>
     <div class="separator"></div>
     <div class="column flex flex-col items-center justify-center text-center space-y-4">
       <div class="flex flex-col items-center">
-        <div class="label text-sm mb-1">Altitude Up</div>
+        <div class="label text-sm mb-1">Alt. Up</div>
         <button class="alt-button rounded-full"
             on:click={() => {setPositionLocal('0', '0', `-${altitude + 10}`)}}>
-          <i class="fas fa-arrow-up-wide-short alt-up"></i>
+          <i class="alt-up fas fa-person-arrow-up-from-line"></i>
         </button>
       </div>
       <div class="flex flex-col items-center justify-center">
-        <div class="label text-sm mb-1">Altitude Down</div>
+        <div class="label text-sm mb-1">Alt. Down</div>
         <button class="alt-button rounded-full"
             on:click={() => {setPositionLocal('0', '0', `-${altitude - 10}`)}}>
-          <i class="fas fa-arrow-down-short-wide alt-down"></i>
+          <i class="alt-down fas fa-person-arrow-down-to-line"></i>
         </button>
       </div>
     </div>
@@ -201,17 +202,17 @@
   }
 
   .alt-button:hover .alt-up {
-    transform: translateY(-0.3rem);
+    transform: translateY(-0.2rem);
     color: #66e1ff;
   }
 
   .alt-button:hover .alt-down  {
-    transform: translateY(0.3rem);
+    transform: translateY(0.2rem);
     color: #66e1ff;
   }
   
   .label {
-    font-size: 0.8rem;
+    font-size: 0.75em;
   }
 
   .map-container {

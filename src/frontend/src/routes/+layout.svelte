@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { MavType, MavState } from 'mavlink-mappings/dist/lib/minimal';
-  import { MissionState } from 'mavlink-mappings/dist/lib/common';
+  import { MavType, MavState, MavAutopilot } from 'mavlink-mappings/dist/lib/minimal';
   import { CopterMode } from 'mavlink-mappings/dist/lib/ardupilotmega';
   import PocketBase from 'pocketbase';
   import '@fortawesome/fontawesome-free/css/all.min.css';
@@ -15,14 +14,20 @@
     mavlinkLogStore,
     mavAltitudeStore,
     mavSpeedStore,
+    mavModelStore,
     mavTypeStore,
     mavStateStore,
-    missionStateStore,
     mavModeStore,
     mavBatteryStore,
-    mavArmedStateStore
-
+    mavArmedStateStore,
+    mavReadyForTakeoffStore,
   } from '../stores/mavlinkStore';
+  import {
+    missionPlanTitleStore,
+    missionPlanActionsStore,
+    missionCountStore,
+    missionIndexStore
+  } from '../stores/missionPlanStore';
   import Modal from '../components/Modal.svelte';
 
   let offline_modal: Modal;
@@ -35,8 +40,8 @@
   let logs: string[] = [];
 
   $: currentPath = $page.url.pathname;
-
   $: isNavHidden = currentPath === '/' || currentPath === '/login';
+  $: missionCountStore.set(Object.keys($missionPlanActionsStore).length);
 
   // @ts-ignore
   String.prototype.toProperCase = function () {
@@ -110,6 +115,26 @@
     }
   }
 
+  async function checkLoadedMission() {
+    try {
+      const response = await pb.collection('mission_plans').getFullList();
+      if (response.length > 0) {
+        const loadedMission = response.find((mission: any) => mission.isLoaded === 1);
+        if (loadedMission) {
+          missionPlanTitleStore.set(loadedMission.title);
+          missionPlanActionsStore.set(loadedMission.actions);
+        }
+      }
+    } catch (error: any) {
+      if (error.message.includes('The request was autocancelled')) {
+        // ignore it
+      } else {
+        console.error('Error:', error.message || error);
+        console.error('Stack Trace:', error.stack || 'No stack trace available');
+      }
+    }
+  }
+
   async function updateBlackBoxCollection(log: string) {
     try {
       // Add new logs to the collection
@@ -169,6 +194,9 @@
           // @ts-ignore
           if (type) type = MavType[parseInt(type.toString().replace('"type":', ''))].toProperCase();
           if (type) mavTypeStore.set(type as string);
+          let model: string | RegExpMatchArray | null = (text as string).match(/"autopilot":(\d+)/g);
+          if (model) model = model.toString().replace('"autopilot":', '');
+          if (model) mavModelStore.set(MavAutopilot[parseInt(model)]);
           let state: string | RegExpMatchArray | null = (text as string).match(/"systemStatus":(\d+)/g);
           if (state) state = MavState[parseInt(state.toString().replace('"systemStatus":', ''))];
           if (state) mavStateStore.set(state as string);
@@ -183,13 +211,17 @@
             mavModeStore.set(CopterMode[parseInt(customMode)]);
           }
       } else if ((text as string).includes('MISSION_CURRENT')) {
-          let missionState: string | RegExpMatchArray | null = (text as string).match(/"mission_state":(\d+)/g);
-          if (missionState) missionState = missionState.toString().replace('"mission_state":', '');
-          if (missionState) missionStateStore.set(MissionState[parseInt(missionState)]);
+          let index: string | RegExpMatchArray | null = (text as string).match(/"seq":(\d+)/g);
+          if (index) index = index.toString().replace('"seq":', '');
+          if (index) missionIndexStore.set(parseInt(index));
       } else if ((text as string).includes('SYS_STATUS')) {
           let battery: string | RegExpMatchArray | null = (text as string).match(/"batteryRemaining":(\d+)/g);
           if (battery) battery = battery.toString().replace('"batteryRemaining":', '');
           if (battery) mavBatteryStore.set(parseInt(battery));
+      } else if ((text as string).includes('STATUSTEXT')) {
+          let message: string | RegExpMatchArray | null = (text as string).match(/"text":"(.+?)"/g);
+          if (message) message = message.toString().replace('"text":"', '').replace('"', '');
+          if (message && message.includes('EKF2 IMU1 is using GPS')) mavReadyForTakeoffStore.set(true);
       }
     }
   }
@@ -207,6 +239,8 @@
       await cleanupBlackBoxCollection();
       await checkOnlineStatus();
     }, 1100);
+
+    await checkLoadedMission();
     
     const dashboard = document.querySelector('.dashboard');
     if (dashboard) {
@@ -255,9 +289,9 @@
           name: 'mission_plans',
           type: 'base',
           schema: [
-            { name: 'title', type: 'text', options: { maxSize: 100000000 } },
+            { name: 'title', type: 'text', default: 'Untitled Mission', options: { maxSize: 100000000 } },
             { name: 'actions', type: 'json', required: true, options: { maxSize: 100000000 } },
-            { name: 'isLoaded', type: 'bool', required: true, default: false }
+            { name: 'isLoaded', type: 'number', default: 0 }
           ]
         };
         await pb.collections.create(newCollection);

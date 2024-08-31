@@ -55,6 +55,25 @@
   }
 
   async function handleLoad(title: string, actions: MissionPlanActions) {
+
+    await pb.collection("mission_plans").getFullList().then((response) => {
+      if (response.length > 0) {
+        response.forEach(async (item) => {
+          if (item.isLoaded === 1) {
+            await pb.collection("mission_plans").update(item.id, { isLoaded: 0 });
+          }
+        });
+      }
+    });
+
+    let missionExists = false;
+    await pb.collection("mission_plans").getFirstListItem(`title = "${title}"`).then((response) => {
+      if (response) {
+        missionExists = true;
+        pb.collection("mission_plans").update(response.id, { isLoaded: 1 });
+      }
+    });
+
     missionPlanTitleStore.set(title);
     missionPlanActionsStore.set(actions);
     try {
