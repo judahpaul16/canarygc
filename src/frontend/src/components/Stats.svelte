@@ -264,7 +264,7 @@
               <div class="tooltip">Release Payload</div>
             </button>
           </div>
-          {#if !checkMode('AUTO', mavMode)}
+          {#if systemState === 'STANDBY'}
             <div class="relative group flex flex-col items-center">
               <button class="circular-button" on:click={initTakeoff} disabled={checkMode('AUTO', mavMode)}>
                 <i class="fas fa-plane-departure"></i>
