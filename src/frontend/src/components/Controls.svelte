@@ -71,17 +71,17 @@
     <div class="separator"></div>
     <div class="column flex flex-col items-center justify-center text-center space-y-4">
       <div class="flex flex-col items-center">
-        <div class="label text-sm mb-1">Altitude Up</div>
+        <div class="label text-sm mb-1">Alt. Up</div>
         <button class="alt-button rounded-full"
             on:click={() => {setPositionLocal('0', '0', `-${altitude + 10}`)}}>
-          <i class="fas fa-arrow-up-wide-short alt-up"></i>
+          <i class="alt-up fas fa-person-arrow-up-from-line"></i>
         </button>
       </div>
       <div class="flex flex-col items-center justify-center">
-        <div class="label text-sm mb-1">Altitude Down</div>
+        <div class="label text-sm mb-1">Alt. Down</div>
         <button class="alt-button rounded-full"
             on:click={() => {setPositionLocal('0', '0', `-${altitude - 10}`)}}>
-          <i class="fas fa-arrow-down-short-wide alt-down"></i>
+          <i class="alt-down fas fa-person-arrow-down-to-line"></i>
         </button>
       </div>
     </div>
@@ -202,17 +202,17 @@
   }
 
   .alt-button:hover .alt-up {
-    transform: translateY(-0.3rem);
+    transform: translateY(-0.2rem);
     color: #66e1ff;
   }
 
   .alt-button:hover .alt-down  {
-    transform: translateY(0.3rem);
+    transform: translateY(0.2rem);
     color: #66e1ff;
   }
   
   .label {
-    font-size: 10px;
+    font-size: 0.75em;
   }
 
   .map-container {
