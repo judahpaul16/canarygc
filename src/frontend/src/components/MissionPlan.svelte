@@ -73,7 +73,7 @@
     let modal = new Modal({
       target: document.body,
       props: {
-        title: 'Stop Flight',
+        title: 'Stop Mission',
         content: 'Are you sure you want to stop the flight?',
         isOpen: true,
         confirmation: true,
@@ -84,7 +84,7 @@
           const newModal = new Modal({
             target: document.body,
             props: {
-              title: 'Flight Stopped',
+              title: 'Mission Stopped',
               content: 'The flight has been stopped.',
               isOpen: true,
               confirmation: false,
@@ -100,7 +100,7 @@
     let modal = new Modal({
       target: document.body,
       props: {
-        title: 'Pause Flight',
+        title: 'Pause Mission',
         content: 'Are you sure you want to pause the flight?',
         isOpen: true,
         confirmation: true,
@@ -111,7 +111,7 @@
           const newModal = new Modal({
             target: document.body,
             props: {
-              title: 'Flight Paused',
+              title: 'Mission Paused',
               content: 'The flight has been paused.',
               isOpen: true,
               confirmation: false,
@@ -127,7 +127,7 @@
     let modal = new Modal({
       target: document.body,
       props: {
-        title: 'Resume Flight',
+        title: 'Resume Mission',
         content: 'Are you sure you want to resume the flight?',
         isOpen: true,
         confirmation: true,
@@ -138,7 +138,7 @@
           const newModal = new Modal({
             target: document.body,
             props: {
-              title: 'Flight Resumed',
+              title: 'Mission Resumed',
               content: 'The flight has been resumed.',
               isOpen: true,
               confirmation: false,

@@ -2,8 +2,7 @@
   import {
     missionPlanTitleStore,
     missionCountStore,
-    missionIndexStore,
-    missionProgressStore
+    missionIndexStore
   } from '../stores/missionPlanStore';
   import {
     mavModelStore,
@@ -14,8 +13,8 @@
     mavSpeedStore,
     mavBatteryStore,
     mavArmedStateStore,
-    mavLocationStore
-
+    mavLocationStore,
+    mavReadyForTakeoffStore
   } from '../stores/mavlinkStore';
   import { get } from 'svelte/store';
 
@@ -29,7 +28,7 @@
   export let systemState: string = get(mavStateStore);
   export let batteryStatus: number | null = get(mavBatteryStore);
   export let mavMode: string = get(mavModeStore);
-  export let missionProgress: number = get(missionProgressStore);
+  let readyForTakeoff = false;
 
   $: mavModel = $mavModelStore;
   $: mavType = $mavTypeStore;
@@ -41,8 +40,8 @@
   $: speed = $mavSpeedStore;
   $: missionPlanTitle = $missionPlanTitleStore;
   $: mavLocation = $mavLocationStore;
-  $: missionProgressStore.set($missionCountStore === 0 ? 0 : Math.round(($missionIndexStore / $missionCountStore) * 100));
-  $: missionProgress = $missionProgressStore;
+  $: missionProgress = Math.round(($missionIndexStore / $missionCountStore) * 100)
+  $: readyForTakeoff = $mavReadyForTakeoffStore;
 
   async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
     const response = await fetch(`/api/mavlink/send_command`, {
@@ -83,7 +82,7 @@
     let modal = new Modal({
       target: document.body,
       props: {
-        title: 'Stop Flight',
+        title: 'Stop Mission',
         content: 'Are you sure you want to stop the flight?',
         isOpen: true,
         confirmation: true,
@@ -94,7 +93,7 @@
           const newModal = new Modal({
             target: document.body,
             props: {
-              title: 'Flight Stopped',
+              title: 'Mission Stopped',
               content: 'The flight has been stopped.',
               isOpen: true,
               confirmation: false,
@@ -110,7 +109,7 @@
     let modal = new Modal({
       target: document.body,
       props: {
-        title: 'Pause Flight',
+        title: 'Pause Mission',
         content: 'Are you sure you want to pause the flight?',
         isOpen: true,
         confirmation: true,
@@ -121,7 +120,7 @@
           const newModal = new Modal({
             target: document.body,
             props: {
-              title: 'Flight Paused',
+              title: 'Mission Paused',
               content: 'The flight has been paused.',
               isOpen: true,
               confirmation: false,
@@ -137,7 +136,7 @@
     let modal = new Modal({
       target: document.body,
       props: {
-        title: 'Resume Flight',
+        title: 'Start / Resume Mission',
         content: 'Are you sure you want to resume the flight?',
         isOpen: true,
         confirmation: true,
@@ -148,7 +147,7 @@
           const newModal = new Modal({
             target: document.body,
             props: {
-              title: 'Flight Resumed',
+              title: 'Mission Resumed',
               content: 'The flight has been resumed.',
               isOpen: true,
               confirmation: false,
@@ -274,7 +273,7 @@
           </div>
           {#if systemState === 'STANDBY'}
             <div class="relative group flex flex-col items-center">
-              <button class="circular-button" on:click={initTakeoff} disabled={checkMode('AUTO', mavMode)}>
+              <button class="circular-button" on:click={initTakeoff} disabled={checkMode('AUTO', mavMode) || !readyForTakeoff}>
                 <i class="fas fa-plane-departure"></i>
                 <div class="tooltip">Initiate Takeoff</div>
               </button>
@@ -291,21 +290,21 @@
             <div class="relative group">
               <button class="circular-button" on:click={resumeMission} disabled={checkMode('AUTO', mavMode)}>
                 <i class="fas fa-play"></i>
-                <div class="tooltip">Start/Resume Flight</div>
+                <div class="tooltip">Start/Resume Mission</div>
               </button>
             </div>
           {:else}
             <div class="relative group">
               <button class="circular-button" on:click={pauseMission} disabled={!checkMode('AUTO', mavMode)}>
                 <i class="fas fa-pause"></i>
-                <div class="tooltip">Pause Flight (Loiter)</div>
+                <div class="tooltip">Pause Mission (Loiter)</div>
               </button>
             </div>
           {/if}
           <div class="relative group">
             <button class="circular-button" on:click={stopMission} disabled={!checkMode('AUTO', mavMode)}>
               <i class="fas fa-stop text-red-400"></i>
-              <div class="tooltip">Stop Flight (RTL)</div>
+              <div class="tooltip">Stop Mission (RTL)</div>
             </button>
           </div>
         </div>

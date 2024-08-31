@@ -19,8 +19,8 @@
     mavStateStore,
     mavModeStore,
     mavBatteryStore,
-    mavArmedStateStore
-
+    mavArmedStateStore,
+    mavReadyForTakeoffStore,
   } from '../stores/mavlinkStore';
   import {
     missionPlanTitleStore,
@@ -41,6 +41,7 @@
 
   $: currentPath = $page.url.pathname;
   $: isNavHidden = currentPath === '/' || currentPath === '/login';
+  $: missionCountStore.set(Object.keys($missionPlanActionsStore).length);
 
   // @ts-ignore
   String.prototype.toProperCase = function () {
@@ -209,10 +210,6 @@
             customMode = customMode.toString().replace('"customMode":', '');
             mavModeStore.set(CopterMode[parseInt(customMode)]);
           }
-      } else if ((text as string).includes('MISSION_COUNT')) {
-          let count: string | RegExpMatchArray | null = (text as string).match(/"count":(\d+)/g);
-          if (count) count = count.toString().replace('"count":', '');
-          if (count) missionCountStore.set(parseInt(count));
       } else if ((text as string).includes('MISSION_CURRENT')) {
           let index: string | RegExpMatchArray | null = (text as string).match(/"seq":(\d+)/g);
           if (index) index = index.toString().replace('"seq":', '');
@@ -221,6 +218,10 @@
           let battery: string | RegExpMatchArray | null = (text as string).match(/"batteryRemaining":(\d+)/g);
           if (battery) battery = battery.toString().replace('"batteryRemaining":', '');
           if (battery) mavBatteryStore.set(parseInt(battery));
+      } else if ((text as string).includes('STATUSTEXT')) {
+          let message: string | RegExpMatchArray | null = (text as string).match(/"text":"(.+?)"/g);
+          if (message) message = message.toString().replace('"text":"', '').replace('"', '');
+          if (message && message.includes('EKF2 IMU1 is using GPS')) mavReadyForTakeoffStore.set(true);
       }
     }
   }
