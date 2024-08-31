@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { MavType, MavState } from 'mavlink-mappings/dist/lib/minimal';
-  import { MissionState } from 'mavlink-mappings/dist/lib/common';
+  import { MavType, MavState, MavAutopilot } from 'mavlink-mappings/dist/lib/minimal';
   import { CopterMode } from 'mavlink-mappings/dist/lib/ardupilotmega';
   import PocketBase from 'pocketbase';
   import '@fortawesome/fontawesome-free/css/all.min.css';
@@ -15,9 +14,9 @@
     mavlinkLogStore,
     mavAltitudeStore,
     mavSpeedStore,
+    mavModelStore,
     mavTypeStore,
     mavStateStore,
-    missionStateStore,
     mavModeStore,
     mavBatteryStore,
     mavArmedStateStore
@@ -25,7 +24,9 @@
   } from '../stores/mavlinkStore';
   import {
     missionPlanTitleStore,
-    missionPlanActionsStore
+    missionPlanActionsStore,
+    missionCountStore,
+    missionIndexStore
   } from '../stores/missionPlanStore';
   import Modal from '../components/Modal.svelte';
 
@@ -39,7 +40,6 @@
   let logs: string[] = [];
 
   $: currentPath = $page.url.pathname;
-
   $: isNavHidden = currentPath === '/' || currentPath === '/login';
 
   // @ts-ignore
@@ -193,6 +193,9 @@
           // @ts-ignore
           if (type) type = MavType[parseInt(type.toString().replace('"type":', ''))].toProperCase();
           if (type) mavTypeStore.set(type as string);
+          let model: string | RegExpMatchArray | null = (text as string).match(/"autopilot":(\d+)/g);
+          if (model) model = model.toString().replace('"autopilot":', '');
+          if (model) mavModelStore.set(MavAutopilot[parseInt(model)]);
           let state: string | RegExpMatchArray | null = (text as string).match(/"systemStatus":(\d+)/g);
           if (state) state = MavState[parseInt(state.toString().replace('"systemStatus":', ''))];
           if (state) mavStateStore.set(state as string);
@@ -206,10 +209,14 @@
             customMode = customMode.toString().replace('"customMode":', '');
             mavModeStore.set(CopterMode[parseInt(customMode)]);
           }
+      } else if ((text as string).includes('MISSION_COUNT')) {
+          let count: string | RegExpMatchArray | null = (text as string).match(/"count":(\d+)/g);
+          if (count) count = count.toString().replace('"count":', '');
+          if (count) missionCountStore.set(parseInt(count));
       } else if ((text as string).includes('MISSION_CURRENT')) {
-          let missionState: string | RegExpMatchArray | null = (text as string).match(/"mission_state":(\d+)/g);
-          if (missionState) missionState = missionState.toString().replace('"mission_state":', '');
-          if (missionState) missionStateStore.set(MissionState[parseInt(missionState)]);
+          let index: string | RegExpMatchArray | null = (text as string).match(/"seq":(\d+)/g);
+          if (index) index = index.toString().replace('"seq":', '');
+          if (index) missionIndexStore.set(parseInt(index));
       } else if ((text as string).includes('SYS_STATUS')) {
           let battery: string | RegExpMatchArray | null = (text as string).match(/"batteryRemaining":(\d+)/g);
           if (battery) battery = battery.toString().replace('"batteryRemaining":', '');

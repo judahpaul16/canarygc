@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { mapStore } from '../stores/mapStore';
-  import { mavLocationStore, mavModeStore, mavStateStore, missionStateStore } from '../stores/mavlinkStore';
+  import { mavLocationStore, mavModeStore } from '../stores/mavlinkStore';
   import { missionPlanTitleStore, missionPlanActionsStore, type MissionPlanItem, type MissionPlanActions } from '../stores/missionPlanStore';
   import Modal from './Modal.svelte';
   import { get } from 'svelte/store';
@@ -20,8 +20,6 @@
   $: mavMode = $mavModeStore;
   $: title = $missionPlanTitleStore;
   $: actions = $missionPlanActionsStore;
-  $: systemState = $mavStateStore;
-  $: missionState = $missionStateStore;
 
   onMount(async () => {
     mapStore.subscribe((value: L.Map | null) => {

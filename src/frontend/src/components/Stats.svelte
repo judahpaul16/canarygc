@@ -1,15 +1,19 @@
 <script lang="ts">
-  import { missionPlanTitleStore, missionPlanActionsStore } from '../stores/missionPlanStore';
   import {
+    missionPlanTitleStore,
+    missionCountStore,
+    missionIndexStore,
+    missionProgressStore
+  } from '../stores/missionPlanStore';
+  import {
+    mavModelStore,
     mavTypeStore,
     mavStateStore,
-    missionStateStore,
     mavModeStore,
     mavAltitudeStore,
     mavSpeedStore,
     mavBatteryStore,
     mavArmedStateStore,
-
     mavLocationStore
 
   } from '../stores/mavlinkStore';
@@ -17,29 +21,28 @@
 
   import Modal from './Modal.svelte';
 
-  export let mavName: string = "CUAV X7 Running Ardupilot";
+  export let mavModel: string = get(mavModelStore);
   export let mavType: string = get(mavTypeStore);
   export let isArmed: boolean = get(mavArmedStateStore)
   export let speed: number = get(mavSpeedStore);
   export let altitude: number = get(mavAltitudeStore);
   export let systemState: string = get(mavStateStore);
-  export let missionState: string = get(missionStateStore);
   export let batteryStatus: number | null = get(mavBatteryStore);
   export let mavMode: string = get(mavModeStore);
-  export let flightProgress: number = 50;
+  export let missionProgress: number = get(missionProgressStore);
 
-  let interval: number;
-
+  $: mavModel = $mavModelStore;
   $: mavType = $mavTypeStore;
   $: isArmed = $mavArmedStateStore;
   $: systemState = $mavStateStore;
-  $: missionState = $missionStateStore;
   $: mavMode = $mavModeStore;
   $: batteryStatus = $mavBatteryStore;
   $: altitude = $mavAltitudeStore;
   $: speed = $mavSpeedStore;
   $: missionPlanTitle = $missionPlanTitleStore;
   $: mavLocation = $mavLocationStore;
+  $: missionProgressStore.set($missionCountStore === 0 ? 0 : Math.round(($missionIndexStore / $missionCountStore) * 100));
+  $: missionProgress = $missionProgressStore;
 
   async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
     const response = await fetch(`/api/mavlink/send_command`, {
@@ -231,7 +234,12 @@
 </script>
 
 <div class="stats bg-[#1c1c1e] text-white p-4 rounded-lg flex flex-col space-y-2 h-full overflow-y-auto overflow-x-hidden text-sm">
-  <h2 class="text-lg font-bold">{mavName}</h2>
+  <h2 class="text-lg font-bold">
+    <a href="https://mavlink.io/en/messages/common.html#MAV_AUTOPILOT" target="_blank" title="More Information">
+      <i class="fas fa-info-circle text-gray-500 hover:text-[#62bbff] mr-[0.2em]"></i>
+    </a>
+    <span class="text-gray-500">Autopilot Model:</span>&nbsp;{mavModel}
+  </h2>
   <hr class="border-[#2d2d2d]" />
   <div class="h-full flex flex-col justify-evenly">
     <div class="grid grid-cols-2 gap-2">
@@ -246,9 +254,9 @@
       <div class="w-full mb-2">Loaded Mission Plan: <span class="text-[#66e1ff]">{missionPlanTitle || 'No mission plan loaded.'}</span></div>
       <div class="flex flex-col items-center justify-end">
         <div class="w-full">
-          <span>Mission Progress: {missionState !== 'Unknown' ? flightProgress : '--'}% (ETA 00:00:00)</span>
+          <span>Mission Progress: {missionProgress === 0 && mavMode === 'AUTO' ? '--' : missionProgress}% (ETA 00:00:00)</span>
           <div class="progress-bar bg-gray-700 rounded-full h-2.5 mt-3">
-            <div class="progress-bar-inner h-2.5 rounded-full" style="width: {missionState !== 'Unknown' ? flightProgress : 0}%;"></div>
+            <div class="progress-bar-inner h-2.5 rounded-full" style="width: {missionProgress}%;"></div>
           </div>
         </div>
         <div class="button-container mt-6">

@@ -16,5 +16,7 @@ export interface MissionPlanItem {
 export type MissionPlanActions = { [key: number]: MissionPlanItem };
 
 export const missionPlanTitleStore = writable<string>('');
-
 export const missionPlanActionsStore = writable<MissionPlanActions>({});
+export const missionCountStore = writable<number>(0);
+export const missionIndexStore = writable<number>(0);
+export const missionProgressStore = writable<number>(0);
