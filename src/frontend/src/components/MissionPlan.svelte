@@ -5,6 +5,7 @@
     missionPlanTitleStore,
     missionPlanActionsStore,
     missionCompleteStore,
+    missionIndexStore,
     type MissionPlanActions
   } from '../stores/missionPlanStore';
   import Modal from './Modal.svelte';
@@ -133,6 +134,7 @@
         confirmation: true,
         notification: false,
         onConfirm: async () => {
+          missionIndexStore.set(1);
           missionCompleteStore.set(false);
           if (get(mavStateStore) === 'STANDBY') {
             await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
