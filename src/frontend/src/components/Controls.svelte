@@ -5,6 +5,9 @@
   import { mavAltitudeStore, mavLocationStore } from '../stores/mavlinkStore';
   import { onMount } from 'svelte';
 
+  let maxSpeed: string = '';
+  let altitudeSetPoint: string = '';
+
   $: mavLocation = $mavLocationStore;
   $: altitude = $mavAltitudeStore;
 
@@ -58,27 +61,35 @@
     </div>
     <div class="separator"></div>
     <div class="inputs column h-full flex flex-col items-center justify-center text-center min-w-[150px] overflow-auto gap-2 self-center">
-      <div id="max-speed-container" class="flex flex-col items-center">
-        <div class="label text-sm mb-1">Max Speed<span class="text-xs text-gray-400 mt-1 ml-1">(m/s)</span></div>
-        <input type="number"  min="0" class="form-input" placeholder="Default: 10" />
-      </div>
-      <div class="flex flex-col items-center justify-center">
-        <div class="label text-sm mb-1">Max Altitude<span class="text-xs text-gray-400 mt-1 ml-1">(m)</span></div>
-        <input type="number"  min="0" class="form-input" placeholder="Default: 100" />
-      </div>
-      <button class="bg-[#2d2d2d] hover:brightness-150 text-xs text-white rounded-full py-1 px-4 mt-1">Set</button>
+      <form>
+        <div id="max-speed-container" class="flex flex-col items-center">
+          <div class="label text-sm mb-1">Max Speed<span class="text-xs text-gray-400 mt-1 ml-1">(m/s)</span></div>
+          <input type="number" min="0" class="form-input mb-2" placeholder="Example: 10" bind:value={maxSpeed} />
+        </div>
+        <div class="flex flex-col items-center justify-center">
+          <div class="label text-sm mb-1">Go to Altitude<span class="text-xs text-gray-400 mt-1 ml-1">(m)</span></div>
+          <input type="number" min="0" class="form-input" placeholder="Example: 100" bind:value={altitudeSetPoint} />
+        </div>
+        <button class="bg-[#2d2d2d] hover:brightness-150 text-xs text-white rounded-full py-1 px-4 mt-2"
+          on:click|preventDefault={() => {
+            if (!isNaN(parseInt(maxSpeed))) sendMavlinkCommand('DO_CHANGE_SPEED', `${[1, maxSpeed]}`);
+            if (!isNaN(parseInt(altitudeSetPoint))) setPositionLocal('0', '0', `-${altitudeSetPoint}`);
+          }}>
+          Set
+        </button>
+      </form>
     </div>
     <div class="separator"></div>
     <div class="column flex flex-col items-center justify-center text-center space-y-4">
       <div class="flex flex-col items-center">
-        <div class="label text-sm mb-1" title="Altitude Up">Alt. Up</div>
+        <div class="label text-sm mb-1" title="Altitude Up">Altitude Up</div>
         <button class="alt-button rounded-full"
             on:click={() => {setPositionLocal('0', '0', `-${altitude + 10}`)}}>
           <i class="alt-up fas fa-arrow-up"></i>
         </button>
       </div>
       <div class="flex flex-col items-center justify-center">
-        <div class="label text-sm mb-1" title="Altitude Down">Alt. Down</div>
+        <div class="label text-sm mb-1" title="Altitude Down">Altitude Down</div>
         <button class="alt-button rounded-full"
             on:click={() => {setPositionLocal('0', '0', `-${altitude - 10}`)}}>
           <i class="alt-down fas fa-arrow-down"></i>
@@ -212,7 +223,7 @@
   }
   
   .label {
-    font-size: 0.75em;
+    font-size: 10pt;
   }
 
   .map-container {
