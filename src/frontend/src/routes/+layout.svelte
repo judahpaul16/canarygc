@@ -25,7 +25,8 @@
     missionPlanTitleStore,
     missionPlanActionsStore,
     missionCountStore,
-    missionIndexStore
+    missionIndexStore,
+    missionCompleteStore
   } from '../stores/missionPlanStore';
   import { get } from 'svelte/store';
   import Modal from '../components/Modal.svelte';
@@ -41,7 +42,7 @@
 
   $: currentPath = $page.url.pathname;
   $: isNavHidden = currentPath === '/' || currentPath === '/login';
-  $: missionCountStore.set(Object.keys($missionPlanActionsStore).length);
+  $: missionCountStore.set(Object.keys($missionPlanActionsStore).length - 1);
 
   // @ts-ignore
   String.prototype.toProperCase = function () {
@@ -104,7 +105,7 @@
           target: document.body,
           props: {
             title: 'Error',
-            content: `Error connecting to the MAVLink stream.\n\n${error.message}`,
+            content: `Error connecting to the MAVLink stream: ${error.stack}`,
             isOpen: true,
             confirmation: false,
             notification: true,
@@ -226,10 +227,12 @@
             customMode = customMode.toString().replace('"customMode":', '');
             mavModeStore.set(CopterMode[parseInt(customMode)]);
           }
-      } else if ((text as string).includes('MISSION_CURRENT')) {
+      } else if ((text as string).includes('MISSION_ITEM_REACHED')) {
           let index: string | RegExpMatchArray | null = (text as string).match(/"seq":(\d+)/g);
           if (index) index = index.toString().replace('"seq":', '');
-          if (index) missionIndexStore.set(parseInt(index));
+          if (index && !get(missionCompleteStore)) missionIndexStore.set(parseInt(index));
+          if (index && parseInt(index) === Object.keys($missionPlanActionsStore).length - 1)
+            missionCompleteStore.set(true);
       } else if ((text as string).includes('SYS_STATUS')) {
           let battery: string | RegExpMatchArray | null = (text as string).match(/"batteryRemaining":(\d+)/g);
           if (battery) battery = battery.toString().replace('"batteryRemaining":', '');

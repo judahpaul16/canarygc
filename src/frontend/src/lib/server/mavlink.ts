@@ -10,7 +10,7 @@ import {
     ardupilotmega,
     send
 } from 'node-mavlink';
-import type { MissionPlanActions } from '../../stores/missionPlanStore';
+import { error } from '@sveltejs/kit';
 
 const REGISTRY: MavLinkPacketRegistry = {
     ...minimal.REGISTRY,
@@ -34,7 +34,13 @@ let logs: string[] = [];
 let newLogs: string[] = [];
 
 async function initializePort(): Promise<void> {
-    if (port) return; // Return if port is already initialized
+    statusRequested = false;
+    if (port) {
+        port.removeAllListeners();
+        port.destroy();
+        reader?.removeAllListeners();
+        reader = null;
+    }
 
     // Use UART serial port in production
     // port = new SerialPort({ path: '/dev/ttyACM0', baudRate: 115200 });
@@ -225,6 +231,8 @@ export {
     loadMissionItem,
     clearAllMissionItems,
     setPositionLocal,
+    port,
+    reader,
     online,
     statusRequested,
     logs,

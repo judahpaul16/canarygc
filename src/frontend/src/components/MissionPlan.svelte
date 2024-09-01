@@ -2,7 +2,12 @@
   import { onMount } from 'svelte';
   import { mapStore } from '../stores/mapStore';
   import { mavLocationStore, mavModeStore, mavStateStore } from '../stores/mavlinkStore';
-  import { missionPlanTitleStore, missionPlanActionsStore, type MissionPlanItem, type MissionPlanActions } from '../stores/missionPlanStore';
+  import {
+    missionPlanTitleStore,
+    missionPlanActionsStore,
+    missionCompleteStore,
+    type MissionPlanActions
+  } from '../stores/missionPlanStore';
   import Modal from './Modal.svelte';
   import { get } from 'svelte/store';
 
@@ -128,6 +133,7 @@
         confirmation: true,
         notification: false,
         onConfirm: async () => {
+          missionCompleteStore.set(false);
           if (get(mavStateStore) === 'STANDBY') {
             await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
             await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[1, 0]}`); // param2: 21196 bypasses pre-arm checks
