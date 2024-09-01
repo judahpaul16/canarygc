@@ -105,7 +105,7 @@
           target: document.body,
           props: {
             title: 'Error',
-            content: `Error connecting to the MAVLink stream: ${error.stack}`,
+            content: `Error connecting to the MAVLink stream: ${error.message}`,
             isOpen: true,
             confirmation: false,
             notification: true,
