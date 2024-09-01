@@ -1,5 +1,6 @@
 <script lang="ts">
   import { MavType, MavState, MavAutopilot } from 'mavlink-mappings/dist/lib/minimal';
+  import { MavCmd, MavResult } from 'mavlink-mappings/dist/lib/common';
   import { CopterMode } from 'mavlink-mappings/dist/lib/ardupilotmega';
   import PocketBase from 'pocketbase';
   import '@fortawesome/fontawesome-free/css/all.min.css';
@@ -30,6 +31,7 @@
   } from '../stores/missionPlanStore';
   import { get } from 'svelte/store';
   import Modal from '../components/Modal.svelte';
+  import Notification from '../components/Notification.svelte';
 
   let offline_modal: Modal;
   let error_modal: Modal;
@@ -190,53 +192,69 @@
       mavlinkLogStore.set(logs);
 
       if ((text as string).includes('GLOBAL_POSITION_INT')) {
-          let lat: string | RegExpMatchArray | null = (text as string).match(/"lat":\-?(\d+)/g);
-          let lon: string | RegExpMatchArray | null = (text as string).match(/"lon":\-?(\d+)/g);
-          if (lat) lat = lat.toString().replace('"lat":', '');
-          if (lon) lon = lon.toString().replace('"lon":', '');
-          if (lat && lon) mavLocationStore.set({ lat: parseFloat(lat)/1e7, lng: parseFloat(lon)/1e7 });
-          let heading: string | RegExpMatchArray | null = (text as string).match(/"hdg":(\d+)/g);
-          if (heading) heading = heading.toString().replace('"hdg":', '');
-          if (heading) mavHeadingStore.set(parseFloat(heading)/100);
-          let altitude: string | RegExpMatchArray | null = (text as string).match(/"alt":(\d+)/g);
-          if (altitude) altitude = altitude.toString().replace('"alt":', '');
-          if (altitude) mavAltitudeStore.set(parseFloat(altitude)/1000);
-          let vx: number | string | RegExpMatchArray | null = parseInt((text as string).match(/"vx":(\-?\d+)/g)!.toString().replace('"vx":', '')) / 100;
-          let vy: number | string | RegExpMatchArray | null = parseInt((text as string).match(/"vy":(\-?\d+)/g)!.toString().replace('"vy":', '')) / 100;
-          let vz: number | string | RegExpMatchArray | null = parseInt((text as string).match(/"vz":(\-?\d+)/g)!.toString().replace('"vz":', '')) / 100;
-          let speed: number = Math.sqrt(Math.pow(vx, 2) + Math.pow(vy, 2) + Math.pow(vz, 2));
-          if (speed) mavSpeedStore.set(parseFloat(speed.toFixed(2)));
+        let lat: string | RegExpMatchArray | null = (text as string).match(/"lat":\-?(\d+)/g);
+        let lon: string | RegExpMatchArray | null = (text as string).match(/"lon":\-?(\d+)/g);
+        if (lat) lat = lat.toString().replace('"lat":', '');
+        if (lon) lon = lon.toString().replace('"lon":', '');
+        if (lat && lon) mavLocationStore.set({ lat: parseFloat(lat)/1e7, lng: parseFloat(lon)/1e7 });
+        let heading: string | RegExpMatchArray | null = (text as string).match(/"hdg":(\d+)/g);
+        if (heading) heading = heading.toString().replace('"hdg":', '');
+        if (heading) mavHeadingStore.set(parseFloat(heading)/100);
+        let altitude: string | RegExpMatchArray | null = (text as string).match(/"alt":(\d+)/g);
+        if (altitude) altitude = altitude.toString().replace('"alt":', '');
+        if (altitude) mavAltitudeStore.set(parseFloat(altitude)/1000);
+        let vx: number | string | RegExpMatchArray | null = parseInt((text as string).match(/"vx":(\-?\d+)/g)!.toString().replace('"vx":', '')) / 100;
+        let vy: number | string | RegExpMatchArray | null = parseInt((text as string).match(/"vy":(\-?\d+)/g)!.toString().replace('"vy":', '')) / 100;
+        let vz: number | string | RegExpMatchArray | null = parseInt((text as string).match(/"vz":(\-?\d+)/g)!.toString().replace('"vz":', '')) / 100;
+        let speed: number = Math.sqrt(Math.pow(vx, 2) + Math.pow(vy, 2) + Math.pow(vz, 2));
+        if (speed) mavSpeedStore.set(parseFloat(speed.toFixed(2)));
       } else if ((text as string).includes('HEARTBEAT')) {
-          let type: string | RegExpMatchArray | null = (text as string).match(/"type":(\d+)/g);
-          // @ts-ignore
-          if (type) type = MavType[parseInt(type.toString().replace('"type":', ''))].toProperCase();
-          if (type) mavTypeStore.set(type as string);
-          let model: string | RegExpMatchArray | null = (text as string).match(/"autopilot":(\d+)/g);
-          if (model) model = model.toString().replace('"autopilot":', '');
-          if (model) mavModelStore.set(MavAutopilot[parseInt(model)]);
-          let state: string | RegExpMatchArray | null = (text as string).match(/"systemStatus":(\d+)/g);
-          if (state) state = MavState[parseInt(state.toString().replace('"systemStatus":', ''))];
-          if (state) mavStateStore.set(state as string);
-          let baseMode: string | RegExpMatchArray | null = (text as string).match(/"baseMode":(\d+)/g);
-          let customMode: string | RegExpMatchArray | null = (text as string).match(/"customMode":(\d+)/g);
-          if (baseMode) {
-            baseMode = baseMode.toString().replace('"baseMode":', '');
-            mavArmedStateStore.set(parseInt(baseMode) === 209);
-          }
-          if (customMode) {
-            customMode = customMode.toString().replace('"customMode":', '');
-            mavModeStore.set(CopterMode[parseInt(customMode)]);
-          }
+        let type: string | RegExpMatchArray | null = (text as string).match(/"type":(\d+)/g);
+        // @ts-ignore
+        if (type) type = MavType[parseInt(type.toString().replace('"type":', ''))].toProperCase();
+        if (type) mavTypeStore.set(type as string);
+        let model: string | RegExpMatchArray | null = (text as string).match(/"autopilot":(\d+)/g);
+        if (model) model = model.toString().replace('"autopilot":', '');
+        if (model) mavModelStore.set(MavAutopilot[parseInt(model)]);
+        let state: string | RegExpMatchArray | null = (text as string).match(/"systemStatus":(\d+)/g);
+        if (state) state = MavState[parseInt(state.toString().replace('"systemStatus":', ''))];
+        if (state) mavStateStore.set(state as string);
+        let baseMode: string | RegExpMatchArray | null = (text as string).match(/"baseMode":(\d+)/g);
+        let customMode: string | RegExpMatchArray | null = (text as string).match(/"customMode":(\d+)/g);
+        if (baseMode) {
+          baseMode = baseMode.toString().replace('"baseMode":', '');
+          mavArmedStateStore.set(parseInt(baseMode) === 209);
+        }
+        if (customMode) {
+          customMode = customMode.toString().replace('"customMode":', '');
+          mavModeStore.set(CopterMode[parseInt(customMode)]);
+        }
       } else if ((text as string).includes('MISSION_ITEM_REACHED')) {
-          let index: string | RegExpMatchArray | null = (text as string).match(/"seq":(\d+)/g);
-          if (index) index = index.toString().replace('"seq":', '');
-          if (index && !get(missionCompleteStore)) missionIndexStore.set(parseInt(index));
-          if (index && parseInt(index) === Object.keys($missionPlanActionsStore).length - 1)
-            missionCompleteStore.set(true);
+        let index: string | RegExpMatchArray | null = (text as string).match(/"seq":(\d+)/g);
+        if (index) index = index.toString().replace('"seq":', '');
+        if (index && !get(missionCompleteStore)) missionIndexStore.set(parseInt(index));
+        if (index && parseInt(index) === Object.keys($missionPlanActionsStore).length - 1)
+          missionCompleteStore.set(true);
       } else if ((text as string).includes('SYS_STATUS')) {
-          let battery: string | RegExpMatchArray | null = (text as string).match(/"batteryRemaining":(\d+)/g);
-          if (battery) battery = battery.toString().replace('"batteryRemaining":', '');
-          if (battery) mavBatteryStore.set(parseInt(battery));
+        let battery: string | RegExpMatchArray | null = (text as string).match(/"batteryRemaining":(\d+)/g);
+        if (battery) battery = battery.toString().replace('"batteryRemaining":', '');
+        if (battery) mavBatteryStore.set(parseInt(battery));
+      } else if ((text as string).includes('COMMAND_ACK')) {
+        let command: string | RegExpMatchArray | null = (text as string).match(/"command":(\d+)/g);
+        let result: string | RegExpMatchArray | null = (text as string).match(/"result":(\d+)/g);
+        if (command && result) {
+          command = MavCmd[parseInt(command.toString().replace('"command":', ''))];
+          result = MavResult[parseInt(result.toString().replace('"result":', ''))];
+          const notification = new Notification({
+            target: document.body,
+            props: {
+              title: 'Command Acknowledged',
+              content: `Command: ${command},<br>Result: ${result}`,
+              type: result === 'ACCEPTED' ? 'success' : 'warning'
+            }
+          });
+          setTimeout(() => notification.$destroy(), 10000);
+        }
       }
     }
   }
