@@ -553,7 +553,7 @@
   }
 
   #flight-plan-actions {
-    max-height: 200px;
+    max-height: 215px;
   }
 
   /* Mobile Styles */
@@ -590,6 +590,13 @@
   @media (max-width: 1060px) {
     #flight-plan-actions {
       max-height: 270px;
+    }
+  }
+  @media (max-width: 1500px) {
+    @media (min-width: 1300px) {
+      #flight-plan-actions {
+        max-height: 240px;
+      }
     }
   }
 </style>

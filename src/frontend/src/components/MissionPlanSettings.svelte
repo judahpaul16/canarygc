@@ -386,11 +386,11 @@
     <div id="import-export" class="flex items-center justify-center gap-2">
         <button on:click={importPlan}>
             <i class="fas fa-upload"></i>
-            <span class="text-[8.5pt]">Import</span>
+            <span class="text-[8.5pt]">Import Plan</span>
         </button>
         <button on:click={exportMissionPlan}>
             <i class="fas fa-download"></i>
-            <span class="text-[8.5pt]">Export</span>
+            <span class="text-[8.5pt]">Export Plan</span>
         </button>
     </div>
 </section>
@@ -442,6 +442,10 @@
         @media (min-width: 990px) {
             #import-export {
                 flex-direction: column;
+                gap: 1em;
+            }
+            #import-export > button {
+                width: 100%;
             }
         }
     }
