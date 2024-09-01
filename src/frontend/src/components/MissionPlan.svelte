@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { mapStore } from '../stores/mapStore';
   import { mavLocationStore, mavModeStore, mavStateStore } from '../stores/mavlinkStore';
   import {
     missionPlanTitleStore,
@@ -22,6 +21,7 @@
   
   $: mavLocation = $mavLocationStore;
   $: mavMode = $mavModeStore;
+  $: systemState = $mavStateStore;
   $: title = $missionPlanTitleStore;
   $: actions = $missionPlanActionsStore;
 
@@ -152,6 +152,7 @@
               notification: true,
             }
           });
+          setTimeout(() => newModal.$destroy(), 3000);
         },
       }
     });
@@ -326,9 +327,9 @@
           <i class="fas fa-check"></i>
           <div class="tooltip">Validate Mission Plan</div>
       </button>
-      {#if !checkMode('AUTO', mavMode)}
+      {#if !checkMode('AUTO', mavMode) || systemState === 'STANDBY'}
         <button class="px-2 py-1 bg-[#55b377] text-white rounded-lg hover:bg-[#61cd89]"
-          disabled={checkMode('AUTO', mavMode)} on:click={() => {resumeMission()}}>
+          disabled={checkMode('AUTO', mavMode) && systemState !== 'STANDBY'} on:click={() => {resumeMission()}}>
               <i class="fas fa-play"></i>
               <div class="tooltip">Start/Resume Mission</div>
         </button>

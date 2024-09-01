@@ -159,6 +159,7 @@
               notification: true,
             }
           });
+          setTimeout(() => newModal.$destroy(), 3000);
         },
       }
     });
@@ -291,9 +292,9 @@
               </button>
             </div>
           {/if}
-          {#if !checkMode('AUTO', mavMode)}
+          {#if !checkMode('AUTO', mavMode) || systemState === 'STANDBY'}
             <div class="relative group">
-              <button class="circular-button" on:click={resumeMission} disabled={checkMode('AUTO', mavMode)}>
+              <button class="circular-button" on:click={resumeMission} disabled={checkMode('AUTO', mavMode) && systemState !== 'STANDBY'}>
                 <i class="fas fa-play"></i>
                 <div class="tooltip">Start/Resume Mission</div>
               </button>
