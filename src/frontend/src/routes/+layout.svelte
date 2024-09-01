@@ -241,7 +241,7 @@
             target: document.body,
             props: {
               title: 'Waypoint Reached',
-              content: `${index}: ${actions[parseInt(index)].type}`,
+              content: `${index}: ${actions[parseInt(index)].type}<br>lat: ${actions[parseInt(index)].lat} °<br>lng: ${actions[parseInt(index)].lon} °<br>alt: ${actions[parseInt(index)].alt === null ? 0 : actions[parseInt(index)].alt} m`,
               type: 'success'
             }
           });
