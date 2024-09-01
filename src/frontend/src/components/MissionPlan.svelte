@@ -10,6 +10,7 @@
   } from '../stores/missionPlanStore';
   import Modal from './Modal.svelte';
   import { get } from 'svelte/store';
+  import Notification from './Notification.svelte';
 
   export let title: string = '';
   let actions: MissionPlanActions = {};
@@ -82,16 +83,15 @@
         onConfirm: async () => {
           await sendMavlinkCommand('DO_SET_MODE' , `${[1, 6]}`); // 6 is RTL: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           modal.$destroy();
-          const newModal = new Modal({
+          const notification = new Notification({
             target: document.body,
             props: {
               title: 'Mission Stopped',
-              content: 'The flight has been stopped.',
-              isOpen: true,
-              confirmation: false,
-              notification: true,
+              content: 'The mission has been stopped.<br>Returning to launch.',
+              type: 'info',
             }
           });
+          setTimeout(() => notification.$destroy(), 10000);
         },
       }
     });
@@ -109,16 +109,15 @@
         onConfirm: async () => {
           await sendMavlinkCommand('DO_SET_MODE' , `${[1, 16]}`); // 16 is POSHOLD: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           modal.$destroy();
-          const newModal = new Modal({
+          const notification = new Notification({
             target: document.body,
             props: {
               title: 'Mission Paused',
-              content: 'The flight has been paused.',
-              isOpen: true,
-              confirmation: false,
-              notification: true,
+              content: 'The mission has been paused.',
+              type: 'info',
             }
           });
+          setTimeout(() => notification.$destroy(), 10000);
         },
       }
     });
@@ -144,17 +143,15 @@
           }
           await sendMavlinkCommand('DO_SET_MODE' , `${[1, 3]}`); // 3 is AUTO Mode: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           modal.$destroy();
-          const newModal = new Modal({
+          const notification = new Notification({
             target: document.body,
             props: {
               title: 'Mission Started',
-              content: 'The mission has been started successfully.',
-              isOpen: true,
-              confirmation: false,
-              notification: true,
+              content: 'The mission has been started.',
+              type: 'info',
             }
           });
-          setTimeout(() => newModal.$destroy(), 3000);
+          setTimeout(() => notification.$destroy(), 10000);
         },
       }
     });
