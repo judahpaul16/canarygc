@@ -45,6 +45,7 @@
   $: currentPath = $page.url.pathname;
   $: isNavHidden = currentPath === '/' || currentPath === '/login';
   $: missionCountStore.set(Object.keys($missionPlanActionsStore).length - 1);
+  $: actions = $missionPlanActionsStore;
 
   // @ts-ignore
   String.prototype.toProperCase = function () {
@@ -235,6 +236,17 @@
         if (index && !get(missionCompleteStore)) missionIndexStore.set(parseInt(index));
         if (index && parseInt(index) === Object.keys($missionPlanActionsStore).length - 1)
           missionCompleteStore.set(true);
+        if (index) {
+          const notification = new Notification({
+            target: document.body,
+            props: {
+              title: 'Waypoint Reached',
+              content: `${index}: ${actions[parseInt(index)].type}`,
+              type: 'success'
+            }
+          });
+          setTimeout(() => notification.$destroy(), 10000);
+        }
       } else if ((text as string).includes('SYS_STATUS')) {
         let battery: string | RegExpMatchArray | null = (text as string).match(/"batteryRemaining":(\d+)/g);
         if (battery) battery = battery.toString().replace('"batteryRemaining":', '');
@@ -245,12 +257,14 @@
         if (command && result) {
           command = MavCmd[parseInt(command.toString().replace('"command":', ''))];
           result = MavResult[parseInt(result.toString().replace('"result":', ''))];
+          let type = result === 'ACCEPTED' ? 'success' : 'warning';
+          if (result.includes('FAILED') || result.includes('DENIED') || result.includes('UNSUPPORTED')) type = 'error';
           const notification = new Notification({
             target: document.body,
             props: {
               title: 'Command Acknowledged',
-              content: `Command: ${command},<br>Result: ${result}`,
-              type: result === 'ACCEPTED' ? 'success' : 'warning'
+              content: `Command: ${command}<br>Result: ${result}`,
+              type: type
             }
           });
           setTimeout(() => notification.$destroy(), 10000);
