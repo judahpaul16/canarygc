@@ -56,6 +56,7 @@
           &times;
         </button>
       </div>
+      <form>
         <div class="px-4 py-2 text-white">
           {content}
           {#if inputs}
@@ -91,14 +92,15 @@
         {#if confirmation}
           <div class="flex justify-end px-4 py-2 border-t border-[#2d2d2d]">
             <button type="submit" on:click={handleConfirm} class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 mr-2">Confirm</button>
-            <button on:click={closeModal} class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400">Cancel</button>
+            <button on:click|preventDefault={closeModal} class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400">Cancel</button>
           </div>
         {/if}
         {#if notification}
           <div class="flex justify-end px-4 py-2 border-t border-[#2d2d2d]">
-            <button on:click={closeModal} class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400">Okay</button>
+            <button on:click|preventDefault={closeModal} class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400">Okay</button>
           </div>
         {/if}
+      </form>
     </div>
   </div>
 {/if}
