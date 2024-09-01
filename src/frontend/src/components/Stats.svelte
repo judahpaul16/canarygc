@@ -256,9 +256,9 @@
       <div class="w-full mb-2">Loaded Mission Plan: <span class="text-[#66e1ff]">{missionPlanTitle || 'No mission plan loaded.'}</span></div>
       <div class="flex flex-col items-center justify-end">
         <div class="w-full">
-          <span>Mission Progress: {systemState === 'Unknown' ? '--' : missionProgress}% (ETA 00:00:00)</span>
+          <span>Mission Progress: {systemState === 'Unknown' ? '--' : mavMode === 'AUTO' ? missionProgress : 0}% (ETA 00:00:00)</span>
           <div class="progress-bar bg-gray-700 rounded-full h-2.5 mt-3">
-            <div class="progress-bar-inner h-2.5 rounded-full" style="width: {missionProgress}%;"></div>
+            <div class="progress-bar-inner h-2.5 rounded-full" style="width: {mavMode === 'AUTO' ? missionProgress : 0}%;"></div>
           </div>
         </div>
         <div class="button-container mt-6">
