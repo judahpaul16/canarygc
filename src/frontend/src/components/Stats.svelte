@@ -13,8 +13,7 @@
     mavSpeedStore,
     mavBatteryStore,
     mavArmedStateStore,
-    mavLocationStore,
-    mavReadyForTakeoffStore
+    mavLocationStore
   } from '../stores/mavlinkStore';
   import { get } from 'svelte/store';
 
@@ -28,7 +27,6 @@
   export let systemState: string = get(mavStateStore);
   export let batteryStatus: number | null = get(mavBatteryStore);
   export let mavMode: string = get(mavModeStore);
-  let readyForTakeoff = false;
 
   $: mavModel = $mavModelStore;
   $: mavType = $mavTypeStore;
@@ -40,8 +38,7 @@
   $: speed = $mavSpeedStore;
   $: missionPlanTitle = $missionPlanTitleStore;
   $: mavLocation = $mavLocationStore;
-  $: missionProgress = Math.round(($missionIndexStore / $missionCountStore) * 100)
-  $: readyForTakeoff = $mavReadyForTakeoffStore;
+  $: missionProgress = Math.round(($missionIndexStore / $missionCountStore) * 100);
 
   async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
     const response = await fetch(`/api/mavlink/send_command`, {
@@ -142,13 +139,19 @@
         confirmation: true,
         notification: false,
         onConfirm: async () => {
+          if (get(mavStateStore) === 'STANDBY') {
+            await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+            await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[1, 0]}`); // param2: 21196 bypasses pre-arm checks
+            await sendMavlinkCommand('NAV_TAKEOFF', `${[0, 0, 0, 0, 0, 0, 10]}`);
+          }
+          await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds
           await sendMavlinkCommand('DO_SET_MODE' , `${[1, 3]}`); // 3 is AUTO Mode: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           modal.$destroy();
           const newModal = new Modal({
             target: document.body,
             props: {
-              title: 'Mission Resumed',
-              content: 'The flight has been resumed.',
+              title: 'Mission Started',
+              content: 'The mission has been started successfully.',
               isOpen: true,
               confirmation: false,
               notification: true,
@@ -253,7 +256,7 @@
       <div class="w-full mb-2">Loaded Mission Plan: <span class="text-[#66e1ff]">{missionPlanTitle || 'No mission plan loaded.'}</span></div>
       <div class="flex flex-col items-center justify-end">
         <div class="w-full">
-          <span>Mission Progress: {missionProgress === 0 && mavMode === 'AUTO' ? '--' : missionProgress}% (ETA 00:00:00)</span>
+          <span>Mission Progress: {systemState === 'Unknown' ? '--' : missionProgress}% (ETA 00:00:00)</span>
           <div class="progress-bar bg-gray-700 rounded-full h-2.5 mt-3">
             <div class="progress-bar-inner h-2.5 rounded-full" style="width: {missionProgress}%;"></div>
           </div>
@@ -273,7 +276,7 @@
           </div>
           {#if systemState === 'STANDBY'}
             <div class="relative group flex flex-col items-center">
-              <button class="circular-button" on:click={initTakeoff} disabled={checkMode('AUTO', mavMode) || !readyForTakeoff}>
+              <button class="circular-button" on:click={initTakeoff} disabled={checkMode('AUTO', mavMode)}>
                 <i class="fas fa-plane-departure"></i>
                 <div class="tooltip">Initiate Takeoff</div>
               </button>
@@ -317,6 +320,7 @@
     background: linear-gradient(45deg, #4c75af 25%, transparent 25%, transparent 50%, #66e1ff 50%, #66e1ff 75%, transparent 75%, transparent);
     background-size: 30px 30px;
     animation: progress-bar 1s linear infinite;
+    transition: width 0.3s;
   }
 
   @keyframes progress-bar {

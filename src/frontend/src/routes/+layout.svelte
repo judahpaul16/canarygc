@@ -19,8 +19,7 @@
     mavStateStore,
     mavModeStore,
     mavBatteryStore,
-    mavArmedStateStore,
-    mavReadyForTakeoffStore,
+    mavArmedStateStore
   } from '../stores/mavlinkStore';
   import {
     missionPlanTitleStore,
@@ -28,6 +27,7 @@
     missionCountStore,
     missionIndexStore
   } from '../stores/missionPlanStore';
+  import { get } from 'svelte/store';
   import Modal from '../components/Modal.svelte';
 
   let offline_modal: Modal;
@@ -123,6 +123,22 @@
         if (loadedMission) {
           missionPlanTitleStore.set(loadedMission.title);
           missionPlanActionsStore.set(loadedMission.actions);
+          try {
+              let response = await fetch("/api/mavlink/load_mission", {
+                  method: "POST",
+                  headers: {
+                      "content-type": "application/json",
+                      "actions": JSON.stringify(loadedMission.actions),
+                  },
+              });
+              if (response.ok) {
+                  console.log(await response.text());
+              } else {
+                  console.error(`Error: ${await response.text()}`);
+              }
+          } catch (error) {
+              console.error("Error:", error);
+          }
         }
       }
     } catch (error: any) {
@@ -218,10 +234,6 @@
           let battery: string | RegExpMatchArray | null = (text as string).match(/"batteryRemaining":(\d+)/g);
           if (battery) battery = battery.toString().replace('"batteryRemaining":', '');
           if (battery) mavBatteryStore.set(parseInt(battery));
-      } else if ((text as string).includes('STATUSTEXT')) {
-          let message: string | RegExpMatchArray | null = (text as string).match(/"text":"(.+?)"/g);
-          if (message) message = message.toString().replace('"text":"', '').replace('"', '');
-          if (message && message.includes('EKF2 IMU1 is using GPS')) mavReadyForTakeoffStore.set(true);
       }
     }
   }
