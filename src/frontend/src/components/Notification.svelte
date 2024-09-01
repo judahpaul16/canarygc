@@ -29,7 +29,9 @@
     };
 
     onMount(() => {
-        updateTranslateY();
+        setInterval(() => {
+            updateTranslateY();
+        }, 1000);
     });
 
     afterUpdate(() => {
