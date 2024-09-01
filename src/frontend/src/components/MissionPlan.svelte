@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { mapStore } from '../stores/mapStore';
-  import { mavLocationStore, mavModeStore } from '../stores/mavlinkStore';
+  import { mavLocationStore, mavModeStore, mavStateStore } from '../stores/mavlinkStore';
   import { missionPlanTitleStore, missionPlanActionsStore, type MissionPlanItem, type MissionPlanActions } from '../stores/missionPlanStore';
   import Modal from './Modal.svelte';
   import { get } from 'svelte/store';
@@ -15,17 +15,12 @@
     'DO_ENGINE_CONTROL', 'CONDITION_DELAY', 'CONDITION_CHANGE_ALT', 'CONDITION_DISTANCE', 'CONDITION_YAW'
   ];
   
-  $: map = $mapStore;
   $: mavLocation = $mavLocationStore;
   $: mavMode = $mavModeStore;
   $: title = $missionPlanTitleStore;
   $: actions = $missionPlanActionsStore;
 
   onMount(async () => {
-    mapStore.subscribe((value: L.Map | null) => {
-      map = value;
-    });
-
     mavLocationStore.subscribe((value) => {
       mavLocation = value;
     });
@@ -133,13 +128,19 @@
         confirmation: true,
         notification: false,
         onConfirm: async () => {
+          if (get(mavStateStore) === 'STANDBY') {
+            await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+            await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[1, 0]}`); // param2: 21196 bypasses pre-arm checks
+            await sendMavlinkCommand('NAV_TAKEOFF', `${[0, 0, 0, 0, 0, 0, 10]}`);
+          }
+          await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds
           await sendMavlinkCommand('DO_SET_MODE' , `${[1, 3]}`); // 3 is AUTO Mode: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           modal.$destroy();
           const newModal = new Modal({
             target: document.body,
             props: {
-              title: 'Mission Resumed',
-              content: 'The flight has been resumed.',
+              title: 'Mission Started',
+              content: 'The mission has been started successfully.',
               isOpen: true,
               confirmation: false,
               notification: true,
@@ -155,10 +156,10 @@
     actions = get(missionPlanActionsStore);
 
     // Determine the next index
-    const newIndex = Object.keys(actions).length + 1;
+    const newIndex = Object.keys(actions).length;
 
     let type = 'NAV_WAYPOINT';
-    if (newIndex === 1) type = 'NAV_TAKEOFF';
+    if (newIndex === 0) type = 'NAV_TAKEOFF';
 
     // Add new action
     actions = { 
@@ -172,7 +173,7 @@
         param1: null,
         param2: null,
         param3: null,
-        param4: null
+        param4: null,
       }
     };
 
@@ -217,7 +218,7 @@
   function reindexActions() {
     const newActions: MissionPlanActions = {};
     Object.values(actions).forEach((action, index) => {
-      newActions[index + 1] = action;
+      newActions[index] = action;
     });
     actions = newActions;
     missionPlanActionsStore.set(actions);
@@ -229,26 +230,26 @@
   function updateActionUI() {
     const actionContainers = document.querySelectorAll('.action-container');
     actionContainers.forEach((container, index) => {
-      container.id = `action-${index + 1}`;
-      container.querySelector('span')!.textContent = `${index + 1}`;
+      container.id = `action-${index}`;
+      container.querySelector('span')!.textContent = `${index}`;
       container.querySelectorAll('input').forEach((input) => {
         const id = input.id.split('-');
-        id[1] = String(index + 1);
+        id[1] = String(index);
         input.id = id.join('-');
       });
       container.querySelectorAll('label').forEach((label) => {
         const id = label.htmlFor.split('-');
-        id[1] = String(index + 1);
+        id[1] = String(index);
         label.htmlFor = id.join('-');
       });
       container.querySelectorAll('select').forEach((select) => {
         const id = select.id.split('-');
-        id[1] = String(index + 1);
+        id[1] = String(index);
         select.id = id.join('-');
       });
       container.querySelectorAll('button').forEach((button) => {
         const id = button.id.split('-');
-        id[1] = String(index + 1);
+        id[1] = String(index);
         button.id = id.join('-');
       });
     });

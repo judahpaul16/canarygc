@@ -55,6 +55,22 @@
   }
 
   async function handleLoad(title: string, actions: MissionPlanActions) {
+    // Clear the current mission plan
+    try {
+      let response = await fetch("/api/mavlink/clear_mission", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+      });
+      if (response.ok) {
+        console.log(await response.text());
+      } else {
+        console.error(`Error: ${await response.text()}`);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
 
     await pb.collection("mission_plans").getFullList().then((response) => {
       if (response.length > 0) {

@@ -71,17 +71,17 @@
     <div class="separator"></div>
     <div class="column flex flex-col items-center justify-center text-center space-y-4">
       <div class="flex flex-col items-center">
-        <div class="label text-sm mb-1">Alt. Up</div>
+        <div class="label text-sm mb-1" title="Altitude Up">Alt. Up</div>
         <button class="alt-button rounded-full"
             on:click={() => {setPositionLocal('0', '0', `-${altitude + 10}`)}}>
-          <i class="alt-up fas fa-person-arrow-up-from-line"></i>
+          <i class="alt-up fas fa-arrow-up"></i>
         </button>
       </div>
       <div class="flex flex-col items-center justify-center">
-        <div class="label text-sm mb-1">Alt. Down</div>
+        <div class="label text-sm mb-1" title="Altitude Down">Alt. Down</div>
         <button class="alt-button rounded-full"
             on:click={() => {setPositionLocal('0', '0', `-${altitude - 10}`)}}>
-          <i class="alt-down fas fa-person-arrow-down-to-line"></i>
+          <i class="alt-down fas fa-arrow-down"></i>
         </button>
       </div>
     </div>

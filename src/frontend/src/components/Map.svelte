@@ -3,7 +3,7 @@
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import { mapStore, markersStore, polylinesStore } from '../stores/mapStore';
   import { mavLocationStore, mavHeadingStore } from '../stores/mavlinkStore';
-  import { missionPlanTitleStore, missionPlanActionsStore, type MissionPlanActions } from '../stores/missionPlanStore';
+  import { missionPlanTitleStore, missionPlanActionsStore, type MissionPlanActions, missionIndexStore } from '../stores/missionPlanStore';
   import { get } from 'svelte/store';
   import Modal from './Modal.svelte';
 
@@ -366,21 +366,25 @@
     for (let i = 0; i < markerEntries.length - 1; i++) {
       const [currentIndex, currentMarker] = markerEntries[i];
       const [nextIndex, nextMarker] = markerEntries[i + 1];
+      let [prevIndex, prevMarker] = markerEntries[i];
+      if (i > 0) [prevIndex, prevMarker] = markerEntries[i - 1];
       
-      if (currentMarker && nextMarker) {
+      if (currentMarker && nextMarker && currentIndex >= get(missionIndexStore)) {
         let currentLatLng = currentMarker.getLatLng();
         let nextLatLng = nextMarker.getLatLng();
         addPolyline(currentLatLng, nextLatLng);
       }
+      if (currentIndex <= get(missionIndexStore) && prevMarker) {
+        removePolyline(prevMarker.getLatLng(), currentMarker.getLatLng());
+      }
     }
 
     if (markerEntries.length > 0) {
-      const [firstIndex, firstMarker] = markerEntries[0];
       if (get(mapStore)) {
         let mavLocation = get(mavLocationStore)!;
-        let currentMarkerLatLng = firstMarker.getLatLng();
-        if (mavLocation && currentMarkerLatLng) {
-            addPolyline(mavLocation as L.LatLng, currentMarkerLatLng);
+        let firstUnreachedMarker = markerEntries.find(([index]) => index === get(missionIndexStore));
+        if (mavLocation && firstUnreachedMarker) {
+          addPolyline(mavLocation as L.LatLng, firstUnreachedMarker[1].getLatLng());
         }
       }
     }
