@@ -1,5 +1,8 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import {
+    port,
+    reader,
+    online,
     initializePort,
     requestSysStatus,
     sendMavlinkCommand,
@@ -7,27 +10,21 @@ import {
     loadMissionItem,
     clearAllMissionItems,
     setPositionLocal,
-    online,
     statusRequested,
-    logs,
-    newLogs,
+    newLogs
 } from '$lib/server/mavlink';
-
-let previousLogLength = 0;
 
 export const POST: RequestHandler = async (request): Promise<Response> => {
     switch (request.params.type) {
         case 'init':
             try {
-                if (!online) await initializePort();
-                if (online && !statusRequested) await requestSysStatus();
+                let connected = (port && reader && online) ? true : false;
+                if (!connected) await initializePort();
+                if (connected && !statusRequested) await requestSysStatus();
 
-                // Return new logs and clear newLogs
-                const currentLogLength = logs.length;
-                if (logs.length > 0) {
+                if (newLogs.length > 0) {
                     const logsToSend = newLogs.slice();
                     newLogs.length = 0; // Clear newLogs
-                    previousLogLength = currentLogLength; // Update previous length
                     return new Response(JSON.stringify(logsToSend), { status: 200, headers: { 'Content-Type': 'application/json' } });
                 }
 

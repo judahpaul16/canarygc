@@ -19,3 +19,4 @@ export const missionPlanTitleStore = writable<string>('');
 export const missionPlanActionsStore = writable<MissionPlanActions>({});
 export const missionCountStore = writable<number>(0);
 export const missionIndexStore = writable<number>(0);
+export const missionCompleteStore = writable<boolean>(true);
