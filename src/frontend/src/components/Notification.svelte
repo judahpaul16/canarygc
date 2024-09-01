@@ -48,7 +48,7 @@
             </button>
         </div>
         <hr class="border-[#ffffff7c] w-[80%] m-auto rounded" />
-        <div class="px-4 py-2 text-white rounded-[1.5em]">
+        <div class="px-4 py-2 text-white rounded-[1.5em] text-center">
             {@html content}
         </div>
     </div>
