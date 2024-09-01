@@ -64,11 +64,11 @@
       <form>
         <div id="max-speed-container" class="flex flex-col items-center">
           <div class="label text-sm mb-1">Max Speed<span class="text-xs text-gray-400 mt-1 ml-1">(m/s)</span></div>
-          <input type="number" min="0" class="form-input mb-2" placeholder="Example: 10" bind:value={maxSpeed} />
+          <input type="number" min="0" class="form-input mb-2" placeholder="10 m/s" bind:value={maxSpeed} />
         </div>
         <div class="flex flex-col items-center justify-center">
           <div class="label text-sm mb-1">Go to Altitude<span class="text-xs text-gray-400 mt-1 ml-1">(m)</span></div>
-          <input type="number" min="0" class="form-input" placeholder="Example: 100" bind:value={altitudeSetPoint} />
+          <input type="number" min="0" class="form-input" placeholder="100 m" bind:value={altitudeSetPoint} />
         </div>
         <button class="bg-[#2d2d2d] hover:brightness-150 text-xs text-white rounded-full py-1 px-4 mt-2"
           on:click|preventDefault={() => {
