@@ -1,6 +1,6 @@
 <svelte:options accessors={true} />
 <script lang="ts">
-    import { onMount, afterUpdate } from 'svelte';
+    import { onMount, afterUpdate, onDestroy } from 'svelte';
     import { notificationCountStore } from '../stores/notificationCountStore';
     import { get } from 'svelte/store';
 
@@ -10,6 +10,7 @@
     export let type: string = 'info';
 
     let translateY: string = '0px';
+    let interval: NodeJS.Timeout;
 
     const close = () => {
         document.getElementById(`notification-${id}`)?.remove();
@@ -29,9 +30,13 @@
     };
 
     onMount(() => {
-        setInterval(() => {
+        interval = setInterval(() => {
             updateTranslateY();
         }, 1000);
+    });
+
+    onDestroy(() => {
+        clearInterval(interval);
     });
 
     afterUpdate(() => {
