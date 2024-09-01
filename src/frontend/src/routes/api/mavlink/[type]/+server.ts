@@ -11,7 +11,8 @@ import {
     clearAllMissionItems,
     setPositionLocal,
     statusRequested,
-    newLogs
+    newLogs,
+    logs
 } from '$lib/server/mavlink';
 
 export const POST: RequestHandler = async (request): Promise<Response> => {
@@ -22,7 +23,7 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
                 if (!connected) await initializePort();
                 if (connected && !statusRequested) await requestSysStatus();
 
-                if (newLogs.length > 0) {
+                if (logs.length > 0) {
                     const logsToSend = newLogs.slice();
                     newLogs.length = 0; // Clear newLogs
                     return new Response(JSON.stringify(logsToSend), { status: 200, headers: { 'Content-Type': 'application/json' } });
