@@ -1,10 +1,19 @@
 <script lang="ts">
     import PocketBase from "pocketbase";
     import { mapStore} from "../stores/mapStore";
-    import { missionPlanTitleStore, missionPlanActionsStore, type MissionPlanActions } from "../stores/missionPlanStore";
-    import { get } from "svelte/store";
+    import {
+        missionPlanTitleStore,
+        missionPlanActionsStore,
+        type MissionPlanActions
+        } from "../stores/missionPlanStore";
     import Modal from "./Modal.svelte";
     import ManageMissionPlans from "./ManageMissionPlans.svelte";
+    import {
+        darkModeStore,
+        primaryColorStore,
+        secondaryColorStore,
+        tertiaryColorStore
+    } from '../stores/customizationStore';
 
     const pb = new PocketBase("http://localhost:8090");
 
@@ -14,6 +23,12 @@
     $: title = $missionPlanTitleStore
     $: actions = $missionPlanActionsStore;
     $: map = $mapStore;
+    
+    $: darkMode = $darkModeStore;
+    $: primaryColor = $primaryColorStore;
+    $: secondaryColor = $secondaryColorStore;
+    $: tertiaryColor = $tertiaryColorStore;
+    $: fontColor = darkMode ? "#ffffff" : "#000000";
 
     function toggleMissionPlans() {
         const modal = new ManageMissionPlans({
@@ -21,6 +36,9 @@
             props: {
                 isModal: true,
                 isOpen: true,
+                onCancel: () => {
+                    modal.$destroy();
+                },
             },
         });
     }
@@ -365,10 +383,11 @@
 </script>
 
 <section
-    class="flight-plan-settings bg-[#1c1c1e] rounded-lg p-4 h-full text-white"
+    class="flight-plan-settings rounded-lg p-4 h-full"
+    style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
 >
     <button on:click={setHomeLocation}>
-        <i class="fas fa-home text-[#e6dc53]"></i>
+        <i class="fas fa-home text-[#ffc64a]"></i>
         Set Home Location
     </button>
     <button on:click={toggleMissionPlans}>
@@ -400,16 +419,18 @@
         display: flex;
         flex-direction: column;
         gap: 1em;
+        color: var(--fontColor);
+        background-color: var(--primaryColor);
     }
 
     button {
         display: flex;
         gap: 0.5rem;
         padding: 0.5rem 1rem;
-        background-color: #2d2d2d;
+        background-color: var(--secondaryColor);
         border: none;
         border-radius: 0.5rem;
-        color: white;
+        color: var(--fontColor);
         font-size: calc(0.3rem + 0.5vw);
         cursor: pointer;
         align-items: center;

@@ -46,8 +46,8 @@
 
 <div class="notification notification-{type} fixed top-4 right-4 z-50 rounded-lg" id="notification-{id}">
     <div class="shadow-lg max-w-sm w-full rounded-lg">
-        <div class="relative border-[#2d2d2d] rounded-[1.5em]">
-            <div class="px-4 py-2 text-lg font-semibold text-white rounded-[1.5em] text-center">
+        <div class="relative rounded-[1.5em]">
+            <div class="px-4 py-2 text-lg font-semibold rounded-[1.5em] text-center">
                 {title}
             </div>
             <button on:click={close} class="absolute top-2 right-2 text-gray-400 hover:text-white text-2xl">
@@ -55,27 +55,30 @@
             </button>
         </div>
         <hr class="border-[#ffffff7c] w-[80%] m-auto rounded" />
-        <div class="px-4 py-2 text-white rounded-[1.5em] text-center">
+        <div class="px-4 py-2 rounded-[1.5em] text-center">
             {@html content}
         </div>
     </div>
 </div>
 
 <style>
+    .relative {
+        border-color: var(--secondaryColor);
+    }
     .notification-info div {
-        background-color: #2b6cb0;
+        background-color: #2a7acf;
         color: #c9d5f3;
     }
     .notification-success div {
-        background-color: #146e14;
+        background-color: #1e8d1e;
         color: #affcaf;
     }
     .notification-warning div {
-        background-color: #d97706;
+        background-color: #d48c3a;
         color: #f7d08a;
     }
     .notification-error div {
-        background-color: #b91c1c;
+        background-color: #d62929;
         color: #f7d4d4;
     }
 </style>

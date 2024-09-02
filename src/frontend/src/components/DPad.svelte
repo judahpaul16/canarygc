@@ -1,6 +1,9 @@
 <script lang="ts">
   import { mavAltitudeStore } from '../stores/mavlinkStore';
   import { get } from 'svelte/store';
+  import { primaryColorStore, tertiaryColorStore } from '../stores/customizationStore';
+  $: primaryColor = $primaryColorStore;
+  $: tertiaryColor = $tertiaryColorStore;
 
   let altitude: number = get(mavAltitudeStore);
   $: altitude = $mavAltitudeStore;
@@ -24,7 +27,7 @@
 </script>
 
 <div class="dpad-container relative flex items-center justify-center w-48 h-48">
-  <nav class="d-pad relative">
+  <nav class="d-pad relative" style="--tertiaryColor: {tertiaryColor}">
     <button class="up" on:click={() => {setPositionLocal('10', '0', `-${altitude}`)}}>
       <i class="fas fa-chevron-up"></i>
     </button>
@@ -54,7 +57,7 @@
     width: 200px;
     height: 200px;
     border-radius: 50%;
-    background: #3f3f40;
+    background: var(--tertiaryColor);
     overflow: hidden;
   }
 
@@ -69,7 +72,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    color: #cacac9;
+    color: #ebebeb;
     font-size: 24px;
     transition: all 0.2s ease;
   }
@@ -128,7 +131,7 @@
     left: 50%;
     width: 60px;
     height: 60px;
-    background-color: #1c1c1e;
+    background-color: var(--primaryColor);
     border-radius: 50%;
     transform: translate(-50%, -50%);
     display: flex;
@@ -137,8 +140,8 @@
   }
 
   .move-text {
-    color: #ffffff;
     font-size: calc(0.5rem + 0.5vw);
+    color: var(--fontColor);
   }
   
   /* Mobile Styles */

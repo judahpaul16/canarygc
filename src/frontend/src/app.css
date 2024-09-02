@@ -17,9 +17,13 @@ main {
 }
 
 * {
-    transition: all 0.3s ease;
-  --sb-track-color: #2d2d2d;
-  --sb-thumb-color: #3d3d3d;
+  transition:
+    all 0.1s ease,
+    color 0s ease,
+    background-color 0.1s ease,
+    height 0s ease !important;
+  --sb-track-color: var(--secondaryColor);
+  --sb-thumb-color: var(--tertiaryColor);
   --sb-size: 12px;
 }
 
@@ -29,6 +33,7 @@ main {
 
 ::-webkit-scrollbar-track {
   background: var(--sb-track-color);
+  border: 2px solid var(--sb-thumb-color);
   border-radius: 10px;
 }
 

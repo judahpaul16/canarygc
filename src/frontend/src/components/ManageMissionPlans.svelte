@@ -4,6 +4,7 @@
   import { get } from "svelte/store";
   import Modal from "./Modal.svelte";
   import { onMount } from "svelte";
+  import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../stores/customizationStore';
 
   const pb = new PocketBase("http://localhost:8090");
 
@@ -14,6 +15,11 @@
   let missionPlans: Array<{ id: string; title: string }> = [];
   let actions: MissionPlanActions = {};
 
+  $: primaryColor = $primaryColorStore;
+  $: secondaryColor = $secondaryColorStore;
+  $: darkMode = $darkModeStore;
+  $: fontColor = darkMode ? "#ffffff" : "#000000";
+  $: tertiaryColor = $tertiaryColorStore;
   $: actions = $missionPlanActionsStore;
 
   onMount(() => {
@@ -167,9 +173,12 @@
 
 {#if isOpen && isModal}
   <div class="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50 p-8">
-    <div class="bg-[#1e1e1e] rounded-lg shadow-lg max-w-lg w-full">
-      <div class="relative border-b border-[#2d2d2d]">
-        <div class="p-4 text-lg font-semibold text-white">
+    <div
+      class="container rounded-lg shadow-lg max-w-lg w-full"
+      style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor}"
+    >
+      <div class="relative border-b">
+        <div class="title-container p-4 text-lg font-semibold">
           {title}
         </div>
         <button
@@ -179,11 +188,11 @@
           &times;
         </button>
       </div>
-      <div class="px-4 py-2 text-white max-h-[40vh] overflow-auto">
+      <div class="px-4 py-2 max-h-[40vh] overflow-auto">
         <ul class="overflow-auto">
           {#if missionPlans.length != 0}
             {#each missionPlans as plan (plan.id)}
-              <li class="flex justify-between items-center px-2 py-1 bg-gray-700 rounded mb-2">
+              <li class="flex justify-between items-center px-2 py-1 rounded mb-2">
                 <span>{plan.title}</span>
                 <div class="flex items-center gap-2">
                   <button
@@ -198,47 +207,50 @@
               </li>
             {/each}
           {:else}
-            <li class="px-2 py-1 bg-gray-700 rounded mb-2">
+            <li class="px-2 py-1 rounded mb-2">
               <span>No mission plans found.</span>
             </li>
           {/if}
         </ul>
       </div>
-      <div class="flex justify-center px-4 py-2 border-t border-[#2d2d2d]">
+      <div class="flex justify-center px-4 py-2 border-t">
         <button
             on:click={importPlan}
-            class="bg-transparent hover:bg-[#4b5563] text-white px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
+            class="import-btn bg-transparent hover:bg-[#4b5563] px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
           >
           <i class="fas fa-upload mr-1"></i>
-          Import Mission Plan
+          Import Plan
         </button>
       </div>
     </div>
   </div>
 {:else}
-  <div class="bg-[#1c1c1e] rounded-lg w-full h-full overflow-auto relative">
-    <div class="relative border-b border-[#2d2d2d]">
-      <div class="title-container p-4 pb-2 font-semibold text-white">
+  <div
+      class="container rounded-lg w-full h-full overflow-auto relative"
+      style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor}"
+    >
+    <div class="relative border-b">
+      <div class="title-container p-4 pb-2 font-semibold">
         {title}
       </div>
     </div>
-    <div class="plans p-2 text-white h-full max-h-[67%]">
+    <div class="plans p-2 h-full max-h-[67%]">
       <ul class="overflow-auto h-full p-2 text-sm">
         {#if missionPlans.length != 0}
           {#each missionPlans as plan (plan.id)}
-            <li class="inline-block justify-between items-center px-2 py-1 bg-gray-700 rounded mb-2 w-full">
+            <li class="inline-block justify-between items-center px-2 py-1 rounded mb-2 w-full text-white">
               <span class="mr-2" title={plan.title}>{plan.title.substring(0, 11)}{#if plan.title.length >= 11}...{/if}</span>
-              <div class="flex items-center gap-3 float-right">
+              <div class="flex items-center gap-3 float-right relative">
                 <button
                   on:click={() => deleteMissionPlan(plan.id)}
-                  class="text-red-400 hover:text-red-600 relative">
+                  class="text-red-400 hover:text-red-600">
                     <i class="fas fa-trash-alt text-sm"></i>
                     <div class="tooltip">Delete</div>
                   </button
                 >
                 <button
                   on:click={() => loadMissionPlan(plan)}
-                  class="text-[#62bbff] hover:text-[#377aad] relative">
+                  class="text-[#62bbff] hover:text-[#377aad]">
                     <i class="fas fa-cloud-arrow-up text-sm"></i>
                     <div class="tooltip">Load</div>
                   </button
@@ -247,16 +259,16 @@
             </li>
           {/each}
         {:else}
-          <li class="px-2 py-1 bg-gray-700 rounded mb-2">
+          <li class="px-2 py-1 rounded mb-2">
             <span>No mission plans found.</span>
           </li>
         {/if}
       </ul>
     </div>
-    <div class="absolute left-0 right-0 bottom-0 flex justify-center border-t border-[#2d2d2d]">
+    <div class="absolute left-0 right-0 bottom-0 flex justify-center border-t" style="--tertiaryColor: {tertiaryColor}">
       <button
           on:click={importPlan}
-          class="bg-[#121212] hover:bg-[#4b5563] text-white px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
+          class="import-btn hover:bg-[#4b5563] px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
         >
         <i class="fas fa-upload text-xs" title="Import Mission Plan"></i>
         <span class="import-btn-span text-xs ml-1">Import</span>
@@ -266,6 +278,23 @@
 {/if}
 
 <style>
+  .container {
+    background-color: var(--primaryColor);
+  }
+
+  .container .border-b, .border-t {
+    border-color: var(--tertiaryColor);
+  }
+
+  .import-btn {
+    background-color: var(--secondaryColor);
+    color: var(--fontColor);
+  }
+
+  .import-btn:hover {
+    background-color: var(--tertiaryColor);
+  }
+
   button {
     font-size: 1rem;
     line-height: 1.5;
@@ -278,11 +307,10 @@
 
   .tooltip {
     position: absolute;
-    top: 0;
-    left: -290%;
+    top: -35%;
+    left: -110%;
     margin-bottom: 0.5rem;
-    background-color: black;
-    color: white;
+    background-color: var(--tertiaryColor);
     padding: 0.5rem;
     border-radius: 0.25rem;
     white-space: nowrap;
@@ -295,14 +323,20 @@
   button:hover .tooltip {
     opacity: 1;
     visibility: visible;
-    transform: translateX(-50%) translateY(-0.5rem);
+    transform: translateX(-30%);
   }
 
   .title-container {
     font-size: calc(0.5rem + 0.5vw);
+    color: var(--fontColor);
   }
   .plans + div {
     padding-block: 1rem;
+  }
+
+  li {
+    color: var(--fontColor);
+    background-color: var(--secondaryColor);
   }
 
   /* Mobile Styles */

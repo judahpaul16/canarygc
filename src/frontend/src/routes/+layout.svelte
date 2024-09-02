@@ -29,6 +29,12 @@
     missionIndexStore,
     missionCompleteStore
   } from '../stores/missionPlanStore';
+  import {
+    darkModeStore,
+    primaryColorStore,
+    secondaryColorStore,
+    tertiaryColorStore
+  } from '../stores/customizationStore';
   import { get } from 'svelte/store';
   import Modal from '../components/Modal.svelte';
   import Notification from '../components/Notification.svelte';
@@ -42,6 +48,11 @@
   let heightOfDashboard = 1000;
   let logs: string[] = [];
 
+  $: darkMode = $darkModeStore;
+  $: primaryColor = $primaryColorStore;
+  $: secondaryColor = $secondaryColorStore;
+  $: tertiaryColor = $tertiaryColorStore;
+  $: fontColor = darkMode ? '#ffffff' : '#000000';
   $: currentPath = $page.url.pathname;
   $: isNavHidden = currentPath === '/' || currentPath === '/login';
   $: missionCountStore.set(Object.keys($missionPlanActionsStore).length - 1);
@@ -395,64 +406,71 @@
   }
 </script>
 
-<main class="flex overflow-auto">
-  <div class="bg-[#00000071] flex w-full h-full">
+<main class="bg-black flex overflow-auto">
+  <div class="bg fixed w-full h-full "></div>
+  <div class="bg-[#0000001f] flex w-full h-full z-10">
     <!-- Desktop Navigation -->
-    <nav class="desktop-nav bg-[#1c1c1e] text-white w-min h-full p-4 grid opacity-0" style="--heightOfDashboard: {heightOfDashboard}px;" class:opacity={!isNavHidden ? 1 : 0}>
-      <div class="flex-grow flex flex-col items-center">
-        <div class="mb-5">
-          <button on:click|preventDefault={() => handleNavigation('/')}>
-            <img src="/logo.png" alt="Logo" class="w-12 h-12">
+    <nav class="desktop-nav w-min h-full p-4 grid opacity-0 z-20"
+      style="--heightOfDashboard: {heightOfDashboard}px; --primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
+      class:opacity={!isNavHidden ? 1 : 0}
+    >
+        <div class="flex-grow flex flex-col items-center">
+          <div class="mb-5">
+            <button on:click|preventDefault={() => handleNavigation('/')}>
+              <img src="/logo.png" alt="Logo" class="w-12 h-12">
+            </button>
+          </div>
+          {#if $authData}
+            <button on:click|preventDefault={() => handleNavigation('/dashboard')} class="nav-button mb-4 {currentPath === '/dashboard' ? 'active' : ''}">
+              <i class="nav-icon fas fa-tachometer-alt"></i>
+              <div class="tooltip text-white">Dashboard</div>
+            </button>
+            <button on:click|preventDefault={() => handleNavigation('/mission-planner')} class="nav-button mb-4 {currentPath === '/mission-planner' ? 'active' : ''}">
+              <i class="nav-icon fas fa-route"></i>
+              <div class="tooltip text-white">Mission Planner</div>
+            </button>
+            <button on:click|preventDefault={() => handleNavigation('/event-log')} class="nav-button mb-4 {currentPath === '/event-log' ? 'active' : ''}">
+              <i class="nav-icon fas fa-bars-staggered"></i>
+              <div class="tooltip text-white">Event Log</div>
+            </button>
+            <div class="separator h-[2px] w-[80%] rounded-2xl mb-4"></div>
+            <button on:click|preventDefault={() => handleNavigation('/user-settings')} class="nav-button mb-4 {currentPath === '/user-settings' ? 'active' : ''}">
+              <i class="nav-icon fas fa-user"></i>
+              <div class="tooltip text-white">User Settings</div>
+            </button>
+            <button on:click|preventDefault={() => handleNavigation('/notifications')} class="nav-button mb-4 {currentPath === '/notifications' ? 'active' : ''}">
+              <i class="nav-icon fas fa-bell"></i>
+              <div class="tooltip text-white">Notifications</div>
+            </button>
+            <button on:click={handleLogout} class="nav-button mb-4">
+              <i class="nav-icon fas fa-sign-out-alt"></i>
+              <div class="tooltip text-white">Logout</div>
+            </button>
+          {:else}
+            <button on:click|preventDefault={() => handleNavigation('/login')} class="nav-button mb-4 {currentPath === '/login' ? 'active' : ''}">
+              <i class="nav-icon fas fa-sign-in-alt"></i>
+              <div class="tooltip text-white">Login</div>
+            </button>
+          {/if}
+        </div>
+        <div class="flex flex-col justify-self-end gap-3">
+          <button class="nav-button" aria-label="GitHub" on:click|preventDefault={() => window.open('https://github.com/MAV-Manager/mmgcs', '_blank')}>
+            <i class="nav-icon fab fa-github"></i>
+            <div class="tooltip text-white">GitHub</div>
+          </button>
+          <div class="separator h-[2px] w-[80%] mx-auto mb-2 rounded-2xl"></div>
+          <button class="nav-button" aria-label="FAA Rules" on:click|preventDefault={() => window.open('https://www.faa.gov/uas', '_blank')}>
+            <i class="nav-icon fas fa-plane-circle-exclamation"></i>
+            <div class="tooltip text-white">FAA Rules and Regulations for Unmanned Aircraft Systems (UAS)</div>
           </button>
         </div>
-        {#if $authData}
-          <button on:click|preventDefault={() => handleNavigation('/dashboard')} class="nav-button mb-4 {currentPath === '/dashboard' ? 'active' : ''}">
-            <i class="nav-icon fas fa-tachometer-alt"></i>
-            <div class="tooltip">Dashboard</div>
-          </button>
-          <button on:click|preventDefault={() => handleNavigation('/mission-planner')} class="nav-button mb-4 {currentPath === '/mission-planner' ? 'active' : ''}">
-            <i class="nav-icon fas fa-route"></i>
-            <div class="tooltip">Mission Planner</div>
-          </button>
-          <button on:click|preventDefault={() => handleNavigation('/event-log')} class="nav-button mb-4 {currentPath === '/event-log' ? 'active' : ''}">
-            <i class="nav-icon fas fa-bars-staggered"></i>
-            <div class="tooltip">Event Log</div>
-          </button>
-          <div class="separator h-[2px] w-[80%] rounded-2xl bg-[#2d2d2d] mb-4"></div>
-          <button on:click|preventDefault={() => handleNavigation('/user-settings')} class="nav-button mb-4 {currentPath === '/user-settings' ? 'active' : ''}">
-            <i class="nav-icon fas fa-user"></i>
-            <div class="tooltip">User Settings</div>
-          </button>
-          <button on:click|preventDefault={() => handleNavigation('/notifications')} class="nav-button mb-4 {currentPath === '/notifications' ? 'active' : ''}">
-            <i class="nav-icon fas fa-bell"></i>
-            <div class="tooltip">Notifications</div>
-          </button>
-          <button on:click={handleLogout} class="nav-button mb-4">
-            <i class="nav-icon fas fa-sign-out-alt"></i>
-            <div class="tooltip">Logout</div>
-          </button>
-        {:else}
-          <button on:click|preventDefault={() => handleNavigation('/login')} class="nav-button mb-4 {currentPath === '/login' ? 'active' : ''}">
-            <i class="nav-icon fas fa-sign-in-alt"></i>
-            <div class="tooltip">Login</div>
-          </button>
-        {/if}
-      </div>
-      <div class="flex flex-col justify-self-end gap-3">
-        <button class="nav-button" aria-label="GitHub" on:click|preventDefault={() => window.open('https://github.com/MAV-Manager/mmgcs', '_blank')}>
-          <i class="nav-icon fab fa-github"></i>
-          <div class="tooltip">GitHub</div>
-        </button>
-        <div class="separator h-[2px] w-[80%] mx-auto mb-2 rounded-2xl bg-[#2d2d2d]"></div>
-        <button class="nav-button" aria-label="FAA Rules" on:click|preventDefault={() => window.open('https://www.faa.gov/uas', '_blank')}>
-          <i class="nav-icon fas fa-plane-circle-exclamation"></i>
-          <div class="tooltip">FAA Rules and Regulations for Unmanned Aircraft Systems (UAS)</div>
-        </button>
-      </div>
     </nav>
 
     <!-- Mobile Navigation -->
-    <nav class="mobile-nav bg-[#1c1c1e] text-white p-4 md:hidden flex flex-col">
+    <nav
+      class="mobile-nav p-4 md:hidden flex flex-col z-20"
+      style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
+    >
       <div class="flex justify-between items-center">
         <button class="nav-button" aria-label="Toggle Navigation" on:click={toggleNav}>
           <i class="nav-icon fas fa-bars"></i>
@@ -488,25 +506,28 @@
           </a>
         {/if}
       </div>
-    </nav>    
+    </nav>
 
-    <div class="slot-container flex-grow pr-8 justify-center items-center overflow-auto">
+    <div class="slot-container flex-grow pr-8 justify-center items-center overflow-auto z-10">
       <slot />
     </div>
   </div>
 </main>
 
 <style>
-  main {
-    background: url('background.png') no-repeat center center fixed;
+  .bg {
+    background: url('bg-map.png') no-repeat center center fixed;
     background-size: cover;
     margin: 0;
+    filter: blur(3px);
   }
 
   .desktop-nav {
     align-content: space-between;
     align-self: center;
-    border: 5px solid #121212;
+    color: var(--fontColor);
+    background-color: var(--primaryColor);
+    border: 5px solid var(--secondaryColor);
     border-right: none;
     border-radius: 30px 0 0 30px;
     margin-left: 2em;
@@ -514,6 +535,11 @@
     height: var(--heightOfDashboard);
     transition: height 0s;
     transition: opacity 0.25s;
+  }
+
+  .mobile-nav {
+    color: var(--fontColor);
+    background-color: var(--primaryColor);
   }
 
   .nav-button {
@@ -529,7 +555,7 @@
   }
 
   .nav-button:hover {
-    background-color: #2d2d2d;
+    background-color: var(--secondaryColor);
   }
 
   .nav-button:hover, .nav-button.active {
@@ -537,7 +563,7 @@
   }
 
   .nav-button.active {
-    background-color: #141414;
+    background-color: var(--tertiaryColor);
   }
 
   .nav-icon {
@@ -549,8 +575,7 @@
     top: 0;
     left: 0;
     margin-bottom: 0.5rem;
-    background-color: black;
-    color: white;
+    background-color: var(--tertiaryColor);
     padding: 0.5rem;
     border-radius: 0.25rem;
     white-space: nowrap;
@@ -558,12 +583,12 @@
     visibility: hidden;
     transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
     z-index: 1;
-    transform: translateX(50px);
   }
 
   .nav-button:hover .tooltip {
     opacity: 1;
     visibility: visible;
+    transform: translateX(50px);
   }
 
 
@@ -584,6 +609,7 @@
 
     .mobile-nav {
       display: flex;
+      background-color: var(--primaryColor);
     }
 
     .mobile-nav-links {

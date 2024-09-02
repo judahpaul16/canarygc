@@ -9,6 +9,8 @@
 
   export let hideOverlay: boolean = false;
   export let mavLocation: L.LatLng | { lat: number; lng: number };;
+  export let id: string | null = null;
+  import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../stores/customizationStore';
 
   const apiKey = import.meta.env.VITE_ALTITUDE_ANGEL_API_KEY;
 
@@ -37,13 +39,17 @@
   let mavHeading: number = 0;
   let mavMarker: L.Marker;
   let isDragging = false;
-  let darkMode = true;
+  let darkMode = get(darkModeStore);
   
-  $: leafletMap = $mapStore;
+  $: darkMode = $darkModeStore;
+  $: primaryColor = $primaryColorStore;
+  $: secondaryColor = $secondaryColorStore;
+  $: tertiaryColor = $tertiaryColorStore;
+  $: fontColor = darkMode ? '#ffffff' : '#000000';
 
+  $: leafletMap = $mapStore;
   $: mavHeading = $mavHeadingStore,
         updateMAVMarker();
-
   $: mavLocation = $mavLocationStore,
         updateMAVMarker();
 
@@ -83,7 +89,8 @@
           leafletMap = value;
         }
       });
-      initializeLeafletMap();
+      if (id !== null) initializeLeafletMap(id);
+      else initializeLeafletMap();
 
       // Load and initialize Altitude Angel
       await loadScript('js/jquery-3.2.1.min.js');
@@ -173,10 +180,20 @@
     }
   }
 
-  function initializeLeafletMap() {
-    leafletMap = L.map('map').setView(mavLocation, zoom);
+  function initializeLeafletMap(id: string = 'map') {
+    leafletMap = L.map(id).setView(mavLocation, zoom);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {}).addTo(leafletMap);
-    if (darkMode) document.getElementById('map')!.classList.add('dark');
+    if (darkMode) {
+      document.getElementById('map')!.classList.add('dark');
+      // @ts-ignore
+      document.querySelector('.bg')!.style.background = "url('bg-map.png') no-repeat center center fixed";
+      primaryColorStore.set('#1c1c1e');
+    } else {
+      // @ts-ignore
+      document.querySelector('.bg')!.style.background = "url('bg-map-light.png') no-repeat center center fixed";
+      primaryColorStore.set('#ffffff');
+    }
+
     // @ts-ignore
     if (hideOverlay) Array.from(document.querySelectorAll('.map-btn i')).forEach((element) => element.style.fontSize = "small");
     
@@ -238,6 +255,20 @@
     if (map) {
       map.classList.toggle('dark');
       darkMode = !darkMode;
+      darkModeStore.set(darkMode);
+    }
+    if (darkMode) {
+      // @ts-ignore
+      document.querySelector('.bg')!.style.background = "url('bg-map.png') no-repeat center center fixed";
+      primaryColorStore.set('#1c1c1e');
+      secondaryColorStore.set('#121212');
+      tertiaryColorStore.set('#2d2d2d');
+    } else {
+      // @ts-ignore
+      document.querySelector('.bg')!.style.background = "url('bg-map-light.png') no-repeat center center fixed";
+      primaryColorStore.set('#ffffff');
+      secondaryColorStore.set('#e7e9ef');
+      tertiaryColorStore.set('#bdbdbd');
     }
   }
 
@@ -454,22 +485,39 @@
 
   #map-toggle {
     z-index: 10;
+    background-color: var(--tertiaryColor);
+    border: 2px solid var(--primaryColor);
+  }
+
+  #map-toggle > * {
+    color: #ffffff;
+  }
+
+  .map-btn {
+    color: var(--fontColor);
+    background-color: var(--secondaryColor);
+    border: 2px solid var(--primaryColor);
+    opacity: 0.90;
+  }
+
+  .map-btn:hover {
+    opacity: 0.7;
   }
 </style>
 
-<div class="map-container">
+<div class="map-container" style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};">
   <div id="aamap" class="relative h-full"></div>
-  <div id="map" class="relative h-full rounded-lg z-0"></div>
-  <button class="map-btn absolute top-[3.2rem] right-2 text-white bg-black bg-opacity-75 p-2 px-3 hover:bg-[#1c1c1ee6] rounded-full" on:click={toggleDarkMode}>
+  <div id={id !== null ? id : 'map'} class="relative h-full rounded-lg z-0"></div>
+  <button class="map-btn absolute top-[3.8rem] right-2 text-[#ffffff] bg-opacity-75 p-2 px-3 rounded-full" on:click={toggleDarkMode}>
     {#if darkMode} <i class="fas fa-moon px-[2px]"></i> {:else} <i class="fas fa-sun"></i> {/if}
   </button>
-  <button class="map-btn absolute top-2 right-2 text-white bg-black bg-opacity-75 p-2 px-3 hover:bg-[#1c1c1ee6] rounded-full" on:click={handleFullScreen}>
+  <button class="map-btn absolute top-3 right-2 text-[#ffffff] bg-opacity-75 p-2 px-[14px] rounded-full" on:click={handleFullScreen}>
     <i class="fas fa-expand"></i>
   </button>
   {#if !hideOverlay}
-    <label id="map-toggle" class="flex justify-center cursor-pointer my-2 absolute top-1 right-2 left-2 w-fit m-auto bg-[#000000ba] rounded-3xl p-2 pl-3 text-sm items-center">
+    <label id="map-toggle" class="flex justify-center cursor-pointer my-2 absolute top-1 right-2 left-2 w-fit m-auto rounded-3xl p-2 pl-3 text-sm items-center">
       <input type="checkbox" value="" class="sr-only peer" on:click={toggleMap}>
-      <span class="text-white"><i class="fas fa-map"></i>&nbsp;&nbsp;{currentMap === 'altitudeAngel' ? 'Altitude Angel' : 'Leaflet'}</span>
+      <span class="text-[#ffffff]"><i class="fas fa-map"></i>&nbsp;&nbsp;{currentMap === 'altitudeAngel' ? 'Altitude Angel' : 'Leaflet'}</span>
       <div class="relative w-11 h-6 ml-3 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-[#61cd89] peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-[#d94d7c]"></div>
     </label>
   {/if}

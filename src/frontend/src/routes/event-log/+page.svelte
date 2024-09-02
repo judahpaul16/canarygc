@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onDestroy, onMount, afterUpdate } from 'svelte';
     import { mavlinkLogStore, mavStateStore } from '../../stores/mavlinkStore';
+    import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../../stores/customizationStore';
     import Modal from '../../components/Modal.svelte';
     import PocketBase from 'pocketbase';
     import { get } from 'svelte/store';
@@ -17,6 +18,11 @@
     let systemState = get(mavStateStore);
 
     $: systemState = $mavStateStore;
+    $: darkMode = $darkModeStore;
+    $: primaryColor = $primaryColorStore;
+    $: secondaryColor = $secondaryColorStore;
+    $: tertiaryColor = $tertiaryColorStore;
+    $: fontColor = darkMode ? '#ffffff' : '#000000';
 
     const heartbeatInfo = 'HEARTBEAT is a message sent by the autopilot to communicate its presence and status to the GCS.';
 
@@ -147,21 +153,23 @@
 </script>
 
 <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">
-    <div class="dashboard w-full gap-4 p-5 bg-[#121212] rounded-[30px] rounded-l-none overflow-hidden h-[90vh] max-h-[90vh]">
-        <div class="event-log bg-[#1c1c1e] rounded-2xl h-full flex flex-col p-5">
+    <div class="dashboard w-full gap-4 p-5 rounded-[30px] rounded-l-none overflow-hidden h-[90vh] max-h-[90vh]"
+        style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
+    >
+        <div class="event-log rounded-2xl h-full flex flex-col p-5">
             <div class="flex items-center justify-between gap-4 mb-4">
-                <h2 class="text-white text-xl">MAVLink Events</h2>
+                <h2 class="text-xl">MAVLink Events</h2>
                 <div class="filters flex gap-4 justify-center items-center">
                     <input type="text" class="form-input" placeholder="Search" on:input={highlightText}/>
                     <div class="form-checkbox gap-2">
                         <input type="checkbox" class="form-checkbox" name="Toggle TIMESYNC" checked={showTimeSync} on:change={(event) => handleShowMessage(event, 'TIMESYNC')}>
-                        <label for="Toggle TIMESYNC" class="text-white mr-2">TIMESYNC</label>
+                        <label for="Toggle TIMESYNC" class="mr-2">TIMESYNC</label>
                         <input type="checkbox" class="form-checkbox" name="Toggle PARAM_VALUE" checked={showParamValue} on:change={(event) => handleShowMessage(event, 'PARAM_VALUE')}>
-                        <label for="Toggle PARAM_VALUE" class="text-white">PARAM_VALUE</label>
+                        <label for="Toggle PARAM_VALUE">PARAM_VALUE</label>
                         <input type="checkbox" class="form-checkbox" name="Toggle GLOBAL_POSITION_INT" checked={showGPSRawInt} on:change={(event) => handleShowMessage(event, 'GLOBAL_POSITION_INT')}>
-                        <label for="Toggle GLOBAL_POSITION_INT" class="text-white">GLOBAL_POSITION_INT</label>
+                        <label for="Toggle GLOBAL_POSITION_INT">GLOBAL_POSITION_INT</label>
                         <input type="checkbox" class="form-checkbox" name="Toggle SYS_STATUS" checked={showSysStatus} on:change={(event) => handleShowMessage(event, 'SYS_STATUS')}>
-                        <label for="Toggle SYS_STATUS" class="text-white">SYS_STATUS</label>
+                        <label for="Toggle SYS_STATUS">SYS_STATUS</label>
                     </div>
                     <div class="btns flex gap-4">
                         <button class="btn btn-primary bg-red-400 hover:bg-red-500 relative" on:click={confirmClear}>
@@ -174,14 +182,14 @@
                         </button>
                     </div>
                 </div>
-                <div class="text-white w-fit flex">
-                    System State:<span class="text-[#61cd89] ml-1 mr-3">{systemState}</span>
-                    <div class="heartbeat text-white w-fit relative mr-5">
+                <div class="system-state w-fit flex">
+                    System State:<p class="text-[#61cd89] ml-1 mr-3">{systemState}</p>
+                    <div class="heartbeat w-fit relative mr-5">
                         <div>
                             <i class="fas fa-heart absolute top-[0.15rem]"></i>
                             <i class="fas fa-heart absolute top-[0.15rem]"></i>
                         </div>
-                        <span class="tooltip">{heartbeatInfo}</span>
+                        <span class="tooltip text-white">{heartbeatInfo}</span>
                     </div>
                 </div>
             </div>
@@ -208,10 +216,18 @@
 
 
 <style>
+    .dashboard {
+      background-color: var(--secondaryColor);
+    }
+
+    h2, span, label, .system-state {
+        color: var(--fontColor);
+    }
+  
     pre {
         white-space: pre-wrap;
         word-wrap: break-word;
-        background-color: #2b2b2b;
+        background-color: var(--secondaryColor);
         border-radius: 10px;
         padding: 10px;
         max-height: 95%;
@@ -224,8 +240,7 @@
         top: 0;
         right: 0;
         margin-bottom: 0.5rem;
-        background-color: black;
-        color: white;
+        background-color: var(--tertiaryColor);
         padding: 0.3rem;
         border-radius: 0.25rem;
         white-space: nowrap;
@@ -272,7 +287,7 @@
         border-radius: 0.5rem;
         padding-inline: 0.5em;
         padding-block: 0.25em;
-        background-color: #2d2d2d;
+        background-color: var(--tertiaryColor);
         color: white;
     }
 
@@ -290,7 +305,7 @@
         width: 1rem;
         height: 1rem;
         border-radius: 0.25rem;
-        background-color: #2d2d2d;
+        background-color: var(--tertiaryColor);
         cursor: pointer;
     }
 
@@ -302,7 +317,7 @@
         font-size: small;
         padding: 4px 8px;
         border-radius: 0.5rem;
-        color: white;
+        color: var(--fontColor);
         cursor: pointer;
     }
 
@@ -313,6 +328,16 @@
     .heartbeat {
         transition: 0s;
     }
+
+    .fa-heart:last-of-type {
+        color: var(--tertiaryColor);
+        opacity: 0.5;
+    }
+
+    .event-log {
+        background-color: var(--primaryColor);
+    }
+
     @media (min-width: 990px) {
         .event-log > div {
             overflow: hidden;
