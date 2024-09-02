@@ -47,6 +47,7 @@
   $: missionPlanTitle = $missionPlanTitleStore;
   $: mavLocation = $mavLocationStore;
   $: missionProgress = Math.round(($missionIndexStore / $missionCountStore) * 100);
+  $: missionLoaded = $missionPlanTitleStore !== '';
 
   async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
     const response = await fetch(`/api/mavlink/send_command`, {
@@ -304,21 +305,30 @@
           {/if}
           {#if !checkMode('AUTO', mavMode) || systemState === 'STANDBY'}
             <div class="relative group">
-              <button class="circular-button" on:click={resumeMission} disabled={checkMode('AUTO', mavMode) && systemState !== 'STANDBY'}>
+              <button
+                class="circular-button" on:click={resumeMission}
+                disabled={checkMode('AUTO', mavMode) && systemState !== 'STANDBY' || !missionLoaded}
+              >
                 <i class="fas fa-play"></i>
                 <div class="tooltip text-white">Start/Resume Mission</div>
               </button>
             </div>
           {:else}
             <div class="relative group">
-              <button class="circular-button" on:click={pauseMission} disabled={!checkMode('AUTO', mavMode)}>
+              <button
+                class="circular-button" on:click={pauseMission}
+                disabled={!checkMode('AUTO', mavMode) || !missionLoaded}
+              >
                 <i class="fas fa-pause"></i>
                 <div class="tooltip text-white">Pause Mission (Loiter)</div>
               </button>
             </div>
           {/if}
           <div class="relative group">
-            <button class="circular-button" on:click={stopMission} disabled={!checkMode('AUTO', mavMode)}>
+            <button
+              class="circular-button" on:click={stopMission}
+              disabled={!checkMode('AUTO', mavMode) || !missionLoaded}
+            >
               <i class="fas fa-stop text-red-400"></i>
               <div class="tooltip text-white">Stop Mission (RTL)</div>
             </button>

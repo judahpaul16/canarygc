@@ -37,6 +37,7 @@
   $: systemState = $mavStateStore;
   $: title = $missionPlanTitleStore;
   $: actions = $missionPlanActionsStore;
+  $: missionLoaded = $missionPlanTitleStore !== '';
 
   onMount(async () => {
     mavLocationStore.subscribe((value) => {
@@ -342,19 +343,25 @@
       </button>
       {#if !checkMode('AUTO', mavMode) || systemState === 'STANDBY'}
         <button class="px-2 py-1 bg-[#55b377] rounded-lg hover:bg-[#61cd89]"
-          disabled={checkMode('AUTO', mavMode) && systemState !== 'STANDBY'} on:click={() => {resumeMission()}}>
-              <i class="fas fa-play"></i>
-              <div class="tooltip">Start/Resume Mission</div>
+          disabled={checkMode('AUTO', mavMode) && systemState !== 'STANDBY' || !missionLoaded}
+          on:click={() => {resumeMission()}}
+        >
+          <i class="fas fa-play"></i>
+          <div class="tooltip">Start/Resume Mission</div>
         </button>
       {:else}
         <button class="px-2 py-1 bg-[#da864e] rounded-lg hover:bg-[#ff995e]"
-          disabled={!checkMode('AUTO', mavMode)} on:click={() => {pauseMission()}}>
-              <i class="fas fa-pause"></i>
-              <div class="tooltip">Pause Mission (Loiter)</div>
+          disabled={!checkMode('AUTO', mavMode) || !missionLoaded}
+          on:click={() => {pauseMission()}}
+        >
+          <i class="fas fa-pause"></i>
+          <div class="tooltip">Pause Mission (Loiter)</div>
         </button>
       {/if}
       <button class="px-2 py-1 bg-[#f87171] rounded-lg hover:bg-[#ff7e7e]"
-          disabled={!checkMode('AUTO', mavMode)} on:click={() => {stopMission()}}>
+          disabled={!checkMode('AUTO', mavMode) || !missionLoaded}
+          on:click={() => {stopMission()}}
+        >
         <i class="fas fa-stop"></i>
         <div class="tooltip">Stop Mission (RTL)</div>
       </button>
