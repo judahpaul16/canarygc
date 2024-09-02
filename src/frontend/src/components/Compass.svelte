@@ -53,7 +53,7 @@
   function updateCompass(newHeading: number) {
     if (typeof document !== 'undefined') {
       const compassArrow = document.querySelector('.compass-arrow');
-      const directionDegree = document.getElementById('direction-degree');
+      const directionDegree = document.getElementById('heading');
       const latLongElement = document.getElementById('lat-long');
 
       if (compassArrow instanceof HTMLElement && directionDegree instanceof HTMLElement) {
@@ -72,7 +72,7 @@
 <div class="compass rounded-lg flex flex-col items-center justify-center h-full w-full overflow-auto p-4"
   style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
 >
-  <div id="direction-degree" class="bg-[#62bbff] p-2 text-[#000000] text-xs rounded-full">{heading}</div>
+  <div id="heading" class="bg-[#62bbff] p-2 text-[#000000] text-xs rounded-full">{heading}</div>
     <div class="compass-container">
       <div class="compass-circle">
         <i class="fas fa-arrow-up compass-arrow"></i>
@@ -88,6 +88,10 @@
 </div>
 
 <style>
+  #heading {
+    color: var(--primaryColor);
+  }
+
   .compass {
     color: var(--fontColor);
     background-color: var(--primaryColor);

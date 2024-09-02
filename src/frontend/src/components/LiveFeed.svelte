@@ -30,7 +30,7 @@
   }
 
   function handleFullScreen() {
-    const liveFeedElement = document.querySelector('#live-feed-container');
+    const liveFeedElement = document.querySelector('#live-feed-container > div');
     if (liveFeedElement instanceof HTMLElement) {
       toggleFullScreen(liveFeedElement);
     }
@@ -61,18 +61,21 @@
 <div id="live-feed-container" class="text-[#ffffff] rounded-lg h-full relative"
   style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --fontColor: {fontColor};"
 >
-  <img id="no-signal" src={darkMode ? 'no-signal.gif': 'no-signal-light.gif'} alt="No Signal" class="w-full h-full object-cover rounded-lg z-0" />
-  <div id="live-feed" class="absolute top-0 w-full h-full object-cover rounded-lg z-1"></div>
-  <div class="absolute top-0 left-0 bg-[#f24e4ecf] text-[#ffffff] px-2 py-1 rounded-br-lg rounded-lg rounded-bl-none rounded-tr-none">Live Feed</div>
-  <div class="caution-text absolute bottom-0 left-0 bg-[#252525cf] px-2 py-1 rounded-tr-lg rounded-lg rounded-br-none rounded-tl-none">Use Caution: The feed may be slightly delayed.</div>
-  <button class="absolute top-2 right-2 text-[#ffffff]bg-opacity-75 p-2 px-3 rounded-full" on:click={handleFullScreen}>
-    <i class="fas fa-expand"></i>
-  </button>
+  <div class="container w-full h-full relative">
+    <img id="no-signal" src={darkMode ? 'no-signal.gif': 'no-signal-light.gif'} alt="No Signal" class="w-full h-full object-cover rounded-lg z-0" />
+    <div id="live-feed" class="absolute top-0 w-full h-full object-cover rounded-lg z-1"></div>
+    <div class="absolute top-0 left-0 bg-[#f24e4ecf] text-[#ffffff] px-2 py-1 rounded-br-lg rounded-lg rounded-bl-none rounded-tr-none">Live Feed</div>
+    <div class="caution-text absolute bottom-0 left-0 bg-[#252525cf] px-2 py-1 rounded-tr-lg rounded-lg rounded-br-none rounded-tl-none">Use Caution: The feed may be slightly delayed.</div>
+    <button class="absolute top-2 right-2 text-[#ffffff]bg-opacity-75 p-2 px-3 rounded-full" on:click={handleFullScreen}>
+      <i class="fas fa-expand"></i>
+    </button>
+  </div>
 </div>
 
 <style>
   #live-feed-container {
     background-color: var(--primaryColor);
+    border: 10px solid var(--primaryColor);
   }
 
   .caution-text {
