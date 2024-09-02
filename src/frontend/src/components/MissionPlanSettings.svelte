@@ -393,11 +393,11 @@
     </button>
     <button on:click={saveMissionPlan}>
         <i class="fas fa-save text-[#61cd89]"></i>
-        Save Mission Plan
+        Save & Load Plan
     </button>
     <button on:click={confirmClear}>
         <i class="fas fa-trash-alt text-[#f87171]"></i>
-        Clear Mission Plan
+        Clear Plan
     </button>
     <div id="import-export" class="flex items-center justify-center gap-2">
         <button on:click={importPlan}>
@@ -428,7 +428,7 @@
         border: none;
         border-radius: 0.5rem;
         color: var(--fontColor);
-        font-size: calc(0.3rem + 0.5vw);
+        font-size: 9pt;
         cursor: pointer;
         align-items: center;
         justify-content: center;

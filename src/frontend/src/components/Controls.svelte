@@ -175,7 +175,7 @@
     border-radius: 1em;
     background-color: var(--secondaryColor);
     color: white;
-    font-size: calc(0.4rem + 0.5vw);
+    font-size: 10pt;
     transition: border-color 0.3s;
   }
 
