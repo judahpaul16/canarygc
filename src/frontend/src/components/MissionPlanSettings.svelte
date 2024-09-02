@@ -438,7 +438,7 @@
     }
 
     button:hover {
-        background-color: #3d3d3d;
+        background-color: var(--tertiaryColor);
     }
 
     /* Mobile Styles */
