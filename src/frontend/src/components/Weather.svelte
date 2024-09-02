@@ -136,7 +136,7 @@
   }
 
   .weather-header {
-    font-size: calc(0.2rem + 1vw);
+    font-size: 13pt;
     margin-bottom: 0.5rem;
     font-weight: bold;
   }
