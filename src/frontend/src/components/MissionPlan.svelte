@@ -550,7 +550,7 @@
   }
 
   .delete-action {
-    background-color: var(--tertiaryColor);
+    background-color: var(--secondaryColor);
   }
 
   .delete-action:hover {
