@@ -70,3 +70,8 @@ iframe {
 .leaflet-control-attribution {
   display: none;
 }
+
+.tooltip {
+  color: #fff;
+  background-color: #3290e7;
+}
