@@ -368,7 +368,7 @@
         const marker = L.marker([lat, lon], { icon: icons[iconIndex] })
           .bindPopup(`${index} - ${type}`);
         leafletMap.addLayer(marker);
-        marker.openPopup();
+        if (!hideOverlay) marker.openPopup();
         markers.set(index, marker);
       }
     }
