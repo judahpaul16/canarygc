@@ -83,7 +83,7 @@
           <div class="label text-sm mb-1">Go to Altitude<span class="text-xs text-gray-400 mt-1 ml-1">(m)</span></div>
           <input type="number" min="0" class="form-input" placeholder="100 m" bind:value={altitudeSetPoint} />
         </div>
-        <button class="set-btn hover:brightness-150 text-[8pt] text-white rounded-full py-1 px-4 mt-2"
+        <button class="set-btn text-[8pt] rounded-full py-1 px-3 mt-2"
           on:click|preventDefault={() => {
             if (!isNaN(parseInt(maxSpeed))) sendMavlinkCommand('DO_CHANGE_SPEED', `${[1, maxSpeed]}`);
             if (!isNaN(parseInt(altitudeSetPoint))) setPositionLocal('0', '0', `-${altitudeSetPoint}`);
@@ -157,7 +157,15 @@
   }
 
   .set-btn {
-    background-color: var(--tertiaryColor);
+    color: var(--fontColor);
+    background-color: var(--secondaryColor);
+    border: 1px solid var(--tertiaryColor);
+  }
+
+  .set-btn:hover {
+    color: #ffffff;
+    background-color: #2e8dfa;
+    border: 1px solid var(--secondaryColor);
   }
 
   input[type='number'] {
@@ -165,7 +173,7 @@
     padding: 0.5rem;
     border: 1px solid var(--tertiaryColor);
     border-radius: 1em;
-    background-color: var(--tertiaryColor);
+    background-color: var(--secondaryColor);
     color: white;
     font-size: calc(0.4rem + 0.5vw);
     transition: border-color 0.3s;
@@ -198,7 +206,7 @@
 
   .alt-button:hover,
   .rotate-button:hover {
-    background-color: #4f4f50;
+    filter: brightness(1.1);
   }
 
   .rotate-left:hover {

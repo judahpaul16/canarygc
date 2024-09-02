@@ -20,7 +20,7 @@
 
   $: darkMode = $darkModeStore;
   $: primaryColor = $primaryColorStore;
-  $: secondaryColor = $secondaryColorStore;
+  $: secondaryColor = darkMode ? $tertiaryColorStore : $secondaryColorStore;
   $: tertiaryColor = $tertiaryColorStore;
   $: fontColor = darkMode ? "#ffffff" : "#000000";
 
@@ -172,6 +172,6 @@
   }
 
   .border-b, .border-t {
-    border-color: var(--tertiaryColor);
+    border-color: var(--secondaryColor);
   }
 </style>

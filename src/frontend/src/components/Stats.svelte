@@ -395,7 +395,7 @@
   }
 
   .circular-button:hover {
-    background-color: var(--secondaryColor);
+    filter: brightness(1.1);
   }
 
   .tooltip {
