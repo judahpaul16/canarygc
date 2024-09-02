@@ -262,7 +262,11 @@
       <div>Mode: <span  class="text-orange-400">{mavMode}</span></div>
     </div>
     <hr class="my-3" />
-      <div class="w-full mb-2">Loaded Mission Plan: <span class="text-[#66e1ff]">{missionPlanTitle || 'No mission plan loaded.'}</span></div>
+      <div class="w-full mb-2">Loaded Mission Plan:
+        <span class="text-[#66e1ff] {darkMode ? '' : 'brightness-90'}" title={missionPlanTitle}>
+          {missionPlanTitle || 'No mission plan loaded.'}
+        </span>
+      </div>
       <div class="flex flex-col items-center justify-end">
         <div class="w-full">
           <span>Mission Progress: {systemState === 'Unknown' ? '--' : mavMode === 'AUTO' ? missionProgress : 0}% (ETA 00:00:00)</span>
