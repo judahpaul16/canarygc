@@ -2,6 +2,12 @@
   import { onMount, onDestroy } from 'svelte';
   import weatherCodes from '../lib/weathercodes.json';
   import { mavLocationStore } from '../stores/mavlinkStore';
+  import {
+    darkModeStore,
+    primaryColorStore,
+    secondaryColorStore,
+    tertiaryColorStore,
+  } from '../stores/customizationStore';
 
   type WeatherCode = {
     day: {
@@ -23,6 +29,11 @@
   export let isDashboard: boolean = false;
   export let mavLocation: L.LatLng | { lat: number; lng: number };;
 
+  $: darkMode = $darkModeStore;
+  $: primaryColor = $primaryColorStore;
+  $: secondaryColor = $secondaryColorStore;
+  $: tertiaryColor = $tertiaryColorStore;
+  $: fontColor = darkMode ? '#ffffff' : '#000000';
   $: mavLocation = $mavLocationStore;
 
   let locationName = '';
@@ -81,14 +92,44 @@
   });
 </script>
 
+{#if isDashboard}
+  <div class="weather min-w-[max-content] h-full max-h-[190px] overflow-y-auto text-center transform -translate-y-[10px]">
+    {#if error}
+      <div class="error">{error}</div>
+    {:else}
+      <img src={weatherImage} alt={weatherDescription} class="weather-icon" />
+      <div class="weather-summary">{weatherDescription}</div>
+      <div class="weather-detail">Temp: {temperature}</div>
+      <div class="weather-detail">Rain Chance: {rainChance}</div>
+    {/if}
+  </div>
+{:else}
+  <div
+    class="weather h-full overflow-y-auto p-4"
+    style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
+  >
+    <div class="weather-header">Weather Advisory</div>
+    <div class="location text-italic">Based on MAV location
+      <span id="location-name"><br><br>{locationName}</span>
+    </div>
+    {#if error}
+      <div class="error">{error}</div>
+    {:else}
+      <img src={weatherImage} alt={weatherDescription} class="weather-icon" />
+      <div class="weather-summary">{weatherDescription}</div>
+      <div class="weather-detail">Temp: {temperature}</div>
+      <div class="weather-detail">Rain Chance: {rainChance}</div>
+    {/if}
+  </div>
+{/if}
+
 <style>
   .weather {
-    background-color: #1c1c1e;
-    color: white;
+    color: var(--fontColor);
+    background-color: var(--primaryColor);
     border-radius: 0.5rem;
     max-width: 400px;
     text-align: center;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -102,7 +143,7 @@
 
   .location {
     font-size: 0.875rem;
-    color: #ccc;
+    color: #838383;
   }
 
   .weather-summary {
@@ -125,7 +166,7 @@
   }
 
   #location-name {
-    color: #ffe997;
+    color: #ffcb0d;
   }
   
   @media (max-height: 750px) {
@@ -134,32 +175,3 @@
     }
   }
 </style>
-
-{#if !isDashboard}
-  <div class="weather h-full overflow-y-auto p-4">
-    <div class="weather-header">Weather Advisory</div>
-    <div class="location text-italic">Based on MAV location
-      <span id="location-name"><br><br>{locationName}</span>
-    </div>
-    {#if error}
-      <div class="error">{error}</div>
-    {:else}
-      <img src={weatherImage} alt={weatherDescription} class="weather-icon" />
-      <div class="weather-summary">{weatherDescription}</div>
-      <div class="weather-detail">Temp: {temperature}</div>
-      <div class="weather-detail">Rain Chance: {rainChance}</div>
-    {/if}
-  </div>
-{:else}
-  <div class="min-w-[max-content] h-full max-h-[190px] overflow-y-auto text-center transform -translate-y-[10px]">
-    {#if error}
-      <div class="error">{error}</div>
-    {:else}
-      <img src={weatherImage} alt={weatherDescription} class="weather-icon" />
-      <div class="weather-summary">{weatherDescription}</div>
-      <div class="weather-detail">Temp: {temperature}</div>
-      <div class="weather-detail">Rain Chance: {rainChance}</div>
-    {/if}
-  </div>
-{/if}
-

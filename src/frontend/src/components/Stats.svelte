@@ -16,6 +16,7 @@
     mavArmedStateStore,
     mavLocationStore
   } from '../stores/mavlinkStore';
+  import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../stores/customizationStore';
   import { get } from 'svelte/store';
 
   import Modal from './Modal.svelte';
@@ -30,6 +31,11 @@
   export let batteryStatus: number | null = get(mavBatteryStore);
   export let mavMode: string = get(mavModeStore);
 
+  $: darkMode = $darkModeStore;
+  $: primaryColor = $primaryColorStore;
+  $: secondaryColor = darkMode ? $tertiaryColorStore : $secondaryColorStore;
+  $: tertiaryColor = $tertiaryColorStore;
+  $: fontColor = darkMode ? '#ffffff' : '#000000';
   $: mavModel = $mavModelStore;
   $: mavType = $mavTypeStore;
   $: isArmed = $mavArmedStateStore;
@@ -235,14 +241,17 @@
   }
 </script>
 
-<div class="stats bg-[#1c1c1e] text-white p-4 rounded-lg flex flex-col space-y-2 h-full overflow-y-auto overflow-x-hidden text-sm">
+<div
+  class="stats p-4 rounded-lg flex flex-col space-y-2 h-full overflow-y-auto overflow-x-hidden text-sm"
+  style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
+>
   <h2 class="text-lg font-bold">
     <a href="https://mavlink.io/en/messages/common.html#MAV_AUTOPILOT" target="_blank" title="More Information">
       <i class="fas fa-info-circle text-gray-500 hover:text-[#62bbff] mr-[0.2em]"></i>
     </a>
     <span class="text-gray-500">Autopilot Model:</span>&nbsp;{mavModel}
   </h2>
-  <hr class="border-[#2d2d2d]" />
+  <hr />
   <div class="h-full flex flex-col justify-evenly">
     <div class="grid grid-cols-2 gap-2">
       <div>MAV Type: {mavType}</div>
@@ -250,42 +259,42 @@
       <div>Speed: {speed} m/s</div>
       <div>Altitude: {altitude} m</div>
       <div class="battery-status {batteryStatus === null ? 'red' : ''} {batteryStatus !== null && batteryStatus < 20 ? 'red' : batteryStatus !== null && batteryStatus < 50 ? 'yellow' : 'green'}">Battery Status: {batteryStatus !== null ? batteryStatus : '--'}%</div>
-      <div>Mode: <span  class="text-orange-300">{mavMode}</span></div>
+      <div>Mode: <span  class="text-orange-400">{mavMode}</span></div>
     </div>
-    <hr class="border-[#2d2d2d] my-3" />
+    <hr class="my-3" />
       <div class="w-full mb-2">Loaded Mission Plan: <span class="text-[#66e1ff]">{missionPlanTitle || 'No mission plan loaded.'}</span></div>
       <div class="flex flex-col items-center justify-end">
         <div class="w-full">
           <span>Mission Progress: {systemState === 'Unknown' ? '--' : mavMode === 'AUTO' ? missionProgress : 0}% (ETA 00:00:00)</span>
-          <div class="progress-bar bg-gray-700 rounded-full h-2.5 mt-3">
+          <div class="progress-bar rounded-full h-2.5 mt-3">
             <div class="progress-bar-inner h-2.5 rounded-full" style="width: {mavMode === 'AUTO' ? missionProgress : 0}%;"></div>
           </div>
         </div>
         <div class="button-container mt-6">
           <div class="relative group">
             <button class="circular-button" on:click={confirmToggleArmDisarm}>
-              <i class="fas fa-key text-yellow-500"></i>
-              <div class="tooltip">Arm / Disarm</div>
+              <i class="fas fa-key text-yellow-300"></i>
+              <div class="tooltip text-white">Arm / Disarm</div>
             </button>
           </div>
           <div class="relative group">
             <button class="circular-button" on:click={releasePayload}>
               <i class="fas fa-parachute-box"></i>
-              <div class="tooltip">Release Payload</div>
+              <div class="tooltip text-white">Release Payload</div>
             </button>
           </div>
           {#if systemState === 'STANDBY'}
             <div class="relative group flex flex-col items-center">
               <button class="circular-button" on:click={initTakeoff} disabled={checkMode('AUTO', mavMode)}>
                 <i class="fas fa-plane-departure"></i>
-                <div class="tooltip">Initiate Takeoff</div>
+                <div class="tooltip text-white">Initiate Takeoff</div>
               </button>
             </div>
           {:else}
             <div class="relative group flex flex-col items-center">
               <button class="circular-button" on:click={initLanding} disabled={checkMode('AUTO', mavMode) || checkMode('LAND', mavMode)}>
                 <i class="fas fa-plane-arrival"></i>
-                <div class="tooltip">Initiate Landing</div>
+                <div class="tooltip text-white">Initiate Landing</div>
               </button>
             </div>
           {/if}
@@ -293,21 +302,21 @@
             <div class="relative group">
               <button class="circular-button" on:click={resumeMission} disabled={checkMode('AUTO', mavMode) && systemState !== 'STANDBY'}>
                 <i class="fas fa-play"></i>
-                <div class="tooltip">Start/Resume Mission</div>
+                <div class="tooltip text-white">Start/Resume Mission</div>
               </button>
             </div>
           {:else}
             <div class="relative group">
               <button class="circular-button" on:click={pauseMission} disabled={!checkMode('AUTO', mavMode)}>
                 <i class="fas fa-pause"></i>
-                <div class="tooltip">Pause Mission (Loiter)</div>
+                <div class="tooltip text-white">Pause Mission (Loiter)</div>
               </button>
             </div>
           {/if}
           <div class="relative group">
             <button class="circular-button" on:click={stopMission} disabled={!checkMode('AUTO', mavMode)}>
               <i class="fas fa-stop text-red-400"></i>
-              <div class="tooltip">Stop Mission (RTL)</div>
+              <div class="tooltip text-white">Stop Mission (RTL)</div>
             </button>
           </div>
         </div>
@@ -316,6 +325,19 @@
 </div>
 
 <style>
+  .stats {
+    background-color: var(--primaryColor);
+    color: var(--fontColor);
+  }
+
+  hr {
+    border: 1px solid var(--secondaryColor);
+  }
+
+  .progress-bar {
+    background-color: var(--tertiaryColor);
+  }
+
   .progress-bar-inner {
     background: linear-gradient(45deg, #4c75af 25%, transparent 25%, transparent 50%, #66e1ff 50%, #66e1ff 75%, transparent 75%, transparent);
     background-size: 30px 30px;
@@ -333,7 +355,7 @@
   }
 
   .battery-status {
-    color: white;
+    color: var(--fontColor);
   }
   .battery-status.green {
     color: green;
@@ -360,7 +382,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: #3f3f40;
+    background-color: var(--tertiaryColor);
     color: white;
     font-size: 0.9rem;
     cursor: pointer;
@@ -369,7 +391,7 @@
   }
 
   .circular-button:hover {
-    background-color: #4f4f50;
+    background-color: var(--secondaryColor);
   }
 
   .tooltip {
@@ -378,8 +400,7 @@
     left: 50%;
     transform: translateX(-50%);
     margin-bottom: 0.5rem;
-    background-color: black;
-    color: white;
+    background-color: var(--tertiaryColor);
     padding: 0.5rem;
     border-radius: 0.25rem;
     white-space: nowrap;
@@ -395,7 +416,8 @@
   }
 
   button:disabled, button:disabled:hover {
-    background-color: #656974;
+    background-color: #b5bcc5;
+    filter: brightness(0.7);
     cursor: not-allowed;
   }
 </style>

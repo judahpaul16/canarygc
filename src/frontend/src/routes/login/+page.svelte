@@ -2,8 +2,15 @@
   import PocketBase from 'pocketbase';
   import { authData } from '../../stores/authStore';
   import { goto } from '$app/navigation';
+  import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../../stores/customizationStore';
 
   const pb = new PocketBase('http://localhost:8090');
+
+  $: darkMode = $darkModeStore;
+  $: primaryColor = $primaryColorStore;
+  $: secondaryColor = $secondaryColorStore;
+  $: tertiaryColor = $tertiaryColorStore;
+  $: fontColor = darkMode ? '#ffffff' : '#000000';
 
   let email = '';
   let password = '';
@@ -30,20 +37,22 @@
   <title>MAV Manager GCS - Login</title>
 </sveltekit:head>
 
-<div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">
-  <div class="dashboard w-fit h-fit flex flex-col justify-center text-white p-10 bg-[#121212d5] rounded-3xl">
+<div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0" 
+  style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
+>
+  <div class="dashboard w-fit h-fit flex flex-col justify-center p-10 rounded-3xl">
     <h2 class="text-2xl font-bold mb-4 text-center">Login to GCS</h2>
     {#if error}
       <div class="mb-4 p-2 bg-red-100 text-red-700 rounded">{error}</div>
     {/if}
     <form on:submit|preventDefault={login}>
       <div class="mb-4">
-        <label for="email" class="block text-gray-300">Email</label>
-        <input type="email" id="email" bind:value={email} class="w-full px-3 py-2 border rounded text-black" required />
+        <label for="email" class="block">Email</label>
+        <input type="email" id="email" bind:value={email} class="w-full px-3 py-2 rounded" required />
       </div>
       <div class="mb-4">
-        <label for="password" class="block text-gray-300">Password</label>
-        <input type="password" id="password" bind:value={password} class="w-full px-3 py-2 border rounded text-black" required />
+        <label for="password" class="block">Password</label>
+        <input type="password" id="password" bind:value={password} class="w-full px-3 py-2 rounded" required />
       </div>
       <button type="submit" class="w-full py-2 rounded">Submit</button>
     </form>
@@ -52,11 +61,20 @@
 
 
 <style>
+  .dashboard {
+    background-color: rgb(from var(--primaryColor) r g b / 75%);
+    border: 2px solid var(--primaryColor);
+    color: var(--fontColor);
+  }
+  label {
+    color: var(--fontColor);
+    margin-bottom: 0.3em;
+  }
   input[type="email"],
   input[type="password"] {
-    background-color: #2d2d2d;
-    color: white;
-    border: 1px solid #1c1c1e;
+    background-color: var(--tertiaryColor);
+    border: 2px solid var(--primaryColor);
+    color: var(--fontColor);
     border-radius: 10px;
   }
   button {

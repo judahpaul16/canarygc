@@ -7,10 +7,13 @@
     import MissionPlan from '../../components/MissionPlan.svelte';
     import MissionPlanSettings from '../../components/MissionPlanSettings.svelte';
     import { mavLocationStore } from '../../stores/mavlinkStore';
+    import { primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../../stores/customizationStore';
   
     $: user = $authData;
-    
     $: mavLocation = $mavLocationStore
+    $: primaryColor = $primaryColorStore;
+    $: secondaryColor = $secondaryColorStore;
+    $: tertiaryColor = $tertiaryColorStore;
   
     onMount(() => {
       setTimeout(() => {
@@ -24,7 +27,9 @@
   </sveltekit:head>
 
   <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">
-    <div class="dashboard w-full grid grid-cols-12 grid-rows-7 gap-4 p-5 bg-[#121212] rounded-[30px] rounded-l-none overflow-auto max-h-[90vh]">
+    <div class="dashboard w-full grid grid-cols-12 grid-rows-7 gap-4 p-5 rounded-[30px] rounded-l-none overflow-auto max-h-[90vh]"
+       style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor};"
+    >
       <div class="map col-span-10 row-span-4">
         <Map {mavLocation} />
       </div>
@@ -50,6 +55,7 @@
       grid-template-columns: repeat(12, minmax(0, 1fr));
       grid-template-rows: repeat(2, 1fr);
       height: 95vh;
+      background-color: var(--secondaryColor);
     }
 
   /* Mobile Styles */

@@ -11,6 +11,12 @@
   import Modal from './Modal.svelte';
   import { get } from 'svelte/store';
   import Notification from './Notification.svelte';
+  import {
+    darkModeStore,
+    primaryColorStore,
+    secondaryColorStore,
+    tertiaryColorStore
+  } from '../stores/customizationStore';
 
   export let title: string = '';
   let actions: MissionPlanActions = {};
@@ -21,6 +27,11 @@
     'DO_ENGINE_CONTROL', 'CONDITION_DELAY', 'CONDITION_CHANGE_ALT', 'CONDITION_DISTANCE', 'CONDITION_YAW'
   ];
   
+  $: darkMode = $darkModeStore;
+  $: primaryColor = $primaryColorStore;
+  $: secondaryColor = darkMode ? $tertiaryColorStore : $secondaryColorStore;
+  $: tertiaryColor = $tertiaryColorStore;
+  $: fontColor = darkMode ? '#ffffff' : '#000000';
   $: mavLocation = $mavLocationStore;
   $: mavMode = $mavModeStore;
   $: systemState = $mavStateStore;
@@ -314,38 +325,41 @@
   }
 </script>
 
-<div class="missionPlan bg-[#1c1c1e] text-white p-4 rounded-lg space-x-4 items-center h-full">
+<div
+  class="missionPlan p-4 rounded-lg space-x-4 items-center h-full"
+  style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
+>
   <div class="container block">
-    <input type="text" class="text-md font-bold mb-2 ml-4 focus:outline-none" placeholder="Untitled Mission" id="flight-plan-title" bind:value={title} on:input={(event) => updateTitle(event)} />
-    <div class="flex items-center gap-2 float-right text-sm">
+    <input type="text" class="text-md font-bold mb-2 ml-4 focus:outline-none" placeholder="Untitled Mission" id="mission-plan-title" bind:value={title} on:input={(event) => updateTitle(event)} />
+    <div class="mission-btns flex items-center gap-2 float-right text-sm">
       <a href="https://ardupilot.org/planner/docs/common-planning-a-mission-with-waypoints-and-events.html" target="_blank" class="text-[#61cd89] hover:underline mr-2">
         <i class="fas fa-question-circle"></i>
         How do I create a mission plan?
       </a>
-      <button class="px-2 py-1 bg-[#588ae7] text-white rounded-lg hover:bg-[#6f9ff9]" on:click={() => {}}>
+      <button class="px-2 py-1 bg-[#588ae7] rounded-lg hover:bg-[#6f9ff9]" on:click={() => {}}>
           <i class="fas fa-check"></i>
           <div class="tooltip">Validate Mission Plan</div>
       </button>
       {#if !checkMode('AUTO', mavMode) || systemState === 'STANDBY'}
-        <button class="px-2 py-1 bg-[#55b377] text-white rounded-lg hover:bg-[#61cd89]"
+        <button class="px-2 py-1 bg-[#55b377] rounded-lg hover:bg-[#61cd89]"
           disabled={checkMode('AUTO', mavMode) && systemState !== 'STANDBY'} on:click={() => {resumeMission()}}>
               <i class="fas fa-play"></i>
               <div class="tooltip">Start/Resume Mission</div>
         </button>
       {:else}
-        <button class="px-2 py-1 bg-[#da864e] text-white rounded-lg hover:bg-[#ff995e]"
+        <button class="px-2 py-1 bg-[#da864e] rounded-lg hover:bg-[#ff995e]"
           disabled={!checkMode('AUTO', mavMode)} on:click={() => {pauseMission()}}>
               <i class="fas fa-pause"></i>
               <div class="tooltip">Pause Mission (Loiter)</div>
         </button>
       {/if}
-      <button class="px-2 py-1 bg-[#f87171] text-white rounded-lg hover:bg-[#ff7e7e]"
+      <button class="px-2 py-1 bg-[#f87171] rounded-lg hover:bg-[#ff7e7e]"
           disabled={!checkMode('AUTO', mavMode)} on:click={() => {stopMission()}}>
         <i class="fas fa-stop"></i>
         <div class="tooltip">Stop Mission (RTL)</div>
       </button>
     </div>
-    <div class="column overflow-auto" id="flight-plan-actions">
+    <div class="column overflow-auto" id="mission-plan-actions">
       <div class="overflow-auto">
         <hr>
         {#key actions}
@@ -425,7 +439,7 @@
                     <textarea placeholder="Notes" value={actions[Number(index)].notes} id="notes-{index}" on:change={updateNotes}></textarea>
                 </div>
                 <div class="separator"></div>
-                <button class="delete-action relative bg-[#2d2d2d] text-white rounded-lg px-3 py-2 text-sm" on:click={() => removeAction(index)}>
+                <button class="delete-action relative rounded-lg px-3 py-2 text-sm" on:click={() => removeAction(index)}>
                     <i class="fas fa-trash-alt text-red-400"></i>
                     <span class="tooltip">Delete Action</span>
                 </button>
@@ -435,7 +449,7 @@
         {/key}
       </div>
       <div class="flex justify-center">
-        <button class="bg-[#2d2d2d] text-white rounded-lg px-4 py-2 my-4" on:click={addAction}>
+        <button class="add-action rounded-lg px-4 py-2 my-4" on:click={addAction}>
           <i class="fas fa-plus"></i>&nbsp;&nbsp;Add Action
         </button>
       </div>
@@ -451,7 +465,7 @@
 
   .separator {
     height: 4vh;
-    background-color: #2d2d2d;
+    background-color: var(--secondaryColor);
     margin: 0 1em;
     padding: 1px;
     border-radius: 0.5rem;
@@ -459,7 +473,7 @@
 
   hr {
     border: 0;
-    border-top: 1px solid #2d2d2d;
+    border-top: 1px solid var(--secondaryColor);
   }
 
   .form-checkbox {
@@ -481,8 +495,8 @@
     border-radius: 0.5rem;
     padding-inline: 0.5em;
     padding-block: 0.25em;
-    background-color: #2d2d2d;
-    color: white;
+    background-color: var(--secondaryColor);
+    color: var(--fontColor);
   }
 
   input:focus, select:focus {
@@ -505,7 +519,7 @@
 
   textarea {
     width: 120px;
-    background-color: #2d2d2d;
+    background-color: var(--secondaryColor);
     border-radius: 1em;
     padding: 0.5rem;
   }
@@ -516,8 +530,7 @@
     left: 50%;
     transform: translateX(-50%);
     margin-bottom: 0.5rem;
-    background-color: #000000dc;
-    color: white;
+    background-color: var(--tertiaryColor);
     padding: 0.5rem;
     border-radius: 0.25rem;
     white-space: nowrap;
@@ -531,6 +544,22 @@
     opacity: 1;
     visibility: visible;
     transform: translateX(-50%) translateY(-0.25em);
+  }
+
+  .add-action {
+    background-color: var(--secondaryColor);
+  }
+
+  .delete-action {
+    background-color: var(--tertiaryColor);
+  }
+
+  .delete-action:hover {
+    background-color: #ff7e7e;
+  }
+
+  .delete-action:hover i {
+    color: var(--fontColor);
   }
 
   .delete-action .tooltip {
@@ -552,8 +581,17 @@
     cursor: not-allowed;
   }
 
-  #flight-plan-actions {
+  .mission-btns > button {
+    color: white;
+  }
+
+  #mission-plan-actions {
     max-height: 215px;
+  }
+
+  .missionPlan {
+    color: var(--fontColor);
+    background-color: var(--primaryColor);
   }
 
   /* Mobile Styles */
@@ -563,7 +601,7 @@
       overflow-y: auto;
     }
 
-    #flight-plan-title {
+    #mission-plan-title {
       margin-inline: 0;
     }
 
@@ -583,18 +621,18 @@
   }
 
   @media (max-width: 1320px) {
-    #flight-plan-actions {
+    #mission-plan-actions {
       max-height: 260px;
     }
   }
   @media (max-width: 1060px) {
-    #flight-plan-actions {
+    #mission-plan-actions {
       max-height: 270px;
     }
   }
   @media (max-width: 1500px) {
     @media (min-width: 1300px) {
-      #flight-plan-actions {
+      #mission-plan-actions {
         max-height: 240px;
       }
     }

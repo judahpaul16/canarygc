@@ -4,10 +4,21 @@
   import Weather from './Weather.svelte';
   import { mavAltitudeStore, mavLocationStore } from '../stores/mavlinkStore';
   import { onMount } from 'svelte';
+  import {
+    darkModeStore,
+    primaryColorStore,
+    secondaryColorStore,
+    tertiaryColorStore
+  } from '../stores/customizationStore';
 
   let maxSpeed: string = '';
   let altitudeSetPoint: string = '';
 
+  $: darkMode = $darkModeStore;
+  $: primaryColor = $primaryColorStore;
+  $: secondaryColor = darkMode ? $tertiaryColorStore : $secondaryColorStore;
+  $: tertiaryColor = $tertiaryColorStore;
+  $: fontColor = darkMode ? '#ffffff' : '#000000';
   $: mavLocation = $mavLocationStore;
   $: altitude = $mavAltitudeStore;
 
@@ -51,7 +62,9 @@
   }
 </script>
 
-<div class="controls bg-[#1c1c1e] text-white px-10 rounded-lg h-full flex items-center overflow-x-auto gap-4">
+<div class="controls px-10 rounded-lg h-full flex items-center overflow-x-auto gap-4"
+  style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
+  >
   <div class="map-container flex-shrink-0 h-48 w-48">
     <Map {mavLocation} hideOverlay={true} />
   </div>
@@ -70,7 +83,7 @@
           <div class="label text-sm mb-1">Go to Altitude<span class="text-xs text-gray-400 mt-1 ml-1">(m)</span></div>
           <input type="number" min="0" class="form-input" placeholder="100 m" bind:value={altitudeSetPoint} />
         </div>
-        <button class="bg-[#2d2d2d] hover:brightness-150 text-xs text-white rounded-full py-1 px-4 mt-2"
+        <button class="set-btn hover:brightness-150 text-[8pt] text-white rounded-full py-1 px-4 mt-2"
           on:click|preventDefault={() => {
             if (!isNaN(parseInt(maxSpeed))) sendMavlinkCommand('DO_CHANGE_SPEED', `${[1, maxSpeed]}`);
             if (!isNaN(parseInt(altitudeSetPoint))) setPositionLocal('0', '0', `-${altitudeSetPoint}`);
@@ -80,7 +93,7 @@
       </form>
     </div>
     <div class="separator"></div>
-    <div class="column flex flex-col items-center justify-center text-center space-y-4">
+    <div class="alt-btns column flex flex-col items-center justify-center text-center space-y-4">
       <div class="flex flex-col items-center">
         <div class="label text-sm mb-1" title="Altitude Up">Altitude Up</div>
         <button class="alt-button rounded-full"
@@ -130,8 +143,8 @@
   }
 
   .separator {
-    width: 1px;
-    background-color: #4f4f50;
+    width: 2px;
+    background-color: var(--secondaryColor);
     margin: 0 1rem;
   }
 
@@ -143,12 +156,16 @@
     transition: background-color 0.3s ease;
   }
 
+  .set-btn {
+    background-color: var(--tertiaryColor);
+  }
+
   input[type='number'] {
     width: 100%;
     padding: 0.5rem;
-    border: 1px solid #2d2d2d;
+    border: 1px solid var(--tertiaryColor);
     border-radius: 1em;
-    background-color: #3f3f40;
+    background-color: var(--tertiaryColor);
     color: white;
     font-size: calc(0.4rem + 0.5vw);
     transition: border-color 0.3s;
@@ -171,7 +188,7 @@
     align-items: center;
     width: 3rem;
     height: 3rem;
-    background-color: #3f3f40;
+    background-color: var(--tertiaryColor);
     color: white;
     font-size: 1.5rem;
     cursor: pointer;
@@ -227,9 +244,14 @@
   }
 
   .map-container {
-    padding: 3px;
-    background: #3d3d3d;
+    padding: 4px;
+    background: var(--tertiaryColor);
     border-radius: 10px;
+  }
+
+  .controls {
+    color: var(--fontColor);
+    background-color: var(--primaryColor);
   }
 
   /* Mobile Styles */
@@ -260,7 +282,7 @@
       display: ruby;
     }
 
-    #max-speed-container, #rotate-left-button {
+    #rotate-left-button {
       margin-right: 1rem;
     }
 
@@ -281,6 +303,12 @@
       width: 2rem;
       height: 2rem;
       font-size: 1rem;
+    }
+
+    .alt-btns {
+      flex-direction: row;
+      align-items: baseline;
+      gap: 1rem;
     }
   }
 </style>

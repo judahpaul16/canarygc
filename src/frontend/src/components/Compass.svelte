@@ -1,9 +1,21 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { mavLocationStore, mavHeadingStore } from '../stores/mavlinkStore';
+  import {
+    darkModeStore,
+    primaryColorStore,
+    secondaryColorStore,
+    tertiaryColorStore
+  } from '../stores/customizationStore';
   
   export let mavLocation: L.LatLng | { lat: number; lng: number };
   let heading: string;
+
+  $: darkMode = $darkModeStore;
+  $: primaryColor = $primaryColorStore;
+  $: secondaryColor = $secondaryColorStore;
+  $: tertiaryColor = $tertiaryColorStore;
+  $: fontColor = darkMode ? '#ffffff' : '#000000';
 
   $: mavLocation = $mavLocationStore,
     updateCompass($mavHeadingStore);
@@ -57,7 +69,30 @@
   }
 </script>
 
+<div class="compass rounded-lg flex flex-col items-center justify-center h-full w-full overflow-auto p-4"
+  style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
+>
+  <div id="direction-degree" class="bg-[#62bbff] p-2 text-[#000000] text-xs rounded-full">{heading}</div>
+    <div class="compass-container">
+      <div class="compass-circle">
+        <i class="fas fa-arrow-up compass-arrow"></i>
+      </div>
+      <div class="north">N</div>
+      <div class="east">E</div>
+      <div class="south">S</div>
+      <div class="west">W</div>
+    </div>
+    <div class="mt-2 text-center text-xs">
+      <div id="lat-long">{currentLat} {currentLong}</div>
+    </div>
+</div>
+
 <style>
+  .compass {
+    color: var(--fontColor);
+    background-color: var(--primaryColor);
+  }
+
   .compass-container {
     position: relative;
     width: 100px;
@@ -71,7 +106,7 @@
     position: relative;
     width: 100%;
     height: 100%;
-    border: 2px dashed white;
+    border: 2px dashed rgb(from var(--fontColor) r g b / 0.3);
     border-radius: 50%;
     display: flex;
     justify-content: center;
@@ -120,19 +155,3 @@
     transform: translateY(-50%);
   }
 </style>
-
-<div class="compass bg-[#1c1c1e] text-white rounded-lg flex flex-col items-center justify-center h-full w-full overflow-auto p-4">
-  <div id="direction-degree" class="bg-[#62bbff] p-2 text-black text-xs rounded-full">{heading}</div>
-  <div class="compass-container">
-    <div class="compass-circle">
-      <i class="fas fa-arrow-up compass-arrow"></i>
-    </div>
-    <div class="north">N</div>
-    <div class="east">E</div>
-    <div class="south">S</div>
-    <div class="west">W</div>
-  </div>
-  <div class="mt-2 text-center text-xs">
-    <div id="lat-long">{currentLat} {currentLong}</div>
-  </div>
-</div>

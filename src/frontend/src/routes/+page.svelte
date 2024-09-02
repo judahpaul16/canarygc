@@ -1,16 +1,29 @@
 <script lang="ts">
   import { authData } from '../stores/authStore';
+  import {
+    darkModeStore,
+    primaryColorStore,
+    secondaryColorStore,
+    tertiaryColorStore
+  } from '../stores/customizationStore';
 
   let user;
   $: user = $authData;
+  $: darkMode = $darkModeStore;
+  $: primaryColor = $primaryColorStore;
+  $: secondaryColor = $secondaryColorStore;
+  $: tertiaryColor = $tertiaryColorStore;
+  $: fontColor = darkMode ? '#ffffff' : '#000000';
 </script>
 
 <sveltekit:head>
   <title>MAV Manager GCS - Home</title>
 </sveltekit:head>
 
-<div class="flex items-center justify-center h-full">
-  <div class="bg-[#121212bd] text-white p-8 rounded-3xl shadow-lg max-w-md w-full">
+<div class="flex items-center justify-center h-full"
+  style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
+>
+  <div class="card p-8 rounded-3xl shadow-lg max-w-md w-full">
     <h1 class="text-3xl font-bold mb-4 text-center">MAV Manager GCS</h1>
     {#if user}
       <p class="text-lg text-center">Hello, {user?.record?.name || 'admin'}!
@@ -45,6 +58,12 @@
 </div>
 
 <style>
+  .card {
+    color: var(--fontColor);
+    background-color: rgb(from var(--primaryColor) r g b / 75%);
+    border: 2px solid var(--secondaryColor);
+  }
+
   .mavlink {
     border-left: 3px solid #58a6ff;
     padding-left: 1rem;
@@ -85,6 +104,6 @@
     color: #58a6ff;
   }
   a:hover {
-    color: white;
+    color: var(--fontColor);
   }
 </style>

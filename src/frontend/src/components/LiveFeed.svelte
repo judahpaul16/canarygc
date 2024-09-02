@@ -2,6 +2,13 @@
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import Modal from './Modal.svelte';
   import { onMount } from 'svelte';
+  import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../stores/customizationStore';
+
+  $: darkMode = $darkModeStore;
+  $: primaryColor = $primaryColorStore;
+  $: secondaryColor = $secondaryColorStore;
+  $: tertiaryColor = $tertiaryColorStore;
+  $: fontColor = darkMode ? '#ffffff' : '#000000';
 
   function toggleFullScreen(element: HTMLElement) {
     if (!document.fullscreenElement) {
@@ -51,12 +58,38 @@
   });
 </script>
 
-<div id="live-feed-container" class="bg-[#1c1c1e] text-white rounded-lg h-full relative">
+<div id="live-feed-container" class="text-[#ffffff] rounded-lg h-full relative"
+  style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --fontColor: {fontColor};"
+>
   <img src="no-signal.gif" alt="No Signal" class="w-full h-full object-cover rounded-lg z-0" />
   <div id="live-feed" class="absolute top-0 w-full h-full object-cover rounded-lg z-1"></div>
-  <div class="absolute top-0 left-0 bg-[#f24e4ecf] text-white px-2 py-1 rounded-br-lg rounded-lg rounded-bl-none rounded-tr-none">Live Feed</div>
-  <div class="absolute bottom-0 left-0 bg-[#252525cf] text-white px-2 py-1 rounded-tr-lg rounded-lg rounded-bl-none rounded-br-none rounded-tl-none">Use Caution: The feed may be slightly delayed.</div>
-  <button class="absolute top-2 right-2 text-white bg-gray-800 bg-opacity-75 p-2 px-3 hover:bg-[#000000e6] rounded-full" on:click={handleFullScreen}>
+  <div class="absolute top-0 left-0 bg-[#f24e4ecf] text-[#ffffff] px-2 py-1 rounded-br-lg rounded-lg rounded-bl-none rounded-tr-none">Live Feed</div>
+  <div class="caution-text absolute bottom-0 left-0 bg-[#252525cf] px-2 py-1 rounded-tr-lg rounded-lg rounded-br-none rounded-tl-none">Use Caution: The feed may be slightly delayed.</div>
+  <button class="absolute top-2 right-2 text-[#ffffff]bg-opacity-75 p-2 px-3 rounded-full" on:click={handleFullScreen}>
     <i class="fas fa-expand"></i>
   </button>
 </div>
+
+<style>
+  #live-feed-container {
+    background-color: var(--primaryColor);
+  }
+
+  .caution-text {
+    color: var(--fontColor);
+    background-color: var(--primaryColor);
+    border: 2px solid var(--secondaryColor);
+    opacity: 0.75;
+  }
+
+  button {
+    color: var(--fontColor);
+    background-color: var(--secondaryColor);
+    border: 2px solid var(--primaryColor);
+    opacity: 0.75;
+  }
+
+  button:hover {
+    opacity: 0.65;
+  }
+</style>
