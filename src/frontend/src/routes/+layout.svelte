@@ -575,7 +575,6 @@
     top: 0;
     left: 0;
     margin-bottom: 0.5rem;
-    background-color: var(--tertiaryColor);
     padding: 0.5rem;
     border-radius: 0.25rem;
     white-space: nowrap;

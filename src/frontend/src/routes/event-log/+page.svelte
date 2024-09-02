@@ -240,7 +240,6 @@
         top: 0;
         right: 0;
         margin-bottom: 0.5rem;
-        background-color: var(--tertiaryColor);
         padding: 0.3rem;
         border-radius: 0.25rem;
         white-space: nowrap;
