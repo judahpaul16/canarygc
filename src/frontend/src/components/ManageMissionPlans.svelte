@@ -15,9 +15,9 @@
   let missionPlans: Array<{ id: string; title: string }> = [];
   let actions: MissionPlanActions = {};
 
-  $: primaryColor = $primaryColorStore;
-  $: secondaryColor = $secondaryColorStore;
   $: darkMode = $darkModeStore;
+  $: primaryColor = $primaryColorStore;
+  $: secondaryColor = darkMode ? $tertiaryColorStore : $secondaryColorStore;
   $: fontColor = darkMode ? "#ffffff" : "#000000";
   $: tertiaryColor = $tertiaryColorStore;
   $: actions = $missionPlanActionsStore;
@@ -283,7 +283,7 @@
   }
 
   .container .border-b, .border-t {
-    border-color: var(--tertiaryColor);
+    border-color: var(--secondaryColor);
   }
 
   .import-btn {

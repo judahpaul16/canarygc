@@ -3,14 +3,23 @@
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import { mapStore, markersStore, polylinesStore } from '../stores/mapStore';
   import { mavLocationStore, mavHeadingStore } from '../stores/mavlinkStore';
-  import { missionPlanTitleStore, missionPlanActionsStore, type MissionPlanActions, missionIndexStore } from '../stores/missionPlanStore';
+  import {
+    missionPlanActionsStore,
+    type MissionPlanActions,
+    missionIndexStore
+  } from '../stores/missionPlanStore';
   import { get } from 'svelte/store';
   import Modal from './Modal.svelte';
 
   export let hideOverlay: boolean = false;
   export let mavLocation: L.LatLng | { lat: number; lng: number };;
   export let id: string | null = null;
-  import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../stores/customizationStore';
+  import {
+    darkModeStore,
+    primaryColorStore,
+    secondaryColorStore,
+    tertiaryColorStore
+  } from '../stores/customizationStore';
 
   const apiKey = import.meta.env.VITE_ALTITUDE_ANGEL_API_KEY;
 
@@ -43,7 +52,7 @@
   
   $: darkMode = $darkModeStore;
   $: primaryColor = $primaryColorStore;
-  $: secondaryColor = $secondaryColorStore;
+  $: secondaryColor = darkMode ? $tertiaryColorStore : $secondaryColorStore;
   $: tertiaryColor = $tertiaryColorStore;
   $: fontColor = darkMode ? '#ffffff' : '#000000';
 
@@ -485,12 +494,12 @@
 
   #map-toggle {
     z-index: 10;
-    background-color: var(--tertiaryColor);
+    background-color: var(--secondaryColor);
     border: 2px solid var(--primaryColor);
   }
 
   #map-toggle > * {
-    color: #ffffff;
+    color: var(--fontColor);
   }
 
   .map-btn {
