@@ -278,7 +278,7 @@
         <div class="button-container mt-6">
           <div class="relative group">
             <button class="circular-button" on:click={confirmToggleArmDisarm}>
-              <i class="fas fa-key text-yellow-300"></i>
+              <i class="fas fa-key text-[#fffa0a]"></i>
               <div class="tooltip text-white">Arm / Disarm</div>
             </button>
           </div>
