@@ -84,12 +84,36 @@ iframe {
   box-shadow: -5px 0 20px rgba(0, 0, 0, 0.2);
 }
 
-@media (min-width: 2420px) {
+
+
+@media (min-width: 3000px) {
   .desktop-nav {
-    margin-left: 20vw !important;
+    margin-left: 24vw !important;
   }
   .dashboard {
-    margin-right: 20vw !important;
+    margin-right: 24vw !important;
+  }
+}
+
+@media (min-width: 2760px) {
+  @media (max-width: 3000px) {
+    .desktop-nav {
+      margin-left: 22vw !important;
+    }
+    .dashboard {
+      margin-right: 22vw !important;
+    }
+  }
+}
+
+@media (min-width: 2420px) {
+  @media (max-width: 2760px) {
+    .desktop-nav {
+      margin-left: 20vw !important;
+    }
+    .dashboard {
+      margin-right: 20vw !important;
+    }
   }
 }
 
