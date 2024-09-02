@@ -277,7 +277,7 @@
       document.querySelector('.bg')!.style.background = "url('bg-map-light.png') no-repeat center center fixed";
       primaryColorStore.set('#ffffff');
       secondaryColorStore.set('#e7e9ef');
-      tertiaryColorStore.set('#bdbdbd');
+      tertiaryColorStore.set('#d7d7d7');
     }
   }
 
