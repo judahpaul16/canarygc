@@ -517,9 +517,9 @@
 <style>
   .bg {
     background: url('bg-map.png') no-repeat center center fixed;
-    background-size: cover;
+    background-size: cover !important;
     margin: 0;
-    filter: blur(3px);
+    filter: blur(2px);
   }
 
   .desktop-nav {
@@ -589,7 +589,6 @@
     visibility: visible;
     transform: translateX(50px);
   }
-
 
   /* Mobile Styles */
   @media (max-width: 990px) {
