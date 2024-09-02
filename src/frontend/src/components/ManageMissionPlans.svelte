@@ -5,6 +5,7 @@
   import Modal from "./Modal.svelte";
   import { onMount } from "svelte";
   import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../stores/customizationStore';
+  import Notification from "./Notification.svelte";
 
   const pb = new PocketBase("http://localhost:8090");
 
@@ -88,14 +89,6 @@
       }
     });
 
-    let missionExists = false;
-    await pb.collection("mission_plans").getFirstListItem(`title = "${title}"`).then((response) => {
-      if (response) {
-        missionExists = true;
-        pb.collection("mission_plans").update(response.id, { isLoaded: 1 });
-      }
-    });
-
     missionPlanTitleStore.set(title);
     missionPlanActionsStore.set(actions);
     try {
@@ -115,6 +108,91 @@
         console.error("Error:", error);
     }
   }
+
+  async function handleSave(title: string, plan: MissionPlanActions) {
+      await handleLoad(title, plan);
+
+      let id = "";
+      let missionExists = async () => {
+          let exists = false;
+          await pb.collection("mission_plans").getFirstListItem(`title = "${title}"`).catch((error) => {
+              exists = false;
+          }).then((response) => {
+              if (response) {
+                  exists = true;
+                  id = response.id;
+              }
+          });
+          return exists;
+      };        
+      if (await missionExists()) {
+          await handleUpdate(id, title, plan);
+      } else {
+          let missionPlan = {
+              title: title,
+              actions: plan,
+              isLoaded: 1,
+          };
+          let response = await pb.collection("mission_plans").create(missionPlan).catch((error) => {
+              new Modal({
+                  target: document.body,
+                  props: {
+                      title: "Error",
+                      content: error.message,
+                      isOpen: true,
+                      confirmation: false,
+                      notification: true,
+                  },
+              });
+          });
+          if (response) {
+            let notification = new Notification({
+              target: document.body,
+              props: {
+                  title: "Mission Plan Saved",
+                  content: "The mission plan has been saved.",
+                  type: "info",
+              },
+            });
+            setTimeout(() => {
+                notification.$destroy();
+            }, 3000);
+          }
+      }
+  }
+
+  async function handleUpdate(id: string, title: string, plan: MissionPlanActions) {
+    let missionPlan = {
+      title: title,
+      actions: plan,
+      isLoaded: 1,
+    };
+    let response = await pb.collection("mission_plans").update(id, missionPlan).catch((error) => {
+      new Modal({
+        target: document.body,
+        props: {
+            title: "Error",
+            content: error.message,
+            isOpen: true,
+            confirmation: false,
+            notification: true,
+        },
+      });
+    });
+    if (response) {
+      let notification = new Notification({
+        target: document.body,
+        props: {
+          title: "Mission Plan Updated",
+          content: "The mission plan has been updated.",
+          type: "info",
+        },
+      });
+      setTimeout(() => {
+        notification.$destroy();
+      }, 3000);
+    }
+}
 
   async function deleteMissionPlan(id: string) {
     const modal = new Modal({
@@ -157,7 +235,8 @@
           const data = e.target?.result;
           const plan = JSON.parse(data as string);
           const title = file.name.replace(".json", "").replace(/_/g, " ");
-          handleLoad(title, plan);
+          await handleSave(title, plan);
+          await getMissionPlans();
         };
         reader.readAsText(file);
       }
