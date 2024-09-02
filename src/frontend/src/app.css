@@ -75,3 +75,11 @@ iframe {
   color: #fff;
   background-color: #3290e7;
 }
+
+.dashboard {
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+}
+
+.desktop-nav, .mobile-nav {
+  box-shadow: -5px 0 20px rgba(0, 0, 0, 0.2);
+}
