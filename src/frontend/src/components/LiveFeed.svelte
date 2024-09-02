@@ -61,7 +61,7 @@
 <div id="live-feed-container" class="text-[#ffffff] rounded-lg h-full relative"
   style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --fontColor: {fontColor};"
 >
-  <img src="no-signal.gif" alt="No Signal" class="w-full h-full object-cover rounded-lg z-0" />
+  <img id="no-signal" src={darkMode ? 'no-signal.gif': 'no-signal-light.gif'} alt="No Signal" class="w-full h-full object-cover rounded-lg z-0" />
   <div id="live-feed" class="absolute top-0 w-full h-full object-cover rounded-lg z-1"></div>
   <div class="absolute top-0 left-0 bg-[#f24e4ecf] text-[#ffffff] px-2 py-1 rounded-br-lg rounded-lg rounded-bl-none rounded-tr-none">Live Feed</div>
   <div class="caution-text absolute bottom-0 left-0 bg-[#252525cf] px-2 py-1 rounded-tr-lg rounded-lg rounded-br-none rounded-tl-none">Use Caution: The feed may be slightly delayed.</div>
