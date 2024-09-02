@@ -253,7 +253,7 @@
 
   .map-container {
     padding: 4px;
-    background: var(--tertiaryColor);
+    background: var(--secondaryColor);
     border-radius: 10px;
   }
 
