@@ -174,22 +174,22 @@
                     <div class="btns flex gap-4">
                         <button class="btn btn-primary bg-red-400 hover:bg-red-500 relative" on:click={confirmClear}>
                             <i class="fas fa-trash-alt"></i>
-                            <span class="tooltip">Clear</span>
+                            <div class="tooltip">Clear</div>
                         </button>
                         <button class="btn btn-primary bg-blue-400 hover:bg-blue-500 relative" on:click={downloadLogs}>
                             <i class="fas fa-download"></i>
-                            <span class="tooltip">Download</span>
+                            <div class="tooltip">Download</div>
                         </button>
                     </div>
                 </div>
                 <div class="system-state w-fit flex">
-                    System State:<p class="text-[#61cd89] ml-1 mr-3">{systemState}</p>
+                    System State:<p class="text-[#61cd89] ml-1 mr-2">{systemState}</p>
                     <div class="heartbeat w-fit relative mr-5">
                         <div>
                             <i class="fas fa-heart absolute top-[0.15rem]"></i>
                             <i class="fas fa-heart absolute top-[0.15rem]"></i>
                         </div>
-                        <span class="tooltip text-white">{heartbeatInfo}</span>
+                        <div class="tooltip">{heartbeatInfo}</div>
                     </div>
                 </div>
             </div>
@@ -286,8 +286,8 @@
         border-radius: 0.5rem;
         padding-inline: 0.5em;
         padding-block: 0.25em;
-        background-color: var(--tertiaryColor);
-        color: white;
+        background-color: var(--secondaryColor);
+        color: var(--fontColor);
     }
 
     input:focus {
@@ -316,7 +316,7 @@
         font-size: small;
         padding: 4px 8px;
         border-radius: 0.5rem;
-        color: var(--fontColor);
+        color: #ffffff;
         cursor: pointer;
     }
 
@@ -329,8 +329,8 @@
     }
 
     .fa-heart:last-of-type {
-        color: var(--tertiaryColor);
-        opacity: 0.5;
+        color: #7c7c7c;
+        opacity: 0.2;
     }
 
     .event-log {
