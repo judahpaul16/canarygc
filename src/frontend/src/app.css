@@ -22,7 +22,7 @@ main {
     color 0s ease,
     background-color 0.1s ease,
     height 0s ease !important;
-  --sb-track-color: var(--secondaryColor);
+  --sb-track-color: var(--primaryColor);
   --sb-thumb-color: var(--tertiaryColor);
   --sb-size: 12px;
 }
@@ -82,4 +82,46 @@ iframe {
 
 .desktop-nav, .mobile-nav {
   box-shadow: -5px 0 20px rgba(0, 0, 0, 0.2);
+}
+
+@media (min-width: 2420px) {
+  .desktop-nav {
+    margin-left: 20vw !important;
+  }
+  .dashboard {
+    margin-right: 20vw !important;
+  }
+}
+
+@media (min-width: 2080px) {
+  @media (max-width: 2420px) {
+    .desktop-nav {
+      margin-left: 15vw !important;
+    }
+    .dashboard {
+      margin-right: 15vw !important;
+    }
+  }
+}
+
+@media (min-width: 1820px) {
+  @media (max-width: 2080px) {
+    .desktop-nav {
+      margin-left: 10vw !important;
+    }
+    .dashboard {
+      margin-right: 10vw !important;
+    }
+  }
+}
+
+@media (min-width: 1620px) {
+  @media (max-width: 1820px) {
+    .desktop-nav {
+      margin-left: 5vw !important;
+    }
+    .dashboard {
+      margin-right: 5vw !important;
+    }
+  }
 }
