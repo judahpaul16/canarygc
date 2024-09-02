@@ -14,6 +14,7 @@
         secondaryColorStore,
         tertiaryColorStore
     } from '../stores/customizationStore';
+    import Notification from "./Notification.svelte";
 
     const pb = new PocketBase("http://localhost:8090");
 
@@ -149,19 +150,17 @@
                 });
             });
             if (response) {
-                let modal = new Modal({
-                    target: document.body,
-                    props: {
-                        title: "Mission Plan Saved",
-                        content: "The mission plan has been saved successfully.",
-                        isOpen: true,
-                        confirmation: false,
-                        notification: true,
-                    },
-                });
-                setTimeout(() => {
-                    modal.$destroy();
-                }, 3000);
+              let notification = new Notification({
+                target: document.body,
+                props: {
+                    title: "Mission Plan Saved",
+                    content: "The mission plan has been saved.",
+                    type: "info",
+                },
+              });
+              setTimeout(() => {
+                  notification.$destroy();
+              }, 3000);
             }
         }
     }
@@ -185,18 +184,16 @@
             });
         });
         if (response) {
-            let modal = new Modal({
+            let notification = new Notification({
                 target: document.body,
                 props: {
-                    title: "Mission Plan Updated",
-                    content: "The mission plan has been updated successfully.",
-                    isOpen: true,
-                    confirmation: false,
-                    notification: true,
+                title: "Mission Plan Updated",
+                content: "The mission plan has been updated.",
+                type: "info",
                 },
             });
             setTimeout(() => {
-                modal.$destroy();
+                notification.$destroy();
             }, 3000);
         }
     }
@@ -233,7 +230,7 @@
         const a = document.createElement("a");
         a.href = url;
         // @ts-ignore
-        a.download = mp.title.replace(/\s/g, "_") || "Untitled_Flight_Plan" + ".json";
+        a.download = title.replace(/\s/g, "_") || "Untitled_Flight_Plan" + ".json";
         a.click();
         URL.revokeObjectURL(url);
     }
