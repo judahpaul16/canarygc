@@ -72,7 +72,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    color: #ebebeb;
+    color: #ffffff;
     font-size: 24px;
     transition: all 0.2s ease;
   }
