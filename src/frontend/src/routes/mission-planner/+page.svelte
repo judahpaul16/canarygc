@@ -30,7 +30,7 @@
     <div class="dashboard w-full grid grid-cols-12 grid-rows-7 gap-4 p-5 rounded-[30px] rounded-l-none overflow-auto max-h-[90vh]"
        style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor};"
     >
-      <div class="map col-span-10 row-span-4">
+      <div class="map col-span-10 row-span-4 p-2 rounded-lg">
         <Map {mavLocation} />
       </div>
       <div class="weather col-span-2 row-span-2">
@@ -57,48 +57,52 @@
       height: 95vh;
       background-color: var(--secondaryColor);
     }
-
-  /* Mobile Styles */
-  @media (max-width: 990px) {
-    .dashboard-container {
-      min-height: fit-content;
-      max-height: fit-content;
+    
+    .map {
+      background-color: var(--primaryColor);
     }
 
-    .dashboard {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      width: 100%;
-      padding: 0.5em;
-      max-height: 92vh;
-      border-radius: 0;
-      overflow-y: auto;
+    /* Mobile Styles */
+    @media (max-width: 990px) {
+      .dashboard-container {
+        min-height: fit-content;
+        max-height: fit-content;
+      }
+
+      .dashboard {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+        padding: 0.5em;
+        max-height: 92vh;
+        border-radius: 0;
+        overflow-y: auto;
+      }
+
+      .dashboard > * {
+        width: 100%;
+        height: 100%;
+        display: block;
+        overflow-y: auto;
+      }
+
+      .weather {
+        display: none;
+      }
+
+      .compass{
+        display: none;
+      }
     }
 
-    .dashboard > * {
-      width: 100%;
-      height: 100%;
-      display: block;
-      overflow-y: auto;
+    @media (max-height: 820px) {
+      .compass {
+        display: none;
+      }
+      .weather {
+        grid-row: span 4 / span 4;
+      }
     }
-
-    .weather {
-      display: none;
-    }
-
-    .compass{
-      display: none;
-    }
-  }
-
-  @media (max-height: 820px) {
-    .compass {
-      display: none;
-    }
-    .weather {
-      grid-row: span 4 / span 4;
-    }
-  }
   </style>
   
