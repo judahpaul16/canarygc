@@ -522,6 +522,10 @@
     filter: blur(2px);
   }
 
+  .separator {
+    background-color: var(--tertiaryColor);
+  }
+
   .desktop-nav {
     align-content: space-between;
     align-self: center;
