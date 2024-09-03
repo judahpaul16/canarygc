@@ -135,6 +135,10 @@
     justify-content: center;
   }
 
+  .weather > img {
+    filter: brightness(0.95);
+  }
+
   .weather-header {
     font-size: 13pt;
     margin-bottom: 0.5rem;
