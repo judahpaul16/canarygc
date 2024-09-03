@@ -220,6 +220,7 @@
       currentMap = 'leaflet';
       if (altitudeAngelDiv) altitudeAngelDiv.style.display = 'none';
       if (leafletDiv) leafletDiv.style.display = 'block';
+      window.dispatchEvent(new Event('resize'));
     } else {
       currentMap = 'altitudeAngel';
       if (altitudeAngelDiv) altitudeAngelDiv.style.display = 'block';
