@@ -504,9 +504,9 @@
 
   .map-btn {
     color: var(--fontColor);
-    background-color: var(--secondaryColor);
-    border: 2px solid var(--primaryColor);
-    opacity: 0.90;
+    background-color: var(--primaryColor);
+    border: 2px solid var(--secondaryColor);
+    opacity: 0.95;
   }
 
   .map-btn:hover {
