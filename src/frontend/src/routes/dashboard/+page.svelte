@@ -44,10 +44,6 @@
 </div>
 
 <style>
-  .dashboard {
-    background-color: var(--secondaryColor);
-  }
-
   /* Mobile Styles */
   @media (max-width: 990px) {
     .dashboard-container {

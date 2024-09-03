@@ -61,7 +61,7 @@
   .card {
     color: var(--fontColor);
     background-color: rgb(from var(--primaryColor) r g b / 75%);
-    border: 2px solid var(--secondaryColor);
+    border: 4px solid rgb(from var(--secondaryColor) r g b / 75%);
   }
 
   .mavlink {

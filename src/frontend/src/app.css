@@ -78,6 +78,7 @@ iframe {
 
 .dashboard {
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+  background-color: rgb(from var(--secondaryColor) r g b / 0.8) !important;
 }
 
 .desktop-nav, .mobile-nav {
