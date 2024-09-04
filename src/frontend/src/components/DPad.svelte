@@ -1,12 +1,31 @@
 <script lang="ts">
-  import { mavAltitudeStore } from '../stores/mavlinkStore';
+  import { mavModeStore, mavAltitudeStore } from '../stores/mavlinkStore';
   import { get } from 'svelte/store';
   import { primaryColorStore, tertiaryColorStore } from '../stores/customizationStore';
-  $: primaryColor = $primaryColorStore;
-  $: tertiaryColor = $tertiaryColorStore;
 
   let altitude: number = get(mavAltitudeStore);
+
+  $: primaryColor = $primaryColorStore;
+  $: tertiaryColor = $tertiaryColorStore;
+  $: mavMode = $mavModeStore;
   $: altitude = $mavAltitudeStore;
+
+  async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
+    const response = await fetch(`/api/mavlink/send_command`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'command': command,
+        'params': params,
+        'useArduPilotMega': useArduPilotMega
+      },
+    });
+    if (response.ok) {
+      console.log(await response.text());
+    } else {
+      console.error(`Error: ${await response.text()}`);
+    }
+  }
 
   async function setPositionLocal(x: string, y: string, z: string) {
     const response = await fetch("/api/mavlink/set_position_local", {
@@ -28,16 +47,28 @@
 
 <div class="dpad-container relative flex items-center justify-center w-48 h-48">
   <nav class="d-pad relative" style="--tertiaryColor: {tertiaryColor}">
-    <button class="up" on:click={() => {setPositionLocal('10', '0', `-${altitude}`)}}>
+    <button class="up" on:click={() => {
+        if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
+        setPositionLocal('10', '0', `-${altitude}`);
+      }}>
       <i class="fas fa-chevron-up"></i>
     </button>
-    <button class="right" on:click={() => {setPositionLocal('0', '10', `-${altitude}`)}}>
+    <button class="right" on:click={() => {
+        if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
+        setPositionLocal('0', '10', `-${altitude}`);
+      }}>
       <i class="fas fa-chevron-right"></i>
     </button>
-    <button class="down" on:click={() => {setPositionLocal('-10', '0', `-${altitude}`)}}>
+    <button class="down" on:click={() => {
+        if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
+        setPositionLocal('-10', '0', `-${altitude}`);
+      }}>
       <i class="fas fa-chevron-down"></i>
     </button>
-    <button class="left" on:click={() => {setPositionLocal('0', '-10', `-${altitude}`)}}>
+    <button class="left" on:click={() => {
+        if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
+        setPositionLocal('0', '-10', `-${altitude}`);
+      }}>
       <i class="fas fa-chevron-left"></i>
     </button>
     <div class="center-circle">
