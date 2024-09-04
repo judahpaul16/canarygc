@@ -2,6 +2,7 @@
 
 # Update and install dependencies
 apt-get update
+apt-get install docker.io docker-compose -y
 apt-get -y install git cmake libjpeg8-dev
 apt-get -y install gcc g++
 apt-get -y install pkg-config
