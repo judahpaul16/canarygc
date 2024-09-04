@@ -415,7 +415,7 @@
         let nextLatLng = nextMarker.getLatLng();
         addPolyline(currentLatLng, nextLatLng);
       }
-      if (currentIndex <= get(missionIndexStore) && prevMarker) {
+      if (currentIndex < get(missionIndexStore) && prevMarker) {
         removePolyline(prevMarker.getLatLng(), currentMarker.getLatLng());
       }
     }

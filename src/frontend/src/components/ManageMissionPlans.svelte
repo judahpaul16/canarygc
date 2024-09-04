@@ -27,6 +27,23 @@
     getMissionPlans();
   });
 
+  async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
+    const response = await fetch(`/api/mavlink/send_command`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'command': command,
+        'params': params,
+        'useArduPilotMega': useArduPilotMega
+      },
+    });
+    if (response.ok) {
+      console.log(await response.text());
+    } else {
+      console.error(`Error: ${await response.text()}`);
+    }
+  }
+
   async function getMissionPlans() {
     try {
       const records = await pb.collection("mission_plans").getFullList();
@@ -62,6 +79,8 @@
   }
 
   async function handleLoad(title: string, actions: MissionPlanActions) {
+    sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+
     // Clear the current mission plan
     try {
       let response = await fetch("/api/mavlink/clear_mission", {

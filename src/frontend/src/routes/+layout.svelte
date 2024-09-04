@@ -244,7 +244,7 @@
       } else if ((text as string).includes('MISSION_ITEM_REACHED')) {
         let index: string | RegExpMatchArray | null = (text as string).match(/"seq":(\d+)/g);
         if (index) index = index.toString().replace('"seq":', '');
-        if (index && !get(missionCompleteStore)) missionIndexStore.set(parseInt(index));
+        if (index && !get(missionCompleteStore)) missionIndexStore.set(parseInt(index) + 1);
         if (index && parseInt(index) === Object.keys($missionPlanActionsStore).length - 1)
           missionCompleteStore.set(true);
         if (index) {
