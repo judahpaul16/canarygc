@@ -67,7 +67,6 @@
     }
     let section = ((1 / count) * 100) * (index - 1);
     progress = progress * ((1 / count) * 100);
-    console.log(progress);
     return parseFloat((Math.min(section + progress, 100)).toFixed(2));
   }
 
