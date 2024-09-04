@@ -46,7 +46,7 @@
   $: speed = $mavSpeedStore;
   $: missionPlanTitle = $missionPlanTitleStore;
   $: mavLocation = $mavLocationStore;
-  $: missionProgress = Math.round(($missionIndexStore / $missionCountStore) * 100);
+  $: missionProgress = Math.min(Math.round(($missionIndexStore / $missionCountStore) * 100), 100);
   $: missionLoaded = $missionPlanTitleStore !== '';
 
   async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
