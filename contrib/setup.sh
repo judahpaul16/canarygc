@@ -1,12 +1,13 @@
 #!/bin/bash
 
 # Update and install dependencies
-apt-get update
-apt-get install docker.io docker-compose -y
-apt-get -y install git cmake libjpeg8-dev
-apt-get -y install gcc g++
-apt-get -y install pkg-config
-apt-get -y install libraspberrypi0 libraspberrypi-dev libraspberrypi-doc libraspberrypi-bin
+sudo apt-get update
+sudo apt-get -y install raspi-config
+sudo apt-get -y install docker.io docker-compose
+sudo apt-get -y install git cmake libjpeg8-dev
+sudo apt-get -y install gcc g++
+sudo apt-get -y install pkg-config
+sudo apt-get -y install libraspberrypi0 libraspberrypi-dev libraspberrypi-doc libraspberrypi-bin
 
 # Enable the camera if not enabled
 if ! vcgencmd get_camera | grep -q 'supported=1 detected=1'; then
