@@ -42,7 +42,7 @@
     //   console.log('Connected to WebSocket server');
     // };
     // ws.onmessage = (event) => {
-    //   const feed = document.querySelector('.feed');
+    //   const feed = document.querySelector('#live-feed');
     //   if (feed instanceof HTMLElement) {
     //     feed.innerHTML = event.data;
     //   }

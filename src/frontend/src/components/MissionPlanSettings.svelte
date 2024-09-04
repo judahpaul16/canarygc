@@ -14,6 +14,7 @@
         secondaryColorStore,
         tertiaryColorStore
     } from '../stores/customizationStore';
+    import { get } from "svelte/store";
     import Notification from "./Notification.svelte";
 
     const pb = new PocketBase("http://localhost:8090");
@@ -54,8 +55,7 @@
                 confirmation: true,
                 notification: false,
                 onConfirm: async () => {
-                    // @ts-ignore
-                    let title = document.getElementById("flight-plan-title")!.value === '' ? "Untitled Mission" : document.getElementById("flight-plan-title")!.value;
+                    let title = get(missionPlanTitleStore);
                     await handleSave(title, actions);
                 },
                 onCancel: () => {
