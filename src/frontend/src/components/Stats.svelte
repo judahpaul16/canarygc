@@ -17,6 +17,7 @@
     mavLocationStore
   } from '../stores/mavlinkStore';
   import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../stores/customizationStore';
+  import { markersStore } from '../stores/mapStore';
   import { get } from 'svelte/store';
 
   import Modal from './Modal.svelte';
@@ -30,6 +31,8 @@
   export let systemState: string = get(mavStateStore);
   export let batteryStatus: number | null = get(mavBatteryStore);
   export let mavMode: string = get(mavModeStore);
+
+  let markers = get(markersStore);
 
   $: darkMode = $darkModeStore;
   $: primaryColor = $primaryColorStore;
@@ -46,8 +49,47 @@
   $: speed = $mavSpeedStore;
   $: missionPlanTitle = $missionPlanTitleStore;
   $: mavLocation = $mavLocationStore;
-  $: missionProgress = Math.min(Math.round(($missionIndexStore / $missionCountStore) * 100), 100);
+  $: missionProgress = getMissionProgress($missionIndexStore, $missionCountStore, $mavLocationStore as L.LatLng);
   $: missionLoaded = $missionPlanTitleStore !== '';
+  $: markers = $markersStore;
+
+  function getMissionProgress(index: number, count: number, mavLocation: L.LatLng): number {
+    let progress: number = 0;
+    let nextMarkerLocation: L.LatLng = { lat: 0, lng: 0 } as L.LatLng;
+    let prevMarkerLocation: L.LatLng = { lat: 0, lng: 0 } as L.LatLng;
+    if (markers.get(index) !== undefined) nextMarkerLocation = markers.get(index)!.getLatLng();
+    if (markers.get(index - 1) !== undefined) prevMarkerLocation = markers.get(index - 1)!.getLatLng();
+    if (nextMarkerLocation.lat !== 0 && nextMarkerLocation.lng !== 0 && prevMarkerLocation.lat !== 0 && prevMarkerLocation.lng !== 0) {
+      let distanceToNext = haversine(mavLocation.lat, mavLocation.lng, nextMarkerLocation.lat, nextMarkerLocation.lng);
+      let distanceToPrev = haversine(mavLocation.lat, mavLocation.lng, prevMarkerLocation.lat, prevMarkerLocation.lng);
+      let totalDistance = distanceToNext + distanceToPrev;
+      progress = (distanceToPrev / totalDistance);
+    }
+    let section = ((1 / count) * 100) * (index - 1);
+    progress = progress * ((1 / count) * 100);
+    console.log(progress);
+    return parseFloat((Math.min(section + progress, 100)).toFixed(2));
+  }
+
+  function haversine(lat1: number, lon1: number, lat2: number, lon2: number) {
+    // distance between latitudes
+    // and longitudes
+    let dLat = (lat2 - lat1) * Math.PI / 180.0;
+    let dLon = (lon2 - lon1) * Math.PI / 180.0;
+        
+    // convert to radiansa
+    lat1 = (lat1) * Math.PI / 180.0;
+    lat2 = (lat2) * Math.PI / 180.0;
+      
+    // apply formulae
+    let a = Math.pow(Math.sin(dLat / 2), 2) + 
+                Math.pow(Math.sin(dLon / 2), 2) * 
+                Math.cos(lat1) * 
+                Math.cos(lat2);
+    let rad = 6371;
+    let c = 2 * Math.asin(Math.sqrt(a));
+    return rad * c;
+  }
 
   async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
     const response = await fetch(`/api/mavlink/send_command`, {
