@@ -164,7 +164,7 @@
 
   .set-btn:hover {
     color: #ffffff;
-    background-color: #2e8dfa;
+    background-color: #4e94f7;
     border: 1px solid var(--secondaryColor);
   }
 
@@ -211,12 +211,12 @@
 
   .rotate-left:hover {
     animation: rotate-left 0.6s;
-    color: #66e1ff;
+    color: #4e94f7;
   }
 
   .rotate-right:hover {
     animation: rotate-right 0.6s;
-    color: #66e1ff;
+    color: #4e94f7;
   }
 
   @keyframes rotate-left {
@@ -239,12 +239,12 @@
 
   .alt-button:hover .alt-up {
     transform: translateY(-0.2rem);
-    color: #66e1ff;
+    color: #4e94f7;
   }
 
   .alt-button:hover .alt-down  {
     transform: translateY(0.2rem);
-    color: #66e1ff;
+    color: #4e94f7;
   }
   
   .label {

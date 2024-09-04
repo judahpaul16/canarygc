@@ -134,10 +134,6 @@
     transition: background-color 0.3s, color 0.3s;
   }
 
-  button:hover {
-    color: var(--primaryColor);
-  }
-
   .form-input {
     appearance: none;
     width: fit-content;

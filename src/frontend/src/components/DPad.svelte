@@ -122,7 +122,7 @@
   }
 
   .d-pad button:hover {
-    color: #66e1ff;
+    color: #4e94f7;
   }
 
   .center-circle {
