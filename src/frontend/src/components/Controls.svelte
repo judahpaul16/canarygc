@@ -62,7 +62,7 @@
   }
 </script>
 
-<div class="controls px-10 rounded-lg h-full flex items-center overflow-x-auto gap-4"
+<div class="controls px-10 rounded-2xl h-full flex items-center overflow-x-auto gap-4"
   style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
   >
   <div class="map-container flex-shrink-0 h-48 w-48">

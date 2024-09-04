@@ -253,7 +253,7 @@
 {#if isOpen && isModal}
   <div class="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50 p-8">
     <div
-      class="container rounded-lg shadow-lg max-w-lg w-full"
+      class="container rounded-2xl shadow-lg max-w-lg w-full"
       style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor}"
     >
       <div class="relative border-b">
@@ -305,7 +305,7 @@
   </div>
 {:else}
   <div
-      class="container rounded-lg w-full h-full overflow-auto relative"
+      class="container rounded-2xl w-full h-full overflow-auto relative"
       style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor}"
     >
     <div class="relative border-b">

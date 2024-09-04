@@ -105,7 +105,7 @@
   </div>
 {:else}
   <div
-    class="weather h-full overflow-y-auto p-4"
+    class="weather rounded-2xl h-full overflow-y-auto p-4"
     style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
   >
     <div class="weather-header">Weather Advisory</div>
@@ -127,7 +127,6 @@
   .weather {
     color: var(--fontColor);
     background-color: var(--primaryColor);
-    border-radius: 0.5rem;
     max-width: 400px;
     text-align: center;
     display: flex;

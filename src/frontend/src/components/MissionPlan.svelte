@@ -327,7 +327,7 @@
 </script>
 
 <div
-  class="missionPlan p-4 rounded-lg space-x-4 items-center h-full"
+  class="missionPlan p-4 rounded-2xl space-x-4 items-center h-full"
   style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
 >
   <div class="container block">

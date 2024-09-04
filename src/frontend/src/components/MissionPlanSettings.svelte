@@ -380,7 +380,7 @@
 </script>
 
 <section
-    class="flight-plan-settings rounded-lg p-4 h-full"
+    class="flight-plan-settings rounded-2xl p-4 h-full"
     style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
 >
     <button on:click={setHomeLocation}>
