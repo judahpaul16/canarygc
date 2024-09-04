@@ -22,6 +22,7 @@
 
   import Modal from './Modal.svelte';
   import Notification from './Notification.svelte';
+    import type { LatLng } from 'leaflet';
 
   export let mavModel: string = get(mavModelStore);
   export let mavType: string = get(mavTypeStore);
@@ -33,6 +34,7 @@
   export let mavMode: string = get(mavModeStore);
 
   let markers = get(markersStore);
+  let progressSamples: { progress: number, timestamp: number }[] = [];
 
   $: darkMode = $darkModeStore;
   $: primaryColor = $primaryColorStore;
@@ -52,6 +54,7 @@
   $: missionProgress = getMissionProgress($missionIndexStore, $missionCountStore, $mavLocationStore as L.LatLng);
   $: missionLoaded = $missionPlanTitleStore !== '';
   $: markers = $markersStore;
+  $: eta = calculateETA(missionProgress, $mavLocationStore);
 
   function getMissionProgress(index: number, count: number, mavLocation: L.LatLng): number {
     let progress: number = 0;
@@ -67,7 +70,9 @@
     }
     let section = ((1 / count) * 100) * (index - 1);
     progress = progress * ((1 / count) * 100);
-    return parseFloat((Math.min(section + progress, 100)).toFixed(2));
+    progress = parseFloat((Math.min(section + progress, 100)).toFixed(2));
+    addSample(progress, Date.now());
+    return progress;
   }
 
   function haversine(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -88,6 +93,55 @@
     let rad = 6371;
     let c = 2 * Math.asin(Math.sqrt(a));
     return rad * c;
+  }
+
+  function addSample(progress: number, timestamp: number) {
+    progressSamples.push({ progress, timestamp });
+    
+    // Keep only the latest 2 samples
+    if (progressSamples.length > 2) {
+      progressSamples.shift();
+    }
+  }
+
+  function calculateETA(currentProgress: number, location: LatLng | { lat: number; lng: number; }): string {
+    if (progressSamples.length < 2) {
+      return "00:00:00"; // Not enough samples
+    }
+    
+    // Get the last two samples
+    const [{ progress: progress1, timestamp: time1 }, { progress: progress2, timestamp: time2 }] = progressSamples;
+
+    // Calculate the progress rate (progress per second)
+    let progressRate = (progress2 - progress1) / ((time2 - time1) / 1000);
+
+    if (progressRate < 0) {
+      progressRate = 1; // Avoid division by zero
+    }
+    
+    // Calculate the remaining progress to reach 100%
+    const remainingProgress = 100 - currentProgress;
+
+    // Calculate the remaining time in seconds
+    const remainingTimeSeconds = (remainingProgress / progressRate);
+
+    // Convert remaining time to hours, minutes, and seconds
+    const hours = Math.floor(remainingTimeSeconds / 3600);
+    const minutes = Math.floor((remainingTimeSeconds % 3600) / 60);
+    const seconds = Math.floor(remainingTimeSeconds % 60);
+
+    // Format the time as HH:MM:SS
+    if (isNaN(hours) || isNaN(minutes) || isNaN(seconds)) {
+      return "00:00:00";
+    }
+    
+    const formattedTime = [
+      hours.toString().padStart(2, '0'),
+      minutes.toString().padStart(2, '0'),
+      seconds.toString().padStart(2, '0')
+    ].join(':');
+
+    return formattedTime;
   }
 
   async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
@@ -311,7 +365,7 @@
       </div>
       <div class="flex flex-col items-center justify-end">
         <div class="w-full">
-          <span>Mission Progress: {systemState === 'Unknown' ? '--' : mavMode === 'AUTO' ? missionProgress : 0}% (ETA 00:00:00)</span>
+          <span>Mission Progress: {systemState === 'Unknown' ? '--' : mavMode === 'AUTO' ? missionProgress : 0}% (ETA {eta})</span>
           <div class="progress-bar rounded-full h-2.5 mt-3">
             <div class="progress-bar-inner h-2.5 rounded-full" style="width: {mavMode === 'AUTO' ? missionProgress : 0}%;"></div>
           </div>
