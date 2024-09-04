@@ -76,7 +76,7 @@
     let dLat = (lat2 - lat1) * Math.PI / 180.0;
     let dLon = (lon2 - lon1) * Math.PI / 180.0;
         
-    // convert to radiansa
+    // convert to radians
     lat1 = (lat1) * Math.PI / 180.0;
     lat2 = (lat2) * Math.PI / 180.0;
       
