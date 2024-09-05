@@ -2,7 +2,12 @@
 
 # Update system and install necessary packages
 sudo apt-get update
-sudo apt-get -y install docker.io docker-compose
+sudo apt-get -y install docker.io
+
+DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
+mkdir -p $DOCKER_CONFIG/cli-plugins
+curl -SL https://github.com/docker/compose/releases/download/v2.3.3/docker-compose-linux-aarch64 -o $DOCKER_CONFIG/cli-plugins/docker-compose
+chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
 
 # May need to logout and login to apply docker group changes
 sudo usermod -aG docker $(whoami)
