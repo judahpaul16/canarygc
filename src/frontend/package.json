@@ -39,6 +39,7 @@
 		"@fortawesome/free-solid-svg-icons": "^6.6.0",
 		"@fortawesome/svelte-fontawesome": "^0.2.2",
 		"axios": "^1.7.3",
+		"hls.js": "^1.5.15",
 		"leaflet": "^1.9.4",
 		"node-mavlink": "^2.0.7",
 		"pocketbase": "^0.21.3",

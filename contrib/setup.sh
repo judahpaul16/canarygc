@@ -1,33 +1,80 @@
 #!/bin/bash
 
-# Update and install dependencies
+# Update system and install necessary packages
 sudo apt-get update
-sudo apt-get -y install raspi-config
 sudo apt-get -y install docker.io docker-compose
-sudo apt-get -y install git cmake libjpeg8-dev
-sudo apt-get -y install gcc g++
-sudo apt-get -y install pkg-config
-sudo apt-get -y install libraspberrypi0 libraspberrypi-dev libraspberrypi-doc libraspberrypi-bin
 
-# Enable the camera if not enabled
-if ! vcgencmd get_camera | grep -q 'supported=1 detected=1'; then
-    echo "Enabling the camera..."
-    sudo raspi-config nonint do_camera 0
-    echo "Camera enabled. Please reboot for the changes to take effect."
-    exit 1
-fi
+# May need to logout and login to apply docker group changes
+sudo usermod -aG docker $(whoami)
 
-# Clone and build mjpg-streamer
-git clone https://github.com/jacksonliam/mjpg-streamer.git
-cd mjpg-streamer/mjpg-streamer-experimental
-make
-make install
-echo "export LD_LIBRARY_PATH='/mjpg-streamer/mjpg-streamer-experimental'" >> ~/.bashrc
-source ~/.bashrc
+# Define service files and commands
+SERVICE_DIR="/etc/systemd/system"
+LIBCAMERA_SERVICE="$SERVICE_DIR/libcamera-vid.service"
+FFMPEG_SERVICE="$SERVICE_DIR/ffmpeg.service"
+HTTP_SERVER_SERVICE="$SERVICE_DIR/http-server.service"
 
-# Set up simple stream website
-mkdir -p /var/www
-cp ./www/stream_simple.html /var/www/index.html
+# Create libcamera-vid service
+sudo tee $LIBCAMERA_SERVICE > /dev/null << EOF
+[Unit]
+Description=Libcamera Video Stream
+After=network.target
 
-# Run the streamer on port 8080
-mjpg_streamer -o "output_http.so -w /var/www -p 8080" -i "input_raspicam.so"
+[Service]
+WorkingDirectory=/home/$(whoami)
+ExecStart=/usr/bin/libcamera-vid -t 0 --inline --listen -o tcp://0.0.0.0:8556
+Restart=always
+User=$(whoami)
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Create ffmpeg service
+sudo tee $FFMPEG_SERVICE > /dev/null << EOF
+[Unit]
+Description=FFmpeg HLS Streaming
+After=network.target
+
+[Service]
+WorkingDirectory=/home/$(whoami)
+ExecStart=/usr/bin/ffmpeg -i tcp://0.0.0.0:8556 -c:v libx264 -f hls -hls_time 10 -hls_list_size 10 -hls_flags delete_segments stream.m3u8
+Restart=always
+User=$(whoami)
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Create http-server service
+sudo tee $HTTP_SERVER_SERVICE > /dev/null << EOF
+[Unit]
+Description=Python HTTP Server
+After=network.target
+
+[Service]
+WorkingDirectory=/home/$(whoami)
+ExecStart=/usr/bin/python3 -m http.server 8554
+Restart=always
+User=$(whoami)
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Reload systemd to apply changes
+sudo systemctl daemon-reload
+
+# Enable and start services
+sudo systemctl enable libcamera-vid.service
+sudo systemctl enable ffmpeg.service
+sudo systemctl enable http-server.service
+
+sudo systemctl start libcamera-vid.service
+sudo systemctl start ffmpeg.service
+sudo systemctl start http-server.service
+
+sudo systemctl status libcamera-vid.service --no-pager
+sudo systemctl status ffmpeg.service --no-pager
+sudo systemctl status http-server.service --no-pager
+
+echo "Services have been created and started."
