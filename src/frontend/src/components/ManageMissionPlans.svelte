@@ -7,7 +7,7 @@
   import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../stores/customizationStore';
   import Notification from "./Notification.svelte";
 
-  const pb = new PocketBase("http://localhost:8090");
+  const pb = new PocketBase(`${window.location.hostname}:8090`);
 
   export let title: string = "Manage Mission Plans";
   export let isModal = false;

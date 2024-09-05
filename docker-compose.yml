@@ -4,6 +4,7 @@ services:
       context: ./src/backend
     volumes:
       - ./src/backend/pb_data:/pb_data
+    network_mode: "host"        
     ports:
       - "8090:8090"
     container_name: mmgcs_backend
@@ -18,6 +19,7 @@ services:
     volumes:
       - ./src/frontend:/app
       - /app/node_modules
+    network_mode: "host"        
     ports:
       - "5173:5173"
     container_name: mmgcs_frontend
@@ -30,18 +32,18 @@ services:
 
   # ArduPilot SITL Service - Uncomment for development
   # https://ardupilot.org/dev/docs/sitl-simulator-software-in-the-loop.html
-  sitl:
-    image: radarku/ardupilot-sitl:latest
-    environment:
-      - INSTANCE=0
-      - LAT=33.7909
-      - LON=-84.3722
-      - ALT=0
-      - DIR=0
-      - MODEL=quad
-      - SPEEDUP=1
-      - VEHICLE=ArduCopter
-    tty: true
-    container_name: mmgcs_sitl
-    ports:
-      - "5760:5760"
+  # sitl:
+  #   image: radarku/ardupilot-sitl:latest
+  #   environment:
+  #     - INSTANCE=0
+  #     - LAT=33.7909
+  #     - LON=-84.3722
+  #     - ALT=0
+  #     - DIR=0
+  #     - MODEL=quad
+  #     - SPEEDUP=1
+  #     - VEHICLE=ArduCopter
+  #   tty: true
+  #   container_name: mmgcs_sitl
+  #   ports:
+  #     - "5760:5760"

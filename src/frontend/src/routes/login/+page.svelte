@@ -4,7 +4,7 @@
   import { goto } from '$app/navigation';
   import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../../stores/customizationStore';
 
-  const pb = new PocketBase('http://localhost:8090');
+  const pb = new PocketBase(`${window.location.hostname}:8090`);
 
   $: darkMode = $darkModeStore;
   $: primaryColor = $primaryColorStore;

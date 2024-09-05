@@ -10,7 +10,12 @@ curl -SL https://github.com/docker/compose/releases/download/v2.3.3/docker-compo
 chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
 
 # May need to logout and login to apply docker group changes
-sudo usermod -aG docker $(whoami)
+if ! docker ps >/dev/null 2>&1; then
+    echo "Docker installed. Adding $(whoami) to the 'docker' group..."
+    sudo usermod -aG docker $(whoami)
+    echo -e "${RED}User added to \`docker\` group but the session must be reloaded to access the Docker daemon. Please log out, log back in, and rerun the script. Exiting...${NC}"
+    exit 0
+fi
 
 # Define service files and commands
 SERVICE_DIR="/etc/systemd/system"

@@ -17,7 +17,7 @@
     import { get } from "svelte/store";
     import Notification from "./Notification.svelte";
 
-    const pb = new PocketBase("http://localhost:8090");
+    const pb = new PocketBase(`${window.location.hostname}:8090`);
 
     let actions: MissionPlanActions = {};
     let title: string = "";

@@ -42,7 +42,7 @@
   let offline_modal: Modal;
   let error_modal: Modal;
 
-  const pb = new PocketBase('http://localhost:8090');
+  const pb = new PocketBase(`${window.location.hostname}:8090`);
 
   let currentPath = '';
   let heightOfDashboard = 1000;
