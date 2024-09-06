@@ -11,6 +11,7 @@ services:
       resources:
         limits:
           memory: 700m
+    restart: always
 
   frontend:
     build:
@@ -27,6 +28,7 @@ services:
       resources:
         limits:
           memory: 700m
+    restart: always
 
   # ArduPilot SITL Service - Uncomment for development
   # https://ardupilot.org/dev/docs/sitl-simulator-software-in-the-loop.html
