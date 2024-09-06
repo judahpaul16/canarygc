@@ -259,15 +259,17 @@
           result = MavResult[parseInt(result.toString().replace('"result":', ''))];
           let type = result === 'ACCEPTED' ? 'success' : 'warning';
           if (result.includes('FAILED') || result.includes('DENIED') || result.includes('UNSUPPORTED')) type = 'error';
-          const notification = new Notification({
-            target: document.body,
-            props: {
-              title: 'Command Acknowledged',
-              content: `Command: ${command}<br>Result: ${result}`,
-              type: type
-            }
-          });
-          setTimeout(() => notification.$destroy(), 10000);
+          if (command !== 'REQUEST_MESSAGE') {
+            const notification = new Notification({
+              target: document.body,
+              props: {
+                title: 'Command Acknowledged',
+                content: `Command: ${command}<br>Result: ${result}`,
+                type: type
+              }
+            });
+            setTimeout(() => notification.$destroy(), 10000);
+          }
         }
       }
     }

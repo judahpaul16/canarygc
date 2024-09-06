@@ -10,7 +10,6 @@ import {
     loadMissionItem,
     clearAllMissionItems,
     setPositionLocal,
-    statusRequested,
     newLogs,
     logs
 } from '$lib/server/mavlink';
@@ -21,7 +20,7 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
             try {
                 await initializePort();
                 let connected = (port && reader && online) ? true : false;
-                if (connected && !statusRequested) await requestSysStatus();
+                if (connected) await requestSysStatus();
 
                 if (logs.length > 0) {
                     const logsToSend = newLogs.slice();
