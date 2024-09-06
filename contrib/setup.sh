@@ -78,6 +78,7 @@ for uart in 0 1 2 3; do
 done
 
 # Restart Nginx to apply the new configuration
+sudo systemctl enable nginx
 sudo systemctl restart nginx
 
 # Reload systemd to apply changes
