@@ -41,7 +41,7 @@ async function initializePort(): Promise<void> {
     }
 
     // Use UART serial port in production
-    port = new SerialPort({ path: '/dev/serial0', baudRate: 115200, lock: false });
+    port = new SerialPort({ path: '/dev/ttyACM0', baudRate: 115200, lock: false });
 
     // Uncomment for development
     // port = connect({ host: 'sitl', port: 5760 });
