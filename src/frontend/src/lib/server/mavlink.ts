@@ -29,7 +29,6 @@ interface ParamValueData {
 let port: SerialPort | Socket | null = null;
 let reader: MavLinkPacketParser | null = null;
 let online = false;
-let statusRequested = false;
 let logs: string[] = [];
 let newLogs: string[] = [];
 
@@ -85,30 +84,26 @@ async function initializePort(): Promise<void> {
 async function requestSysStatus() {
     if (!port || !reader) await initializePort();
 
-    let request = new common.SetMessageIntervalCommand();
+    let request = new common.RequestMessageCommand();
     request.targetSystem = 1;
     request.targetComponent = 1;
     request.messageId = common.GlobalPositionInt.MSG_ID;
-    request.interval = 1000000; // 1 Hz (every 1 seconds)
     request.responseTarget = 1;
     await send(port!, request);
 
-    request = new common.SetMessageIntervalCommand();
+    request = new common.RequestMessageCommand();;
     request.targetSystem = 1;
     request.targetComponent = 1;
     request.messageId = common.MissionCurrent.MSG_ID;
-    request.interval = 1000000; // 1 Hz (every 1 seconds)
     request.responseTarget = 1;
     await send(port!, request);
 
-    request = new common.SetMessageIntervalCommand();
+    request = new common.RequestMessageCommand();
     request.targetSystem = 1;
     request.targetComponent = 1;
     request.messageId = common.SysStatus.MSG_ID;
-    request.interval = 1000000; // 1 Hz (every 1 seconds)
     request.responseTarget = 1;
     await send(port!, request);
-    statusRequested = true;
 }
 
 async function requestParameters() {
@@ -232,7 +227,6 @@ export {
     port,
     reader,
     online,
-    statusRequested,
     logs,
     newLogs,
     common,
