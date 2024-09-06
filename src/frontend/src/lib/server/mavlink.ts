@@ -71,7 +71,7 @@ async function initializePort(): Promise<void> {
             let logEntry = `${clazz.MSG_NAME}(${clazz.MAGIC_NUMBER})::${timestamp}::${JSON.stringify(sanitizedData as ParamValueData)}`;
             logs.push(logEntry); // Store log entries
             newLogs.push(logEntry);
-            if (logEntry.includes('_ACK')) console.log(logEntry);
+            if (logEntry.includes('_ACK') && !logEntry.includes('"command":512')) console.log(logEntry);
         }
     });
 
