@@ -2,7 +2,13 @@
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import Modal from './Modal.svelte';
   import { onMount } from 'svelte';
-  import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../stores/customizationStore';
+  import {
+    darkModeStore,
+    primaryColorStore,
+    secondaryColorStore,
+    tertiaryColorStore
+  } from '../stores/customizationStore';
+  import Hls from 'hls.js';
 
   $: darkMode = $darkModeStore;
   $: primaryColor = $primaryColorStore;
@@ -36,21 +42,25 @@
     }
   }
 
-  function initConnection() {
-    // const ws = new WebSocket('ws://localhost:8554');
-    // ws.onopen = () => {
-    //   console.log('Connected to WebSocket server');
-    // };
-    // ws.onmessage = (event) => {
-    //   const feed = document.querySelector('.feed');
-    //   if (feed instanceof HTMLElement) {
-    //     feed.innerHTML = event.data;
-    //   }
-    // };
-    // ws.onclose = () => {
-    //   console.log('Disconnected from WebSocket server');
-    // };
-    return;
+  async function initConnection() {
+    let video = document.getElementById('live-feed') as HTMLVideoElement;
+    let videoSrc = 'http://192.168.2.76:8554/stream.m3u8';
+    if (Hls.isSupported()) {
+      var hls = new Hls();
+      hls.loadSource(videoSrc);
+      hls.attachMedia(video);
+    }
+    // HLS.js is not supported on platforms that do not have Media Source
+    // Extensions (MSE) enabled.
+    //
+    // When the browser has built-in HLS support (check using `canPlayType`),
+    // we can provide an HLS manifest (i.e. .m3u8 URL) directly to the video
+    // element through the `src` property. This is using the built-in support
+    // of the plain video element, without using HLS.js.
+    else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = videoSrc;
+    }
+    video.play();
   }
 
   onMount(() => {
@@ -58,14 +68,14 @@
   });
 </script>
 
-<div id="live-feed-container" class="text-[#ffffff] rounded-lg h-full relative"
+<div id="live-feed-container" class="text-[#ffffff] rounded-2xl h-full relative"
   style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --fontColor: {fontColor};"
 >
   <div class="container w-full h-full relative">
-    <img id="no-signal" src={darkMode ? 'no-signal.gif': 'no-signal-light.gif'} alt="No Signal" class="w-full h-full object-cover rounded z-0" />
-    <div id="live-feed" class="absolute top-0 w-full h-full object-cover rounded z-1"></div>
-    <div class="absolute top-0 left-0 bg-[#f24e4ecf] text-[#ffffff] px-2 py-1 rounded-br-lg rounded rounded-bl-none rounded-tr-none">Live Feed</div>
-    <div class="caution-text absolute bottom-0 left-0 bg-[#252525cf] px-2 py-1 rounded-tr-lg rounded rounded-br-none rounded-tl-none">Use Caution: The feed may be slightly delayed.</div>
+    <img id="no-signal" src={darkMode ? 'no-signal.gif': 'no-signal-light.gif'} alt="No Signal" class="w-full h-full object-cover rounded-lg z-0" />
+    <video id="live-feed" autoplay loop muted class="absolute top-0 w-full h-full object-cover rounded-lg z-1"></video>
+    <div class="absolute top-0 left-0 bg-[#f24e4ecf] text-[#ffffff] px-2 py-1 rounded-br-lg rounded-lg rounded-bl-none rounded-tr-none">Live Feed</div>
+    <div class="caution-text absolute bottom-0 left-0 bg-[#252525cf] px-2 py-1 rounded-tr-lg rounded-lg rounded-br-none rounded-tl-none">Use Caution: The feed may be slightly delayed.</div>
     <button class="absolute top-2 right-2 text-[#ffffff]bg-opacity-75 p-2 px-3 rounded-full" on:click={handleFullScreen}>
       <i class="fas fa-expand"></i>
     </button>

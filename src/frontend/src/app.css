@@ -55,7 +55,7 @@ html {
 }
 
 iframe {
-  border-radius: 1em;
+  border-radius: 1rem;
 }
 
 .dashboard {
@@ -78,7 +78,7 @@ iframe {
 
 .dashboard {
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
-  background-color: rgb(from var(--secondaryColor) r g b / 0.8) !important;
+  background-color: rgb(from var(--secondaryColor) r g b / 0.85) !important;
 }
 
 .desktop-nav, .mobile-nav {

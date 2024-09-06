@@ -42,7 +42,7 @@
   let offline_modal: Modal;
   let error_modal: Modal;
 
-  const pb = new PocketBase('http://localhost:8090');
+  let pb: PocketBase;
 
   let currentPath = '';
   let heightOfDashboard = 1000;
@@ -244,7 +244,7 @@
       } else if ((text as string).includes('MISSION_ITEM_REACHED')) {
         let index: string | RegExpMatchArray | null = (text as string).match(/"seq":(\d+)/g);
         if (index) index = index.toString().replace('"seq":', '');
-        if (index && !get(missionCompleteStore)) missionIndexStore.set(parseInt(index));
+        if (index && !get(missionCompleteStore)) missionIndexStore.set(parseInt(index) + 1);
         if (index && parseInt(index) === Object.keys($missionPlanActionsStore).length - 1)
           missionCompleteStore.set(true);
         if (index) {
@@ -285,6 +285,8 @@
   }
 
   onMount(async () => {
+    pb = new PocketBase(`http://${window.location.hostname}:8090`);
+
     if (typeof window !== 'undefined' && authData.checkExpired() && window.location.pathname !== '/') {
       authData.set(null);
       goto('/login');
@@ -531,7 +533,7 @@
     align-self: center;
     color: var(--fontColor);
     background-color: var(--primaryColor);
-    border: 5px solid var(--secondaryColor);
+    border: 5px solid rgb(from var(--secondaryColor) r g b / 0.85);
     border-right: none;
     border-radius: 30px 0 0 30px;
     margin-left: 2em;

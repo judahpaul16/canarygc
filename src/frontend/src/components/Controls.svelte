@@ -2,7 +2,7 @@
   import Map from './Map.svelte';
   import DPad from './DPad.svelte';
   import Weather from './Weather.svelte';
-  import { mavAltitudeStore, mavLocationStore } from '../stores/mavlinkStore';
+  import { mavModeStore, mavAltitudeStore, mavLocationStore } from '../stores/mavlinkStore';
   import { onMount } from 'svelte';
   import {
     darkModeStore,
@@ -19,6 +19,7 @@
   $: secondaryColor = darkMode ? $tertiaryColorStore : $secondaryColorStore;
   $: tertiaryColor = $tertiaryColorStore;
   $: fontColor = darkMode ? '#ffffff' : '#000000';
+  $: mavMode = $mavModeStore;
   $: mavLocation = $mavLocationStore;
   $: altitude = $mavAltitudeStore;
 
@@ -44,6 +45,7 @@
       console.error(`Error: ${await response.text()}`);
     }
   }
+  
   async function setPositionLocal(x: string, y: string, z: string) {
     const response = await fetch("/api/mavlink/set_position_local", {
       method: "POST",
@@ -62,7 +64,7 @@
   }
 </script>
 
-<div class="controls px-10 rounded-lg h-full flex items-center overflow-x-auto gap-4"
+<div class="controls px-10 rounded-2xl h-full flex items-center overflow-x-auto gap-4"
   style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
   >
   <div class="map-container flex-shrink-0 h-48 w-48">
@@ -96,16 +98,20 @@
     <div class="alt-btns column flex flex-col items-center justify-center text-center space-y-4">
       <div class="flex flex-col items-center">
         <div class="label text-sm mb-1" title="Altitude Up">Altitude Up</div>
-        <button class="alt-button rounded-full"
-            on:click={() => {setPositionLocal('0', '0', `-${altitude + 10}`)}}>
+        <button class="alt-button rounded-full" on:click={() => {
+          if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
+          setPositionLocal('0', '0', `-${altitude + 10}`)
+        }}>
           <i class="alt-up fas fa-arrow-up"></i>
         </button>
       </div>
       <div class="flex flex-col items-center justify-center">
         <div class="label text-sm mb-1" title="Altitude Down">Altitude Down</div>
-        <button class="alt-button rounded-full"
-            on:click={() => {setPositionLocal('0', '0', `-${altitude - 10}`)}}>
-          <i class="alt-down fas fa-arrow-down"></i>
+        <button class="alt-button rounded-full" on:click={() => {
+            if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
+            setPositionLocal('0', '0', `-${altitude - 10}`)
+          }}>
+            <i class="alt-down fas fa-arrow-down"></i>
         </button>
       </div>
     </div>
@@ -115,8 +121,8 @@
         <div class="label text-sm mb-1">Rotate Left</div>
         <button class="rotate-button rotate-left rounded-full"
           on:click={() => {
-            sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
-            sendMavlinkCommand('CONDITION_YAW', `${[10, 10, -1, 1]}`);
+              if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
+              sendMavlinkCommand('CONDITION_YAW', `${[10, 10, -1, 1]}`);
             }}>
           ⟲
         </button>
@@ -125,8 +131,8 @@
         <div class="label text-sm mb-1">Rotate Right</div>
         <button class="rotate-button rotate-right rounded-full"
           on:click={() => {
-            sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
-            sendMavlinkCommand('CONDITION_YAW', `${[10, 10, 1, 1]}`);
+              if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
+              sendMavlinkCommand('CONDITION_YAW', `${[10, 10, 1, 1]}`);
             }}>
           ⟳
         </button>
@@ -164,7 +170,7 @@
 
   .set-btn:hover {
     color: #ffffff;
-    background-color: #2e8dfa;
+    background-color: #4e94f7;
     border: 1px solid var(--secondaryColor);
   }
 
@@ -211,12 +217,12 @@
 
   .rotate-left:hover {
     animation: rotate-left 0.6s;
-    color: #66e1ff;
+    color: #4e94f7;
   }
 
   .rotate-right:hover {
     animation: rotate-right 0.6s;
-    color: #66e1ff;
+    color: #4e94f7;
   }
 
   @keyframes rotate-left {
@@ -239,12 +245,12 @@
 
   .alt-button:hover .alt-up {
     transform: translateY(-0.2rem);
-    color: #66e1ff;
+    color: #4e94f7;
   }
 
   .alt-button:hover .alt-down  {
     transform: translateY(0.2rem);
-    color: #66e1ff;
+    color: #4e94f7;
   }
   
   .label {

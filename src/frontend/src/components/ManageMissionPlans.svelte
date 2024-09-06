@@ -7,7 +7,7 @@
   import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../stores/customizationStore';
   import Notification from "./Notification.svelte";
 
-  const pb = new PocketBase("http://localhost:8090");
+  let pb: PocketBase;
 
   export let title: string = "Manage Mission Plans";
   export let isModal = false;
@@ -24,8 +24,26 @@
   $: actions = $missionPlanActionsStore;
 
   onMount(() => {
+    pb = new PocketBase(`http://${window.location.hostname}:8090`);
     getMissionPlans();
   });
+
+  async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
+    const response = await fetch(`/api/mavlink/send_command`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'command': command,
+        'params': params,
+        'useArduPilotMega': useArduPilotMega
+      },
+    });
+    if (response.ok) {
+      console.log(await response.text());
+    } else {
+      console.error(`Error: ${await response.text()}`);
+    }
+  }
 
   async function getMissionPlans() {
     try {
@@ -62,6 +80,8 @@
   }
 
   async function handleLoad(title: string, actions: MissionPlanActions) {
+    sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+
     // Clear the current mission plan
     try {
       let response = await fetch("/api/mavlink/clear_mission", {
@@ -253,7 +273,7 @@
 {#if isOpen && isModal}
   <div class="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50 p-8">
     <div
-      class="container rounded-lg shadow-lg max-w-lg w-full"
+      class="container rounded-2xl shadow-lg max-w-lg w-full"
       style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor}"
     >
       <div class="relative border-b">
@@ -295,7 +315,7 @@
       <div class="flex justify-center px-4 py-2 border-t">
         <button
             on:click={importPlan}
-            class="import-btn bg-transparent hover:bg-[#4b5563] px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
+            class="import-btn bg-transparent px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
           >
           <i class="fas fa-upload mr-1"></i>
           Import Plan
@@ -305,7 +325,7 @@
   </div>
 {:else}
   <div
-      class="container rounded-lg w-full h-full overflow-auto relative"
+      class="container rounded-2xl w-full h-full overflow-auto relative"
       style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor}"
     >
     <div class="relative border-b">
@@ -371,7 +391,8 @@
   }
 
   .import-btn:hover {
-    background-color: var(--tertiaryColor);
+    color: white;
+    background-color: #4e94f7;
   }
 
   button {

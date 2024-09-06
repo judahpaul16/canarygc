@@ -2,9 +2,13 @@
   import PocketBase from 'pocketbase';
   import { authData } from '../../stores/authStore';
   import { goto } from '$app/navigation';
-  import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../../stores/customizationStore';
-
-  const pb = new PocketBase('http://localhost:8090');
+  import {
+    darkModeStore,
+    primaryColorStore,
+    secondaryColorStore,
+    tertiaryColorStore
+  } from '../../stores/customizationStore';
+  import { onMount } from 'svelte';
 
   $: darkMode = $darkModeStore;
   $: primaryColor = $primaryColorStore;
@@ -15,6 +19,12 @@
   let email = '';
   let password = '';
   let error = '';
+
+  let pb: PocketBase;
+  
+  onMount(() => {
+    pb = new PocketBase(`http://${window.location.hostname}:8090`);
+  });
 
   async function login() {
     try {

@@ -61,7 +61,7 @@
   <div class="fixed inset-0 flex items-center justify-center z-50 bg-[#00000080]"
     style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
   >
-    <div class="container rounded-lg shadow-lg max-w-sm w-full">
+    <div class="container rounded-2xl shadow-lg max-w-sm w-full">
       <div class="relative border-b">
         <div class="px-4 py-2 text-lg font-semibold">
           {title}
@@ -132,10 +132,6 @@
     background: none;
     cursor: pointer;
     transition: background-color 0.3s, color 0.3s;
-  }
-
-  button:hover {
-    color: var(--primaryColor);
   }
 
   .form-input {

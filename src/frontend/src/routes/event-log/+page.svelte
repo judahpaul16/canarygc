@@ -6,7 +6,7 @@
     import PocketBase from 'pocketbase';
     import { get } from 'svelte/store';
 
-    const pb = new PocketBase('http://localhost:8090');
+    let pb: PocketBase;
     
     let logs: string[] = [];
     let logContainer: HTMLElement;
@@ -142,6 +142,7 @@
     }
 
     onMount(() => {
+        pb = new PocketBase(`http://${window.location.hostname}:8090`);
         mavlinkLogStore.subscribe((value) => {
             logs = value;
         });

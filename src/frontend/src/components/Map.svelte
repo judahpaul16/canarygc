@@ -220,6 +220,7 @@
       currentMap = 'leaflet';
       if (altitudeAngelDiv) altitudeAngelDiv.style.display = 'none';
       if (leafletDiv) leafletDiv.style.display = 'block';
+      window.dispatchEvent(new Event('resize'));
     } else {
       currentMap = 'altitudeAngel';
       if (altitudeAngelDiv) altitudeAngelDiv.style.display = 'block';
@@ -414,7 +415,7 @@
         let nextLatLng = nextMarker.getLatLng();
         addPolyline(currentLatLng, nextLatLng);
       }
-      if (currentIndex <= get(missionIndexStore) && prevMarker) {
+      if (currentIndex < get(missionIndexStore) && prevMarker) {
         removePolyline(prevMarker.getLatLng(), currentMarker.getLatLng());
       }
     }
@@ -516,7 +517,7 @@
 
 <div class="map-container" style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};">
   <div id="aamap" class="relative h-full"></div>
-  <div id={id !== null ? id : 'map'} class="relative h-full rounded-lg z-0"></div>
+  <div id={id !== null ? id : 'map'} class="relative h-full rounded-2xl z-0"></div>
   <button class="map-btn absolute top-[3.8rem] right-2 text-[#ffffff] bg-opacity-75 p-2 px-3 rounded-full" on:click={toggleDarkMode}>
     {#if darkMode} <i class="fas fa-moon px-[2px]"></i> {:else} <i class="fas fa-sun"></i> {/if}
   </button>

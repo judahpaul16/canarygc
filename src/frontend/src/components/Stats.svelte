@@ -17,10 +17,12 @@
     mavLocationStore
   } from '../stores/mavlinkStore';
   import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../stores/customizationStore';
+  import { markersStore } from '../stores/mapStore';
   import { get } from 'svelte/store';
 
   import Modal from './Modal.svelte';
   import Notification from './Notification.svelte';
+    import type { LatLng } from 'leaflet';
 
   export let mavModel: string = get(mavModelStore);
   export let mavType: string = get(mavTypeStore);
@@ -30,6 +32,9 @@
   export let systemState: string = get(mavStateStore);
   export let batteryStatus: number | null = get(mavBatteryStore);
   export let mavMode: string = get(mavModeStore);
+
+  let markers = get(markersStore);
+  let progressSamples: { progress: number, timestamp: number }[] = [];
 
   $: darkMode = $darkModeStore;
   $: primaryColor = $primaryColorStore;
@@ -46,8 +51,98 @@
   $: speed = $mavSpeedStore;
   $: missionPlanTitle = $missionPlanTitleStore;
   $: mavLocation = $mavLocationStore;
-  $: missionProgress = Math.round(($missionIndexStore / $missionCountStore) * 100);
+  $: missionProgress = getMissionProgress($missionIndexStore, $missionCountStore, $mavLocationStore as L.LatLng);
   $: missionLoaded = $missionPlanTitleStore !== '';
+  $: markers = $markersStore;
+  $: eta = calculateETA(missionProgress, $mavLocationStore);
+
+  function getMissionProgress(index: number, count: number, mavLocation: L.LatLng): number {
+    let progress: number = 0;
+    let nextMarkerLocation: L.LatLng = { lat: 0, lng: 0 } as L.LatLng;
+    let prevMarkerLocation: L.LatLng = { lat: 0, lng: 0 } as L.LatLng;
+    if (markers.get(index) !== undefined) nextMarkerLocation = markers.get(index)!.getLatLng();
+    if (markers.get(index - 1) !== undefined) prevMarkerLocation = markers.get(index - 1)!.getLatLng();
+    if (nextMarkerLocation.lat !== 0 && nextMarkerLocation.lng !== 0 && prevMarkerLocation.lat !== 0 && prevMarkerLocation.lng !== 0) {
+      let distanceToNext = haversine(mavLocation.lat, mavLocation.lng, nextMarkerLocation.lat, nextMarkerLocation.lng);
+      let distanceToPrev = haversine(mavLocation.lat, mavLocation.lng, prevMarkerLocation.lat, prevMarkerLocation.lng);
+      let totalDistance = distanceToNext + distanceToPrev;
+      progress = (distanceToPrev / totalDistance);
+    }
+    let section = ((1 / count) * 100) * (index - 1);
+    progress = progress * ((1 / count) * 100);
+    progress = parseFloat((Math.min(section + progress, 100)).toFixed(2));
+    addSample(progress, Date.now());
+    return progress;
+  }
+
+  function haversine(lat1: number, lon1: number, lat2: number, lon2: number) {
+    // distance between latitudes
+    // and longitudes
+    let dLat = (lat2 - lat1) * Math.PI / 180.0;
+    let dLon = (lon2 - lon1) * Math.PI / 180.0;
+        
+    // convert to radians
+    lat1 = (lat1) * Math.PI / 180.0;
+    lat2 = (lat2) * Math.PI / 180.0;
+      
+    // apply formulae
+    let a = Math.pow(Math.sin(dLat / 2), 2) + 
+                Math.pow(Math.sin(dLon / 2), 2) * 
+                Math.cos(lat1) * 
+                Math.cos(lat2);
+    let rad = 6371;
+    let c = 2 * Math.asin(Math.sqrt(a));
+    return rad * c;
+  }
+
+  function addSample(progress: number, timestamp: number) {
+    progressSamples.push({ progress, timestamp });
+    
+    // Keep only the latest 2 samples
+    if (progressSamples.length > 2) {
+      progressSamples.shift();
+    }
+  }
+
+  function calculateETA(currentProgress: number, location: LatLng | { lat: number; lng: number; }): string {
+    if (progressSamples.length < 2) {
+      return "00:00:00"; // Not enough samples
+    }
+    
+    // Get the last two samples
+    const [{ progress: progress1, timestamp: time1 }, { progress: progress2, timestamp: time2 }] = progressSamples;
+
+    // Calculate the progress rate (progress per second)
+    let progressRate = (progress2 - progress1) / ((time2 - time1) / 1000);
+
+    if (progressRate < 0) {
+      progressRate = 1; // Avoid division by zero
+    }
+    
+    // Calculate the remaining progress to reach 100%
+    const remainingProgress = 100 - currentProgress;
+
+    // Calculate the remaining time in seconds
+    const remainingTimeSeconds = (remainingProgress / progressRate);
+
+    // Convert remaining time to hours, minutes, and seconds
+    const hours = Math.floor(remainingTimeSeconds / 3600);
+    const minutes = Math.floor((remainingTimeSeconds % 3600) / 60);
+    const seconds = Math.floor(remainingTimeSeconds % 60);
+
+    // Format the time as HH:MM:SS
+    if (isNaN(hours) || isNaN(minutes) || isNaN(seconds)) {
+      return "00:00:00";
+    }
+    
+    const formattedTime = [
+      hours.toString().padStart(2, '0'),
+      minutes.toString().padStart(2, '0'),
+      seconds.toString().padStart(2, '0')
+    ].join(':');
+
+    return formattedTime;
+  }
 
   async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
     const response = await fetch(`/api/mavlink/send_command`, {
@@ -243,7 +338,7 @@
 </script>
 
 <div
-  class="stats p-4 rounded-lg flex flex-col space-y-2 h-full overflow-y-auto overflow-x-hidden text-sm"
+  class="stats p-4 rounded-2xl flex flex-col space-y-2 h-full overflow-y-auto overflow-x-hidden text-sm"
   style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
 >
   <h2 class="text-lg font-bold">
@@ -270,7 +365,7 @@
       </div>
       <div class="flex flex-col items-center justify-end">
         <div class="w-full">
-          <span>Mission Progress: {systemState === 'Unknown' ? '--' : mavMode === 'AUTO' ? missionProgress : 0}% (ETA 00:00:00)</span>
+          <span>Mission Progress: {systemState === 'Unknown' ? '--' : mavMode === 'AUTO' ? missionProgress : 0}% (ETA {eta})</span>
           <div class="progress-bar rounded-full h-2.5 mt-3">
             <div class="progress-bar-inner h-2.5 rounded-full" style="width: {mavMode === 'AUTO' ? missionProgress : 0}%;"></div>
           </div>
