@@ -106,17 +106,15 @@
         setTimeout(() => notification.$destroy(), 5000);
       }
   } catch (error: any) {
-      let error_modal = new Modal({
+      let notification = new Notification({
         target: document.body,
         props: {
           title: 'Error',
-          content: `Error connecting to the MAVLink stream: ${error.message}`,
-          isOpen: true,
-          confirmation: false,
-          notification: true,
-        },
+          content: `Error: ${error.message || error}`,
+          type: 'error'
+        }
       });
-      error_modal.isOpen = true;
+      setTimeout(() => notification.$destroy(), 5000);
       return;
     }
   }
@@ -261,15 +259,17 @@
           result = MavResult[parseInt(result.toString().replace('"result":', ''))];
           let type = result === 'ACCEPTED' ? 'success' : 'warning';
           if (result.includes('FAILED') || result.includes('DENIED') || result.includes('UNSUPPORTED')) type = 'error';
-          const notification = new Notification({
-            target: document.body,
-            props: {
-              title: 'Command Acknowledged',
-              content: `Command: ${command}<br>Result: ${result}`,
-              type: type
-            }
-          });
-          setTimeout(() => notification.$destroy(), 10000);
+          if (command !== 'REQUEST_MESSAGE') {
+            const notification = new Notification({
+              target: document.body,
+              props: {
+                title: 'Command Acknowledged',
+                content: `Command: ${command}<br>Result: ${result}`,
+                type: type
+              }
+            });
+            setTimeout(() => notification.$destroy(), 10000);
+          }
         }
       }
     }
