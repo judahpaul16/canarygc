@@ -44,7 +44,7 @@
 
   async function initConnection() {
     let video = document.getElementById('live-feed') as HTMLVideoElement;
-    let videoSrc = 'http://192.168.2.76:8554/stream.m3u8';
+    let videoSrc = `http://${window.location.hostname}:8554/stream.m3u8`;
     if (Hls.isSupported()) {
       var hls = new Hls();
       hls.loadSource(videoSrc);

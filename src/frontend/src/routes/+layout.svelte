@@ -39,9 +39,6 @@
   import Modal from '../components/Modal.svelte';
   import Notification from '../components/Notification.svelte';
 
-  let offline_modal: Modal;
-  let error_modal: Modal;
-
   let pb: PocketBase;
 
   let currentPath = '';
@@ -98,33 +95,27 @@
           getLogs(log.replace(/\\"/g, '"') + '\n');
         });
       } else {
-        if (!offline_modal) {
-          offline_modal = new Modal({
-            target: document.body,
-            props: {
-              title: 'Offline',
-              content: `The MAVLink stream is currently offline. Please make sure the MAVLink stream is running, verify the connection, and try again.`,
-              isOpen: true,
-              confirmation: false,
-              notification: true,
-            },
-          });
-        }
-        offline_modal.isOpen = true;
-        return;
-      }
-  } catch (error: any) {
-      if (!error_modal)
-        error_modal = new Modal({
+        let notification = new Notification({
           target: document.body,
           props: {
-            title: 'Error',
-            content: `Error connecting to the MAVLink stream: ${error.message}`,
-            isOpen: true,
-            confirmation: false,
-            notification: true,
-          },
+            title: 'Offline',
+            content: 'The MAVLink stream is offline.',
+            type: 'error'
+          }
         });
+        setTimeout(() => notification.$destroy(), 5000);
+      }
+  } catch (error: any) {
+      let error_modal = new Modal({
+        target: document.body,
+        props: {
+          title: 'Error',
+          content: `Error connecting to the MAVLink stream: ${error.message}`,
+          isOpen: true,
+          confirmation: false,
+          notification: true,
+        },
+      });
       error_modal.isOpen = true;
       return;
     }
