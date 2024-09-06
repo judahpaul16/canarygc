@@ -34,7 +34,7 @@ let logs: string[] = [];
 let newLogs: string[] = [];
 
 async function initializePort(): Promise<void> {
-    if (port) {
+    if (port !== null) {
         port.removeAllListeners();
         port.destroy();
         reader?.removeAllListeners();
@@ -46,6 +46,7 @@ async function initializePort(): Promise<void> {
 
     // Uncomment for development
     port = connect({ host: 'sitl', port: 5760 });
+
 
     await new Promise<void>((resolve, reject) => {
         port!.on('error', (err) => {
@@ -82,7 +83,7 @@ async function initializePort(): Promise<void> {
 }
 
 async function requestSysStatus() {
-    if (!port || !reader) throw new Error('Port or reader is not initialized');
+    if (!port || !reader) await initializePort();
 
     let request = new common.SetMessageIntervalCommand();
     request.targetSystem = 1;
@@ -111,7 +112,7 @@ async function requestSysStatus() {
 }
 
 async function requestParameters() {
-    if (!port || !reader) throw new Error('Port or reader is not initialized');
+    if (!port || !reader) await initializePort();
 
     const request = new common.ParamRequestList();
     request.targetSystem = 1;
@@ -120,7 +121,7 @@ async function requestParameters() {
 }
 
 async function sendMavlinkCommand(command: string, params: number[], useArduPilotMega = false, useCmdLong = true) {
-    if (!port || !reader) throw new Error('Port or reader is not initialized');
+    if (!port || !reader) await initializePort();
 
     let commandMsg: common.CommandInt | common.CommandLong;
     if (useCmdLong) commandMsg = new common.CommandLong();
@@ -142,23 +143,23 @@ async function sendMavlinkCommand(command: string, params: number[], useArduPilo
     if (params[4]) commandMsg._param5 = params[4];
     if (params[5]) commandMsg._param6 = params[5];
     if (params[6]) commandMsg._param7 = params[6];
-    await send(port, commandMsg);
+    await send(port!, commandMsg);
 }
 
 async function setMissionCount(numItems: number) {
-    if (!port || !reader) throw new Error('Port or reader is not initialized');
+    if (!port || !reader) await initializePort();
 
     const count = new common.MissionCount();
     count.targetSystem = 1;
     count.targetComponent = 1;
     count.count = numItems;
     count.opaqueId = 0;
-    await send(port, count);
+    await send(port!, count);
     await new Promise((resolve) => setTimeout(resolve, 250)); // Wait for 250 ms
 }
 
 async function loadMissionItem(item: any, index: number) {
-    if (!port || !reader) throw new Error('Port or reader is not initialized');
+    if (!port || !reader) await initializePort();
 
     const msg = new common.MissionItemInt();
     msg.targetSystem = 1;
@@ -176,20 +177,20 @@ async function loadMissionItem(item: any, index: number) {
     msg.y = Number((item.lon * 1e7).toFixed(0));
     msg.z = item.alt === null ? 0 : item.alt;
     msg.missionType = 0;
-    await send(port, msg);
+    await send(port!, msg);
 }
 
 async function clearAllMissionItems() {
-    if (!port || !reader) throw new Error('Port or reader is not initialized');
+    if (!port || !reader) await initializePort();
 
     const msg = new common.MissionClearAll();
     msg.targetSystem = 1;
     msg.targetComponent = 1;
-    await send(port, msg);
+    await send(port!, msg);
 }
 
 async function setPositionLocal(x: number, y: number, z: number) {
-    if (!port || !reader) throw new Error('Port or reader is not initialized');
+    if (!port || !reader) await initializePort();
     const msg = new common.SetPositionTargetLocalNed();
     
     msg.timeBootMs = 0;
@@ -202,7 +203,7 @@ async function setPositionLocal(x: number, y: number, z: number) {
     msg.y = y;
     msg.z = z;
     msg.yawRate = 0;
-    await send(port, msg);
+    await send(port!, msg);
   }
 
 function convertBigIntToNumber(obj: any): any {
