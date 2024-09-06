@@ -88,6 +88,11 @@
     border: 10px solid var(--primaryColor);
   }
 
+  #no-signal {
+    background-color: var(--primaryColor);
+    padding-right: 1px;
+  }
+
   .caution-text {
     color: var(--fontColor);
     background-color: var(--primaryColor);
