@@ -106,17 +106,15 @@
         setTimeout(() => notification.$destroy(), 5000);
       }
   } catch (error: any) {
-      let error_modal = new Modal({
+      let notification = new Notification({
         target: document.body,
         props: {
           title: 'Error',
-          content: `Error connecting to the MAVLink stream: ${error.message}`,
-          isOpen: true,
-          confirmation: false,
-          notification: true,
-        },
+          content: `Error: ${error.message || error}`,
+          type: 'error'
+        }
       });
-      error_modal.isOpen = true;
+      setTimeout(() => notification.$destroy(), 5000);
       return;
     }
   }
