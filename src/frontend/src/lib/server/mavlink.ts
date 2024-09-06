@@ -41,10 +41,10 @@ async function initializePort(): Promise<void> {
     }
 
     // Use UART serial port in production
-    // port = new SerialPort({ path: '/dev/ttyS0', baudRate: 115200 });
+    port = new SerialPort({ path: '/dev/serial0', baudRate: 115200 });
 
     // Uncomment for development
-    port = connect({ host: 'sitl', port: 5760 });
+    // port = connect({ host: 'sitl', port: 5760 });
 
 
     await new Promise<void>((resolve, reject) => {
