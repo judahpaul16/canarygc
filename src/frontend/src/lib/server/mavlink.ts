@@ -193,18 +193,16 @@ async function setPositionLocal(x: number, y: number, z: number) {
     if (!port || !reader) throw new Error('Port or reader is not initialized');
     const msg = new common.SetPositionTargetLocalNed();
     
-    // Set parameters for the command
     msg.timeBootMs = 0;
     msg.targetSystem = 1;
     msg.targetComponent = 1;
     msg.coordinateFrame = 1; // MAV_FRAME_LOCAL_NED
-    // ignore velocity and acceleration and yaw
     // @ts-ignore
-    msg.typeMask = 0b111111111000;
+    msg.typeMask = 0b011111111000; // ignore all but position
     msg.x = x;
     msg.y = y;
     msg.z = z;
-    // Send the command to the drone
+    msg.yawRate = 0;
     await send(port, msg);
   }
 

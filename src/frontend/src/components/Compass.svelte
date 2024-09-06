@@ -69,7 +69,7 @@
   }
 </script>
 
-<div class="compass rounded-lg flex flex-col items-center justify-center h-full w-full overflow-auto p-4"
+<div class="compass rounded-2xl flex flex-col items-center justify-center h-full w-full overflow-auto p-4"
   style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
 >
   <div id="heading" class="bg-[#62bbff] p-2 text-[#000000] text-xs rounded-full">{heading}</div>

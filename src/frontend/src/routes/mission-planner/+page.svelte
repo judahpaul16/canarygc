@@ -30,7 +30,7 @@
     <div class="dashboard w-full grid grid-cols-12 grid-rows-7 gap-4 p-5 rounded-[30px] rounded-l-none overflow-auto max-h-[90vh]"
        style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor};"
     >
-      <div class="map col-span-10 row-span-4 p-2 rounded-lg">
+      <div class="map col-span-10 row-span-4 p-2 rounded-2xl">
         <Map {mavLocation} />
       </div>
       <div class="weather col-span-2 row-span-2">

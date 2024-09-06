@@ -14,9 +14,11 @@
         secondaryColorStore,
         tertiaryColorStore
     } from '../stores/customizationStore';
+    import { get } from "svelte/store";
+    import { onMount } from "svelte";
     import Notification from "./Notification.svelte";
 
-    const pb = new PocketBase("http://localhost:8090");
+    let pb: PocketBase;
 
     let actions: MissionPlanActions = {};
     let title: string = "";
@@ -30,6 +32,27 @@
     $: secondaryColor = $secondaryColorStore;
     $: tertiaryColor = $tertiaryColorStore;
     $: fontColor = darkMode ? "#ffffff" : "#000000";
+
+    onMount(() => {
+        pb = new PocketBase(`http://${window.location.hostname}:8090`);
+    });
+
+    async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
+        const response = await fetch(`/api/mavlink/send_command`, {
+        method: 'POST',
+        headers: {
+            'content-type': 'application/json',
+            'command': command,
+            'params': params,
+            'useArduPilotMega': useArduPilotMega
+        },
+        });
+        if (response.ok) {
+        console.log(await response.text());
+        } else {
+        console.error(`Error: ${await response.text()}`);
+        }
+    }
 
     function toggleMissionPlans() {
         const modal = new ManageMissionPlans({
@@ -54,8 +77,7 @@
                 confirmation: true,
                 notification: false,
                 onConfirm: async () => {
-                    // @ts-ignore
-                    let title = document.getElementById("flight-plan-title")!.value === '' ? "Untitled Mission" : document.getElementById("flight-plan-title")!.value;
+                    let title = get(missionPlanTitleStore);
                     await handleSave(title, actions);
                 },
                 onCancel: () => {
@@ -66,6 +88,8 @@
     }
 
     async function handleLoad(title: string, actions: MissionPlanActions) {
+        sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+
         // Clear the current mission plan
         try {
             let response = await fetch("/api/mavlink/clear_mission", {
@@ -380,7 +404,7 @@
 </script>
 
 <section
-    class="flight-plan-settings rounded-lg p-4 h-full"
+    class="flight-plan-settings rounded-2xl p-4 h-full"
     style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
 >
     <button on:click={setHomeLocation}>
