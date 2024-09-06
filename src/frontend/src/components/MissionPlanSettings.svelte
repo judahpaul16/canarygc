@@ -15,9 +15,10 @@
         tertiaryColorStore
     } from '../stores/customizationStore';
     import { get } from "svelte/store";
+    import { onMount } from "svelte";
     import Notification from "./Notification.svelte";
 
-    const pb = new PocketBase(`${window.location.hostname}:8090`);
+    let pb: PocketBase;
 
     let actions: MissionPlanActions = {};
     let title: string = "";
@@ -31,6 +32,10 @@
     $: secondaryColor = $secondaryColorStore;
     $: tertiaryColor = $tertiaryColorStore;
     $: fontColor = darkMode ? "#ffffff" : "#000000";
+
+    onMount(() => {
+        pb = new PocketBase(`http://${window.location.hostname}:8090`);
+    });
 
     async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
         const response = await fetch(`/api/mavlink/send_command`, {

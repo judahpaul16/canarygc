@@ -42,7 +42,7 @@
   let offline_modal: Modal;
   let error_modal: Modal;
 
-  const pb = new PocketBase(`${window.location.hostname}:8090`);
+  let pb: PocketBase;
 
   let currentPath = '';
   let heightOfDashboard = 1000;
@@ -285,6 +285,8 @@
   }
 
   onMount(async () => {
+    pb = new PocketBase(`http://${window.location.hostname}:8090`);
+
     if (typeof window !== 'undefined' && authData.checkExpired() && window.location.pathname !== '/') {
       authData.set(null);
       goto('/login');
