@@ -45,23 +45,6 @@
   async function initConnection() {
     let video = document.getElementById('live-feed') as HTMLVideoElement;
     let videoSrc = 'http://192.168.2.76:8554/stream.m3u8';
-    let hasSignal = await fetch(videoSrc)
-      .then(response => {
-        if (response.ok) {
-          return true;
-        }
-        return false;
-      })
-      .then(() => {
-        return true;
-      })
-      .catch(() => {
-        return false;
-      });
-    if (!hasSignal) {
-      video.style.display = 'none';
-      return;
-    }
     if (Hls.isSupported()) {
       var hls = new Hls();
       hls.loadSource(videoSrc);
