@@ -2,7 +2,7 @@
 
 # Update system and install necessary packages
 sudo apt-get update
-sudo apt-get -y install docker.io
+sudo apt-get -y install docker.io python3
 
 DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
 mkdir -p $DOCKER_CONFIG/cli-plugins
@@ -22,6 +22,29 @@ SERVICE_DIR="/etc/systemd/system"
 LIBCAMERA_SERVICE="$SERVICE_DIR/libcamera-vid.service"
 FFMPEG_SERVICE="$SERVICE_DIR/ffmpeg.service"
 HTTP_SERVER_SERVICE="$SERVICE_DIR/http-server.service"
+
+# Create a directory for the CORS HTTP server script
+SCRIPT_DIR="/home/$(whoami)/scripts"
+mkdir -p $SCRIPT_DIR
+
+# Create the CORS HTTP server script
+cat << 'EOF' > $SCRIPT_DIR/cors_http_server.py
+from http.server import SimpleHTTPRequestHandler, HTTPServer
+
+class CORSHTTPRequestHandler(SimpleHTTPRequestHandler):
+    def end_headers(self):
+        self.send_header('Access-Control-Allow-Origin', '*')
+        super().end_headers()
+
+def run(server_class=HTTPServer, handler_class=CORSHTTPRequestHandler, port=8554):
+    server_address = ('', port)
+    httpd = server_class(server_address, handler_class)
+    print(f'Starting httpd on port {port}...')
+    httpd.serve_forever()
+
+if __name__ == "__main__":
+    run()
+EOF
 
 # Create libcamera-vid service
 sudo tee $LIBCAMERA_SERVICE > /dev/null << EOF
@@ -58,12 +81,12 @@ EOF
 # Create http-server service
 sudo tee $HTTP_SERVER_SERVICE > /dev/null << EOF
 [Unit]
-Description=Python HTTP Server
+Description=Python HTTP Server with CORS
 After=network.target
 
 [Service]
-WorkingDirectory=/home/$(whoami)
-ExecStart=/usr/bin/python3 -m http.server 8554
+WorkingDirectory=$SCRIPT_DIR
+ExecStart=/usr/bin/python3 cors_http_server.py
 Restart=always
 User=$(whoami)
 
