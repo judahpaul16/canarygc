@@ -70,6 +70,13 @@ server {
 }
 EOF
 
+# Check and enable all uarts with dtoverlay=uartx
+for uart in 0 1 2 3; do
+    if ! grep -q "dtoverlay=uart${uart}" /boot/firmware/config.txt; then
+        echo "dtoverlay=uart${uart}" | sudo tee -a /boot/firmware/config.txt
+    fi
+done
+
 # Restart Nginx to apply the new configuration
 sudo systemctl restart nginx
 
