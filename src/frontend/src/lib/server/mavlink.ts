@@ -34,7 +34,6 @@ let logs: string[] = [];
 let newLogs: string[] = [];
 
 async function initializePort(): Promise<void> {
-    statusRequested = false;
     if (port) {
         port.removeAllListeners();
         port.destroy();
