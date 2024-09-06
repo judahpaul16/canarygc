@@ -73,7 +73,7 @@
 >
   <div class="container w-full h-full relative">
     <img id="no-signal" src={darkMode ? 'no-signal.gif': 'no-signal-light.gif'} alt="No Signal" class="w-full h-full object-cover rounded-lg z-0" />
-    <video src="http://192.168.2.76:8554/stream.m3u8" id="live-feed" autoplay loop muted class="absolute top-0 w-full h-full object-cover rounded-lg z-1"></video>
+    <video id="live-feed" autoplay loop muted class="absolute top-0 w-full h-full object-cover rounded-lg z-1"></video>
     <div class="absolute top-0 left-0 bg-[#f24e4ecf] text-[#ffffff] px-2 py-1 rounded-br-lg rounded-lg rounded-bl-none rounded-tr-none">Live Feed</div>
     <div class="caution-text absolute bottom-0 left-0 bg-[#252525cf] px-2 py-1 rounded-tr-lg rounded-lg rounded-br-none rounded-tl-none">Use Caution: The feed may be slightly delayed.</div>
     <button class="absolute top-2 right-2 text-[#ffffff]bg-opacity-75 p-2 px-3 rounded-full" on:click={handleFullScreen}>

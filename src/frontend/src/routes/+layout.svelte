@@ -533,7 +533,7 @@
     align-self: center;
     color: var(--fontColor);
     background-color: var(--primaryColor);
-    border: 5px solid var(--secondaryColor);
+    border: 5px solid rgb(from var(--secondaryColor) r g b / 0.85);
     border-right: none;
     border-radius: 30px 0 0 30px;
     margin-left: 2em;
