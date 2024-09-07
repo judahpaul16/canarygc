@@ -12,11 +12,13 @@ import {
 } from 'node-mavlink';
 import { error } from '@sveltejs/kit';
 
-const REGISTRY: MavLinkPacketRegistry = {
-    ...minimal.REGISTRY,
-    ...common.REGISTRY,
-    ...ardupilotmega.REGISTRY,
-};
+// const REGISTRY: MavLinkPacketRegistry = {
+//     ...minimal.REGISTRY,
+//     ...common.REGISTRY,
+//     ...ardupilotmega.REGISTRY,
+// };
+
+import { REGISTRY } from '$lib/mavlink-registry'
 
 interface ParamValueData {
     paramId: string;
