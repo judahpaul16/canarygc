@@ -12,21 +12,8 @@ import {
 } from 'node-mavlink';
 import { error } from '@sveltejs/kit';
 
-// const REGISTRY: MavLinkPacketRegistry = {
-//     ...minimal.REGISTRY,
-//     ...common.REGISTRY,
-//     ...ardupilotmega.REGISTRY,
-// };
-
 import { REGISTRY } from '$lib/mavlink-registry'
-
-interface ParamValueData {
-    paramId: string;
-    paramValue: string;
-    paramType: number;
-    paramCount: number;
-    paramIndex: number;
-}
+import type { ParamValueData } from './ParamValueData';
 
 let port: SerialPort | Socket | null = null;
 let reader: MavLinkPacketParser | null = null;
@@ -35,51 +22,82 @@ let logs: string[] = [];
 let newLogs: string[] = [];
 
 async function initializePort(): Promise<void> {
+    try {
+        await closeExistingConnection();
+        await openNewConnection();
+        setupPacketReader();
+        setupPortListeners();
+    } catch (error) {
+        console.error('Failed to initialize port:', error);
+        throw error;
+    }
+}
+
+async function closeExistingConnection(): Promise<void> {
     if (port !== null) {
         port.removeAllListeners();
-        port.destroy();
+        await new Promise<void>((resolve, reject) => {
+            try {
+                port!.destroy(null as unknown as Error);
+                resolve();
+            } catch (err) {
+                reject(err);
+            }
+        });
         reader?.removeAllListeners();
         reader = null;
     }
+}
 
+async function openNewConnection(): Promise<void> {
     // Use UART serial port in production
-    // port = new SerialPort({ path: '/dev/ttyACM0', baudRate: 115200, lock: false });
+    //port = new SerialPort({ path: '/dev/ttyACM0', baudRate: 115200, lock: false });
 
     // Uncomment for development
-    port = connect({ host: 'sitl', port: 5760 });
+     port = connect({ host: 'sitl', port: 5760 });
 
     await new Promise<void>((resolve, reject) => {
-        port!.on('error', (err) => {
+        port!.once('error', (err) => {
             reject(new Error(`Error connecting to the MAVLink server: ${err.message}`));
         });
-        port!.on('data', () => {
+        port!.once('data', () => {
             logs.push('MAVLink connection initialized');
             resolve();
         });
     });
+}
 
-    reader = port
+function setupPacketReader(): void {
+    reader = port!
         .pipe(new MavLinkPacketSplitter())
         .pipe(new MavLinkPacketParser());
 
-    reader.on('data', (packet: MavLinkPacket) => {
-        online = true;
-        const clazz = REGISTRY[packet.header.msgid];
-        if (clazz) {
-            const data = packet.protocol.data(packet.payload, clazz);
-            const sanitizedData = convertBigIntToNumber(data);
-            let timestamp = new Date().toISOString();
-            let logEntry = `${clazz.MSG_NAME}(${clazz.MAGIC_NUMBER})::${timestamp}::${JSON.stringify(sanitizedData as ParamValueData)}`;
-            logs.push(logEntry); // Store log entries
-            newLogs.push(logEntry);
-            if (logEntry.includes('_ACK') && !logEntry.includes('"command":512')) console.log(logEntry);
-        }
-    });
+    reader.on('data', handlePacket);
+}
 
-    port.on('close', () => {
-        port = null;
-        reader = null;
-    });
+function handlePacket(packet: MavLinkPacket): void {
+    online = true;
+    const clazz = REGISTRY[packet.header.msgid];
+    if (clazz) {
+        const data = packet.protocol.data(packet.payload, clazz);
+        const sanitizedData = convertBigIntToNumber(data);
+        const timestamp = new Date().toISOString();
+        const logEntry = `${clazz.MSG_NAME}(${clazz.MAGIC_NUMBER})::${timestamp}::${JSON.stringify(sanitizedData)}`;
+        logs.push(logEntry);
+        newLogs.push(logEntry);
+        if (logEntry.includes('_ACK') && !logEntry.includes('"command":512')) console.log(logEntry);
+    }
+}
+
+function setupPortListeners(): void {
+    port!.on('close', handlePortClose);
+}
+
+function handlePortClose(): void {
+    port = null;
+    reader = null;
+    online = false;
+    logs.push('MAVLink connection closed');
 }
 
 async function requestSysStatus() {
