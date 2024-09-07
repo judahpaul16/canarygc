@@ -10,10 +10,8 @@ import {
     ardupilotmega,
     send
 } from 'node-mavlink';
-import { error } from '@sveltejs/kit';
 
 import { REGISTRY } from '$lib/mavlink-registry'
-import type { ParamValueData } from './ParamValueData';
 
 let port: SerialPort | Socket | null = null;
 let reader: MavLinkPacketParser | null = null;
