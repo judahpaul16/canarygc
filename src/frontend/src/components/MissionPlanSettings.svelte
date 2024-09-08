@@ -4,6 +4,7 @@
     import {
         missionPlanTitleStore,
         missionPlanActionsStore,
+        missionCompleteStore,
         type MissionPlanActions
         } from "../stores/missionPlanStore";
     import Modal from "./Modal.svelte";
@@ -119,6 +120,7 @@
 
         missionPlanTitleStore.set(title);
         missionPlanActionsStore.set(actions);
+        missionCompleteStore.set(false);
         try {
             let response = await fetch("/api/mavlink/load_mission", {
                 method: "POST",

@@ -1,10 +1,19 @@
 <script lang="ts">
   import PocketBase from "pocketbase";
-  import { missionPlanTitleStore, missionPlanActionsStore, type MissionPlanActions } from "../stores/missionPlanStore";
-  import { get } from "svelte/store";
+  import {
+    missionPlanTitleStore,
+    missionPlanActionsStore,
+    missionCompleteStore,
+    type MissionPlanActions
+  } from "../stores/missionPlanStore";
   import Modal from "./Modal.svelte";
   import { onMount } from "svelte";
-  import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../stores/customizationStore';
+  import {
+    darkModeStore,
+    primaryColorStore,
+    secondaryColorStore,
+    tertiaryColorStore
+  } from '../stores/customizationStore';
   import Notification from "./Notification.svelte";
 
   let pb: PocketBase;
@@ -69,7 +78,7 @@
         onConfirm: async (p: any = plan) => {
           let response = await pb.collection("mission_plans").getFirstListItem(`id = "${p.id}"`);
           let { title, actions } = response;
-          await handleLoad(title, actions);
+          await handleSave(title, actions);
           isOpen = false;
         },
         onCancel: () => {
@@ -111,6 +120,7 @@
 
     missionPlanTitleStore.set(title);
     missionPlanActionsStore.set(actions);
+    missionCompleteStore.set(false);
     try {
         let response = await fetch("/api/mavlink/load_mission", {
             method: "POST",
