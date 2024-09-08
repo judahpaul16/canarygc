@@ -26,6 +26,7 @@ services:
     container_name: mmgcs_frontend
     environment:
       - CHOKIDAR_USEPOLLING=true
+      - NODE_ENV=production
     deploy:
       resources:
         limits:

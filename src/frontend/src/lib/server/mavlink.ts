@@ -45,12 +45,13 @@ async function closeExistingConnection(): Promise<void> {
 }
 
 async function openNewConnection(): Promise<void> {
-    try {
-        // Use TCP socket in development
-        port = connect({ host: 'sitl', port: 5760 });
-    } catch (error) {
+    let isProduction = process.env.NODE_ENV === 'production';
+    if (isProduction) {
         // Use UART serial port in production
         port = new SerialPort({ path: '/dev/ttyACM0', baudRate: 115200, lock: false });
+    } else {
+        // Use TCP socket in development
+        port = connect({ host: 'sitl', port: 5760 });
     }
     await new Promise<void>((resolve, reject) => {
         port!.once('error', (err) => {
