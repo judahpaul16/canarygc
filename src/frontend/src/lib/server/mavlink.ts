@@ -44,23 +44,13 @@ async function closeExistingConnection(): Promise<void> {
     }
 }
 
-async function checkSerialPortExists(portName: string): Promise<boolean> {
-    try {
-        const ports = await SerialPort.list();
-        return ports.some(port => port.path === portName);
-    } catch (error) {
-        console.error('Error listing serial ports:', error);
-        return false;
-    }
-}
-
 async function openNewConnection(): Promise<void> {
-    if (await checkSerialPortExists('/dev/ttyACM0')) {
-        // Use UART serial port in production
-        port = new SerialPort({ path: '/dev/ttyACM0', baudRate: 115200, lock: false });
-    } else {
+    try {
         // Use TCP socket in development
         port = connect({ host: 'sitl', port: 5760 });
+    } catch (error) {
+        // Use UART serial port in production
+        port = new SerialPort({ path: '/dev/ttyACM0', baudRate: 115200, lock: false });
     }
     await new Promise<void>((resolve, reject) => {
         port!.once('error', (err) => {
