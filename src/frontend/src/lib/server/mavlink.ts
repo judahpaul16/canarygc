@@ -44,32 +44,33 @@ async function closeExistingConnection(): Promise<void> {
     }
 }
 
-async function openNewConnection(): Promise<void> {
+async function checkSerialPortExists(portName: string): Promise<boolean> {
     try {
+        const ports = await SerialPort.list();
+        return ports.some(port => port.path === portName);
+    } catch (error) {
+        console.error('Error listing serial ports:', error);
+        return false;
+    }
+}
+
+async function openNewConnection(): Promise<void> {
+    if (await checkSerialPortExists('/dev/ttyACM0')) {
         // Use UART serial port in production
         port = new SerialPort({ path: '/dev/ttyACM0', baudRate: 115200, lock: false });
-        await new Promise<void>((resolve, reject) => {
-            port!.once('error', (err) => {
-                reject(new Error(`Error connecting to the MAVLink server: ${err.message}`));
-            });
-            port!.once('data', () => {
-                logs.push('MAVLink connection initialized');
-                resolve();
-            });
-        });
-    } catch (error) {
-        // Use TCP socket in development, enable by short circuiting the try block
+    } else {
+        // Use TCP socket in development
         port = connect({ host: 'sitl', port: 5760 });
-        await new Promise<void>((resolve, reject) => {
-            port!.once('error', (err) => {
-                reject(new Error(`Error connecting to the MAVLink server: ${err.message}`));
-            });
-            port!.once('data', () => {
-                logs.push('MAVLink connection initialized');
-                resolve();
-            });
-        });
     }
+    await new Promise<void>((resolve, reject) => {
+        port!.once('error', (err) => {
+            reject(new Error(`Error connecting to the MAVLink server: ${err.message}`));
+        });
+        port!.once('data', () => {
+            logs.push('MAVLink connection initialized');
+            resolve();
+        });
+    });
 }
 
 function setupPacketReader(): void {
