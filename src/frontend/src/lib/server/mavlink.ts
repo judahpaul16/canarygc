@@ -3,9 +3,6 @@ import { connect, type Socket } from 'net';
 import {
     MavLinkPacketSplitter,
     MavLinkPacketParser,
-    type MavLinkPacketRegistry,
-    type MavLinkPacket,
-    minimal,
     common,
     ardupilotmega,
     send
@@ -48,21 +45,31 @@ async function closeExistingConnection(): Promise<void> {
 }
 
 async function openNewConnection(): Promise<void> {
-    // Use UART serial port in production
-    port = new SerialPort({ path: '/dev/ttyACM0', baudRate: 115200, lock: false });
-
-    // Uncomment for development
-    // port = connect({ host: 'sitl', port: 5760 });
-
-    await new Promise<void>((resolve, reject) => {
-        port!.once('error', (err) => {
-            reject(new Error(`Error connecting to the MAVLink server: ${err.message}`));
+    try {
+        // Use UART serial port in production
+        port = new SerialPort({ path: '/dev/ttyACM0', baudRate: 115200, lock: false });
+        await new Promise<void>((resolve, reject) => {
+            port!.once('error', (err) => {
+                reject(new Error(`Error connecting to the MAVLink server: ${err.message}`));
+            });
+            port!.once('data', () => {
+                logs.push('MAVLink connection initialized');
+                resolve();
+            });
         });
-        port!.once('data', () => {
-            logs.push('MAVLink connection initialized');
-            resolve();
+    } catch (error) {
+        // Use TCP socket in development, enable by short circuiting the try block
+        port = connect({ host: 'sitl', port: 5760 });
+        await new Promise<void>((resolve, reject) => {
+            port!.once('error', (err) => {
+                reject(new Error(`Error connecting to the MAVLink server: ${err.message}`));
+            });
+            port!.once('data', () => {
+                logs.push('MAVLink connection initialized');
+                resolve();
+            });
         });
-    });
+    }
 }
 
 function setupPacketReader(): void {
@@ -70,21 +77,19 @@ function setupPacketReader(): void {
         .pipe(new MavLinkPacketSplitter())
         .pipe(new MavLinkPacketParser());
 
-    reader.on('data', handlePacket);
-}
-
-function handlePacket(packet: MavLinkPacket): void {
-    online = true;
-    const clazz = REGISTRY[packet.header.msgid];
-    if (clazz) {
-        const data = packet.protocol.data(packet.payload, clazz);
-        const sanitizedData = convertBigIntToNumber(data);
-        const timestamp = new Date().toISOString();
-        const logEntry = `${clazz.MSG_NAME}(${clazz.MAGIC_NUMBER})::${timestamp}::${JSON.stringify(sanitizedData)}`;
-        logs.push(logEntry);
-        newLogs.push(logEntry);
-        if (logEntry.includes('_ACK') && !logEntry.includes('"command":512')) console.log(logEntry);
-    }
+    reader.on('data', (packet) => {
+        online = true;
+        const clazz = REGISTRY[packet.header.msgid];
+        if (clazz) {
+            const data = packet.protocol.data(packet.payload, clazz);
+            const sanitizedData = convertBigIntToNumber(data);
+            const timestamp = new Date().toISOString();
+            const logEntry = `${clazz.MSG_NAME}(${clazz.MAGIC_NUMBER})::${timestamp}::${JSON.stringify(sanitizedData)}`;
+            logs.push(logEntry);
+            newLogs.push(logEntry);
+            if (logEntry.includes('_ACK') && !logEntry.includes('"command":512')) console.log(logEntry);
+        }
+    });
 }
 
 function setupPortListeners(): void {
