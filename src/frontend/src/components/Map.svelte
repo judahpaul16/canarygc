@@ -337,7 +337,7 @@
       if (!isNaN(lat) && !isNaN(lon) && iconIndex >= 0) {
         const marker = L.marker([lat, lon], { icon: icons[iconIndex] })
           .bindPopup(`${index} - ${type}`);
-        leafletMap.addLayer(marker);
+        try { leafletMap.addLayer(marker); } catch (e) { return; }
         if (!hideOverlay) marker.openPopup();
         markers.set(index, marker);
       }
