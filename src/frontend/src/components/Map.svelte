@@ -137,30 +137,16 @@
       updateMap(Number(index));
     });
     
-    document.addEventListener('mousedown', (event) => {
-      isDragging = true;
-    });
-    document.addEventListener('mouseup', (event) => {
-      isDragging = false;
-    });
-    document.addEventListener('touchstart', (event) => {
-      isDragging = true;
-    });
-    document.addEventListener('touchend', (event) => {
-      isDragging = false;
-    });
+    document.addEventListener('mousedown', () => { isDragging = true });
+    document.addEventListener('mouseup', () => { isDragging = false });
+    document.addEventListener('touchstart', () => { isDragging = true});
+    document.addEventListener('touchend', () => { isDragging = false });
     let zoomIn = document.querySelector('.leaflet-control-zoom-in');
     let zoomOut = document.querySelector('.leaflet-control-zoom-out');
-    if (zoomIn) {
-      zoomIn.addEventListener('click', () => {
-        zoom = zoom + 1;
-      });
-    }
-    if (zoomOut) {
-      zoomOut.addEventListener('click', () => {
-        zoom = zoom - 1;
-      });
-    }
+    if (zoomIn) zoomIn.addEventListener('click', () => { zoom = zoom + 1 });
+    if (zoomOut) zoomOut.addEventListener('click', () => { zoom = zoom - 1 });
+    document.addEventListener('scrollUp', () => { zoom = zoom + 1 });
+    document.addEventListener('scrollDown', () => { zoom = zoom - 1 });
   });
 
   function initializeAltitudeAngelMap() {
