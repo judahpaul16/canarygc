@@ -25,7 +25,7 @@
 
   let L: typeof import('leaflet');
   let altitudeAngelMap: any;
-  let leafletMap: any;
+  let leafletMap: any = get(mapStore);
   let currentMap: 'altitudeAngel' | 'leaflet' = 'leaflet'; // Default to Leaflet
   let zoom = 17;
 
@@ -43,8 +43,8 @@
     'map/do_engine_control.png', 'map/delay.png', 'map/condition_change_alt.png', 'map/condition_distance.png', 'map/condition_yaw.png'
   ];
   let icons: L.Icon[] = [];
-  let markers: Map<number, L.Marker> = new Map(); // Map to keep track of markers
-  let polylines: Map<string, L.Polyline> = new Map(); // Map to keep track of polylines
+  let markers: Map<number, L.Marker> = get(markersStore); // Map to keep track of markers
+  let polylines: Map<string, L.Polyline> = get(polylinesStore); // Map to keep track of polylines
   let mavHeading: number = 0;
   let mavMarker: L.Marker;
   let isDragging = false;
@@ -93,11 +93,6 @@
     try {
       // Load and initialize Leaflet
       L = (await import('leaflet')).default;
-      mapStore.subscribe((value: L.Map | null) => {
-        if (value) {
-          leafletMap = value;
-        }
-      });
       if (id !== null) initializeLeafletMap(id);
       else initializeLeafletMap();
 
@@ -115,14 +110,6 @@
       }, 1000);
     });
 
-    markersStore.subscribe((value) => {
-      markers = value;
-    });
-
-    polylinesStore.subscribe((value) => {
-      polylines = value;
-    });
-    
     icons = action_markers.map((marker) => {
       return L.icon({
         iconUrl: marker,
@@ -334,10 +321,6 @@
   }
 
   async function updateMap(index: number) {
-    missionPlanActionsStore.subscribe((value) => {
-      actions = value;
-    });
-
     // Retrieve the action details using the index
     const action = actions[index];
     

@@ -20,7 +20,7 @@
 
     let pb: PocketBase;
 
-    let actions: MissionPlanActions = {};
+    let actions: MissionPlanActions = get(missionPlanActionsStore);
     let title: string = "";
 
     $: title = $missionPlanTitleStore
@@ -243,10 +243,6 @@
     }
 
     async function exportMissionPlan() {
-        missionPlanActionsStore.subscribe((value) => {
-            actions = value;
-        });
-        
         const blob = new Blob([JSON.stringify(actions)], {
             type: "application/json",
         });
