@@ -40,22 +40,6 @@
   $: missionLoaded = $missionPlanTitleStore !== '';
 
   onMount(async () => {
-    mavLocationStore.subscribe((value) => {
-      mavLocation = value;
-    });
-
-    mavModeStore.subscribe((value) => {
-      mavMode = value;
-    });
-
-    missionPlanTitleStore.subscribe((value) => {
-      title = value;
-    });
-
-    missionPlanActionsStore.subscribe((value) => {
-      actions = value;
-    });
-
     const input = document.querySelector('input[type="text"]') as HTMLInputElement;
     function resizeInput() {
       input.style.width = `${input.scrollWidth}px`;
