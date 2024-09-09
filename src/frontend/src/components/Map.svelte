@@ -25,7 +25,7 @@
 
   let L: typeof import('leaflet');
   let altitudeAngelMap: any;
-  let leafletMap: any;
+  let leafletMap: any = get(mapStore);
   let currentMap: 'altitudeAngel' | 'leaflet' = 'leaflet'; // Default to Leaflet
   let zoom = 17;
 
@@ -43,8 +43,8 @@
     'map/do_engine_control.png', 'map/delay.png', 'map/condition_change_alt.png', 'map/condition_distance.png', 'map/condition_yaw.png'
   ];
   let icons: L.Icon[] = [];
-  let markers: Map<number, L.Marker> = new Map(); // Map to keep track of markers
-  let polylines: Map<string, L.Polyline> = new Map(); // Map to keep track of polylines
+  let markers: Map<number, L.Marker> = get(markersStore); // Map to keep track of markers
+  let polylines: Map<string, L.Polyline> = get(polylinesStore); // Map to keep track of polylines
   let mavHeading: number = 0;
   let mavMarker: L.Marker;
   let isDragging = false;
@@ -93,11 +93,6 @@
     try {
       // Load and initialize Leaflet
       L = (await import('leaflet')).default;
-      mapStore.subscribe((value: L.Map | null) => {
-        if (value) {
-          leafletMap = value;
-        }
-      });
       if (id !== null) initializeLeafletMap(id);
       else initializeLeafletMap();
 
@@ -115,14 +110,6 @@
       }, 1000);
     });
 
-    markersStore.subscribe((value) => {
-      markers = value;
-    });
-
-    polylinesStore.subscribe((value) => {
-      polylines = value;
-    });
-    
     icons = action_markers.map((marker) => {
       return L.icon({
         iconUrl: marker,
@@ -137,30 +124,16 @@
       updateMap(Number(index));
     });
     
-    document.addEventListener('mousedown', (event) => {
-      isDragging = true;
-    });
-    document.addEventListener('mouseup', (event) => {
-      isDragging = false;
-    });
-    document.addEventListener('touchstart', (event) => {
-      isDragging = true;
-    });
-    document.addEventListener('touchend', (event) => {
-      isDragging = false;
-    });
+    document.addEventListener('mousedown', () => { isDragging = true });
+    document.addEventListener('mouseup', () => { isDragging = false });
+    document.addEventListener('touchstart', () => { isDragging = true});
+    document.addEventListener('touchend', () => { isDragging = false });
     let zoomIn = document.querySelector('.leaflet-control-zoom-in');
     let zoomOut = document.querySelector('.leaflet-control-zoom-out');
-    if (zoomIn) {
-      zoomIn.addEventListener('click', () => {
-        zoom = zoom + 1;
-      });
-    }
-    if (zoomOut) {
-      zoomOut.addEventListener('click', () => {
-        zoom = zoom - 1;
-      });
-    }
+    if (zoomIn) zoomIn.addEventListener('click', () => { zoom = zoom + 1 });
+    if (zoomOut) zoomOut.addEventListener('click', () => { zoom = zoom - 1 });
+    document.addEventListener('scrollUp', () => { zoom = zoom + 1 });
+    document.addEventListener('scrollDown', () => { zoom = zoom - 1 });
   });
 
   function initializeAltitudeAngelMap() {
@@ -348,10 +321,6 @@
   }
 
   async function updateMap(index: number) {
-    missionPlanActionsStore.subscribe((value) => {
-      actions = value;
-    });
-
     // Retrieve the action details using the index
     const action = actions[index];
     
@@ -368,7 +337,7 @@
       if (!isNaN(lat) && !isNaN(lon) && iconIndex >= 0) {
         const marker = L.marker([lat, lon], { icon: icons[iconIndex] })
           .bindPopup(`${index} - ${type}`);
-        leafletMap.addLayer(marker);
+        try { leafletMap.addLayer(marker); } catch (e) { return; }
         if (!hideOverlay) marker.openPopup();
         markers.set(index, marker);
       }
@@ -461,7 +430,7 @@
           leafletMap.addLayer(mavMarker);
           updateMarkersAndPolylines();
           if (!isDragging) {
-            leafletMap.flyTo(mavLocation as L.LatLng, zoom);
+            leafletMap.flyTo(mavLocation as L.LatLng);
           }
         }
       };

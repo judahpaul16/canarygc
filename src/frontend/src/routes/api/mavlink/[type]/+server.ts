@@ -20,7 +20,7 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
             try {
                 let connected = (port && reader && online) ? true : false;
                 if (!connected) await initializePort();
-                if (connected) await requestSysStatus();
+                else await requestSysStatus();
 
                 if (logs.length > 0) {
                     const logsToSend = newLogs.slice();

@@ -22,7 +22,7 @@
 
   import Modal from './Modal.svelte';
   import Notification from './Notification.svelte';
-    import type { LatLng } from 'leaflet';
+  import type { LatLng } from 'leaflet';
 
   export let mavModel: string = get(mavModelStore);
   export let mavType: string = get(mavTypeStore);
