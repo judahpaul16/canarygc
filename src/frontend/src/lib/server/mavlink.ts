@@ -15,13 +15,16 @@ let reader: MavLinkPacketParser | null = null;
 let online = false;
 let logs: string[] = [];
 let newLogs: string[] = [];
+let connecting = false;
 
 async function initializePort(): Promise<void> {
     try {
+        connecting = true;
         await closeExistingConnection();
         await openNewConnection();
         setupPacketReader();
         setupPortListeners();
+        connecting = false;
     } catch (error) {
         console.error('Failed to initialize port:', error);
         throw error;
@@ -96,7 +99,10 @@ function handlePortClose(): void {
 }
 
 async function requestSysStatus() {
-    if (!port || !reader) await initializePort();
+    if (!port || !reader) {
+        online = false;
+        return;
+    }
 
     let request = new common.RequestMessageCommand();
     request.targetSystem = 1;
@@ -121,7 +127,10 @@ async function requestSysStatus() {
 }
 
 async function requestParameters() {
-    if (!port || !reader) await initializePort();
+    if (!port || !reader) {
+        online = false;
+        return;
+    }
 
     const request = new common.ParamRequestList();
     request.targetSystem = 1;
@@ -130,7 +139,10 @@ async function requestParameters() {
 }
 
 async function sendMavlinkCommand(command: string, params: number[], useArduPilotMega = false, useCmdLong = true) {
-    if (!port || !reader) await initializePort();
+    if (!port || !reader) {
+        online = false;
+        return;
+    }
 
     let commandMsg: common.CommandInt | common.CommandLong;
     if (useCmdLong) commandMsg = new common.CommandLong();
@@ -156,7 +168,10 @@ async function sendMavlinkCommand(command: string, params: number[], useArduPilo
 }
 
 async function setMissionCount(numItems: number) {
-    if (!port || !reader) await initializePort();
+    if (!port || !reader) {
+        online = false;
+        return;
+    }
 
     const count = new common.MissionCount();
     count.targetSystem = 1;
@@ -168,7 +183,10 @@ async function setMissionCount(numItems: number) {
 }
 
 async function loadMissionItem(item: any, index: number) {
-    if (!port || !reader) await initializePort();
+    if (!port || !reader) {
+        online = false;
+        return;
+    }
 
     const msg = new common.MissionItemInt();
     msg.targetSystem = 1;
@@ -190,7 +208,10 @@ async function loadMissionItem(item: any, index: number) {
 }
 
 async function clearAllMissionItems() {
-    if (!port || !reader) await initializePort();
+    if (!port || !reader) {
+        online = false;
+        return;
+    }
 
     const msg = new common.MissionClearAll();
     msg.targetSystem = 1;
@@ -199,7 +220,10 @@ async function clearAllMissionItems() {
 }
 
 async function setPositionLocal(x: number, y: number, z: number) {
-    if (!port || !reader) await initializePort();
+    if (!port || !reader) {
+        online = false;
+        return;
+    }
     const msg = new common.SetPositionTargetLocalNed();
     
     msg.timeBootMs = 0;
@@ -241,6 +265,7 @@ export {
     port,
     reader,
     online,
+    connecting,
     logs,
     newLogs,
     common,
