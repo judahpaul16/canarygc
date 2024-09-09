@@ -192,85 +192,106 @@
       logs = [...logs, text];
       mavlinkLogStore.set(logs);
 
-      if ((text as string).includes('GLOBAL_POSITION_INT')) {
-        let lat: string | RegExpMatchArray | null = (text as string).match(/"lat":\-?(\d+)/g);
-        let lon: string | RegExpMatchArray | null = (text as string).match(/"lon":\-?(\d+)/g);
-        if (lat) lat = lat.toString().replace('"lat":', '');
-        if (lon) lon = lon.toString().replace('"lon":', '');
-        if (lat && lon) mavLocationStore.set({ lat: parseFloat(lat)/1e7, lng: parseFloat(lon)/1e7 });
-        let heading: string | RegExpMatchArray | null = (text as string).match(/"hdg":(\d+)/g);
-        if (heading) heading = heading.toString().replace('"hdg":', '');
-        if (heading) mavHeadingStore.set(parseFloat(heading)/100);
-        let altitude: string | RegExpMatchArray | null = (text as string).match(/"alt":(\d+)/g);
-        if (altitude) altitude = altitude.toString().replace('"alt":', '');
-        if (altitude) mavAltitudeStore.set(parseFloat(altitude)/1000);
-        let vx: number | string | RegExpMatchArray | null = parseInt((text as string).match(/"vx":(\-?\d+)/g)!.toString().replace('"vx":', '')) / 100;
-        let vy: number | string | RegExpMatchArray | null = parseInt((text as string).match(/"vy":(\-?\d+)/g)!.toString().replace('"vy":', '')) / 100;
-        let vz: number | string | RegExpMatchArray | null = parseInt((text as string).match(/"vz":(\-?\d+)/g)!.toString().replace('"vz":', '')) / 100;
-        let speed: number = Math.sqrt(Math.pow(vx, 2) + Math.pow(vy, 2) + Math.pow(vz, 2));
-        if (speed) mavSpeedStore.set(parseFloat(speed.toFixed(2)));
-      } else if ((text as string).includes('HEARTBEAT')) {
-        let type: string | RegExpMatchArray | null = (text as string).match(/"type":(\d+)/g);
-        // @ts-ignore
-        if (type) type = MavType[parseInt(type.toString().replace('"type":', ''))].toProperCase();
-        if (type) mavTypeStore.set(type as string);
-        let model: string | RegExpMatchArray | null = (text as string).match(/"autopilot":(\d+)/g);
-        if (model) model = model.toString().replace('"autopilot":', '');
-        if (model) mavModelStore.set(MavAutopilot[parseInt(model)]);
-        let state: string | RegExpMatchArray | null = (text as string).match(/"systemStatus":(\d+)/g);
-        if (state) state = MavState[parseInt(state.toString().replace('"systemStatus":', ''))];
-        if (state) mavStateStore.set(state as string);
-        let baseMode: string | RegExpMatchArray | null = (text as string).match(/"baseMode":(\d+)/g);
-        let customMode: string | RegExpMatchArray | null = (text as string).match(/"customMode":(\d+)/g);
-        if (baseMode) {
-          baseMode = baseMode.toString().replace('"baseMode":', '');
-          mavArmedStateStore.set(parseInt(baseMode) === 209);
+      const handlers = {
+        'GLOBAL_POSITION_INT': handleGlobalPositionInt,
+        'HEARTBEAT': handleHeartbeat,
+        'MISSION_ITEM_REACHED': handleMissionItemReached,
+        'SYS_STATUS': handleSysStatus,
+        'COMMAND_ACK': handleCommandAck
+      };
+
+      for (const [key, handler] of Object.entries(handlers)) {
+        if (text.includes(key)) {
+          handler(text);
+          break;
         }
-        if (customMode) {
-          customMode = customMode.toString().replace('"customMode":', '');
-          mavModeStore.set(CopterMode[parseInt(customMode)]);
+      }
+    }
+  }
+
+  function handleGlobalPositionInt(text: string) {
+    const extractValue = (regex: RegExp) => {
+      const match = text.match(regex);
+      return match ? match[1] : null;
+    };
+
+    const lat = extractValue(/"lat":(-?\d+)/);
+    const lon = extractValue(/"lon":(-?\d+)/);
+    const heading = extractValue(/"hdg":(\d+)/);
+    const altitude = extractValue(/"alt":(\d+)/);
+    const vx = extractValue(/"vx":(-?\d+)/);
+    const vy = extractValue(/"vy":(-?\d+)/);
+    const vz = extractValue(/"vz":(-?\d+)/);
+
+    if (lat && lon) mavLocationStore.set({ lat: parseFloat(lat)/1e7, lng: parseFloat(lon)/1e7 });
+    if (heading) mavHeadingStore.set(parseFloat(heading)/100);
+    if (altitude) mavAltitudeStore.set(parseFloat(altitude)/1000);
+    if (vx && vy && vz) {
+      const speed = Math.sqrt(Math.pow(parseInt(vx)/100, 2) + Math.pow(parseInt(vy)/100, 2) + Math.pow(parseInt(vz)/100, 2));
+      mavSpeedStore.set(parseFloat(speed.toFixed(2)));
+    }
+  }
+
+  function handleHeartbeat(text: string) {
+    const extractValue = (regex: RegExp) => {
+      const match = text.match(regex);
+      return match ? match[1] : null;
+    };
+
+    const type = extractValue(/"type":(\d+)/);
+    const model = extractValue(/"autopilot":(\d+)/);
+    const state = extractValue(/"systemStatus":(\d+)/);
+    const baseMode = extractValue(/"baseMode":(\d+)/);
+    const customMode = extractValue(/"customMode":(\d+)/);
+
+    // @ts-ignore
+    if (type) mavTypeStore.set(MavType[parseInt(type)].toProperCase());
+    if (model) mavModelStore.set(MavAutopilot[parseInt(model)]);
+    if (state) mavStateStore.set(MavState[parseInt(state)]);
+    if (baseMode) mavArmedStateStore.set(parseInt(baseMode) === 209);
+    if (customMode) mavModeStore.set(CopterMode[parseInt(customMode)]);
+  }
+
+  function handleMissionItemReached(text: string) {
+    const index = text.match(/"seq":(\d+)/)?.at(1);
+    if (index) {
+      const indexNum = parseInt(index);
+      if (!get(missionCompleteStore)) missionIndexStore.set(indexNum + 1);
+      if (indexNum === Object.keys($missionPlanActionsStore).length - 1) missionCompleteStore.set(true);
+
+      new Notification({
+        target: document.body,
+        props: {
+          title: 'Waypoint Reached',
+          content: `${index}: ${actions[indexNum].type}<br>lat: ${actions[indexNum].lat} °<br>lng: ${actions[indexNum].lon} °<br>alt: ${actions[indexNum].alt === null ? 0 : actions[indexNum].alt} m`,
+          type: 'success'
         }
-      } else if ((text as string).includes('MISSION_ITEM_REACHED')) {
-        let index: string | RegExpMatchArray | null = (text as string).match(/"seq":(\d+)/g);
-        if (index) index = index.toString().replace('"seq":', '');
-        if (index && !get(missionCompleteStore)) missionIndexStore.set(parseInt(index) + 1);
-        if (index && parseInt(index) === Object.keys($missionPlanActionsStore).length - 1)
-          missionCompleteStore.set(true);
-        if (index) {
-          const notification = new Notification({
-            target: document.body,
-            props: {
-              title: 'Waypoint Reached',
-              content: `${index}: ${actions[parseInt(index)].type}<br>lat: ${actions[parseInt(index)].lat} °<br>lng: ${actions[parseInt(index)].lon} °<br>alt: ${actions[parseInt(index)].alt === null ? 0 : actions[parseInt(index)].alt} m`,
-              type: 'success'
-            }
-          });
-          setTimeout(() => notification.$destroy(), 10000);
-        }
-      } else if ((text as string).includes('SYS_STATUS')) {
-        let battery: string | RegExpMatchArray | null = (text as string).match(/"batteryRemaining":(\d+)/g);
-        if (battery) battery = battery.toString().replace('"batteryRemaining":', '');
-        if (battery) mavBatteryStore.set(parseInt(battery));
-      } else if ((text as string).includes('COMMAND_ACK')) {
-        let command: string | RegExpMatchArray | null = (text as string).match(/"command":(\d+)/g);
-        let result: string | RegExpMatchArray | null = (text as string).match(/"result":(\d+)/g);
-        if (command && result) {
-          command = MavCmd[parseInt(command.toString().replace('"command":', ''))];
-          result = MavResult[parseInt(result.toString().replace('"result":', ''))];
-          let type = result === 'ACCEPTED' ? 'success' : 'warning';
-          if (result.includes('FAILED') || result.includes('DENIED') || result.includes('UNSUPPORTED')) type = 'error';
-          if (command !== 'REQUEST_MESSAGE') {
-            const notification = new Notification({
-              target: document.body,
-              props: {
-                title: 'Command Acknowledged',
-                content: `Command: ${command}<br>Result: ${result}`,
-                type: type
-              }
-            });
-            setTimeout(() => notification.$destroy(), 10000);
+      });
+    }
+  }
+
+  function handleSysStatus(text: string) {
+    const battery = text.match(/"batteryRemaining":(\d+)/)?.at(1);
+    if (battery) mavBatteryStore.set(parseInt(battery));
+  }
+
+  function handleCommandAck(text: string) {
+    const command = text.match(/"command":(\d+)/)?.at(1);
+    const result = text.match(/"result":(\d+)/)?.at(1);
+    if (command && result) {
+      const commandText = MavCmd[parseInt(command)];
+      const resultText = MavResult[parseInt(result)];
+      let type = resultText === 'ACCEPTED' ? 'success' : 'warning';
+      if (resultText.includes('FAILED') || resultText.includes('DENIED') || resultText.includes('UNSUPPORTED')) type = 'error';
+      if (commandText !== 'REQUEST_MESSAGE') {
+        new Notification({
+          target: document.body,
+          props: {
+            title: 'Command Acknowledged',
+            content: `Command: ${commandText}<br>Result: ${resultText}`,
+            type: type
           }
-        }
+        });
       }
     }
   }
@@ -282,7 +303,7 @@
       authData.set(null);
       goto('/login');
     }
-    
+
     await initializeMissionPlansCollection();
     await initializeBlackBoxCollection();
 
@@ -292,7 +313,7 @@
     }, 1100);
 
     await checkLoadedMission();
-    
+
     const dashboard = document.querySelector('.dashboard');
     if (dashboard) {
       resizeObserver = new ResizeObserver(() => {
@@ -300,7 +321,7 @@
       });
       resizeObserver.observe(dashboard);
     }
-    
+
     updateDashboardHeight();
   });
 
@@ -334,7 +355,7 @@
     try {
       const collections = await pb.collections.getFullList();
       const collectionExists = collections.some(c => c.name === 'mission_plans');
-      
+
       if (!collectionExists) {
         const newCollection = {
           name: 'mission_plans',
@@ -361,7 +382,7 @@
     try {
       const collections = await pb.collections.getFullList();
       const collectionExists = collections.some(c => c.name === 'blackbox');
-      
+
       if (!collectionExists) {
         const newCollection = {
           name: 'blackbox',
@@ -591,7 +612,7 @@
   @media (max-width: 990px) {
     main > div {
       flex-direction: column;
-    } 
+    }
 
     .slot-container {
       padding: 0;
