@@ -3,6 +3,7 @@ import {
     port,
     reader,
     online,
+    connecting,
     initializePort,
     requestSysStatus,
     sendMavlinkCommand,
@@ -18,8 +19,8 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
     switch (request.params.type) {
         case 'init':
             try {
-                let connected = (port && reader && online) ? true : false;
-                if (!connected) await initializePort();
+                let connected = (port && reader && online);
+                if (!connected && !connecting) await initializePort();
                 else await requestSysStatus();
 
                 if (logs.length > 0) {
