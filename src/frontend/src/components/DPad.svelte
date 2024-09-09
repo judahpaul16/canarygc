@@ -89,6 +89,7 @@
     height: 200px;
     border-radius: 50%;
     background: var(--tertiaryColor);
+    border: 4px solid var(--secondaryColor);
     overflow: hidden;
   }
 
