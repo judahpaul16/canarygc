@@ -52,7 +52,7 @@
   
   $: darkMode = $darkModeStore;
   $: primaryColor = $primaryColorStore;
-  $: secondaryColor = darkMode ? $tertiaryColorStore : $secondaryColorStore;
+  $: secondaryColor = $secondaryColorStore;
   $: tertiaryColor = $tertiaryColorStore;
   $: fontColor = darkMode ? '#ffffff' : '#000000';
 
@@ -474,8 +474,8 @@
 
   .map-btn {
     color: var(--fontColor);
-    background-color: var(--primaryColor);
-    border: 2px solid var(--secondaryColor);
+    background-color: var(--secondaryColor);
+    border: 2px solid var(--primaryColor);
     opacity: 0.95;
   }
 

@@ -17,7 +17,7 @@
 
   $: darkMode = $darkModeStore;
   $: primaryColor = $primaryColorStore;
-  $: secondaryColor = darkMode ? $tertiaryColorStore : $secondaryColorStore;
+  $: secondaryColor = $secondaryColorStore;
   $: tertiaryColor = $tertiaryColorStore;
   $: fontColor = darkMode ? '#ffffff' : '#000000';
   $: mavMode = $mavModeStore;
@@ -145,7 +145,7 @@
 
   .separator {
     width: 2px;
-    background-color: var(--secondaryColor);
+    background-color: var(--tertiaryColor);
     margin: 0 1rem;
   }
 
@@ -255,7 +255,7 @@
   .map-container {
     padding: 4px;
     background: var(--secondaryColor);
-    border-radius: 10px;
+    border-radius: 1rem;
   }
 
   .controls {
