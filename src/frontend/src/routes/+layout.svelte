@@ -289,16 +289,15 @@
 
   onMount(async () => {
     pb = new PocketBase(`http://${window.location.hostname}:8090`);
-
-    if (typeof window !== 'undefined' && authData.checkExpired() && window.location.pathname !== '/') {
-      authData.set(null);
-      goto('/login');
-    }
     
     await initializeMissionPlansCollection();
     await initializeBlackBoxCollection();
 
     setInterval(async () => {
+      if (typeof window !== 'undefined' && authData.checkExpired() && window.location.pathname !== '/') {
+        authData.set(null);
+        goto('/login');
+      }
       await cleanupBlackBoxCollection();
       await checkOnlineStatus();
     }, 1100);
