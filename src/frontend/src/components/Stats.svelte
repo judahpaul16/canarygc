@@ -275,7 +275,7 @@
         confirmation: true,
         notification: false,
         onConfirm: async () => {
-          await sendMavlinkCommand('DO_SET_SERVO' , `${[1, 9, 2000]}`); // 9 is the servo number for the payload release mechanism
+          await sendMavlinkCommand('DO_GRIPPER' , `${[1, 0]}`); // param2 - 0: release, 1: grip
           modal.$destroy();
           const notification = new Notification({
             target: document.body,
