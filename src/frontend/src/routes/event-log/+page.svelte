@@ -17,6 +17,7 @@
     let searchTerm = '';
     let systemState = get(mavStateStore);
 
+    $: logs = $mavlinkLogStore;
     $: systemState = $mavStateStore;
     $: darkMode = $darkModeStore;
     $: primaryColor = $primaryColorStore;
