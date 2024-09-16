@@ -168,11 +168,11 @@
     if (darkMode) {
       document.getElementById('map')!.classList.add('dark');
       // @ts-ignore
-      document.querySelector('.bg')!.style.background = "url('bg-map.png') no-repeat center center fixed";
+      document.querySelector('.bg')!.style.background = "url('bg-map.webp') no-repeat center center fixed";
       primaryColorStore.set('#1c1c1e');
     } else {
       // @ts-ignore
-      document.querySelector('.bg')!.style.background = "url('bg-map-light.png') no-repeat center center fixed";
+      document.querySelector('.bg')!.style.background = "url('bg-map-light.webp') no-repeat center center fixed";
       primaryColorStore.set('#ffffff');
     }
 
@@ -242,13 +242,13 @@
     }
     if (darkMode) {
       // @ts-ignore
-      document.querySelector('.bg')!.style.background = "url('bg-map.png') no-repeat center center fixed";
+      document.querySelector('.bg')!.style.background = "url('bg-map.webp') no-repeat center center fixed";
       primaryColorStore.set('#1c1c1e');
       secondaryColorStore.set('#121212');
       tertiaryColorStore.set('#2d2d2d');
     } else {
       // @ts-ignore
-      document.querySelector('.bg')!.style.background = "url('bg-map-light.png') no-repeat center center fixed";
+      document.querySelector('.bg')!.style.background = "url('bg-map-light.webp') no-repeat center center fixed";
       primaryColorStore.set('#ffffff');
       secondaryColorStore.set('#e7e9ef');
       tertiaryColorStore.set('#d7d7d7');
