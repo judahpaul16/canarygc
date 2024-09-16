@@ -520,7 +520,7 @@
 
 <style>
   .bg {
-    background: url('bg-map.png') no-repeat center center fixed;
+    background: url('bg-map.webp') no-repeat center center fixed;
     background-size: cover !important;
     margin: 0;
     filter: blur(2px);
