@@ -8,13 +8,15 @@
     secondaryColorStore,
     tertiaryColorStore
   } from '../stores/customizationStore';
-  import Hls from 'hls.js';
 
   $: darkMode = $darkModeStore;
   $: primaryColor = $primaryColorStore;
   $: secondaryColor = $secondaryColorStore;
   $: tertiaryColor = $tertiaryColorStore;
   $: fontColor = darkMode ? '#ffffff' : '#000000';
+
+  let peerConnection: RTCPeerConnection;
+  let videoElement: HTMLVideoElement;
 
   function toggleFullScreen(element: HTMLElement) {
     if (!document.fullscreenElement) {
@@ -42,35 +44,43 @@
     }
   }
 
-  async function initConnection() {
-    let video = document.getElementById('live-feed') as HTMLVideoElement;
-    let videoSrc = `http://${window.location.hostname}:8554/stream.m3u8`;
-    if (Hls.isSupported()) {
-      var hls = new Hls();
-      hls.loadSource(videoSrc);
-      hls.attachMedia(video);
-      video.onloadeddata = () => {
-        video.style.zIndex = '10';
-      };
+  async function initWebRTC() {
+    const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+    peerConnection = new RTCPeerConnection(configuration);
+
+    peerConnection.ontrack = (event) => {
+      if (videoElement && event.streams[0]) {
+        videoElement.srcObject = event.streams[0];
+      }
+    };
+
+    try {
+      const response = await fetch('http://' + window.location.hostname + ':8556/offer', {
+        method: 'POST',
+        body: JSON.stringify({ sdp: '', type: 'offer' }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const answer = await response.json();
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+
+      const offerResponse = await fetch('http://' + window.location.hostname + ':8556/offer', {
+        method: 'POST',
+        body: JSON.stringify(offer),
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const finalAnswer = await offerResponse.json();
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(finalAnswer));
+    } catch (error) {
+      console.error('Error during WebRTC setup:', error);
     }
-    // HLS.js is not supported on platforms that do not have Media Source
-    // Extensions (MSE) enabled.
-    //
-    // When the browser has built-in HLS support (check using `canPlayType`),
-    // we can provide an HLS manifest (i.e. .m3u8 URL) directly to the video
-    // element through the `src` property. This is using the built-in support
-    // of the plain video element, without using HLS.js.
-    else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = videoSrc;
-      video.onloadeddata = () => {
-        video.style.zIndex = '10';
-      };
-    }
-    video.play();
   }
 
   onMount(() => {
-    initConnection();
+    videoElement = document.getElementById('live-feed') as HTMLVideoElement;
+    initWebRTC();
   });
 </script>
 
@@ -79,9 +89,9 @@
 >
   <div class="container w-full h-full relative">
     <img id="no-signal" src={darkMode ? 'no-signal.gif': 'no-signal-light.gif'} alt="No Signal" class="absolute top-0 w-full h-full object-cover rounded-lg z-10" />
-    <video id="live-feed" controls autoplay loop muted class="bg-black absolute top-0 w-full h-full object-cover rounded-lg z-0"></video>
+    <video id="live-feed" autoplay playsinline controls loop muted class="bg-black absolute top-0 w-full h-full object-cover rounded-lg z-0"></video>
     <div class="tab absolute top-2 left-2 bg-[#f24e4eb9] text-[#ffffff] text-md px-2 py-1 rounded-full z-20">Live Feed</div>
-    <div class="caution-text opacity-0 text-md absolute top-2 right-2 bg-[#252525cf] px-2 py-1 rounded-full z-20">Use Caution: The feed may be slightly delayed.</div>
+    <div class="caution-text opacity-[50%] text-md absolute top-2 right-2 bg-[#252525cf] px-2 py-1 rounded-full z-20">Use Caution: The feed may be slightly delayed.</div>
   </div>
 </div>
 
