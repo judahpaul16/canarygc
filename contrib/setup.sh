@@ -43,7 +43,7 @@ After=network.target
 
 [Service]
 WorkingDirectory=/home/$(whoami)
-ExecStart=/usr/local/bin/webrtc-streamer -v /dev/video0 -C 720x480 -F 30 -P 8556
+ExecStart=/usr/local/bin/webrtc-streamer -v /dev/video0 -H 0.0.0.0:8556
 Restart=always
 User=$(whoami)
 
@@ -59,10 +59,13 @@ for uart in 0 1 2 3; do
 done
 
 # Install WebRTC streamer
-wget https://github.com/mpromonet/webrtc-streamer/releases/download/v0.6.2/webrtc-streamer-v0.6.2-Linux-armv7l.tar.gz
-tar -xzf webrtc-streamer-v0.6.2-Linux-armv7l.tar.gz
+wget https://github.com/mpromonet/webrtc-streamer/releases/download/v0.8.7/webrtc-streamer-v0.8.7-Linux-arm64-Release.tar.gz
+tar -xzf webrtc-streamer-v0.8.7-Linux-arm64-Release.tar.gz
+cd webrtc-streamer-v0.8.7-Linux-arm64-Release/webrtc-streamer/
 sudo mv webrtc-streamer /usr/local/bin/
-rm webrtc-streamer-v0.6.2-Linux-armv7l.tar.gz
+cd ../../
+rm webrtc-streamer-v0.8.7-Linux-arm64-Release.tar.gz
+rm -rf webrtc-streamer-v0.8.7-Linux-arm64-Release
 
 # Reload systemd to apply changes
 sudo systemctl daemon-reload
@@ -70,7 +73,7 @@ sudo systemctl daemon-reload
 # Enable and start services
 sudo systemctl enable webrtc-streamer.service
 sudo systemctl start webrtc-streamer.service
-
+sleep 5
 sudo systemctl status webrtc-streamer.service --no-pager
 
-echo "WebRTC streamer service has been created and started."
+echo "WebRTC streamer service has been created and started on port 8556."
