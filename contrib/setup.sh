@@ -2,13 +2,13 @@
 
 # Update system and install necessary packages
 sudo apt-get update
-sudo apt-get -y install docker.io nginx ufw
+sudo apt-get -y install docker.io nginx ufw wget
 
 # Enable and start the firewall
 echo "y" | sudo ufw enable
 sudo ufw allow 22
 sudo ufw allow 8090
-sudo ufw allow 8556
+sudo ufw allow 8889
 sudo ufw allow 5173
 echo "y" | sudo ufw reload
 
@@ -27,29 +27,9 @@ fi
 if ! docker ps >/dev/null 2>&1; then
     echo "Docker installed. Adding $(whoami) to the 'docker' group..."
     sudo usermod -aG docker $(whoami)
-    echo -e "User added to \docker\ group but the session must be reloaded to access the Docker daemon. Please log out, log back in, and rerun the script. Exiting..."
+    echo -e "User added to 'docker' group but the session must be reloaded to access the Docker daemon. Please log out, log back in, and rerun the script. Exiting..."
     exit 0
 fi
-
-# Define service files and commands
-SERVICE_DIR="/etc/systemd/system"
-WEBRTC_SERVICE="$SERVICE_DIR/webrtc-streamer.service"
-
-# Create WebRTC streamer service
-sudo tee $WEBRTC_SERVICE > /dev/null << EOF
-[Unit]
-Description=WebRTC Video Streamer
-After=network.target
-
-[Service]
-WorkingDirectory=/home/$(whoami)
-ExecStart=/usr/local/bin/webrtc-streamer -v /dev/video0 -H 0.0.0.0:8556
-Restart=always
-User=$(whoami)
-
-[Install]
-WantedBy=multi-user.target
-EOF
 
 # Check and enable all uarts with dtoverlay=uartx
 for uart in 0 1 2 3; do
@@ -58,22 +38,46 @@ for uart in 0 1 2 3; do
     fi
 done
 
-# Install WebRTC streamer
-wget https://github.com/mpromonet/webrtc-streamer/releases/download/v0.8.7/webrtc-streamer-v0.8.7-Linux-arm64-Release.tar.gz
-tar -xzf webrtc-streamer-v0.8.7-Linux-arm64-Release.tar.gz
-cd webrtc-streamer-v0.8.7-Linux-arm64-Release/webrtc-streamer/
-sudo mv webrtc-streamer /usr/local/bin/
-cd ../../
-rm webrtc-streamer-v0.8.7-Linux-arm64-Release.tar.gz
-rm -rf webrtc-streamer-v0.8.7-Linux-arm64-Release
+# Install MediaMTX
+if [ ! -d ~/mediamtx ]; then
+    mkdir -p ~/mediamtx && cd ~/mediamtx
+    wget https://github.com/bluenviron/mediamtx/releases/download/v1.7.0/mediamtx_v1.7.0_linux_arm64v8.tar.gz
+    tar -xvzf mediamtx_v1.7.0_linux_arm64v8.tar.gz
+    rm mediamtx_v1.7.0_linux_arm64v8.tar.gz
+
+    # Configure MediaMTX
+    if ! grep -q 'cam1:' ~/mediamtx/mediamtx.yml; then
+        cat << EOF >> ~/mediamtx/mediamtx.yml
+  cam1:
+    runOnInit: bash -c 'libcamera-vid -t 0 --inline --listen -o - | ffmpeg -i /dev/stdin -c:v libx264 -tune zerolatency -f rtsp rtsp://localhost:8554/cam1'
+    runOnInitRestart: yes
+EOF
+    fi
+fi
+
+# Create WebRTC service
+sudo tee /etc/systemd/system/webrtc-streamer.service > /dev/null << EOF
+[Unit]
+Description=MediaMTX WebRTC Streaming Server
+After=network.target
+
+[Service]
+WorkingDirectory=/home/$(whoami)
+ExecStart=/home/$(whoami)/mediamtx/mediamtx
+Restart=always
+User=$(whoami)
+
+[Install]
+WantedBy=multi-user.target
+EOF
 
 # Reload systemd to apply changes
 sudo systemctl daemon-reload
 
-# Enable and start services
+# Enable and start MediaMTX service
 sudo systemctl enable webrtc-streamer.service
-sudo systemctl start webrtc-streamer.service
+sudo systemctl restart webrtc-streamer.service
 sleep 5
 sudo systemctl status webrtc-streamer.service --no-pager
 
-echo "WebRTC streamer service has been created and started on port 8556."
+echo "WebRTC service has been created and started on port 8556."
