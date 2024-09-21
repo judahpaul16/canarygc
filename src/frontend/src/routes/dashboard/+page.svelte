@@ -68,12 +68,6 @@
       display: block;
     }
 
-    .live-feed {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
     .compass {
       display: none;
     }
