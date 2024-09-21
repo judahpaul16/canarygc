@@ -63,7 +63,7 @@ After=network.target
 
 [Service]
 WorkingDirectory=/home/$(whoami)
-ExecStart=/home/$(whoami)/mediamtx/mediamtx
+ExecStart=/home/$(whoami)/mediamtx/mediamtx /home/$(whoami)/mediamtx/mediamtx.yml
 Restart=always
 User=$(whoami)
 
