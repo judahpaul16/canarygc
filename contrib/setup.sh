@@ -2,15 +2,14 @@
 
 # Update system and install necessary packages
 sudo apt-get update
-sudo apt-get -y install docker.io nginx ufw
+sudo apt-get -y install docker.io nginx ufw wget
 
 # Enable and start the firewall
 echo "y" | sudo ufw enable
 sudo ufw allow 22
-sudo ufw allow 8554
-sudo ufw allow 8556
-sudo ufw allow 5173
 sudo ufw allow 8090
+sudo ufw allow 8889
+sudo ufw allow 5173
 echo "y" | sudo ufw reload
 
 sudo chown -R $(whoami):www-data /home/$(whoami)
@@ -28,62 +27,9 @@ fi
 if ! docker ps >/dev/null 2>&1; then
     echo "Docker installed. Adding $(whoami) to the 'docker' group..."
     sudo usermod -aG docker $(whoami)
-    echo -e "User added to \`docker\` group but the session must be reloaded to access the Docker daemon. Please log out, log back in, and rerun the script. Exiting..."
+    echo -e "User added to 'docker' group but the session must be reloaded to access the Docker daemon. Please log out, log back in, and rerun the script. Exiting..."
     exit 0
 fi
-
-# Define service files and commands
-SERVICE_DIR="/etc/systemd/system"
-LIBCAMERA_SERVICE="$SERVICE_DIR/libcamera-vid.service"
-FFMPEG_SERVICE="$SERVICE_DIR/ffmpeg.service"
-NGINX_CONF="/etc/nginx/sites-available/default"
-
-# Create libcamera-vid service
-sudo tee $LIBCAMERA_SERVICE > /dev/null << EOF
-[Unit]
-Description=Libcamera Video Stream
-After=network.target
-
-[Service]
-WorkingDirectory=/home/$(whoami)
-ExecStart=/usr/bin/libcamera-vid -t 0 --inline --listen -o tcp://0.0.0.0:8556
-Restart=always
-User=$(whoami)
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# Create ffmpeg service
-sudo tee $FFMPEG_SERVICE > /dev/null << EOF
-[Unit]
-Description=FFmpeg HLS Streaming
-After=network.target
-
-[Service]
-WorkingDirectory=/home/$(whoami)
-ExecStart=/usr/bin/ffmpeg -i tcp://0.0.0.0:8556 -c:v libx264 -f hls -hls_time 10 -hls_list_size 10 -hls_flags delete_segments stream.m3u8
-Restart=always
-User=$(whoami)
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# Configure Nginx for CORS
-sudo tee $NGINX_CONF > /dev/null << EOF
-server {
-    listen 8554;
-    server_name localhost;
-
-    location / {
-        root /home/$(whoami);
-        add_header 'Access-Control-Allow-Origin' '*';
-        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
-        add_header 'Access-Control-Allow-Headers' 'Content-Type';
-    }
-}
-EOF
 
 # Check and enable all uarts with dtoverlay=uartx
 for uart in 0 1 2 3; do
@@ -92,21 +38,46 @@ for uart in 0 1 2 3; do
     fi
 done
 
-# Restart Nginx to apply the new configuration
-sudo systemctl enable nginx
-sudo systemctl restart nginx
+# Install MediaMTX
+if [ ! -d ~/mediamtx ]; then
+    mkdir -p ~/mediamtx && cd ~/mediamtx
+    wget https://github.com/bluenviron/mediamtx/releases/download/v1.7.0/mediamtx_v1.7.0_linux_arm64v8.tar.gz
+    tar -xvzf mediamtx_v1.7.0_linux_arm64v8.tar.gz
+    rm mediamtx_v1.7.0_linux_arm64v8.tar.gz
+
+    # Configure MediaMTX
+    if ! grep -q 'cam1:' ~/mediamtx/mediamtx.yml; then
+        cat << EOF >> ~/mediamtx/mediamtx.yml
+  cam1:
+    runOnInit: bash -c 'libcamera-vid -t 0 --width 1280 --height 720 --inline --listen -o - | ffmpeg -i /dev/stdin -c:v libx264 -tune zerolatency -f rtsp rtsp://localhost:8554/cam1'
+    runOnInitRestart: yes
+EOF
+    fi
+fi
+
+# Create WebRTC service
+sudo tee /etc/systemd/system/webrtc-streamer.service > /dev/null << EOF
+[Unit]
+Description=MediaMTX WebRTC Streaming Server
+After=network.target
+
+[Service]
+WorkingDirectory=/home/$(whoami)
+ExecStart=/home/$(whoami)/mediamtx/mediamtx /home/$(whoami)/mediamtx/mediamtx.yml
+Restart=always
+User=$(whoami)
+
+[Install]
+WantedBy=multi-user.target
+EOF
 
 # Reload systemd to apply changes
 sudo systemctl daemon-reload
 
-# Enable and start services
-sudo systemctl enable libcamera-vid.service
-sudo systemctl enable ffmpeg.service
+# Enable and start MediaMTX service
+sudo systemctl enable webrtc-streamer.service
+sudo systemctl restart webrtc-streamer.service
+sleep 5
+sudo systemctl status webrtc-streamer.service --no-pager
 
-sudo systemctl start libcamera-vid.service
-sudo systemctl start ffmpeg.service
-
-sudo systemctl status libcamera-vid.service --no-pager
-sudo systemctl status ffmpeg.service --no-pager
-
-echo "Services have been created and started. Nginx is configured to handle CORS."
+echo "WebRTC service has been created."

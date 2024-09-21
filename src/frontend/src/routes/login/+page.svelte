@@ -73,7 +73,7 @@
 <style>
   .dashboard {
     background-color: rgb(from var(--primaryColor) r g b / 75%);
-    border: 2px solid var(--primaryColor);
+    border: 2px solid var(--secondaryColor);
     color: var(--fontColor);
   }
   label {
@@ -83,7 +83,7 @@
   input[type="email"],
   input[type="password"] {
     background-color: var(--tertiaryColor);
-    border: 2px solid var(--primaryColor);
+    border: 2px solid var(--secondaryColor);
     color: var(--fontColor);
     border-radius: 10px;
   }
