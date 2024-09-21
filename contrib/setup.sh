@@ -49,7 +49,7 @@ if [ ! -d ~/mediamtx ]; then
     if ! grep -q 'cam1:' ~/mediamtx/mediamtx.yml; then
         cat << EOF >> ~/mediamtx/mediamtx.yml
   cam1:
-    runOnInit: bash -c 'libcamera-vid -t 0 --inline --listen -o - | ffmpeg -i /dev/stdin -c:v libx264 -tune zerolatency -f rtsp rtsp://localhost:8554/cam1'
+    runOnInit: bash -c 'libcamera-vid -t 0 --width 1280 --height 720 --inline --listen -o - | ffmpeg -i /dev/stdin -c:v libx264 -tune zerolatency -f rtsp rtsp://localhost:8554/cam1'
     runOnInitRestart: yes
 EOF
     fi
@@ -80,4 +80,4 @@ sudo systemctl restart webrtc-streamer.service
 sleep 5
 sudo systemctl status webrtc-streamer.service --no-pager
 
-echo "WebRTC service has been created and started on port 8556."
+echo "WebRTC service has been created."
