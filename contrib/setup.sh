@@ -10,6 +10,8 @@ sudo ufw allow 22
 sudo ufw allow 8090
 sudo ufw allow 8889
 sudo ufw allow 5173
+sudo ufw allow in on wwan0
+sudo ufw allow out on wwan0
 echo "y" | sudo ufw reload
 
 sudo chown -R $(whoami):www-data /home/$(whoami)
