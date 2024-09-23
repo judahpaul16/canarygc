@@ -56,10 +56,9 @@
       flex-direction: column;
       gap: 8px;
       padding: 0.5em;
-      padding-right: 0px !important;
       max-height: 92vh;
       border-radius: 0;
-      overflow-y: auto;
+      overflow-x: hidden;
       height: 100%;
     }
 
