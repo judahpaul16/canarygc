@@ -24,6 +24,18 @@
   
   onMount(() => {
     pb = new PocketBase(`http://${window.location.hostname}:8090`);
+    let emailInput = document.getElementById('email') as HTMLInputElement;
+    let passwordInput = document.getElementById('password') as HTMLInputElement;
+    ['focus', 'click'].forEach(event => {
+      emailInput.addEventListener(event, () => {
+        emailInput.autofocus = true;
+        passwordInput.autofocus = false;
+      });
+      passwordInput.addEventListener(event, () => {
+        passwordInput.autofocus = true;
+        emailInput.autofocus = false;
+      });
+    });
   });
 
   async function login() {
