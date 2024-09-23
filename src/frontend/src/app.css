@@ -21,6 +21,7 @@ main {
     all 0.1s ease,
     color 0s ease,
     background-color 0.1s ease,
+    opacity 0.5s ease,
     height 0s ease !important;
   --sb-track-color: var(--primaryColor);
   --sb-thumb-color: var(--tertiaryColor);
@@ -58,10 +59,6 @@ iframe {
   border-radius: 1rem;
 }
 
-.dashboard {
-  opacity: 0;
-}
-
 .dark .leaflet-layer,
 .dark .leaflet-control-zoom-in,
 .dark .leaflet-control-zoom-out {
@@ -77,6 +74,7 @@ iframe {
 }
 
 .dashboard {
+  opacity: 0;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
   background-color: rgb(from var(--secondaryColor) r g b / 0.85) !important;
 }
@@ -85,7 +83,12 @@ iframe {
   box-shadow: -5px 0 20px rgba(0, 0, 0, 0.2);
 }
 
-
+@media (max-width: 990px) {
+  .dashboard-container {
+    height: 100% !important;
+    min-height: 100% !important;
+  }
+}
 
 @media (min-width: 3000px) {
   .desktop-nav {
