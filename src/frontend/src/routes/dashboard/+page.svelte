@@ -55,11 +55,13 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
-      padding: 0.5em;
-      max-height: 92vh;
-      border-radius: 0;
-      overflow-x: hidden;
+      padding: 0.7em;
+      padding-right: 0;
+      padding-bottom: 5em;
       height: 100%;
+      max-height: 100%;
+      border-radius: 0;
+      overflow: auto;
     }
 
     .dashboard > * {
