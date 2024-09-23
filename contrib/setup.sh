@@ -51,7 +51,7 @@ if [ ! -d ~/mediamtx ]; then
     if ! grep -q 'cam1:' ~/mediamtx/mediamtx.yml; then
         cat << EOF >> ~/mediamtx/mediamtx.yml
   cam1:
-    runOnInit: bash -c 'libcamera-vid -t 0 --width 1280 --height 720 --inline --listen -o - | ffmpeg -i /dev/stdin -c:v libx264 -tune zerolatency -f rtsp rtsp://localhost:8554/cam1'
+    runOnInit: bash -c 'libcamera-vid -t 0 --width 1280 --height 720 --inline --listen -o - | ffmpeg -fflags +genpts -i /dev/stdin -c:v libx264 -preset ultrafast -tune zerolatency -profile:v baseline -x264-params "nal-hrd=cbr:force-cfr=1" -b:v 2M -maxrate 2M -bufsize 4M -g 60 -keyint_min 60 -sc_threshold 0 -f rtsp -rtsp_transport tcp rtsp://localhost:8554/cam1'
     runOnInitRestart: yes
 EOF
     fi
