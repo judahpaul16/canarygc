@@ -34,8 +34,14 @@ services:
     restart: always
 
   webrtc:
-    build: ./src/webrtc
+    image: bluenviron/mediamtx:latest-rpi
     container_name: mmgcs_webrtc
+    environment:
+      - MTX_PATHS_CAM_SOURCE=rpiCamera
+    volumes:
+      - /run/udev:/run/udev:ro
+    tmpfs:
+      - /dev/shm:exec
     network_mode: host
     privileged: true
     restart: always
