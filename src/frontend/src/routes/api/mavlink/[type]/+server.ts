@@ -20,10 +20,10 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
         case 'init':
             try {
                 let connected = (port && reader && online);
-                if (!connected && !connecting) await initializePort();
+                if (!connected) await initializePort();
                 else await requestSysStatus();
 
-                if (logs.length > 0) {
+                if (newLogs.length > 0) {
                     const logsToSend = newLogs.slice();
                     newLogs.length = 0; // Clear newLogs
                     return new Response(JSON.stringify(logsToSend), { status: 200, headers: { 'Content-Type': 'application/json' } });
