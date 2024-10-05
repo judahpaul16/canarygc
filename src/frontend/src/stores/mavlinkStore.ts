@@ -10,6 +10,7 @@ if (typeof window !== 'undefined') {
     latLng = { lat: 33.7909, lng: -84.388 };
 }
 
+export const onlineStore = writable<boolean>(false);
 export const mavModelStore = writable<string>('UNKNOWN');
 export const mavTypeStore = writable<string>('Unknown');
 export const mavArmedStateStore = writable<boolean>(false);

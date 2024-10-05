@@ -87,6 +87,7 @@
     background-color: rgb(from var(--primaryColor) r g b / 75%);
     border: 2px solid var(--secondaryColor);
     color: var(--fontColor);
+    margin-right: 0 !important;
   }
   label {
     color: var(--fontColor);
