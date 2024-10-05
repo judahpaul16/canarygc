@@ -10,6 +10,7 @@
   import { goto } from '$app/navigation';
   import '../app.css';
   import {
+    onlineStore,
     mavHeadingStore,
     mavLocationStore,
     mavlinkLogStore,
@@ -36,7 +37,7 @@
     tertiaryColorStore
   } from '../stores/customizationStore';
   import { get } from 'svelte/store';
-  import Modal from '../components/Modal.svelte';
+  import Offline from '../components/Offline.svelte';
   import Notification from '../components/Notification.svelte';
 
   let pb: PocketBase;
@@ -44,7 +45,9 @@
   let currentPath = '';
   let heightOfDashboard = 1000;
   let logs: string[] = [];
+  let online = get(onlineStore);
 
+  $: online = $onlineStore;
   $: darkMode = $darkModeStore;
   $: primaryColor = $primaryColorStore;
   $: secondaryColor = $secondaryColorStore;
@@ -88,34 +91,25 @@
       });
       if (response.ok) {
         const data = await response.json();
-        Object.keys(data).forEach(key => {
-          updateBlackBoxCollection(JSON.stringify(data[key]));
-        });
-        data.forEach((log: string) => {
-          getLogs(log.replace(/\\"/g, '"') + '\n');
-        });
+        if (data.length > 0) {
+          Object.keys(data).forEach(key => {
+            updateBlackBoxCollection(JSON.stringify(data[key]));
+          });
+          data.forEach((log: string) => {
+            getLogs(log.replace(/\\"/g, '"') + '\n');
+          });
+          onlineStore.set(true);
+        } else {
+          onlineStore.set(false);
+        }
       } else {
-        let notification = new Notification({
-          target: document.body,
-          props: {
-            title: 'Offline',
-            content: 'The MAVLink stream is offline.',
-            type: 'error'
-          }
-        });
-        setTimeout(() => notification.$destroy(), 5000);
+        onlineStore.set(false);
       }
   } catch (error: any) {
-      let notification = new Notification({
-        target: document.body,
-        props: {
-          title: 'Error',
-          content: `Error: ${error.message || error}`,
-          type: 'error'
-        }
-      });
-      setTimeout(() => notification.$destroy(), 5000);
-      return;
+      console.error('Error:', error.message || error);
+      console.error('Stack Trace:', error.stack || 'No stack trace available');
+      onlineStore.set(false);
+
     }
   }
 
@@ -512,9 +506,15 @@
       </div>
     </nav>
 
-    <div class="slot-container flex-grow pr-8 justify-center items-center overflow-auto z-10">
+    <div class="slot-container flex-grow { currentPath !== '/login' && currentPath !== '/' ? 'pr-8' : '' } justify-center items-center overflow-auto z-10">
       <slot />
     </div>
+
+    {#key online}
+      {#if !online}
+        <Offline />
+      {/if}
+    {/key}
   </div>
 </main>
 
