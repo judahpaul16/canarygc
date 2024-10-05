@@ -34,10 +34,8 @@ services:
     restart: always
 
   webrtc:
-    image: bluenviron/mediamtx:latest
+    build: ./src/webrtc
     container_name: mmgcs_webrtc
     network_mode: host
-    volumes:
-      - .:ro
-    command: mediamtx.yml
+    privileged: true
     restart: always
