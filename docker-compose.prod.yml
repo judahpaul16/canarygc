@@ -32,3 +32,12 @@ services:
         limits:
           memory: 700m
     restart: always
+
+  webrtc:
+    image: bluenviron/mediamtx:latest
+    container_name: mmgcs_webrtc
+    network_mode: host
+    volumes:
+      - .:ro
+    command: mediamtx.yml
+    restart: always

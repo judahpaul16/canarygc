@@ -115,7 +115,7 @@ docker compose up
 
 ## 🚀 Deploy
 ```bash
-cd ~/ && sudo rm -rf mmgcs && git clone -c core.protectNTFS=false git@github.com:judahpaul16/mmgcs.git && cd mmgcs && docker compose down && docker compose -f docker-compose.prod.yml up -d
+cd ~/ && sudo rm -rf mmgcs && git clone -c core.protectNTFS=false git@github.com:judahpaul16/mmgcs.git && cd mmgcs && docker compose -f docker-compose.prod.yml down && docker compose -f docker-compose.prod.yml up -d
 ```
 
 ## ✅ Compatibility
