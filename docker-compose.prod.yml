@@ -38,6 +38,21 @@ services:
     container_name: mmgcs_webrtc
     environment:
       - MTX_PATHS_CAM_SOURCE=rpiCamera
+      - MTX_WEBRTCADDITIONALHOSTS=${PUBLIC_IP}
+      - MTX_READTIMEOUT=10s
+      - MTX_WRITETIMEOUT=10s
+      - MTX_API=yes
+      - MTX_METRICS=yes
+      - MTX_PPROF=yes
+      - MTX_PROTOCOLS=tcp
+      - MTX_RTSPADDRESS=:8554
+      - MTX_RTMPADDRESS=:1935
+      - MTX_HLSADDRESS=:8888
+      - MTX_WEBRTCADDRESS=:8889
+      - MTX_APIADDRESS=:9997
+      - MTX_METRICSADDRESS=:9998
+      - MTX_PPROFFADDRESS=:9999
+      - MTX_READBUFFERCOUNT=512
     volumes:
       - /run/udev:/run/udev:ro
     tmpfs:
