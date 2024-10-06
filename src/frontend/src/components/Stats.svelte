@@ -161,19 +161,24 @@
     }
   }
 
-  function confirmToggleArmDisarm() {
+  function confirmCalibration() {
     let modal = new Modal({
       target: document.body,
       props: {
-        title: 'Arm / Disarm',
-        content: 'Are you sure you want to arm/disarm the MAV?',
+        title: 'Sensor Calibration',
+        content: 'Are you sure you want to calibrate the sensors? If so please manually specify the current heading (direction) of the MAV in degrees.',
+        inputs: [
+          {
+            type: 'number',
+            placeholder: 'Current Heading',
+          }
+        ],
         isOpen: true,
         confirmation: true,
         notification: false,
         onConfirm: async () => {
+          await sendMavlinkCommand('FIXED_MAG_CAL_YAW', `${[isNaN(parseInt(modal.inputValues![0])) ? 0 : modal.inputValues![0], 0, mavLocation.lat, mavLocation.lng]}`); // param2: 21196 bypasses pre-arm checks
           modal.$destroy();
-          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 0]}`); // 0 is STABALIZE: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
-          await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[isArmed ? 0 : 1, 0]}`); // param2: 21196 bypasses pre-arm checks
         }
       }
     });
@@ -245,7 +250,6 @@
           missionCompleteStore.set(false);
           if (get(mavStateStore) === 'STANDBY') {
             await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
-            await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[1, 0]}`); // param2: 21196 bypasses pre-arm checks
             await sendMavlinkCommand('NAV_TAKEOFF', `${[0, 0, 0, 0, 0, 0, 10]}`);
             await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds
           }
@@ -372,9 +376,9 @@
         </div>
         <div class="button-container mt-6">
           <div class="relative group">
-            <button class="circular-button" on:click={confirmToggleArmDisarm}>
-              <i class="fas fa-key text-[#fffa0a]"></i>
-              <div class="tooltip text-white">Arm / Disarm</div>
+            <button class="circular-button" on:click={confirmCalibration}>
+              <i class="fas fa-satellite-dish text-[#ffa704]"></i>
+              <div class="tooltip text-white">Calibrate Sensors</div>
             </button>
           </div>
           <div class="relative group">
