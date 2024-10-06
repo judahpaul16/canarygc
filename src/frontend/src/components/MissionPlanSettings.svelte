@@ -342,9 +342,12 @@
                     let lat = Number((parseFloat(modal.inputValues![0]) * 1e7).toFixed(0));
                     let lon = Number((parseFloat(modal.inputValues![1]) * 1e7).toFixed(0));
                     let alt = Number(parseFloat(modal.inputValues![2]).toFixed(0));
+                    let useCurrent = 0;
                     if (isNaN(lat) || isNaN(lon) || isNaN(alt)) {
-                        alert("Please enter a valid latitude, longitude, and altitude.");
-                        return;
+                        useCurrent = 1;
+                        lat = 0;
+                        lon = 0;
+                        alt = 0;
                     }
                     try {
                         let response = await fetch("/api/mavlink/send_command", {
@@ -352,7 +355,7 @@
                             headers: {
                                 "content-type": "application/json",
                                 "command": "DO_SET_HOME",
-                                "params": `${[0, 0, 0, 0, lat, lon, alt]}`,
+                                "params": `${[useCurrent, 0, 0, 0, lat, lon, alt]}`,
                                 "useCmdLong": "false",
                             },
                         });
