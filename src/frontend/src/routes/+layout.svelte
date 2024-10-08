@@ -277,6 +277,39 @@
             setTimeout(() => notification.$destroy(), 10000);
           }
         }
+      } else if ((text as string).includes('STATUSTEXT')) {
+        let severity: string | RegExpMatchArray | null = (text as string).match(/"severity":(\d+)/g);
+        let statusText: string | RegExpMatchArray | null = (text as string).match(/"text":"(.+?)"/g);
+        if (severity && statusText) {
+          severity = severity.toString().replace('"severity":', '');
+          statusText = statusText.toString().replace('"text":"', '').replace('"', '');
+          let type;
+          switch (parseInt(severity)) {
+          case 0:
+          case 1:
+          case 2:
+          case 3:
+            type = 'error';
+            break;
+          case 4:
+            type = 'warning';
+            break;
+          case 5:
+          case 6:
+          case 7:
+          default:
+            type = 'info';
+          }
+          const notification = new Notification({
+            target: document.body,
+            props: {
+              title: 'Status Message',
+              content: statusText,
+              type: type
+            }
+          });
+          setTimeout(() => notification.$destroy(), 10000);
+        }
       }
     }
   }

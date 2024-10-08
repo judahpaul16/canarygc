@@ -177,7 +177,9 @@
         confirmation: true,
         notification: false,
         onConfirm: async () => {
-          await sendMavlinkCommand('FIXED_MAG_CAL_YAW', `${[isNaN(parseInt(modal.inputValues![0])) ? 0 : modal.inputValues![0], 0, mavLocation.lat, mavLocation.lng]}`); // param2: 21196 bypasses pre-arm checks
+          await sendMavlinkCommand('FIXED_MAG_CAL_YAW', `${[isNaN(parseInt(modal.inputValues![0])) ? 0 : modal.inputValues![0], 0, mavLocation.lat, mavLocation.lng]}`);
+          await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds
+          await sendMavlinkCommand('PREFLIGHT_CALIBRATION', `${[0, 0, 0, 0, 4, 0, 0, 0]}`);
           modal.$destroy();
         }
       }
@@ -312,7 +314,7 @@
           }
         ],
         onConfirm: async () => {
-          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // param2: 4 (GUIDED) see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[1, 0]}`); // param2: 21196 bypasses pre-arm checks
           await sendMavlinkCommand('NAV_TAKEOFF', `${[0, 0, 0, 0, 0, 0, parseInt(modal.inputValues![0])]}`);
         },
@@ -330,7 +332,7 @@
         confirmation: true,
         notification: false,
         onConfirm: async () => {
-          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // param2: 4 (GUIDED) see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           await sendMavlinkCommand('NAV_LAND', `${[0, 0, 0, 0, mavLocation.lat, mavLocation.lng, 0]}`);
         },
       }
@@ -378,7 +380,7 @@
         <div class="button-container mt-6">
           <div class="relative group">
             <button class="circular-button" on:click={confirmCalibration}>
-              <i class="fas fa-satellite-dish text-[#ffa704]"></i>
+              <i class="far fa-compass text-[#ffa704] fa-spin"></i>
               <div class="tooltip text-white">Calibrate Sensors</div>
             </button>
           </div>
