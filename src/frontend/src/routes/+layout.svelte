@@ -152,7 +152,7 @@
   async function updateBlackBoxCollection(log: string) {
     try {
       // Add new logs to the collection
-      await pb.collection('blackbox').create({ log: log });
+      pb.collection('blackbox').create({ log: log });
     } catch (error : any) {
       if (error.message.includes('The request was autocancelled')) {
           // ignore it
