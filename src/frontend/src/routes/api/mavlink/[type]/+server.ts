@@ -17,7 +17,7 @@ import {
 
 export const POST: RequestHandler = async (request): Promise<Response> => {
     switch (request.params.type) {
-        case 'init':
+        case 'heartbeat':
             try {
                 let connected = (port && reader && online);
                 if (!connected) await initializePort();
