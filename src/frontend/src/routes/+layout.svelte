@@ -47,6 +47,10 @@
   let logs: string[] = [];
   let online = get(onlineStore);
 
+  let inactivityTimer: NodeJS.Timeout;
+  let authCheckInterval: NodeJS.Timeout;
+  const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
+
   $: online = $onlineStore;
   $: darkMode = $darkModeStore;
   $: primaryColor = $primaryColorStore;
@@ -314,13 +318,40 @@
     }
   }
 
+  function resetInactivityTimer() {
+    if (inactivityTimer) clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(handleInactivity, INACTIVITY_TIMEOUT);
+  }
+
+  function handleInactivity() {
+    if (authData.checkExpired()) {
+      authData.set(null);
+      goto('/login');
+    }
+  }
+
+  function handleUserActivity() {
+    resetInactivityTimer();
+    authData.refreshTimestamp();
+  }
+
   onMount(async () => {
     pb = new PocketBase(`http://${window.location.hostname}:8090`);
     
     await initializeMissionPlansCollection();
     await initializeBlackBoxCollection();
 
-    setInterval(async () => {
+    // Set up event listeners for user activity
+    window.addEventListener('mousemove', handleUserActivity);
+    window.addEventListener('keydown', handleUserActivity);
+    window.addEventListener('click', handleUserActivity);
+    window.addEventListener('scroll', handleUserActivity);
+
+    // Initial setup of inactivity timer
+    resetInactivityTimer();
+
+    // Auth Checks
+    authCheckInterval = setInterval(async () => {
       if (typeof window !== 'undefined' && authData.checkExpired() && window.location.pathname !== '/') {
         authData.set(null);
         goto('/login');
@@ -346,6 +377,12 @@
     if (resizeObserver) {
       resizeObserver.disconnect();
     }
+    clearInterval(authCheckInterval);
+    clearTimeout(inactivityTimer);
+    window.removeEventListener('mousemove', handleUserActivity);
+    window.removeEventListener('keydown', handleUserActivity);
+    window.removeEventListener('click', handleUserActivity);
+    window.removeEventListener('scroll', handleUserActivity);
   });
 
   afterUpdate(() => {

@@ -36,6 +36,11 @@ function createAuthStore() {
       const now = Date.now();
       const expirationTime = 30 * 60 * 1000; // 30 minutes in milliseconds
       return now - parseInt(authTimestamp) > expirationTime;
+    },
+    refreshTimestamp: () => {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('authTimestamp', Date.now().toString());
+      }
     }
   };
 }
