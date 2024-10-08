@@ -379,10 +379,6 @@
     }
     clearInterval(authCheckInterval);
     clearTimeout(inactivityTimer);
-    window.removeEventListener('mousemove', handleUserActivity);
-    window.removeEventListener('keydown', handleUserActivity);
-    window.removeEventListener('click', handleUserActivity);
-    window.removeEventListener('scroll', handleUserActivity);
   });
 
   afterUpdate(() => {
