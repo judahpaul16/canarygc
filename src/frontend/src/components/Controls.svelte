@@ -70,7 +70,15 @@
     <div class="flex justify-between w-full px-2 pt-2">
       <span class="text-xs text-gray-400">
         <a href="https://en.wikipedia.org/wiki/Dilution_of_precision_(navigation)" target="_blank">
-          <i class="far fa-question-circle"></i>
+          <i class="far fa-question-circle relative">
+            <div class="tooltip">&lt; 1:	Ideal
+              <br><br>1–2:	Excellent
+              <br><br>2–5:	Good
+              <br><br>5–10:	Moderate
+              <br><br>10–20:	Fair
+              <br><br>&gt; 20:	Poor
+            </div>
+          </i>
         </a>
         HDOP: <span class="{mavSatellite.hdop > 20 ? 'text-red-300' : mavSatellite.hdop > 5 && mavSatellite.hdop < 20 ? 'text-yellow-300' : 'text-green-300'}">
           {mavSatellite.hdop.toFixed(2)}
@@ -235,6 +243,29 @@
   .rotate-right:hover {
     animation: rotate-right 0.6s;
     color: #4e94f7;
+  }
+
+  .tooltip {
+    position: absolute;
+    top: -1000%;
+    left: 0;
+    height: auto;
+    max-width: 200px;
+    display: flex;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
+    z-index: 1;
+  }
+
+  i:hover .tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(-45px);
   }
 
   @keyframes rotate-left {
