@@ -144,7 +144,7 @@
               if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
               sendMavlinkCommand('CONDITION_YAW', `${[10, 10, -1, 1]}`);
             }}>
-          ⟲
+          <i class="fas fa-rotate-left"></i>
         </button>
       </div>
       <div class="flex flex-col items-center">
@@ -154,7 +154,7 @@
               if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
               sendMavlinkCommand('CONDITION_YAW', `${[10, 10, 1, 1]}`);
             }}>
-          ⟳
+          <i class="fas fa-rotate-right"></i>
         </button>
       </div>
     </div>
