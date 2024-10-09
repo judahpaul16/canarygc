@@ -284,15 +284,6 @@
         onConfirm: async () => {
           await sendMavlinkCommand('DO_GRIPPER' , `${[1, 0]}`); // param2 - 0: release, 1: grip
           modal.$destroy();
-          const notification = new Notification({
-            target: document.body,
-            props: {
-              title: 'Payload Released',
-              content: 'The payload has been released.',
-              type: 'info',
-            }
-          });
-          setTimeout(() => notification.$destroy(), 10000);
         },
       }
     });
