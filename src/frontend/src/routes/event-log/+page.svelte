@@ -194,7 +194,7 @@
             </div>
             <pre class="text-gray-300 flex flex-col" bind:this={logContainer}>
                 {#each logs as log}
-                    {#if log.indexOf('HEARTBEAT') === -1 && log.indexOf('MISSION_CURRENT') === -1 && log.indexOf('"command":512') === -1}
+                    {#if log.indexOf('HEARTBEAT') === -1 && log.indexOf('MISSION_CURRENT') === -1 && log.indexOf('"command":512') === -1 && log.indexOf('GPS_RAW_INT') === -1}
                         {#if log.indexOf('TIMESYNC') !== -1}
                             <span style="display: {showTimeSync ? 'block' : 'none'}">{@html getHighlightedLog(log)}</span>
                         {:else if log.indexOf('PARAM_VALUE') !== -1}
