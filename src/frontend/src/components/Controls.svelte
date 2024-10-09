@@ -2,7 +2,7 @@
   import Map from './Map.svelte';
   import DPad from './DPad.svelte';
   import Weather from './Weather.svelte';
-  import { mavModeStore, mavAltitudeStore, mavLocationStore } from '../stores/mavlinkStore';
+  import { mavModeStore, mavAltitudeStore, mavLocationStore, mavSatelliteStore } from '../stores/mavlinkStore';
   import {
     darkModeStore,
     primaryColorStore,
@@ -23,6 +23,7 @@
   $: mavMode = $mavModeStore;
   $: mavLocation = $mavLocationStore;
   $: altitude = $mavAltitudeStore;
+  $: mavSatellite = $mavSatelliteStore;
 
   async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
     const response = await fetch(`/api/mavlink/send_command`, {
@@ -62,8 +63,24 @@
 <div class="controls px-10 rounded-2xl h-full flex items-center overflow-x-auto gap-4"
   style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
   >
-  <div class="map-container flex-shrink-0 h-48 w-48">
-    <Map {mavLocation} hideOverlay={true} />
+  <div class="flex flex-col">
+    <div class="map-container flex-shrink-0 h-48 w-48">
+      <Map {mavLocation} hideOverlay={true} />
+    </div>
+    <div class="flex justify-between w-full px-2 pt-2">
+      <span class="text-xs text-gray-400">
+        <a href="https://en.wikipedia.org/wiki/Dilution_of_precision_(navigation)" target="_blank">
+          <i class="far fa-question-circle"></i>
+        </a>
+        HDOP: <span class="{mavSatellite.hdop > 20 ? 'text-red-300' : mavSatellite.hdop > 5 && mavSatellite.hdop < 20 ? 'text-yellow-300' : 'text-green-300'}">
+          {mavSatellite.hdop}
+        </span>
+      </span>
+      <span class="text-xs text-gray-400">
+        # Sats: <span class="{mavSatellite.total < 6 ? 'text-red-300' : 'text-green-300'}">
+        {mavSatellite.total}</span>
+      </span>
+    </div>
   </div>
   <div class="flex w-full justify-center">
     <div class="weather column flex flex-col items-center justify-center">

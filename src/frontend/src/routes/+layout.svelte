@@ -21,7 +21,8 @@
     mavStateStore,
     mavModeStore,
     mavBatteryStore,
-    mavArmedStateStore
+    mavArmedStateStore,
+    mavSatelliteStore
   } from '../stores/mavlinkStore';
   import {
     missionPlanTitleStore,
@@ -216,6 +217,14 @@
         let vz: number | string | RegExpMatchArray | null = parseInt((text as string).match(/"vz":(\-?\d+)/g)!.toString().replace('"vz":', '')) / 100;
         let speed: number = Math.sqrt(Math.pow(vx, 2) + Math.pow(vy, 2) + Math.pow(vz, 2));
         if (speed) mavSpeedStore.set(parseFloat(speed.toFixed(2)));
+      } else if ((text as string).includes('GPS_RAW_INT')) {
+        let eph: string | RegExpMatchArray | null = (text as string).match(/"eph":(\d+)/g);
+        let satellites_visible: string | RegExpMatchArray | null = (text as string).match(/"satellitesVisible":(\d+)/g);
+        if (eph && satellites_visible) {
+          eph = eph.toString().replace('"eph":', '');
+          satellites_visible = satellites_visible.toString().replace('"satellitesVisible":', '');
+          mavSatelliteStore.set({ total: parseInt(satellites_visible), hdop: parseFloat(eph) * 1e-2 });
+        }
       } else if ((text as string).includes('HEARTBEAT')) {
         let type: string | RegExpMatchArray | null = (text as string).match(/"type":(\d+)/g);
         // @ts-ignore
@@ -289,20 +298,20 @@
           statusText = statusText.toString().replace('"text":"', '').replace('"', '');
           let type;
           switch (parseInt(severity)) {
-          case 0:
-          case 1:
-          case 2:
-          case 3:
-            type = 'error';
-            break;
-          case 4:
-            type = 'warning';
-            break;
-          case 5:
-          case 6:
-          case 7:
-          default:
-            type = 'info';
+            case 0:
+            case 1:
+            case 2:
+            case 3:
+              type = 'error';
+              break;
+            case 4:
+              type = 'warning';
+              break;
+            case 5:
+            case 6:
+            case 7:
+            default:
+              type = 'info';
           }
           const notification = new Notification({
             target: document.body,

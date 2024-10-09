@@ -17,6 +17,7 @@ export const mavArmedStateStore = writable<boolean>(false);
 export const mavStateStore = writable<string>('Unknown');
 export const mavModeStore = writable<string>('Unknown');
 export const mavLocationStore = writable<L.LatLng | { lat: number; lng: number }>(latLng);
+export const mavSatelliteStore = writable<{ total: number; hdop: number }>({ total: 0, hdop: 999.0 });
 export const mavHeadingStore = writable<number>(320);
 export const mavAltitudeStore = writable<number>(0);
 export const mavSpeedStore = writable<number>(0);

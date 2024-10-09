@@ -111,6 +111,13 @@ async function requestSysStatus() {
     request.responseTarget = 1;
     await send(port!, request);
 
+    request = new common.RequestMessageCommand();
+    request.targetSystem = 1;
+    request.targetComponent = 1;
+    request.messageId = common.GpsRawInt.MSG_ID;
+    request.responseTarget = 1;
+    await send(port!, request);
+
     request = new common.RequestMessageCommand();;
     request.targetSystem = 1;
     request.targetComponent = 1;
