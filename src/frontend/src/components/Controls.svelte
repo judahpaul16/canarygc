@@ -72,10 +72,10 @@
         <a href="https://en.wikipedia.org/wiki/Dilution_of_precision_(navigation)" target="_blank">
           <i class="far fa-question-circle relative">
             <div class="tooltip">&lt; 1:	Ideal
-              <br><br>1–2:	Excellent
-              <br><br>2–5:	Good
-              <br><br>5–10:	Moderate
-              <br><br>10–20:	Fair
+              <br><br>1 - 2:	Excellent
+              <br><br>2 - 5:	Good
+              <br><br>5 - 10:	Moderate
+              <br><br>10 - 20:	Fair
               <br><br>&gt; 20:	Poor
             </div>
           </i>
