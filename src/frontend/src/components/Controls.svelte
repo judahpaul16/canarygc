@@ -60,7 +60,7 @@
   }
 </script>
 
-<div class="controls px-10 rounded-2xl h-full flex items-center overflow-x-auto gap-4"
+<div class="controls px-10 rounded-2xl h-full flex items-center overflow-x-auto overflow-y-hidden gap-4"
   style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
   >
   <div class="flex flex-col">
@@ -324,6 +324,14 @@
       justify-content: center;
       width: 100%;
       margin: auto;
+    }
+
+    .map-container {
+      width: auto;
+    }
+
+    .controls > div > div:nth-of-type(2) {
+      flex-direction: row;
     }
 
     .weather {
