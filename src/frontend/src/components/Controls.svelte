@@ -73,7 +73,7 @@
           <i class="far fa-question-circle"></i>
         </a>
         HDOP: <span class="{mavSatellite.hdop > 20 ? 'text-red-300' : mavSatellite.hdop > 5 && mavSatellite.hdop < 20 ? 'text-yellow-300' : 'text-green-300'}">
-          {mavSatellite.hdop}
+          {mavSatellite.hdop.toFixed(2)}
         </span>
       </span>
       <span class="text-xs text-gray-400">
