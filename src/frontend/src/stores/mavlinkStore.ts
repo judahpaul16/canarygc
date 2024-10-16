@@ -1,14 +1,7 @@
 import { writable } from 'svelte/store';
 
 let L: typeof import('leaflet');
-let latLng;
-
-if (typeof window !== 'undefined') {
-    L = (await import('leaflet')).default;
-    latLng = L.latLng(33.7909, -84.3722);
-} else {
-    latLng = { lat: 33.7909, lng: -84.388 };
-}
+let latLng = { lat: 33.7909, lng: -84.388 };
 
 export const onlineStore = writable<boolean>(false);
 export const mavModelStore = writable<string>('UNKNOWN');
