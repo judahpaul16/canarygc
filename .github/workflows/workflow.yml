@@ -34,7 +34,7 @@ jobs:
       - name: Build and push services
         run: |
           # Build frontend service using the production compose file
-          docker-compose -f docker-compose.prod.yml build frontend
+          docker compose -f docker-compose.prod.yml build frontend
 
           # Tag and push the service to Docker Hub
           docker tag mmgcs_frontend ${{ secrets.DOCKERHUB_USERNAME }}/mmgcs
