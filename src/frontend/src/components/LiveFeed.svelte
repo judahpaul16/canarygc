@@ -15,6 +15,7 @@
   $: tertiaryColor = $tertiaryColorStore;
   $: fontColor = darkMode ? '#ffffff' : '#000000';
 
+  let isProduction = false;
   let containerAspect = 16 / 9;
   let videoAspect = 16 / 9;
 
@@ -77,6 +78,15 @@
     fetchLiveFeed();
 
     window.addEventListener('resize', adjustVideoSize);
+
+    let response = fetch('/api/mavlink/heartbeat');
+    response.then((res) => {
+      if (res.status === 200) {
+        isProduction = res.headers.get('isProduction') === 'true';
+      }
+    });
+    let noSignal = document.getElementById('no-signal') as HTMLImageElement;
+    if (!isProduction) noSignal.src = 'simulation.gif';
   });
 </script>
 
@@ -84,7 +94,7 @@
   style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --fontColor: {fontColor};"
 >
   <div class="container w-full h-full relative">
-    <img id="no-signal" src={darkMode ? 'no-signal.gif': 'no-signal-light.gif'} alt="No Signal" class="absolute top-0 w-full h-full object-cover rounded-lg z-10" />
+    <img id="no-signal" src={darkMode && !isProduction ? 'no-signal.gif': 'no-signal-light.gif'} alt="No Signal" class="absolute top-0 w-full h-full object-cover rounded-lg z-10" />
     <iframe allowfullscreen id="live-feed" title="Live Feed" src={ typeof window !== 'undefined' ? `http://${window.location.hostname}:8889/cam`  : ''} class="bg-black absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 object-cover rounded-lg z-0"></iframe>
     <div class="tab absolute top-2 left-2 bg-[#f24e4eb9] text-[#ffffff] text-md px-2 py-1 rounded-full z-20">Live Feed</div>
     <div class="caution-text opacity-[50%] text-md absolute bottom-2 left-2 bg-[#252525cf] px-2 py-1 mr-[0.5em] rounded-full z-20">Use Caution: The feed may be slightly delayed.</div>
