@@ -31,10 +31,15 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GH_TOKEN }}
 
-      - name: Build and push to Docker Hub
+      - name: Build and push services
         run: |
-          timeout 3600 docker buildx build --platform linux/arm64 --no-cache -t ${{ secrets.DOCKERHUB_USERNAME }}/mmgcs:latest --push .
+          # Build frontend service using the production compose file
+          docker-compose -f docker-compose.prod.yml build frontend
 
-      - name: Build and push to GHCR
-        run: |
-          timeout 3600 docker buildx build --platform linux/arm64 --no-cache -t ghcr.io/${{ github.repository_owner }}/mmgcs:latest --push .
+          # Tag and push the service to Docker Hub
+          docker tag mmgcs_frontend ${{ secrets.DOCKERHUB_USERNAME }}/mmgcs
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/mmgcs
+
+          # Tag and push the service to GitHub Container Registry
+          docker tag mmgcs_frontend ghcr.io/${{ github.repository_owner }}/mmgcs
+          docker push ghcr.io/${{ github.repository_owner }}/mmgcs
