@@ -37,9 +37,9 @@ jobs:
           docker compose -f docker-compose.prod.yml build frontend
 
           # Tag and push the service to Docker Hub
-          docker tag mmgcs_frontend ${{ secrets.DOCKERHUB_USERNAME }}/mmgcs
+          docker tag mmgcs_frontend ${{ secrets.DOCKERHUB_USERNAME }}/mmgcs:latest
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/mmgcs
 
           # Tag and push the service to GitHub Container Registry
-          docker tag mmgcs_frontend ghcr.io/${{ github.repository_owner }}/mmgcs
+          docker tag mmgcs_frontend ghcr.io/${{ github.repository_owner }}/mmgcs:latest
           docker push ghcr.io/${{ github.repository_owner }}/mmgcs
