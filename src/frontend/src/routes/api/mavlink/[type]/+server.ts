@@ -26,7 +26,10 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
                 if (logs.length > 0) {
                     const logsToSend = newLogs.slice();
                     newLogs.length = 0; // Clear newLogs
-                    return new Response(JSON.stringify(logsToSend), { status: 200, headers: { 'Content-Type': 'application/json' } });
+                    return new Response(JSON.stringify(logsToSend), { status: 200, headers: {
+                        'Content-Type': 'application/json',
+                        'isProduction': `${process.env.NODE_ENV === 'production'}`,
+                    }});
                 }
 
                 return new Response('No logs available', { status: 503 });
