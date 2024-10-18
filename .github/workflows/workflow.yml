@@ -4,6 +4,21 @@ on:
   release:
     types:
       - published
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Log level'
+        required: true
+        default: 'warning'
+        type: choice
+        options:
+        - info
+        - warning
+        - debug
+      tags:
+        description: 'Test scenario tags'
+        required: false
+        type: boolean
 
 permissions:
   contents: read
@@ -15,6 +30,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Fetch all history, including tags
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -35,28 +52,30 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GH_TOKEN }}
 
-      - name: Get latest release
-        id: get_release
+      - name: Get the version
+        id: get_version
         run: |
-          echo "LATEST_RELEASE=$(curl -sS -H 'Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
-            https://api.github.com/repos/${{ github.repository }}/releases/latest \
-            | jq -r .tag_name)" >> $GITHUB_OUTPUT
+          VERSION=$(git tag | sort --version-sort | tail -n1)
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          echo "VERSION=${VERSION}"
 
       - name: Build and push services
         env:
-          LATEST_RELEASE: ${{ steps.get_release.outputs.LATEST_RELEASE }}
+          VERSION: ${{ steps.get_version.outputs.VERSION }}
         run: |
-          echo "Latest release: $LATEST_RELEASE"
+          echo "Building version: $VERSION"
 
           # Build frontend service using the production compose file
           docker compose -f docker-compose.prod.yml build frontend
 
           # Tag and push the service to Docker Hub
-          docker tag mmgcs-frontend ${{ secrets.DOCKERHUB_USERNAME }}/mmgcs:$LATEST_RELEASE
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/mmgcs:$LATEST_RELEASE
+          docker tag mmgcs-frontend ${{ secrets.DOCKERHUB_USERNAME }}/mmgcs:$VERSION
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/mmgcs:$VERSION
+          docker tag mmgcs-frontend ${{ secrets.DOCKERHUB_USERNAME }}/mmgcs:latest
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/mmgcs:latest
 
           # Tag and push the service to GitHub Container Registry
-          docker tag mmgcs-frontend ghcr.io/${{ github.repository_owner }}/mmgcs:$LATEST_RELEASE
-          docker push ghcr.io/${{ github.repository_owner }}/mmgcs:$LATEST_RELEASE
+          docker tag mmgcs-frontend ghcr.io/${{ github.repository_owner }}/mmgcs:$VERSION
+          docker push ghcr.io/${{ github.repository_owner }}/mmgcs:$VERSION
+          docker tag mmgcs-frontend ghcr.io/${{ github.repository_owner }}/mmgcs:latest
           docker push ghcr.io/${{ github.repository_owner }}/mmgcs:latest
