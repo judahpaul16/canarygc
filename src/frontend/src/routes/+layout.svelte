@@ -345,6 +345,8 @@
   }
 
   onMount(async () => {
+    // @ts-ignore
+    document.querySelector('.bg')!.style.background = "url('bg-map.webp') no-repeat center center fixed";
     pb = new PocketBase(`http://${window.location.hostname}:8090`);
     
     await initializeMissionPlansCollection();
