@@ -1,5 +1,7 @@
 FROM node:21-alpine AS build
 
+LABEL org.opencontainers.image.source https://github.com/MAV-Manager/mmgcs_public
+
 WORKDIR /app
 
 COPY package*.json ./
