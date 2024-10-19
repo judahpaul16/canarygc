@@ -16,6 +16,7 @@ services:
   frontend:
     build:
       context: ./src/frontend
+      dockerfile: Dockerfile.prod
     devices:
       - "/dev/ttyACM0:/dev/ttyACM0"
     ports:
