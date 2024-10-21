@@ -15,6 +15,13 @@ A web-based ground control station (GCS) for remote autopilot management via the
 
 ---
 
+## 🤔 How Does It Work?
+
+Unlike traditional GCS software, MAV Manager GCS is a web-based application that runs on a Raspberry Pi--making it a part of the flight stack. This enables you to manage your autopilot from anywhere in the world, as long as you have an internet connection.
+![Diagram](screenshots/diagram.png)
+
+---
+
 ## 🐚 Setup Script
 
 Be sure to install all the system dependencies before trying to run the docker container. This command will run the setup script located in the contrib folder.
