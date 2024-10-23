@@ -8,7 +8,7 @@
 
     let pb: PocketBase;
     
-    let logs: string[] = get(mavlinkLogStore);
+    let logs: string[] = [];
     let logContainer: HTMLElement;
     let showTimeSync = false;
     let showParamValue = false;
@@ -143,6 +143,9 @@
 
     onMount(() => {
         pb = new PocketBase(`http://${window.location.hostname}:8090`);
+        mavlinkLogStore.subscribe((value) => {
+            logs = value;
+        });
     });
 
     afterUpdate(() => {

@@ -3,15 +3,14 @@
   import DPad from './DPad.svelte';
   import Weather from './Weather.svelte';
   import { mavModeStore, mavAltitudeStore, mavLocationStore } from '../stores/mavlinkStore';
+  import { onMount } from 'svelte';
   import {
     darkModeStore,
     primaryColorStore,
     secondaryColorStore,
     tertiaryColorStore
   } from '../stores/customizationStore';
-  import { get } from 'svelte/store';
 
-  let altitude = get(mavAltitudeStore);
   let maxSpeed: string = '';
   let altitudeSetPoint: string = '';
 
@@ -23,6 +22,12 @@
   $: mavMode = $mavModeStore;
   $: mavLocation = $mavLocationStore;
   $: altitude = $mavAltitudeStore;
+
+  onMount(() => {
+    mavAltitudeStore.subscribe((value) => {
+      altitude = value;
+    });
+  });
 
   async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
     const response = await fetch(`/api/mavlink/send_command`, {

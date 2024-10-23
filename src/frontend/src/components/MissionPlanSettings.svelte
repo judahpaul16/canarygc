@@ -4,7 +4,6 @@
     import {
         missionPlanTitleStore,
         missionPlanActionsStore,
-        missionCompleteStore,
         type MissionPlanActions
         } from "../stores/missionPlanStore";
     import Modal from "./Modal.svelte";
@@ -21,7 +20,7 @@
 
     let pb: PocketBase;
 
-    let actions: MissionPlanActions = get(missionPlanActionsStore);
+    let actions: MissionPlanActions = {};
     let title: string = "";
 
     $: title = $missionPlanTitleStore
@@ -120,7 +119,6 @@
 
         missionPlanTitleStore.set(title);
         missionPlanActionsStore.set(actions);
-        missionCompleteStore.set(false);
         try {
             let response = await fetch("/api/mavlink/load_mission", {
                 method: "POST",
@@ -245,6 +243,10 @@
     }
 
     async function exportMissionPlan() {
+        missionPlanActionsStore.subscribe((value) => {
+            actions = value;
+        });
+        
         const blob = new Blob([JSON.stringify(actions)], {
             type: "application/json",
         });

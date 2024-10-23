@@ -2,27 +2,12 @@
 
 # Update system and install necessary packages
 sudo apt-get update
-sudo apt-get -y install docker.io nginx ufw
-
-# Enable and start the firewall
-echo "y" | sudo ufw enable
-sudo ufw allow 22
-sudo ufw allow 8554
-sudo ufw allow 8556
-sudo ufw allow 5173
-sudo ufw allow 8090
-echo "y" | sudo ufw reload
-
-sudo chown -R $(whoami):www-data /home/$(whoami)
+sudo apt-get -y install docker.io nginx
 
 DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
-# check if docker compose is installed
-
-if ! [ "$(command -v docker compose)" ]; then
-    mkdir -p $DOCKER_CONFIG/cli-plugins
-    curl -SL https://github.com/docker/compose/releases/download/v2.3.3/docker-compose-linux-aarch64 -o $DOCKER_CONFIG/cli-plugins/docker-compose
-    chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
-fi
+mkdir -p $DOCKER_CONFIG/cli-plugins
+curl -SL https://github.com/docker/compose/releases/download/v2.3.3/docker-compose-linux-aarch64 -o $DOCKER_CONFIG/cli-plugins/docker-compose
+chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
 
 # May need to logout and login to apply docker group changes
 if ! docker ps >/dev/null 2>&1; then

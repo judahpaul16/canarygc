@@ -24,15 +24,14 @@ services:
     container_name: mmgcs_frontend
     environment:
       - CHOKIDAR_USEPOLLING=true
-      - NODE_ENV=development
     deploy:
       resources:
         limits:
           memory: 700m
-    depends_on:
-      - sitl
     restart: always
 
+  # ArduPilot SITL Service - Uncomment for development
+  # https://ardupilot.org/dev/docs/sitl-simulator-software-in-the-loop.html
   sitl:
     image: radarku/ardupilot-sitl:latest
     environment:

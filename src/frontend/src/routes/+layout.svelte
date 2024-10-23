@@ -170,26 +170,17 @@
   }
 
   async function cleanupBlackBoxCollection() {
-    try {
-      let records = await pb.collection('blackbox').getFullList();
-      if (records.length > 1000) {
-        // Sort records by creation date (or timestamp) to find the oldest ones
-        records.sort((a, b) => new Date(a.created).getTime() - new Date(b.created).getTime());
+    let records = await pb.collection('blackbox').getFullList();
+    if (records.length > 1000) {
+      // Sort records by creation date (or timestamp) to find the oldest ones
+      records.sort((a, b) => new Date(a.created).getTime() - new Date(b.created).getTime());
 
-        // Keep the latest 1,000 records
-        let recordsToDelete = records.slice(0, records.length - 1000);
+      // Keep the latest 1,000 records
+      let recordsToDelete = records.slice(0, records.length - 1000);
 
-        // Delete the selected records
-        let deletePromises = recordsToDelete.map(record => pb.collection('blackbox').delete(record.id));
-        Promise.all(deletePromises);
-      }
-    } catch (error: any) {
-      if (error.message.includes('The request was autocancelled')) {
-        // ignore it
-      } else {
-        console.error('Error:', error.message || error);
-        console.error('Stack Trace:', error.stack || 'No stack trace available');
-      }
+      // Delete the selected records
+      let deletePromises = recordsToDelete.map(record => pb.collection('blackbox').delete(record.id));
+      Promise.all(deletePromises);
     }
   }
 
