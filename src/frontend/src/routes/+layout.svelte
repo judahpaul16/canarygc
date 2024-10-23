@@ -191,138 +191,197 @@
       }
     }
   }
+  type MessageHandler = (text: string) => void;
+
+  interface Position {
+    lat: number;
+    lng: number;
+  }
+
+  interface SatelliteInfo {
+    total: number;
+    hdop: number;
+  }
+
+  interface NotificationConfig {
+    title: string;
+    content: string;
+    type: 'success' | 'warning' | 'error' | 'info';
+    duration?: number;
+  }
+
+  // Helper functions to extract and parse values from log text
+  const extractValue = (text: string, pattern: string): string | null => {
+    const match = text.match(new RegExp(`"${pattern}":\\-?(\\d+)`, 'g'));
+    return match ? match.toString().replace(`"${pattern}":`, '') : null;
+  };
+
+  const parseLocation = (lat: string | null, lon: string | null): Position | null => {
+    if (!lat || !lon) return null;
+    return {
+      lat: parseFloat(lat) / 1e7,
+      lng: parseFloat(lon) / 1e7
+    };
+  };
+
+  const calculateSpeed = (text: string): number | null => {
+    const vx = parseInt(extractValue(text, 'vx') || '0') / 100;
+    const vy = parseInt(extractValue(text, 'vy') || '0') / 100;
+    const vz = parseInt(extractValue(text, 'vz') || '0') / 100;
+    return Math.sqrt(Math.pow(vx, 2) + Math.pow(vy, 2) + Math.pow(vz, 2));
+  };
+
+  const showNotification = (config: NotificationConfig) => {
+    const notification = new Notification({
+      target: document.body,
+      props: {
+        title: config.title,
+        content: config.content,
+        type: config.type
+      }
+    });
+    setTimeout(() => notification.$destroy(), config.duration || 10000);
+  };
+
+  // Message handlers for different MAVLink message types
+  const messageHandlers: Record<string, MessageHandler> = {
+    GLOBAL_POSITION_INT: (text: string) => {
+      const lat = extractValue(text, 'lat');
+      const lon = extractValue(text, 'lon');
+      const position = parseLocation(lat, lon);
+      if (position) mavLocationStore.set(position);
+
+      const heading = extractValue(text, 'hdg');
+      if (heading) mavHeadingStore.set(parseFloat(heading) / 100);
+
+      const altitude = extractValue(text, 'alt');
+      if (altitude) mavAltitudeStore.set(parseFloat(altitude) / 1000);
+
+      const speed = calculateSpeed(text);
+      if (speed) mavSpeedStore.set(parseFloat(speed.toFixed(2)));
+    },
+
+    GPS_RAW_INT: (text: string) => {
+      const eph = extractValue(text, 'eph');
+      const satellites = extractValue(text, 'satellitesVisible');
+      if (eph && satellites) {
+        const satInfo: SatelliteInfo = {
+          total: parseInt(satellites),
+          hdop: parseFloat(eph) * 1e-2
+        };
+        mavSatelliteStore.set(satInfo);
+      }
+    },
+
+    HEARTBEAT: (text: string) => {
+      let toProperCase = (str: string): string => {
+        return str.replace(/\w\S*/g, function(txt) {
+          return txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase();
+        });
+      }
+      const type = extractValue(text, 'type');
+      if (type) mavTypeStore.set(toProperCase(MavType[parseInt(type)]));
+
+      const model = extractValue(text, 'autopilot');
+      if (model) mavModelStore.set(MavAutopilot[parseInt(model)]);
+
+      const state = extractValue(text, 'systemStatus');
+      if (state) mavStateStore.set(MavState[parseInt(state)]);
+
+      const baseMode = extractValue(text, 'baseMode');
+      if (baseMode) mavArmedStateStore.set(parseInt(baseMode) === 209);
+
+      const customMode = extractValue(text, 'customMode');
+      if (customMode) mavModeStore.set(CopterMode[parseInt(customMode)]);
+    },
+
+    MISSION_CURRENT: (text: string) => {
+      const index = extractValue(text, 'seq');
+      if (index) missionIndexStore.set(parseInt(index));
+    },
+
+    MISSION_ITEM_REACHED: (text: string) => {
+      const index = extractValue(text, 'seq');
+      if (!index) return;
+      
+      const indexNum = parseInt(index);
+      if (indexNum === Object.keys($missionPlanActionsStore).length - 1) {
+        missionCompleteStore.set(true);
+      }
+
+      const action = actions[indexNum];
+      showNotification({
+        title: 'Waypoint Reached',
+        content: `${index}: ${action.type}<br>lat: ${action.lat} °<br>lng: ${action.lon} °<br>alt: ${action.alt === null ? 0 : action.alt} m`,
+        type: 'success'
+      });
+    },
+
+    SYS_STATUS: (text: string) => {
+      const battery = extractValue(text, 'batteryRemaining');
+      if (battery) mavBatteryStore.set(parseInt(battery));
+    },
+
+    COMMAND_ACK: (text: string) => {
+      const command = extractValue(text, 'command');
+      const result = extractValue(text, 'result');
+      
+      if (!command || !result) return;
+      
+      const commandName = MavCmd[parseInt(command)];
+      const resultName = MavResult[parseInt(result)];
+      
+      if (commandName === 'REQUEST_MESSAGE') return;
+
+      let type: NotificationConfig['type'] = 'success';
+      if (resultName !== 'ACCEPTED') {
+        type = resultName.includes('FAILED') || 
+              resultName.includes('DENIED') || 
+              resultName.includes('UNSUPPORTED') ? 'error' : 'warning';
+      }
+
+      showNotification({
+        title: 'Command Acknowledged',
+        content: `Command: ${commandName}<br>Result: ${resultName}`,
+        type
+      });
+    },
+
+    STATUSTEXT: (text: string) => {
+      const severity = extractValue(text, 'severity');
+      const statusText = text.match(/"text":"(.+?)"/)?.[0]
+        ?.replace('"text":"', '')
+        ?.replace('"', '');
+
+      if (!severity || !statusText) return;
+
+      const severityLevel = parseInt(severity);
+      const type: NotificationConfig['type'] = 
+        severityLevel <= 3 ? 'error' :
+        severityLevel === 4 ? 'warning' : 'info';
+
+      showNotification({
+        title: 'Status Message',
+        content: statusText,
+        type
+      });
+    }
+  };
 
   async function getLogs(text: string) {
     // truncate old logs to save memory
     logs = logs.slice(-1000);
 
-    if (text && !logs.includes(text)) {
-      logs = [...logs, text];
-      mavlinkLogStore.set(logs);
+    if (!text || logs.includes(text)) return;
 
-      if ((text as string).includes('GLOBAL_POSITION_INT')) {
-        let lat: string | RegExpMatchArray | null = (text as string).match(/"lat":\-?(\d+)/g);
-        let lon: string | RegExpMatchArray | null = (text as string).match(/"lon":\-?(\d+)/g);
-        if (lat) lat = lat.toString().replace('"lat":', '');
-        if (lon) lon = lon.toString().replace('"lon":', '');
-        if (lat && lon) mavLocationStore.set({ lat: parseFloat(lat)/1e7, lng: parseFloat(lon)/1e7 });
-        let heading: string | RegExpMatchArray | null = (text as string).match(/"hdg":(\d+)/g);
-        if (heading) heading = heading.toString().replace('"hdg":', '');
-        if (heading) mavHeadingStore.set(parseFloat(heading)/100);
-        let altitude: string | RegExpMatchArray | null = (text as string).match(/"alt":(\d+)/g);
-        if (altitude) altitude = altitude.toString().replace('"alt":', '');
-        if (altitude) mavAltitudeStore.set(parseFloat(altitude)/1000);
-        let vx: number | string | RegExpMatchArray | null = parseInt((text as string).match(/"vx":(\-?\d+)/g)!.toString().replace('"vx":', '')) / 100;
-        let vy: number | string | RegExpMatchArray | null = parseInt((text as string).match(/"vy":(\-?\d+)/g)!.toString().replace('"vy":', '')) / 100;
-        let vz: number | string | RegExpMatchArray | null = parseInt((text as string).match(/"vz":(\-?\d+)/g)!.toString().replace('"vz":', '')) / 100;
-        let speed: number = Math.sqrt(Math.pow(vx, 2) + Math.pow(vy, 2) + Math.pow(vz, 2));
-        if (speed) mavSpeedStore.set(parseFloat(speed.toFixed(2)));
-      } else if ((text as string).includes('GPS_RAW_INT')) {
-        let eph: string | RegExpMatchArray | null = (text as string).match(/"eph":(\d+)/g);
-        let satellites_visible: string | RegExpMatchArray | null = (text as string).match(/"satellitesVisible":(\d+)/g);
-        if (eph && satellites_visible) {
-          eph = eph.toString().replace('"eph":', '');
-          satellites_visible = satellites_visible.toString().replace('"satellitesVisible":', '');
-          mavSatelliteStore.set({ total: parseInt(satellites_visible), hdop: parseFloat(eph) * 1e-2 });
-        }
-      } else if ((text as string).includes('HEARTBEAT')) {
-        let type: string | RegExpMatchArray | null = (text as string).match(/"type":(\d+)/g);
-        // @ts-ignore
-        if (type) type = MavType[parseInt(type.toString().replace('"type":', ''))].toProperCase();
-        if (type) mavTypeStore.set(type as string);
-        let model: string | RegExpMatchArray | null = (text as string).match(/"autopilot":(\d+)/g);
-        if (model) model = model.toString().replace('"autopilot":', '');
-        if (model) mavModelStore.set(MavAutopilot[parseInt(model)]);
-        let state: string | RegExpMatchArray | null = (text as string).match(/"systemStatus":(\d+)/g);
-        if (state) state = MavState[parseInt(state.toString().replace('"systemStatus":', ''))];
-        if (state) mavStateStore.set(state as string);
-        let baseMode: string | RegExpMatchArray | null = (text as string).match(/"baseMode":(\d+)/g);
-        let customMode: string | RegExpMatchArray | null = (text as string).match(/"customMode":(\d+)/g);
-        if (baseMode) {
-          baseMode = baseMode.toString().replace('"baseMode":', '');
-          mavArmedStateStore.set(parseInt(baseMode) === 209);
-        }
-        if (customMode) {
-          customMode = customMode.toString().replace('"customMode":', '');
-          mavModeStore.set(CopterMode[parseInt(customMode)]);
-        }
-      } else if ((text as string).includes('MISSION_CURRENT')) {
-        let index: string | RegExpMatchArray | null = (text as string).match(/"seq":(\d+)/g);
-        if (index) index = index.toString().replace('"seq":', '');
-        if (index) missionIndexStore.set(parseInt(index));
-      } else if ((text as string).includes('MISSION_ITEM_REACHED')) {
-        let index: string | RegExpMatchArray | null = (text as string).match(/"seq":(\d+)/g);
-        if (index) index = index.toString().replace('"seq":', '');
-        if (index && parseInt(index) === Object.keys($missionPlanActionsStore).length - 1)
-          missionCompleteStore.set(true);
-        if (index) {
-          const notification = new Notification({
-            target: document.body,
-            props: {
-              title: 'Waypoint Reached',
-              content: `${index}: ${actions[parseInt(index)].type}<br>lat: ${actions[parseInt(index)].lat} °<br>lng: ${actions[parseInt(index)].lon} °<br>alt: ${actions[parseInt(index)].alt === null ? 0 : actions[parseInt(index)].alt} m`,
-              type: 'success'
-            }
-          });
-          setTimeout(() => notification.$destroy(), 10000);
-        }
-      } else if ((text as string).includes('SYS_STATUS')) {
-        let battery: string | RegExpMatchArray | null = (text as string).match(/"batteryRemaining":(\d+)/g);
-        if (battery) battery = battery.toString().replace('"batteryRemaining":', '');
-        if (battery) mavBatteryStore.set(parseInt(battery));
-      } else if ((text as string).includes('COMMAND_ACK')) {
-        let command: string | RegExpMatchArray | null = (text as string).match(/"command":(\d+)/g);
-        let result: string | RegExpMatchArray | null = (text as string).match(/"result":(\d+)/g);
-        if (command && result) {
-          command = MavCmd[parseInt(command.toString().replace('"command":', ''))];
-          result = MavResult[parseInt(result.toString().replace('"result":', ''))];
-          let type = result === 'ACCEPTED' ? 'success' : 'warning';
-          if (result.includes('FAILED') || result.includes('DENIED') || result.includes('UNSUPPORTED')) type = 'error';
-          if (command !== 'REQUEST_MESSAGE') {
-            const notification = new Notification({
-              target: document.body,
-              props: {
-                title: 'Command Acknowledged',
-                content: `Command: ${command}<br>Result: ${result}`,
-                type: type
-              }
-            });
-            setTimeout(() => notification.$destroy(), 10000);
-          }
-        }
-      } else if ((text as string).includes('STATUSTEXT')) {
-        let severity: string | RegExpMatchArray | null = (text as string).match(/"severity":(\d+)/g);
-        let statusText: string | RegExpMatchArray | null = (text as string).match(/"text":"(.+?)"/g);
-        if (severity && statusText) {
-          severity = severity.toString().replace('"severity":', '');
-          statusText = statusText.toString().replace('"text":"', '').replace('"', '');
-          let type;
-          switch (parseInt(severity)) {
-            case 0:
-            case 1:
-            case 2:
-            case 3:
-              type = 'error';
-              break;
-            case 4:
-              type = 'warning';
-              break;
-            case 5:
-            case 6:
-            case 7:
-            default:
-              type = 'info';
-          }
-          const notification = new Notification({
-            target: document.body,
-            props: {
-              title: 'Status Message',
-              content: statusText,
-              type: type
-            }
-          });
-          setTimeout(() => notification.$destroy(), 10000);
-        }
+    logs = [...logs, text];
+    mavlinkLogStore.set(logs);
+
+    // Find which message type this is and process it
+    for (const [messageType, handler] of Object.entries(messageHandlers)) {
+      if (text.includes(messageType)) {
+        handler(text);
+        break;
       }
     }
   }
