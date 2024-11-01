@@ -1,4 +1,4 @@
-<svelte:options accessors={true} />
+<svelte:options runes={true} />
 <script lang="ts">
   import {
     darkModeStore,
@@ -7,11 +7,11 @@
     tertiaryColorStore
   } from '../stores/customizationStore';
 
-  $: darkMode = $darkModeStore;
-  $: primaryColor = $primaryColorStore;
-  $: secondaryColor = darkMode ? $tertiaryColorStore : $secondaryColorStore;
-  $: tertiaryColor = $tertiaryColorStore;
-  $: fontColor = darkMode ? "#ffffff" : "#000000";
+  let darkMode = $derived($darkModeStore);
+  let primaryColor = $derived($primaryColorStore);
+  let secondaryColor = $derived(darkMode ? $tertiaryColorStore : $secondaryColorStore);
+  let tertiaryColor = $derived($tertiaryColorStore);
+  let fontColor = $derived(darkMode ? "#ffffff" : "#000000");
 </script>
 
 <div class="fixed inset-0 flex items-center justify-center z-50 bg-[#00000080]"
@@ -30,7 +30,7 @@ style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --ter
             </p>
         </div>
         <div class="px-4 py-2 flex justify-center">
-            <button class="px-2 py-1 mb-2 text-center bg-slate-400 hover:bg-[#ff3333] text-white rounded-lg" on:click={() => window.location.reload()}>
+            <button class="px-2 py-1 mb-2 text-center bg-slate-400 hover:bg-[#ff3333] text-white rounded-lg" onclick={() => window.location.reload()}>
                 Refresh Window
             </button>
         </div>

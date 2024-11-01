@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import { onMount } from 'svelte';
   import { mavLocationStore, mavHeadingStore } from '../stores/mavlinkStore';
   import {
@@ -8,21 +10,15 @@
     tertiaryColorStore
   } from '../stores/customizationStore';
   
-  export let mavLocation: L.LatLng | { lat: number; lng: number };
-  let heading: string;
+  interface Props {
+    mavLocation: L.LatLng | { lat: number; lng: number };
+  }
 
-  $: darkMode = $darkModeStore;
-  $: primaryColor = $primaryColorStore;
-  $: secondaryColor = $secondaryColorStore;
-  $: tertiaryColor = $tertiaryColorStore;
-  $: fontColor = darkMode ? '#ffffff' : '#000000';
+  let { mavLocation = $bindable() }: Props = $props();
+  let heading: string = $state();
 
-  $: mavLocation = $mavLocationStore,
-    updateCompass($mavHeadingStore);
-  $: heading = formatHeading($mavHeadingStore);
 
-  $: currentLat = formatCoordinates(mavLocation.lat, true);
-  $: currentLong = formatCoordinates(mavLocation.lng, false);
+
 
   onMount(() => {
     const updateHeading = (newHeading: number) => {
@@ -67,6 +63,20 @@
       }
     }
   }
+  let darkMode = $derived($darkModeStore);
+  let primaryColor = $derived($primaryColorStore);
+  let secondaryColor = $derived($secondaryColorStore);
+  let tertiaryColor = $derived($tertiaryColorStore);
+  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
+  run(() => {
+    mavLocation = $mavLocationStore,
+      updateCompass($mavHeadingStore);
+  });
+  run(() => {
+    heading = formatHeading($mavHeadingStore);
+  });
+  let currentLat = $derived(formatCoordinates(mavLocation.lat, true));
+  let currentLong = $derived(formatCoordinates(mavLocation.lng, false));
 </script>
 
 <div class="compass rounded-2xl flex flex-col items-center justify-center h-full w-full overflow-auto p-4"

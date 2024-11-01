@@ -1,14 +1,18 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import { mavModeStore, mavAltitudeStore } from '../stores/mavlinkStore';
   import { get } from 'svelte/store';
   import { primaryColorStore, tertiaryColorStore } from '../stores/customizationStore';
 
-  let altitude: number = get(mavAltitudeStore);
+  let altitude: number = $state(get(mavAltitudeStore));
 
-  $: primaryColor = $primaryColorStore;
-  $: tertiaryColor = $tertiaryColorStore;
-  $: mavMode = $mavModeStore;
-  $: altitude = $mavAltitudeStore;
+  let primaryColor = $derived($primaryColorStore);
+  let tertiaryColor = $derived($tertiaryColorStore);
+  let mavMode = $derived($mavModeStore);
+  run(() => {
+    altitude = $mavAltitudeStore;
+  });
 
   async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
     const response = await fetch(`/api/mavlink/send_command`, {
@@ -47,25 +51,25 @@
 
 <div class="dpad-container relative flex items-center justify-center w-48 h-48">
   <nav class="d-pad relative" style="--tertiaryColor: {tertiaryColor}">
-    <button class="up" on:click={() => {
+    <button class="up" onclick={() => {
         if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
         setPositionLocal('10', '0', `-${altitude}`);
       }}>
       <i class="fas fa-chevron-up"></i>
     </button>
-    <button class="right" on:click={() => {
+    <button class="right" onclick={() => {
         if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
         setPositionLocal('0', '10', `-${altitude}`);
       }}>
       <i class="fas fa-chevron-right"></i>
     </button>
-    <button class="down" on:click={() => {
+    <button class="down" onclick={() => {
         if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
         setPositionLocal('-10', '0', `-${altitude}`);
       }}>
       <i class="fas fa-chevron-down"></i>
     </button>
-    <button class="left" on:click={() => {
+    <button class="left" onclick={() => {
         if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
         setPositionLocal('0', '-10', `-${altitude}`);
       }}>

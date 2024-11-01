@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { preventDefault } from 'svelte/legacy';
+
   import PocketBase from 'pocketbase';
   import { authData } from '../../stores/authStore';
   import { goto } from '$app/navigation';
@@ -10,15 +12,15 @@
   } from '../../stores/customizationStore';
   import { onMount } from 'svelte';
 
-  $: darkMode = $darkModeStore;
-  $: primaryColor = $primaryColorStore;
-  $: secondaryColor = $secondaryColorStore;
-  $: tertiaryColor = $tertiaryColorStore;
-  $: fontColor = darkMode ? '#ffffff' : '#000000';
+  let darkMode = $derived($darkModeStore);
+  let primaryColor = $derived($primaryColorStore);
+  let secondaryColor = $derived($secondaryColorStore);
+  let tertiaryColor = $derived($tertiaryColorStore);
+  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
 
-  let email = '';
-  let password = '';
-  let error = '';
+  let email = $state('');
+  let password = $state('');
+  let error = $state('');
 
   let pb: PocketBase;
   
@@ -67,7 +69,7 @@
     {#if error}
       <div class="mb-4 p-2 bg-red-100 text-red-700 rounded">{error}</div>
     {/if}
-    <form on:submit|preventDefault={login}>
+    <form onsubmit={preventDefault(login)}>
       <div class="mb-4">
         <label for="email" class="block">Email</label>
         <input type="email" id="email" bind:value={email} class="w-full px-3 py-2 rounded" required />

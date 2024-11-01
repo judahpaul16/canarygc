@@ -23,6 +23,7 @@
   import Modal from './Modal.svelte';
   import Notification from './Notification.svelte';
   import type { LatLng } from 'leaflet';
+import { mount } from "svelte";
 
   export let mavModel: string = get(mavModelStore);
   export let mavType: string = get(mavTypeStore);
@@ -162,172 +163,172 @@
   }
 
   function confirmCalibration() {
-    let modal = new Modal({
-      target: document.body,
-      props: {
-        title: 'Sensor Calibration',
-        content: 'Are you sure you want to calibrate the sensors? If so please manually specify the current heading (direction) of the MAV in degrees.',
-        inputs: [
-          {
-            type: 'number',
-            placeholder: 'Current Heading',
+    let modal = mount(Modal, {
+          target: document.body,
+          props: {
+            title: 'Sensor Calibration',
+            content: 'Are you sure you want to calibrate the sensors? If so please manually specify the current heading (direction) of the MAV in degrees.',
+            inputs: [
+              {
+                type: 'number',
+                placeholder: 'Current Heading',
+              }
+            ],
+            isOpen: true,
+            confirmation: true,
+            notification: false,
+            onConfirm: async () => {
+              await sendMavlinkCommand('FIXED_MAG_CAL_YAW', `${[isNaN(parseInt(modal.inputValues![0])) ? 0 : modal.inputValues![0], 0, mavLocation.lat, mavLocation.lng]}`);
+              await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds
+              await sendMavlinkCommand('PREFLIGHT_CALIBRATION', `${[0, 0, 0, 0, 4, 0, 0, 0]}`);
+              unmount(modal);
+            }
           }
-        ],
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        onConfirm: async () => {
-          await sendMavlinkCommand('FIXED_MAG_CAL_YAW', `${[isNaN(parseInt(modal.inputValues![0])) ? 0 : modal.inputValues![0], 0, mavLocation.lat, mavLocation.lng]}`);
-          await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds
-          await sendMavlinkCommand('PREFLIGHT_CALIBRATION', `${[0, 0, 0, 0, 4, 0, 0, 0]}`);
-          modal.$destroy();
-        }
-      }
-    });
+        });
   }
 
   function stopMission() {
-    let modal = new Modal({
-      target: document.body,
-      props: {
-        title: 'Stop Mission',
-        content: 'Are you sure you want to stop the flight?',
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        onConfirm: async () => {
-          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 6]}`); // 6 is RTL: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
-          modal.$destroy();
-          const notification = new Notification({
-            target: document.body,
-            props: {
-              title: 'Mission Stopped',
-              content: 'The mission has been stopped.<br>Returning to launch.',
-              type: 'info',
-            }
-          });
-          setTimeout(() => notification.$destroy(), 10000);
-        },
-      }
-    });
+    let modal = mount(Modal, {
+          target: document.body,
+          props: {
+            title: 'Stop Mission',
+            content: 'Are you sure you want to stop the flight?',
+            isOpen: true,
+            confirmation: true,
+            notification: false,
+            onConfirm: async () => {
+              await sendMavlinkCommand('DO_SET_MODE' , `${[1, 6]}`); // 6 is RTL: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+              unmount(modal);
+              const notification = mount(Notification, {
+                              target: document.body,
+                              props: {
+                                title: 'Mission Stopped',
+                                content: 'The mission has been stopped.<br>Returning to launch.',
+                                type: 'info',
+                              }
+                            });
+              setTimeout(() => unmount(notification), 10000);
+            },
+          }
+        });
   }
 
   function pauseMission() {
-    let modal = new Modal({
-      target: document.body,
-      props: {
-        title: 'Pause Mission',
-        content: 'Are you sure you want to pause the flight?',
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        onConfirm: async () => {
-          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 16]}`); // 16 is POSHOLD: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
-          modal.$destroy();
-          const notification = new Notification({
-            target: document.body,
-            props: {
-              title: 'Mission Paused',
-              content: 'The mission has been paused.',
-              type: 'info',
-            }
-          });
-          setTimeout(() => notification.$destroy(), 10000);
-        },
-      }
-    });
+    let modal = mount(Modal, {
+          target: document.body,
+          props: {
+            title: 'Pause Mission',
+            content: 'Are you sure you want to pause the flight?',
+            isOpen: true,
+            confirmation: true,
+            notification: false,
+            onConfirm: async () => {
+              await sendMavlinkCommand('DO_SET_MODE' , `${[1, 16]}`); // 16 is POSHOLD: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+              unmount(modal);
+              const notification = mount(Notification, {
+                              target: document.body,
+                              props: {
+                                title: 'Mission Paused',
+                                content: 'The mission has been paused.',
+                                type: 'info',
+                              }
+                            });
+              setTimeout(() => unmount(notification), 10000);
+            },
+          }
+        });
   }
 
   function resumeMission() {
-    let modal = new Modal({
-      target: document.body,
-      props: {
-        title: 'Start / Resume Mission',
-        content: 'Are you sure you want to resume the flight?',
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        onConfirm: async () => {
-          missionIndexStore.set(1);
-          missionCompleteStore.set(false);
-          if (get(mavStateStore) === 'STANDBY') {
-            await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
-            await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[1, 0]}`); // param2: 21196 bypasses pre-arm checks
-            await sendMavlinkCommand('NAV_TAKEOFF', `${[0, 0, 0, 0, 0, 0, 10]}`);
-            await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds
+    let modal = mount(Modal, {
+          target: document.body,
+          props: {
+            title: 'Start / Resume Mission',
+            content: 'Are you sure you want to resume the flight?',
+            isOpen: true,
+            confirmation: true,
+            notification: false,
+            onConfirm: async () => {
+              missionIndexStore.set(1);
+              missionCompleteStore.set(false);
+              if (get(mavStateStore) === 'STANDBY') {
+                await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+                await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[1, 0]}`); // param2: 21196 bypasses pre-arm checks
+                await sendMavlinkCommand('NAV_TAKEOFF', `${[0, 0, 0, 0, 0, 0, 10]}`);
+                await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds
+              }
+              await sendMavlinkCommand('DO_SET_MODE' , `${[1, 3]}`); // 3 is AUTO Mode: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+              unmount(modal);
+              const notification = mount(Notification, {
+                              target: document.body,
+                              props: {
+                                title: 'Mission Started',
+                                content: 'The mission has been started.',
+                                type: 'info',
+                              }
+                            });
+              setTimeout(() => unmount(notification), 10000);
+            },
           }
-          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 3]}`); // 3 is AUTO Mode: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
-          modal.$destroy();
-          const notification = new Notification({
-            target: document.body,
-            props: {
-              title: 'Mission Started',
-              content: 'The mission has been started.',
-              type: 'info',
-            }
-          });
-          setTimeout(() => notification.$destroy(), 10000);
-        },
-      }
-    });
+        });
   }
 
   function releasePayload() {
-    let modal = new Modal({
-      target: document.body,
-      props: {
-        title: 'Confirm Release Payload',
-        content: 'Are you sure you want to release the payload?\nUse caution and ensure the drop zone is clear.',
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        onConfirm: async () => {
-          await sendMavlinkCommand('DO_GRIPPER' , `${[1, 0]}`); // param2 - 0: release, 1: grip
-          modal.$destroy();
-        },
-      }
-    });
+    let modal = mount(Modal, {
+          target: document.body,
+          props: {
+            title: 'Confirm Release Payload',
+            content: 'Are you sure you want to release the payload?\nUse caution and ensure the drop zone is clear.',
+            isOpen: true,
+            confirmation: true,
+            notification: false,
+            onConfirm: async () => {
+              await sendMavlinkCommand('DO_GRIPPER' , `${[1, 0]}`); // param2 - 0: release, 1: grip
+              unmount(modal);
+            },
+          }
+        });
   }
 
   function initTakeoff() {
-    let modal = new Modal({
-      target: document.body,
-      props: {
-        title: 'Confirm Takeoff',
-        content: 'Are you sure you want to initiate takeoff? If so please specify the altitude.',
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        inputs: [
-          {
-            type: 'number',
-            placeholder: 'Altitude (m)',
+    let modal = mount(Modal, {
+          target: document.body,
+          props: {
+            title: 'Confirm Takeoff',
+            content: 'Are you sure you want to initiate takeoff? If so please specify the altitude.',
+            isOpen: true,
+            confirmation: true,
+            notification: false,
+            inputs: [
+              {
+                type: 'number',
+                placeholder: 'Altitude (m)',
+              }
+            ],
+            onConfirm: async () => {
+              await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // param2: 4 (GUIDED) see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+              await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[1, 0]}`); // param2: 21196 bypasses pre-arm checks
+              await sendMavlinkCommand('NAV_TAKEOFF', `${[0, 0, 0, 0, 0, 0, parseInt(modal.inputValues![0])]}`);
+            },
           }
-        ],
-        onConfirm: async () => {
-          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // param2: 4 (GUIDED) see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
-          await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[1, 0]}`); // param2: 21196 bypasses pre-arm checks
-          await sendMavlinkCommand('NAV_TAKEOFF', `${[0, 0, 0, 0, 0, 0, parseInt(modal.inputValues![0])]}`);
-        },
-      }
-    });
+        });
   }
   
   function initLanding() {
-    let modal = new Modal({
-      target: document.body,
-      props: {
-        title: 'Confirm Landing',
-        content: 'Are you sure you want to land the MAV?',
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        onConfirm: async () => {
-          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // param2: 4 (GUIDED) see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
-          await sendMavlinkCommand('NAV_LAND', `${[0, 0, 0, 0, mavLocation.lat, mavLocation.lng, 0]}`);
-        },
-      }
-    });
+    let modal = mount(Modal, {
+          target: document.body,
+          props: {
+            title: 'Confirm Landing',
+            content: 'Are you sure you want to land the MAV?',
+            isOpen: true,
+            confirmation: true,
+            notification: false,
+            onConfirm: async () => {
+              await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // param2: 4 (GUIDED) see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+              await sendMavlinkCommand('NAV_LAND', `${[0, 0, 0, 0, mavLocation.lat, mavLocation.lng, 0]}`);
+            },
+          }
+        });
   }
   
   function checkMode(target: string, mode: string) {

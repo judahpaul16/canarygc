@@ -8,9 +8,9 @@
   import { mavLocationStore } from '../../stores/mavlinkStore';
   import { secondaryColorStore } from '../../stores/customizationStore';
 
-  $: user = $authData;
-  $: mavLocation = $mavLocationStore;
-  $: secondaryColor = $secondaryColorStore;
+  let user = $derived($authData);
+  let mavLocation = $derived($mavLocationStore);
+  let secondaryColor = $derived($secondaryColorStore);
 
 </script>
 

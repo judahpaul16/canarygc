@@ -4,7 +4,7 @@
     missionPlanTitleStore,
     missionPlanActionsStore,
     missionCompleteStore,
-    type MissionPlanActions
+    type MissionPlanActions,
   } from "../stores/missionPlanStore";
   import Modal from "./Modal.svelte";
   import { onMount } from "svelte";
@@ -12,8 +12,8 @@
     darkModeStore,
     primaryColorStore,
     secondaryColorStore,
-    tertiaryColorStore
-  } from '../stores/customizationStore';
+    tertiaryColorStore,
+  } from "../stores/customizationStore";
   import Notification from "./Notification.svelte";
 
   let pb: PocketBase;
@@ -37,14 +37,18 @@
     getMissionPlans();
   });
 
-  async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
+  async function sendMavlinkCommand(
+    command: string,
+    params: string = "",
+    useArduPilotMega: string = "false"
+  ) {
     const response = await fetch(`/api/mavlink/send_command`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'content-type': 'application/json',
-        'command': command,
-        'params': params,
-        'useArduPilotMega': useArduPilotMega
+        "content-type": "application/json",
+        command: command,
+        params: params,
+        useArduPilotMega: useArduPilotMega,
       },
     });
     if (response.ok) {
@@ -65,31 +69,34 @@
       console.error("Error fetching mission plans:", error);
     }
   }
-  
+
   async function loadMissionPlan(plan: any) {
-    const modal = new Modal({
+    const modal = mount(Modal, {
       target: document.body,
       props: {
         title: "Load Mission Plan",
-        content: "Are you sure you want to load this mission plan? This action will overwrite the currently loaded mission plan.",
+        content:
+          "Are you sure you want to load this mission plan? This action will overwrite the currently loaded mission plan.",
         isOpen: true,
         confirmation: true,
         notification: false,
         onConfirm: async (p: any = plan) => {
-          let response = await pb.collection("mission_plans").getFirstListItem(`id = "${p.id}"`);
+          let response = await pb
+            .collection("mission_plans")
+            .getFirstListItem(`id = "${p.id}"`);
           let { title, actions } = response;
           await handleSave(title, actions);
           isOpen = false;
         },
         onCancel: () => {
-          modal.$destroy();
+          unmount(modal);
         },
       },
     });
   }
 
   async function handleLoad(title: string, actions: MissionPlanActions) {
-    sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+    sendMavlinkCommand("DO_SET_MODE", `${[1, 4]}`); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
 
     // Clear the current mission plan
     try {
@@ -108,109 +115,128 @@
       console.error("Error:", error);
     }
 
-    await pb.collection("mission_plans").getFullList().then((response) => {
-      if (response.length > 0) {
-        response.forEach(async (item) => {
-          if (item.isLoaded === 1) {
-            await pb.collection("mission_plans").update(item.id, { isLoaded: 0 });
-          }
-        });
-      }
-    });
+    await pb
+      .collection("mission_plans")
+      .getFullList()
+      .then((response) => {
+        if (response.length > 0) {
+          response.forEach(async (item) => {
+            if (item.isLoaded === 1) {
+              await pb
+                .collection("mission_plans")
+                .update(item.id, { isLoaded: 0 });
+            }
+          });
+        }
+      });
 
     missionPlanTitleStore.set(title);
     missionPlanActionsStore.set(actions);
     missionCompleteStore.set(false);
     try {
-        let response = await fetch("/api/mavlink/load_mission", {
-            method: "POST",
-            headers: {
-                "content-type": "application/json",
-                "actions": JSON.stringify(actions),
-            },
-        });
-        if (response.ok) {
-            console.log(await response.text());
-        } else {
-            console.error(`Error: ${await response.text()}`);
-        }
+      let response = await fetch("/api/mavlink/load_mission", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          actions: JSON.stringify(actions),
+        },
+      });
+      if (response.ok) {
+        console.log(await response.text());
+      } else {
+        console.error(`Error: ${await response.text()}`);
+      }
     } catch (error) {
-        console.error("Error:", error);
+      console.error("Error:", error);
     }
   }
 
   async function handleSave(title: string, plan: MissionPlanActions) {
-      await handleLoad(title, plan);
+    await handleLoad(title, plan);
 
-      let id = "";
-      let missionExists = async () => {
-          let exists = false;
-          await pb.collection("mission_plans").getFirstListItem(`title = "${title}"`).catch((error) => {
-              exists = false;
-          }).then((response) => {
-              if (response) {
-                  exists = true;
-                  id = response.id;
-              }
-          });
-          return exists;
-      };        
-      if (await missionExists()) {
-          await handleUpdate(id, title, plan);
-      } else {
-          let missionPlan = {
-              title: title,
-              actions: plan,
-              isLoaded: 1,
-          };
-          let response = await pb.collection("mission_plans").create(missionPlan).catch((error) => {
-              new Modal({
-                  target: document.body,
-                  props: {
-                      title: "Error",
-                      content: error.message,
-                      isOpen: true,
-                      confirmation: false,
-                      notification: true,
-                  },
-              });
-          });
+    let id = "";
+    let missionExists = async () => {
+      let exists = false;
+      await pb
+        .collection("mission_plans")
+        .getFirstListItem(`title = "${title}"`)
+        .catch((error) => {
+          exists = false;
+        })
+        .then((response) => {
           if (response) {
-            let notification = new Notification({
-              target: document.body,
-              props: {
-                  title: "Mission Plan Saved",
-                  content: "The mission plan has been saved.",
-                  type: "info",
-              },
-            });
-            setTimeout(() => {
-                notification.$destroy();
-            }, 3000);
+            exists = true;
+            id = response.id;
           }
+        });
+      return exists;
+    };
+    if (await missionExists()) {
+      await handleUpdate(id, title, plan);
+    } else {
+      let missionPlan = {
+        title: title,
+        actions: plan,
+        isLoaded: 1,
+      };
+      let response = await pb
+        .collection("mission_plans")
+        .create(missionPlan)
+        .catch((error) => {
+          mount(Modal, {
+            target: document.body,
+            props: {
+              title: "Error",
+              content: error.message,
+              isOpen: true,
+              confirmation: false,
+              notification: true,
+            },
+          });
+        });
+      if (response) {
+        let notification = mount(Notification, {
+          target: document.body,
+          props: {
+            title: "Mission Plan Saved",
+            content: "The mission plan has been saved.",
+            type: "info",
+          },
+        });
+        setTimeout(() => {
+          unmount(notification);
+        }, 3000);
       }
+    }
   }
 
-  async function handleUpdate(id: string, title: string, plan: MissionPlanActions) {
+  async function handleUpdate(
+    id: string,
+    title: string,
+    plan: MissionPlanActions
+  ) {
     let missionPlan = {
       title: title,
       actions: plan,
       isLoaded: 1,
     };
-    let response = await pb.collection("mission_plans").update(id, missionPlan).catch((error) => {
-      new Modal({
-        target: document.body,
-        props: {
+    let response = await pb
+      .collection("mission_plans")
+      .update(id, missionPlan)
+      .catch((error) => {
+        mount(Modal, {
+          target: document.body,
+          props: {
             title: "Error",
             content: error.message,
             isOpen: true,
             confirmation: false,
             notification: true,
-        },
+          },
+        });
       });
-    });
     if (response) {
-      let notification = new Notification({
+      let notification = mount(Notification, {
         target: document.body,
         props: {
           title: "Mission Plan Updated",
@@ -219,13 +245,13 @@
         },
       });
       setTimeout(() => {
-        notification.$destroy();
+        unmount(notification);
       }, 3000);
     }
-}
+  }
 
   async function deleteMissionPlan(id: string) {
-    const modal = new Modal({
+    const modal = mount(Modal, {
       target: document.body,
       props: {
         title: "Delete Mission Plan",
@@ -235,10 +261,10 @@
         notification: false,
         onConfirm: async () => {
           await handleDelete(id);
-          modal.$destroy();
+          unmount(modal);
         },
         onCancel: () => {
-          modal.$destroy();
+          unmount(modal);
         },
       },
     });
@@ -281,7 +307,9 @@
 </script>
 
 {#if isOpen && isModal}
-  <div class="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50 p-8">
+  <div
+    class="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50 p-8"
+  >
     <div
       class="container rounded-2xl shadow-lg max-w-lg w-full"
       style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor}"
@@ -301,7 +329,9 @@
         <ul class="overflow-auto">
           {#if missionPlans.length != 0}
             {#each missionPlans as plan (plan.id)}
-              <li class="flex justify-between items-center px-2 py-1 rounded mb-2">
+              <li
+                class="flex justify-between items-center px-2 py-1 rounded mb-2"
+              >
                 <span>{plan.title}</span>
                 <div class="flex items-center gap-2">
                   <button
@@ -324,9 +354,9 @@
       </div>
       <div class="flex justify-center px-4 py-2 border-t">
         <button
-            on:click={importPlan}
-            class="import-btn bg-transparent px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
-          >
+          on:click={importPlan}
+          class="import-btn bg-transparent px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
+        >
           <i class="fas fa-upload mr-1"></i>
           Import Plan
         </button>
@@ -335,9 +365,9 @@
   </div>
 {:else}
   <div
-      class="container rounded-2xl w-full h-full overflow-auto relative"
-      style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor}"
-    >
+    class="container rounded-2xl w-full h-full overflow-auto relative"
+    style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor}"
+  >
     <div class="relative border-b">
       <div class="title-container p-4 pb-2 font-semibold">
         {title}
@@ -347,23 +377,30 @@
       <ul class="overflow-auto h-full p-2 text-sm">
         {#if missionPlans.length != 0}
           {#each missionPlans as plan (plan.id)}
-            <li class="inline-block justify-between items-center px-2 py-1 rounded mb-2 w-full text-white">
-              <span class="mr-2" title={plan.title}>{plan.title.substring(0, 11)}{#if plan.title.length >= 11}...{/if}</span>
+            <li
+              class="inline-block justify-between items-center px-2 py-1 rounded mb-2 w-full text-white"
+            >
+              <span class="mr-2" title={plan.title}
+                >{plan.title.substring(
+                  0,
+                  11
+                )}{#if plan.title.length >= 11}...{/if}</span
+              >
               <div class="flex items-center gap-3 float-right relative">
                 <button
                   on:click={() => deleteMissionPlan(plan.id)}
-                  class="text-red-400 hover:text-red-600">
-                    <i class="fas fa-trash-alt text-sm"></i>
-                    <div class="tooltip">Delete</div>
-                  </button
+                  class="text-red-400 hover:text-red-600"
                 >
+                  <i class="fas fa-trash-alt text-sm"></i>
+                  <div class="tooltip">Delete</div>
+                </button>
                 <button
                   on:click={() => loadMissionPlan(plan)}
-                  class="text-[#62bbff] hover:text-[#377aad]">
-                    <i class="fas fa-cloud-arrow-up text-sm"></i>
-                    <div class="tooltip">Load</div>
-                  </button
+                  class="text-[#62bbff] hover:text-[#377aad]"
                 >
+                  <i class="fas fa-cloud-arrow-up text-sm"></i>
+                  <div class="tooltip">Load</div>
+                </button>
               </div>
             </li>
           {/each}
@@ -374,11 +411,14 @@
         {/if}
       </ul>
     </div>
-    <div class="absolute left-0 right-0 bottom-0 flex justify-center border-t" style="--tertiaryColor: {tertiaryColor}">
+    <div
+      class="absolute left-0 right-0 bottom-0 flex justify-center border-t"
+      style="--tertiaryColor: {tertiaryColor}"
+    >
       <button
-          on:click={importPlan}
-          class="import-btn hover:bg-[#4b5563] px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
-        >
+        on:click={importPlan}
+        class="import-btn hover:bg-[#4b5563] px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
+      >
         <i class="fas fa-upload text-xs" title="Import Mission Plan"></i>
         <span class="import-btn-span text-xs ml-1">Import</span>
       </button>
@@ -391,7 +431,8 @@
     background-color: var(--primaryColor);
   }
 
-  .container .border-b, .border-t {
+  .container .border-b,
+  .border-t {
     border-color: var(--secondaryColor);
   }
 
@@ -425,7 +466,10 @@
     white-space: nowrap;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
+    transition:
+      opacity 0.3s,
+      visibility 0.3s,
+      transform 0.3s;
     z-index: 1;
   }
 

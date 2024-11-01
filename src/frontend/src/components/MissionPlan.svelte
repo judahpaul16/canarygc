@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { mavLocationStore, mavModeStore, mavStateStore } from '../stores/mavlinkStore';
   import {
     missionPlanTitleStore,
@@ -68,89 +68,89 @@
   }
   
   function stopMission() {
-    let modal = new Modal({
-      target: document.body,
-      props: {
-        title: 'Stop Mission',
-        content: 'Are you sure you want to stop the flight?',
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        onConfirm: async () => {
-          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 6]}`); // 6 is RTL: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
-          modal.$destroy();
-          const notification = new Notification({
-            target: document.body,
-            props: {
-              title: 'Mission Stopped',
-              content: 'The mission has been stopped.<br>Returning to launch.',
-              type: 'info',
-            }
-          });
-          setTimeout(() => notification.$destroy(), 10000);
-        },
-      }
-    });
+    let modal = mount(Modal, {
+          target: document.body,
+          props: {
+            title: 'Stop Mission',
+            content: 'Are you sure you want to stop the flight?',
+            isOpen: true,
+            confirmation: true,
+            notification: false,
+            onConfirm: async () => {
+              await sendMavlinkCommand('DO_SET_MODE' , `${[1, 6]}`); // 6 is RTL: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+              unmount(modal);
+              const notification = mount(Notification, {
+                              target: document.body,
+                              props: {
+                                title: 'Mission Stopped',
+                                content: 'The mission has been stopped.<br>Returning to launch.',
+                                type: 'info',
+                              }
+                            });
+              setTimeout(() => unmount(notification), 10000);
+            },
+          }
+        });
   }
 
   function pauseMission() {
-    let modal = new Modal({
-      target: document.body,
-      props: {
-        title: 'Pause Mission',
-        content: 'Are you sure you want to pause the flight?',
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        onConfirm: async () => {
-          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 16]}`); // 16 is POSHOLD: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
-          modal.$destroy();
-          const notification = new Notification({
-            target: document.body,
-            props: {
-              title: 'Mission Paused',
-              content: 'The mission has been paused.',
-              type: 'info',
-            }
-          });
-          setTimeout(() => notification.$destroy(), 10000);
-        },
-      }
-    });
+    let modal = mount(Modal, {
+          target: document.body,
+          props: {
+            title: 'Pause Mission',
+            content: 'Are you sure you want to pause the flight?',
+            isOpen: true,
+            confirmation: true,
+            notification: false,
+            onConfirm: async () => {
+              await sendMavlinkCommand('DO_SET_MODE' , `${[1, 16]}`); // 16 is POSHOLD: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+              unmount(modal);
+              const notification = mount(Notification, {
+                              target: document.body,
+                              props: {
+                                title: 'Mission Paused',
+                                content: 'The mission has been paused.',
+                                type: 'info',
+                              }
+                            });
+              setTimeout(() => unmount(notification), 10000);
+            },
+          }
+        });
   }
 
   function resumeMission() {
-    let modal = new Modal({
-      target: document.body,
-      props: {
-        title: 'Resume Mission',
-        content: 'Are you sure you want to resume the flight?',
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        onConfirm: async () => {
-          missionIndexStore.set(1);
-          missionCompleteStore.set(false);
-          if (get(mavStateStore) === 'STANDBY') {
-            await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
-            await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[1, 0]}`); // param2: 21196 bypasses pre-arm checks
-            await sendMavlinkCommand('NAV_TAKEOFF', `${[0, 0, 0, 0, 0, 0, 10]}`);
-            await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds
+    let modal = mount(Modal, {
+          target: document.body,
+          props: {
+            title: 'Resume Mission',
+            content: 'Are you sure you want to resume the flight?',
+            isOpen: true,
+            confirmation: true,
+            notification: false,
+            onConfirm: async () => {
+              missionIndexStore.set(1);
+              missionCompleteStore.set(false);
+              if (get(mavStateStore) === 'STANDBY') {
+                await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+                await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[1, 0]}`); // param2: 21196 bypasses pre-arm checks
+                await sendMavlinkCommand('NAV_TAKEOFF', `${[0, 0, 0, 0, 0, 0, 10]}`);
+                await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds
+              }
+              await sendMavlinkCommand('DO_SET_MODE' , `${[1, 3]}`); // 3 is AUTO Mode: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+              unmount(modal);
+              const notification = mount(Notification, {
+                              target: document.body,
+                              props: {
+                                title: 'Mission Started',
+                                content: 'The mission has been started.',
+                                type: 'info',
+                              }
+                            });
+              setTimeout(() => unmount(notification), 10000);
+            },
           }
-          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 3]}`); // 3 is AUTO Mode: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
-          modal.$destroy();
-          const notification = new Notification({
-            target: document.body,
-            props: {
-              title: 'Mission Started',
-              content: 'The mission has been started.',
-              type: 'info',
-            }
-          });
-          setTimeout(() => notification.$destroy(), 10000);
-        },
-      }
-    });
+        });
   }
 
   function addAction() {
@@ -183,23 +183,23 @@
   }
 
   async function removeAction(id: string) {
-    const modal = new Modal({
-      target: document.body,
-      props: {
-        title: "Delete Action",
-        content: "Are you sure you want to delete this action?",
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        onConfirm: () => {
-          handleRemove(parseInt(id));
-          modal.$destroy();
-        },
-        onCancel: () => {
-          modal.$destroy();
-        },
-      },
-    });
+    const modal = mount(Modal, {
+          target: document.body,
+          props: {
+            title: "Delete Action",
+            content: "Are you sure you want to delete this action?",
+            isOpen: true,
+            confirmation: true,
+            notification: false,
+            onConfirm: () => {
+              handleRemove(parseInt(id));
+              unmount(modal);
+            },
+            onCancel: () => {
+              unmount(modal);
+            },
+          },
+        });
   }
 
   function handleRemove(index: number) {

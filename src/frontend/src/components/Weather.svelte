@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import { onMount, onDestroy } from 'svelte';
   import weatherCodes from '../lib/weathercodes.json';
   import { mavLocationStore } from '../stores/mavlinkStore';
@@ -26,22 +28,28 @@
 
   const weatherCodesTyped: WeatherCodes = weatherCodes as WeatherCodes;
 
-  export let isDashboard: boolean = false;
-  export let mavLocation: L.LatLng | { lat: number; lng: number };;
+  interface Props {
+    isDashboard?: boolean;
+    mavLocation: L.LatLng | { lat: number; lng: number };
+  }
 
-  $: darkMode = $darkModeStore;
-  $: primaryColor = $primaryColorStore;
-  $: secondaryColor = $secondaryColorStore;
-  $: tertiaryColor = $tertiaryColorStore;
-  $: fontColor = darkMode ? '#ffffff' : '#000000';
-  $: mavLocation = $mavLocationStore;
+  let { isDashboard = false, mavLocation = $bindable() }: Props = $props();
 
-  let locationName = '';
-  let temperature = '';
-  let weatherDescription = '';
-  let weatherImage = '';
-  let rainChance = '';
-  let error = '';
+  let darkMode = $derived($darkModeStore);
+  let primaryColor = $derived($primaryColorStore);
+  let secondaryColor = $derived($secondaryColorStore);
+  let tertiaryColor = $derived($tertiaryColorStore);
+  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
+  run(() => {
+    mavLocation = $mavLocationStore;
+  });
+
+  let locationName = $state('');
+  let temperature = $state('');
+  let weatherDescription = $state('');
+  let weatherImage = $state('');
+  let rainChance = $state('');
+  let error = $state('');
 
   async function fetchWeather() {
     try {
