@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import { onMount, onDestroy } from 'svelte';
   import { mavLocationStore, mavModeStore, mavStateStore } from '../stores/mavlinkStore';
   import {
@@ -18,8 +20,12 @@
     tertiaryColorStore
   } from '../stores/customizationStore';
 
-  export let title: string = '';
-  let actions: MissionPlanActions = {};
+  interface Props {
+    title?: string;
+  }
+
+  let { title = $bindable('') }: Props = $props();
+  let actions: MissionPlanActions = $state({});
   let action_types = [
     'NAV_WAYPOINT', 'NAV_SPLINE_WAYPOINT', 'NAV_TAKEOFF', 'NAV_RETURN_TO_LAUNCH', 'NAV_GUIDED_ENABLE', 'NAV_LAND',
     'NAV_LOITER_TIME', 'NAV_LOITER_TURNS', 'NAV_LOITER_UNLIM', 'NAV_PAYLOAD_PLACE', 'DO_WINCH', 'DO_SET_CAM_TRIGG_DIST',
@@ -27,17 +33,24 @@
     'DO_ENGINE_CONTROL', 'CONDITION_DELAY', 'CONDITION_CHANGE_ALT', 'CONDITION_DISTANCE', 'CONDITION_YAW'
   ];
   
-  $: darkMode = $darkModeStore;
-  $: primaryColor = $primaryColorStore;
-  $: secondaryColor = darkMode ? $tertiaryColorStore : $secondaryColorStore;
-  $: tertiaryColor = $tertiaryColorStore;
-  $: fontColor = darkMode ? '#ffffff' : '#000000';
-  $: mavLocation = $mavLocationStore;
-  $: mavMode = $mavModeStore;
-  $: systemState = $mavStateStore;
-  $: title = $missionPlanTitleStore;
-  $: actions = $missionPlanActionsStore;
-  $: missionLoaded = $missionPlanTitleStore !== '';
+  let darkMode = $derived($darkModeStore);
+  let primaryColor = $derived($primaryColorStore);
+  let secondaryColor = $derived(darkMode ? $tertiaryColorStore : $secondaryColorStore);
+  let tertiaryColor = $derived($tertiaryColorStore);
+  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
+  let mavLocation;
+  run(() => {
+    mavLocation = $mavLocationStore;
+  });
+  let mavMode = $derived($mavModeStore);
+  let systemState = $derived($mavStateStore);
+  run(() => {
+    title = $missionPlanTitleStore;
+  });
+  run(() => {
+    actions = $missionPlanActionsStore;
+  });
+  let missionLoaded = $derived($missionPlanTitleStore !== '');
 
   onMount(async () => {
     const input = document.querySelector('input[type="text"]') as HTMLInputElement;
@@ -315,20 +328,20 @@
   style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
 >
   <div class="container block">
-    <input type="text" class="text-md font-bold mb-2 ml-4 focus:outline-none" placeholder="Untitled Mission" id="mission-plan-title" bind:value={title} on:input={(event) => updateTitle(event)} />
+    <input type="text" class="text-md font-bold mb-2 ml-4 focus:outline-none" placeholder="Untitled Mission" id="mission-plan-title" bind:value={title} oninput={(event) => updateTitle(event)} />
     <div class="mission-btns flex items-center gap-2 float-right text-sm">
       <a href="https://ardupilot.org/planner/docs/common-planning-a-mission-with-waypoints-and-events.html" target="_blank" class="text-[#61cd89] hover:underline mr-2">
         <i class="fas fa-question-circle"></i>
         How do I create a mission plan?
       </a>
-      <button class="px-2 py-1 bg-[#588ae7] rounded-lg hover:bg-[#6f9ff9]" on:click={() => {}}>
+      <button class="px-2 py-1 bg-[#588ae7] rounded-lg hover:bg-[#6f9ff9]" onclick={() => {}}>
           <i class="fas fa-check"></i>
           <div class="tooltip">Validate Mission Plan</div>
       </button>
       {#if !checkMode('AUTO', mavMode) || systemState === 'STANDBY'}
         <button class="px-2 py-1 bg-[#55b377] rounded-lg hover:bg-[#61cd89]"
           disabled={checkMode('AUTO', mavMode) && systemState !== 'STANDBY' || !missionLoaded}
-          on:click={() => {resumeMission()}}
+          onclick={() => {resumeMission()}}
         >
           <i class="fas fa-play"></i>
           <div class="tooltip">Start/Resume Mission</div>
@@ -336,7 +349,7 @@
       {:else}
         <button class="px-2 py-1 bg-[#da864e] rounded-lg hover:bg-[#ff995e]"
           disabled={!checkMode('AUTO', mavMode) || !missionLoaded}
-          on:click={() => {pauseMission()}}
+          onclick={() => {pauseMission()}}
         >
           <i class="fas fa-pause"></i>
           <div class="tooltip">Pause Mission (Loiter)</div>
@@ -344,7 +357,7 @@
       {/if}
       <button class="px-2 py-1 bg-[#f87171] rounded-lg hover:bg-[#ff7e7e]"
           disabled={!checkMode('AUTO', mavMode) || !missionLoaded}
-          on:click={() => {stopMission()}}
+          onclick={() => {stopMission()}}
         >
         <i class="fas fa-stop"></i>
         <div class="tooltip">Stop Mission (RTL)</div>
@@ -365,14 +378,14 @@
                     <a href="https://ardupilot.org/copter/docs/mission-command-list.html" target="_blank" class="text-[#61cd89] ml-1" title="More Information">
                         <i class="fas fa-info-circle text-[9pt]"></i>
                     </a>
-                    <select class="mt-1" name="action" id="action-{index}-type" on:change={updateActionType} value={actions[Number(index)].type}>
+                    <select class="mt-1" name="action" id="action-{index}-type" onchange={updateActionType} value={actions[Number(index)].type}>
                     {#each action_types as action_type}
                         <option value="{action_type}">{action_type}</option>
                     {/each}
                     </select>
                     <div class="text-center flex justify-center items-center gap-2 mt-2">
                       <label for="altitude" class="text-[9pt] mr-1">Altitude</label>
-                      <input type="number" min="0" name="altitude" id="altitude-{index}" class="altitude" placeholder="0: current alt" value={String(actions[Number(index)].alt ?? '')} on:change={updateAltitude}>
+                      <input type="number" min="0" name="altitude" id="altitude-{index}" class="altitude" placeholder="0: current alt" value={String(actions[Number(index)].alt ?? '')} onchange={updateAltitude}>
                       <span class="text-xs text-gray-400">m</span>
                     </div>
                 </div>
@@ -386,12 +399,12 @@
                   </h2>
                   <div class="flex justify-between items-center gap-1">
                     <span class="text-[8pt] mr-2">Lat</span>
-                    <input type="number" step="0.0001" id="lat-{index}" placeholder="eg. 33.749" value={actions[Number(index)].lat} on:change={updateLat} />
+                    <input type="number" step="0.0001" id="lat-{index}" placeholder="eg. 33.749" value={actions[Number(index)].lat} onchange={updateLat} />
                     <span class="text-lg text-gray-400">°</span>
                   </div>
                   <div class="flex justify-between items-center gap-1">
                     <span class="text-[8pt] mr-2">Lon</span>
-                    <input type="number" step="0.0001" id="lon-{index}" placeholder="eg. -84.388" value={actions[Number(index)].lon} on:change={updateLon} />
+                    <input type="number" step="0.0001" id="lon-{index}" placeholder="eg. -84.388" value={actions[Number(index)].lon} onchange={updateLon} />
                     <span class="text-lg text-gray-400">°</span>
                   </div>
                 </div>
@@ -406,31 +419,31 @@
                   <div class="flex justify-between items-center gap-3">
                     <div class="flex justify-between items-center gap-3">
                       <span class="text-[8pt]">P1</span>
-                      <input type="number" id="param1-{index}" placeholder="Empty" value={actions[Number(index)].param1} on:change={updateParam} />
+                      <input type="number" id="param1-{index}" placeholder="Empty" value={actions[Number(index)].param1} onchange={updateParam} />
                     </div>
                     <div class="flex justify-between items-center gap-3">
                       <span class="text-[8pt]">P2</span>
-                      <input type="number" id="param2-{index}" placeholder="Empty" value={actions[Number(index)].param2} on:change={updateParam} />
+                      <input type="number" id="param2-{index}" placeholder="Empty" value={actions[Number(index)].param2} onchange={updateParam} />
                     </div>
                   </div>
                   <div class="flex justify-between items-center gap-3">
                     <div class="flex justify-between items-center gap-3">
                       <span class="text-[8pt]">P3</span>
-                      <input type="number" id="param3-{index}" placeholder="Empty" value={actions[Number(index)].param3} on:change={updateParam} />
+                      <input type="number" id="param3-{index}" placeholder="Empty" value={actions[Number(index)].param3} onchange={updateParam} />
                     </div>
                     <div class="flex justify-between items-center gap-3">
                       <span class="text-[8pt]">P4</span>
-                      <input type="number" id="param4-{index}" placeholder="Empty" value={actions[Number(index)].param4} on:change={updateParam} />
+                      <input type="number" id="param4-{index}" placeholder="Empty" value={actions[Number(index)].param4} onchange={updateParam} />
                     </div>
                   </div>
                 </div>
                 <div class="separator"></div>
                 <div class="form-input flex flex-col gap-1 items-center justify-center">
                     <h2 class="text-[9pt]">Additional Notes</h2>
-                    <textarea placeholder="Notes" value={actions[Number(index)].notes} id="notes-{index}" on:change={updateNotes}></textarea>
+                    <textarea placeholder="Notes" value={actions[Number(index)].notes} id="notes-{index}" onchange={updateNotes}></textarea>
                 </div>
                 <div class="separator"></div>
-                <button class="delete-action relative rounded-lg px-3 py-2 text-sm" on:click={() => removeAction(index)}>
+                <button class="delete-action relative rounded-lg px-3 py-2 text-sm" onclick={() => removeAction(index)}>
                     <i class="fas fa-trash-alt text-red-400"></i>
                     <span class="tooltip">Delete Action</span>
                 </button>
@@ -440,7 +453,7 @@
         {/key}
       </div>
       <div class="flex justify-center">
-        <button class="add-action rounded-lg px-4 py-2 my-4" on:click={addAction}>
+        <button class="add-action rounded-lg px-4 py-2 my-4" onclick={addAction}>
           <i class="fas fa-plus"></i>&nbsp;&nbsp;Add Action
         </button>
       </div>

@@ -77,11 +77,9 @@
   export {
   	title,
   	content,
-  	isOpen,
   	confirmation,
   	notification,
   	inputs,
-  	inputValues,
   	onConfirm,
   	onCancel,
   }

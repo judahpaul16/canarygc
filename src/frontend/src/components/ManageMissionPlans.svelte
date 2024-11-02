@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import PocketBase from "pocketbase";
   import {
     missionPlanTitleStore,
@@ -18,19 +20,30 @@
 
   let pb: PocketBase;
 
-  export let title: string = "Manage Mission Plans";
-  export let isModal = false;
-  export let isOpen: boolean = true;
-  export let onCancel: () => void = () => {};
-  let missionPlans: Array<{ id: string; title: string }> = [];
-  let actions: MissionPlanActions = {};
+  interface Props {
+    title?: string;
+    isModal?: boolean;
+    isOpen?: boolean;
+    onCancel?: () => void;
+  }
 
-  $: darkMode = $darkModeStore;
-  $: primaryColor = $primaryColorStore;
-  $: secondaryColor = darkMode ? $tertiaryColorStore : $secondaryColorStore;
-  $: fontColor = darkMode ? "#ffffff" : "#000000";
-  $: tertiaryColor = $tertiaryColorStore;
-  $: actions = $missionPlanActionsStore;
+  let {
+    title = "Manage Mission Plans",
+    isModal = false,
+    isOpen = $bindable(true),
+    onCancel = () => {}
+  }: Props = $props();
+  let missionPlans: Array<{ id: string; title: string }> = $state([]);
+  let actions: MissionPlanActions = $state({});
+
+  let darkMode = $derived($darkModeStore);
+  let primaryColor = $derived($primaryColorStore);
+  let secondaryColor = $derived(darkMode ? $tertiaryColorStore : $secondaryColorStore);
+  let fontColor = $derived(darkMode ? "#ffffff" : "#000000");
+  let tertiaryColor = $derived($tertiaryColorStore);
+  run(() => {
+    actions = $missionPlanActionsStore;
+  });
 
   onMount(() => {
     pb = new PocketBase(`http://${window.location.hostname}:8090`);
@@ -319,7 +332,7 @@
           {title}
         </div>
         <button
-          on:click={closeModal}
+          onclick={closeModal}
           class="absolute top-2 right-2 text-gray-400 hover:text-white text-2xl"
         >
           &times;
@@ -335,11 +348,11 @@
                 <span>{plan.title}</span>
                 <div class="flex items-center gap-2">
                   <button
-                    on:click={() => deleteMissionPlan(plan.id)}
+                    onclick={() => deleteMissionPlan(plan.id)}
                     class="text-red-500 hover:text-red-700">Delete</button
                   >
                   <button
-                    on:click={() => loadMissionPlan(plan)}
+                    onclick={() => loadMissionPlan(plan)}
                     class="text-blue-500 hover:text-blue-700">Load</button
                   >
                 </div>
@@ -354,7 +367,7 @@
       </div>
       <div class="flex justify-center px-4 py-2 border-t">
         <button
-          on:click={importPlan}
+          onclick={importPlan}
           class="import-btn bg-transparent px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
         >
           <i class="fas fa-upload mr-1"></i>
@@ -388,14 +401,14 @@
               >
               <div class="flex items-center gap-3 float-right relative">
                 <button
-                  on:click={() => deleteMissionPlan(plan.id)}
+                  onclick={() => deleteMissionPlan(plan.id)}
                   class="text-red-400 hover:text-red-600"
                 >
                   <i class="fas fa-trash-alt text-sm"></i>
                   <div class="tooltip">Delete</div>
                 </button>
                 <button
-                  on:click={() => loadMissionPlan(plan)}
+                  onclick={() => loadMissionPlan(plan)}
                   class="text-[#62bbff] hover:text-[#377aad]"
                 >
                   <i class="fas fa-cloud-arrow-up text-sm"></i>
@@ -416,7 +429,7 @@
       style="--tertiaryColor: {tertiaryColor}"
     >
       <button
-        on:click={importPlan}
+        onclick={importPlan}
         class="import-btn hover:bg-[#4b5563] px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
       >
         <i class="fas fa-upload text-xs" title="Import Mission Plan"></i>

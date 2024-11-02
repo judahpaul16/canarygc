@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import {
     missionPlanTitleStore,
     missionCountStore,
@@ -25,37 +27,31 @@
   import type { LatLng } from 'leaflet';
 import { mount } from "svelte";
 
-  export let mavModel: string = get(mavModelStore);
-  export let mavType: string = get(mavTypeStore);
-  export let isArmed: boolean = get(mavArmedStateStore)
-  export let speed: number = get(mavSpeedStore);
-  export let altitude: number = get(mavAltitudeStore);
-  export let systemState: string = get(mavStateStore);
-  export let batteryStatus: number | null = get(mavBatteryStore);
-  export let mavMode: string = get(mavModeStore);
+  interface Props {
+    mavModel?: string;
+    mavType?: string;
+    isArmed?: boolean;
+    speed?: number;
+    altitude?: number;
+    systemState?: string;
+    batteryStatus?: number | null;
+    mavMode?: string;
+  }
 
-  let markers = get(markersStore);
+  let {
+    mavModel = $bindable(get(mavModelStore)),
+    mavType = $bindable(get(mavTypeStore)),
+    isArmed = $bindable(get(mavArmedStateStore)),
+    speed = $bindable(get(mavSpeedStore)),
+    altitude = $bindable(get(mavAltitudeStore)),
+    systemState = $bindable(get(mavStateStore)),
+    batteryStatus = $bindable(get(mavBatteryStore)),
+    mavMode = $bindable(get(mavModeStore))
+  }: Props = $props();
+
+  let markers = $state(get(markersStore));
   let progressSamples: { progress: number, timestamp: number }[] = [];
 
-  $: darkMode = $darkModeStore;
-  $: primaryColor = $primaryColorStore;
-  $: secondaryColor = darkMode ? $tertiaryColorStore : $secondaryColorStore;
-  $: tertiaryColor = $tertiaryColorStore;
-  $: fontColor = darkMode ? '#ffffff' : '#000000';
-  $: mavModel = $mavModelStore;
-  $: mavType = $mavTypeStore;
-  $: isArmed = $mavArmedStateStore;
-  $: systemState = $mavStateStore;
-  $: mavMode = $mavModeStore;
-  $: batteryStatus = $mavBatteryStore;
-  $: altitude = $mavAltitudeStore;
-  $: speed = $mavSpeedStore;
-  $: missionPlanTitle = $missionPlanTitleStore;
-  $: mavLocation = $mavLocationStore;
-  $: missionProgress = getMissionProgress($missionIndexStore, $missionCountStore, $mavLocationStore as L.LatLng);
-  $: missionLoaded = $missionPlanTitleStore !== '';
-  $: markers = $markersStore;
-  $: eta = calculateETA(missionProgress, $mavLocationStore);
 
   function getMissionProgress(index: number, count: number, mavLocation: L.LatLng): number {
     let progress: number = 0;
@@ -334,6 +330,43 @@ import { mount } from "svelte";
   function checkMode(target: string, mode: string) {
     return target.includes(mode);
   }
+  let darkMode = $derived($darkModeStore);
+  let primaryColor = $derived($primaryColorStore);
+  let secondaryColor = $derived(darkMode ? $tertiaryColorStore : $secondaryColorStore);
+  let tertiaryColor = $derived($tertiaryColorStore);
+  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
+  run(() => {
+    mavModel = $mavModelStore;
+  });
+  run(() => {
+    mavType = $mavTypeStore;
+  });
+  run(() => {
+    isArmed = $mavArmedStateStore;
+  });
+  run(() => {
+    systemState = $mavStateStore;
+  });
+  run(() => {
+    mavMode = $mavModeStore;
+  });
+  run(() => {
+    batteryStatus = $mavBatteryStore;
+  });
+  run(() => {
+    altitude = $mavAltitudeStore;
+  });
+  run(() => {
+    speed = $mavSpeedStore;
+  });
+  let missionPlanTitle = $derived($missionPlanTitleStore);
+  let mavLocation = $derived($mavLocationStore);
+  let missionProgress = $derived(getMissionProgress($missionIndexStore, $missionCountStore, $mavLocationStore as L.LatLng));
+  let missionLoaded = $derived($missionPlanTitleStore !== '');
+  run(() => {
+    markers = $markersStore;
+  });
+  let eta = $derived(calculateETA(missionProgress, $mavLocationStore));
 </script>
 
 <div
@@ -371,27 +404,27 @@ import { mount } from "svelte";
         </div>
         <div class="button-container mt-6">
           <div class="relative group">
-            <button class="circular-button" on:click={confirmCalibration}>
+            <button class="circular-button" onclick={confirmCalibration}>
               <i class="far fa-compass text-[#ffa704] fa-spin"></i>
               <div class="tooltip text-white">Calibrate Sensors</div>
             </button>
           </div>
           <div class="relative group">
-            <button class="circular-button" on:click={releasePayload}>
+            <button class="circular-button" onclick={releasePayload}>
               <i class="fas fa-parachute-box"></i>
               <div class="tooltip text-white">Release Payload</div>
             </button>
           </div>
           {#if systemState === 'STANDBY'}
             <div class="relative group flex flex-col items-center">
-              <button class="circular-button" on:click={initTakeoff} disabled={checkMode('AUTO', mavMode)}>
+              <button class="circular-button" onclick={initTakeoff} disabled={checkMode('AUTO', mavMode)}>
                 <i class="fas fa-plane-departure"></i>
                 <div class="tooltip text-white">Initiate Takeoff</div>
               </button>
             </div>
           {:else}
             <div class="relative group flex flex-col items-center">
-              <button class="circular-button" on:click={initLanding} disabled={checkMode('AUTO', mavMode) || checkMode('LAND', mavMode)}>
+              <button class="circular-button" onclick={initLanding} disabled={checkMode('AUTO', mavMode) || checkMode('LAND', mavMode)}>
                 <i class="fas fa-plane-arrival"></i>
                 <div class="tooltip text-white">Initiate Landing</div>
               </button>
@@ -400,7 +433,7 @@ import { mount } from "svelte";
           {#if !checkMode('AUTO', mavMode) || systemState === 'STANDBY'}
             <div class="relative group">
               <button
-                class="circular-button" on:click={resumeMission}
+                class="circular-button" onclick={resumeMission}
                 disabled={checkMode('AUTO', mavMode) && systemState !== 'STANDBY' || !missionLoaded}
               >
                 <i class="fas fa-play"></i>
@@ -410,7 +443,7 @@ import { mount } from "svelte";
           {:else}
             <div class="relative group">
               <button
-                class="circular-button" on:click={pauseMission}
+                class="circular-button" onclick={pauseMission}
                 disabled={!checkMode('AUTO', mavMode) || !missionLoaded}
               >
                 <i class="fas fa-pause"></i>
@@ -420,7 +453,7 @@ import { mount } from "svelte";
           {/if}
           <div class="relative group">
             <button
-              class="circular-button" on:click={stopMission}
+              class="circular-button" onclick={stopMission}
               disabled={!checkMode('AUTO', mavMode) || !missionLoaded}
             >
               <i class="fas fa-stop text-red-400"></i>
