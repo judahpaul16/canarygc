@@ -1,5 +1,3 @@
-<!-- @migration-task Error while migrating Svelte code: Can't migrate code with afterUpdate. Please migrate by hand. -->
-<!-- @migration-task Error while migrating Svelte code: Can't migrate code with afterUpdate. Please migrate by hand. -->
 <script lang="ts">
   import { MavType, MavState, MavAutopilot } from 'mavlink-mappings/dist/lib/minimal';
   import { MavCmd, MavResult } from 'mavlink-mappings/dist/lib/common';
@@ -8,7 +6,7 @@
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import { authData } from '../stores/authStore';
   import { page } from '$app/stores';
-  import { onMount, onDestroy, afterUpdate, mount, unmount } from 'svelte';
+  import { onMount, onDestroy, unmount, mount } from 'svelte';
   import { goto } from '$app/navigation';
   import '../app.css';
   import {
@@ -45,25 +43,28 @@
 
   let pb: PocketBase;
 
-  let currentPath = '';
   let heightOfDashboard = 1000;
   let logs: string[] = [];
-  let online = get(onlineStore);
 
   let inactivityTimer: NodeJS.Timeout;
   let authCheckInterval: NodeJS.Timeout;
   const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
 
-  $: online = $onlineStore;
-  $: darkMode = $darkModeStore;
-  $: primaryColor = $primaryColorStore;
-  $: secondaryColor = $secondaryColorStore;
-  $: tertiaryColor = $tertiaryColorStore;
-  $: fontColor = darkMode ? '#ffffff' : '#000000';
-  $: currentPath = $page.url.pathname;
-  $: isNavHidden = currentPath === '/' || currentPath === '/login';
-  $: missionCountStore.set(Object.keys($missionPlanActionsStore).length - 1);
-  $: actions = $missionPlanActionsStore;
+  let online = $derived($onlineStore);
+  let darkMode = $derived($darkModeStore);
+  let primaryColor = $derived($primaryColorStore);
+  let secondaryColor = $derived($secondaryColorStore);
+  let tertiaryColor = $derived($tertiaryColorStore);
+  
+  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
+  let currentPath = $derived(() => $page.url.pathname);
+  let isNavHidden = $derived(() => currentPath === '/' || currentPath === '/login');
+  
+  $effect(() => {
+     missionCountStore.set(Object.keys($missionPlanActionsStore).length - 1);
+	 });
+	 
+  let actions = $derived($missionPlanActionsStore);
 
   // @ts-ignore
   String.prototype.toProperCase = function () {
@@ -453,7 +454,7 @@
     clearTimeout(inactivityTimer);
   });
 
-  afterUpdate(() => {
+  $effect(() => {
     const dashboard = document.querySelector('.dashboard');
     if (dashboard) {
       if (resizeObserver) {

@@ -458,6 +458,24 @@
   });
 </script>
 
+<div class="map-container" style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};">
+  <div id="aamap" class="relative h-full"></div>
+  <div id={id !== null ? id : 'map'} class="relative h-full rounded-2xl z-0"></div>
+  <button class="map-btn absolute top-[3.8rem] right-2 text-[#ffffff] bg-opacity-75 p-2 px-3 rounded-full" onclick={toggleDarkMode}>
+    {#if darkMode} <i class="fas fa-moon px-[2px]"></i> {:else} <i class="fas fa-sun"></i> {/if}
+  </button>
+  <button class="map-btn absolute top-3 right-2 text-[#ffffff] bg-opacity-75 p-2 px-[14px] rounded-full" onclick={handleFullScreen}>
+    <i class="fas fa-expand"></i>
+  </button>
+  {#if !hideOverlay}
+    <label id="map-toggle" class="flex justify-center cursor-pointer my-2 absolute top-1 right-2 left-2 w-fit m-auto rounded-3xl p-2 pl-3 text-sm items-center">
+      <input type="checkbox" value="" class="sr-only peer" onclick={toggleMap}>
+      <span class="text-[#ffffff]"><i class="fas fa-map"></i>&nbsp;&nbsp;{currentMap === 'altitudeAngel' ? 'Altitude Angel' : 'Leaflet'}</span>
+      <div class="relative w-11 h-6 ml-3 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-[#61cd89] peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-[#d94d7c]"></div>
+    </label>
+  {/if}
+</div>
+
 <style lang="css">
   @import url('https://unpkg.com/leaflet@1.7.1/dist/leaflet.css');
   .map-container {
@@ -503,21 +521,3 @@
     opacity: 0.7;
   }
 </style>
-
-<div class="map-container" style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};">
-  <div id="aamap" class="relative h-full"></div>
-  <div id={id !== null ? id : 'map'} class="relative h-full rounded-2xl z-0"></div>
-  <button class="map-btn absolute top-[3.8rem] right-2 text-[#ffffff] bg-opacity-75 p-2 px-3 rounded-full" onclick={toggleDarkMode}>
-    {#if darkMode} <i class="fas fa-moon px-[2px]"></i> {:else} <i class="fas fa-sun"></i> {/if}
-  </button>
-  <button class="map-btn absolute top-3 right-2 text-[#ffffff] bg-opacity-75 p-2 px-[14px] rounded-full" onclick={handleFullScreen}>
-    <i class="fas fa-expand"></i>
-  </button>
-  {#if !hideOverlay}
-    <label id="map-toggle" class="flex justify-center cursor-pointer my-2 absolute top-1 right-2 left-2 w-fit m-auto rounded-3xl p-2 pl-3 text-sm items-center">
-      <input type="checkbox" value="" class="sr-only peer" onclick={toggleMap}>
-      <span class="text-[#ffffff]"><i class="fas fa-map"></i>&nbsp;&nbsp;{currentMap === 'altitudeAngel' ? 'Altitude Angel' : 'Leaflet'}</span>
-      <div class="relative w-11 h-6 ml-3 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-[#61cd89] peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-[#d94d7c]"></div>
-    </label>
-  {/if}
-</div>
