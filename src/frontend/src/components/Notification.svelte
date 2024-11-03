@@ -1,16 +1,20 @@
-<!-- @migration-task Error while migrating Svelte code: Can't migrate code with afterUpdate. Please migrate by hand. -->
-<!-- @migration-task Error while migrating Svelte code: Can't migrate code with afterUpdate. Please migrate by hand. -->
-<svelte:options accessors={true} />
+<svelte:options runes={true} />
 <script lang="ts">
-    import { onMount, afterUpdate, onDestroy } from 'svelte';
+    import { onMount, onDestroy } from 'svelte';
     import { notificationCountStore } from '../stores/notificationCountStore';
     import { get } from 'svelte/store';
-
-    export let id: number = get(notificationCountStore);
-    export let title: string;
-    export let content: string;
-    export let type: string = 'info';
-
+    
+	
+	interface NotificationProps {
+        id: number;
+        title: string;
+        content: string;
+        type?: string;
+    }
+	
+	let { id = get(notificationCountStore), title, content, type = 'info' } = $props<NotificationProps>();
+     
+    
     let translateY: string = '0px';
     let interval: NodeJS.Timeout;
 
@@ -22,26 +26,24 @@
     const updateTranslateY = () => {
         const notifications = Array.from(document.querySelectorAll('.notification'));
         notificationCountStore.set(notifications.length);
-        const notificationHeight = notifications[notifications.length - 1].clientHeight + 8;
+        const notificationHeight = notifications[notifications.length - 1]?.clientHeight + 8 || 0;
 
         notifications.forEach((notif, index) => {
-            // @ts-ignore
             notif.style.transform = `translateY(${index * notificationHeight}px)`;
         });
         translateY = `translateY(${notifications.findIndex(n => n.id === `notification-${id}`) * notificationHeight}px)`;
     };
 
     onMount(() => {
-        interval = setInterval(() => {
-            updateTranslateY();
-        }, 1000);
+        interval = setInterval(updateTranslateY, 1000);
     });
 
     onDestroy(() => {
         clearInterval(interval);
     });
 
-    afterUpdate(() => {
+    // Replace afterUpdate with $effect
+    $effect(() => {
         updateTranslateY();
     });
 </script>
