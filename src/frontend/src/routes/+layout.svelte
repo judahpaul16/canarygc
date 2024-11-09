@@ -14,6 +14,7 @@
     mavHeadingStore,
     mavLocationStore,
     mavlinkLogStore,
+    mavlinkParamStore,
     mavAltitudeStore,
     mavSpeedStore,
     mavModelStore,
@@ -22,7 +23,9 @@
     mavModeStore,
     mavBatteryStore,
     mavArmedStateStore,
-    mavSatelliteStore
+    mavSatelliteStore,
+    type Parameter,
+    type ParameterMeta
   } from '../stores/mavlinkStore';
   import {
     missionPlanTitleStore,
@@ -212,7 +215,7 @@
 
   // Helper functions to extract and parse values from log text
   const extractValue = (text: string, pattern: string): string | null => {
-    const match = text.match(new RegExp(`"${pattern}":\\-?(\\d+)`, 'g'));
+    const match = text.match(new RegExp(`"${pattern}":\\s*("[^"]*"|\\-?\\d+)`, 'g'));
     return match ? match.toString().replace(`"${pattern}":`, '') : null;
   };
 
@@ -365,6 +368,24 @@
         content: statusText,
         type
       });
+    },
+
+    PARAM_VALUE: (text: string) => {
+      const paramId = extractValue(text, 'paramId');
+      const paramValue = extractValue(text, 'paramValue');
+      if (paramId && paramValue) {
+        let param: Parameter = {
+          param_id: paramId,
+          param_value: parseInt(paramValue),
+          param_type: parseInt(extractValue(text, 'paramType') || '0'),
+          param_count: parseInt(extractValue(text, 'paramCount') || '0'),
+          param_index: parseInt(extractValue(text, 'paramIndex') || '0')
+        };
+        // update the store at the index of the parameter
+        let params = get(mavlinkParamStore);
+        params[param.param_id] = param;
+        mavlinkParamStore.set(params);
+      }
     }
   };
 
@@ -568,9 +589,9 @@
               <div class="tooltip text-white">Event Log</div>
             </button>
             <div class="separator h-[2px] w-[80%] rounded-2xl mb-4"></div>
-            <button on:click|preventDefault={() => handleNavigation('/user-settings')} class="nav-button mb-4 {currentPath === '/user-settings' ? 'active' : ''}">
-              <i class="nav-icon fas fa-user"></i>
-              <div class="tooltip text-white">User Settings</div>
+            <button on:click|preventDefault={() => handleNavigation('/params')} class="nav-button mb-4 {currentPath === '/user-settings' ? 'active' : ''}">
+              <i class="nav-icon fas fa-cog"></i>
+              <div class="tooltip text-white">Configure Parameters</div>
             </button>
             <button on:click|preventDefault={() => handleNavigation('/notifications')} class="nav-button mb-4 {currentPath === '/notifications' ? 'active' : ''}">
               <i class="nav-icon fas fa-bell"></i>
@@ -626,7 +647,7 @@
             <i class="nav-icon fas fa-bars-staggered"></i>&nbsp;&nbsp;Event Log
           </a>
           <a href="/user-settings" on:click|preventDefault={() => handleNavigation('/user-settings')} class="nav-button mb-4 {currentPath === '/user-settings' ? 'active' : ''}">
-            <i class="nav-icon fas fa-user"></i>&nbsp;&nbsp;User Settings
+            <i class="nav-icon fas fa-cog"></i>&nbsp;&nbsp;Configure Parameters
           </a>
           <a href="/notifications" on:click|preventDefault={() => handleNavigation('/notifications')} class="nav-button mb-4 {currentPath === '/notifications' ? 'active' : ''}">
             <i class="nav-icon fas fa-bell"></i>&nbsp;&nbsp;Notifications

@@ -6,6 +6,8 @@ import {
     connecting,
     initializePort,
     requestSysStatus,
+    requestParameters,
+    writeParameter,
     sendMavlinkCommand,
     setMissionCount,
     loadMissionItem,
@@ -93,6 +95,28 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
             try {
                 await setPositionLocal(x, y, z);
                 return new Response(`Local position set manually: x: ${x}, y: ${y}, z: ${z}`, { status: 200 });
+            } catch (err) {
+                console.error(err);
+                return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
+            }
+        case 'request_params':
+            try {
+                await requestParameters();
+                return new Response('Parameters requested', { status: 200 });
+            } catch (err) {
+                console.error(err);
+                return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
+            }
+        case 'write_param':
+            let param = request.request.headers.get('param');
+            let value = parseFloat(request.request.headers.get('value')!);
+            let type = parseInt(request.request.headers.get('type')!);
+            if (isNaN(value) || isNaN(type)) {
+                return new Response('Invalid value or type', { status: 400 });
+            }
+            try {
+                await writeParameter(param!, value, type);
+                return new Response(`Parameter written: ${param}, value: ${value}, type: ${type}`, { status: 200 });
             } catch (err) {
                 console.error(err);
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });

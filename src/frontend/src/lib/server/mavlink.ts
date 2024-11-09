@@ -145,6 +145,21 @@ async function requestParameters() {
     await send(port!, request);
 }
 
+async function writeParameter(param: string, value: number, type: number) {
+    if (!port || !reader) {
+        online = false;
+        return;
+    }
+
+    const request = new common.ParamSet();
+    request.targetSystem = 1;
+    request.targetComponent = 1;
+    request.paramId = param;
+    request.paramValue = value;
+    request.paramType = type;
+    await send(port!, request);
+}
+
 async function sendMavlinkCommand(command: string, params: number[], useArduPilotMega = false, useCmdLong = true) {
     if (!port || !reader) {
         online = false;
@@ -264,6 +279,7 @@ export {
     initializePort,
     requestSysStatus,
     requestParameters,
+    writeParameter,
     sendMavlinkCommand,
     setMissionCount,
     loadMissionItem,
