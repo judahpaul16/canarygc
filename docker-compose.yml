@@ -49,3 +49,5 @@ services:
     container_name: mmgcs_sitl
     ports:
       - "5760:5760"
+    healthcheck:
+      timeout: 10s

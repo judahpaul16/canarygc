@@ -29,6 +29,7 @@ function createAuthStore() {
     },
     checkExpired: () => {
       if (typeof window === 'undefined') return true;
+      if (!localStorage.getItem('authData')) return true;
 
       const authTimestamp = localStorage.getItem('authTimestamp');
       if (!authTimestamp) return true;
