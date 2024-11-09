@@ -89,7 +89,17 @@
             <div class="flex flex-col h-full">
                 <!-- Header -->
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-white">Vehicle Parameters</h2>
+                    <h2 class="text-2xl font-bold text-white">
+                        Vehicle Parameters
+                        <a target="_blank" href="https://ardupilot.org/dev/docs/mavlink-get-set-params.html" class="relative text-blue-500">
+                            <i class="fa-solid fa-square-arrow-up-right"></i>
+                            <span class="tooltip">ArduPilot Reference</span>
+                        </a>
+                        <a target="_blank" href="https://docs.px4.io/v1.11/en/advanced_config/parameter_reference.html" class="relative text-blue-500">
+                            <i class="fa-solid fa-square-arrow-up-right"></i>
+                            <span class="tooltip">PX4 Reference</span>
+                        </a>
+                    </h2>
                     <button 
                         class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                         on:click={requestParameters}
@@ -185,5 +195,27 @@
 
     ::-webkit-scrollbar-thumb:hover {
         background: rgba(255, 255, 255, 0.3);
+    }
+
+    .tooltip {
+        position: absolute;
+        top: -200%;
+        left: -50%;
+        height: auto;
+        display: flex;
+        font-size: medium;
+        padding: 0.5em;
+        border-radius: 0.25rem;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
+        z-index: 1;
+    }
+
+    a:hover .tooltip {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(5px);
     }
 </style>

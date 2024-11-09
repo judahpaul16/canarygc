@@ -589,9 +589,9 @@
               <div class="tooltip text-white">Event Log</div>
             </button>
             <div class="separator h-[2px] w-[80%] rounded-2xl mb-4"></div>
-            <button on:click|preventDefault={() => handleNavigation('/params')} class="nav-button mb-4 {currentPath === '/user-settings' ? 'active' : ''}">
+            <button on:click|preventDefault={() => handleNavigation('/vehicle-params')} class="nav-button mb-4 {currentPath === '/user-settings' ? 'active' : ''}">
               <i class="nav-icon fas fa-cog"></i>
-              <div class="tooltip text-white">Configure Parameters</div>
+              <div class="tooltip text-white">Vehicle Parameters</div>
             </button>
             <button on:click|preventDefault={() => handleNavigation('/notifications')} class="nav-button mb-4 {currentPath === '/notifications' ? 'active' : ''}">
               <i class="nav-icon fas fa-bell"></i>
@@ -647,7 +647,7 @@
             <i class="nav-icon fas fa-bars-staggered"></i>&nbsp;&nbsp;Event Log
           </a>
           <a href="/user-settings" on:click|preventDefault={() => handleNavigation('/user-settings')} class="nav-button mb-4 {currentPath === '/user-settings' ? 'active' : ''}">
-            <i class="nav-icon fas fa-cog"></i>&nbsp;&nbsp;Configure Parameters
+            <i class="nav-icon fas fa-cog"></i>&nbsp;&nbsp;Vehicle Parameters
           </a>
           <a href="/notifications" on:click|preventDefault={() => handleNavigation('/notifications')} class="nav-button mb-4 {currentPath === '/notifications' ? 'active' : ''}">
             <i class="nav-icon fas fa-bell"></i>&nbsp;&nbsp;Notifications
