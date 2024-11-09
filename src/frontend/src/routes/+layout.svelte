@@ -647,7 +647,7 @@
     </div>
 
     {#key online}
-      {#if !online}
+      {#if !online && currentPath !== '/login' && currentPath !== '/'}
         <Offline />
       {/if}
     {/key}
