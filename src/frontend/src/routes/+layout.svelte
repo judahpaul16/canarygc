@@ -544,10 +544,9 @@
     }
   }
 
-  function handleNavigation(path: string) {
-    if (currentPath !== path) {
-      goto(path);
-    }
+  function handleNavigation(path: string, target: string = '') {
+    if (target === '_blank') window.open(path, target);
+    else if (currentPath !== path) goto(path);
   }
 
   function handleLogout() {
@@ -588,14 +587,14 @@
               <i class="nav-icon fas fa-bars-staggered"></i>
               <div class="tooltip text-white">Event Log</div>
             </button>
-            <div class="separator h-[2px] w-[80%] rounded-2xl mb-4"></div>
-            <button on:click|preventDefault={() => handleNavigation('/vehicle-params')} class="nav-button mb-4 {currentPath === '/user-settings' ? 'active' : ''}">
+            <button on:click|preventDefault={() => handleNavigation('/vehicle-params')} class="nav-button mb-4 {currentPath === '/vehicle-params' ? 'active' : ''}">
               <i class="nav-icon fas fa-cog"></i>
               <div class="tooltip text-white">Vehicle Parameters</div>
             </button>
-            <button on:click|preventDefault={() => handleNavigation('/notifications')} class="nav-button mb-4 {currentPath === '/notifications' ? 'active' : ''}">
-              <i class="nav-icon fas fa-bell"></i>
-              <div class="tooltip text-white">Notifications</div>
+            <div class="separator h-[2px] w-[80%] rounded-2xl mb-4"></div>
+            <button on:click|preventDefault={() => handleNavigation('/admin', "_blank")} class="nav-button mb-4">
+              <i class="nav-icon fas fa-user"></i>
+              <div class="tooltip text-white">Admin Dashboard</div>
             </button>
             <button on:click={handleLogout} class="nav-button mb-4">
               <i class="nav-icon fas fa-sign-out-alt"></i>
@@ -646,11 +645,11 @@
           <a href="/event-log" on:click|preventDefault={() => handleNavigation('/event-log')} class="nav-button mb-4 {currentPath === '/event-log' ? 'active' : ''}">
             <i class="nav-icon fas fa-bars-staggered"></i>&nbsp;&nbsp;Event Log
           </a>
-          <a href="/user-settings" on:click|preventDefault={() => handleNavigation('/user-settings')} class="nav-button mb-4 {currentPath === '/user-settings' ? 'active' : ''}">
+          <a href="/user-settings" on:click|preventDefault={() => handleNavigation('/vehicle-params')} class="nav-button mb-4 {currentPath === '/vehicle-params' ? 'active' : ''}">
             <i class="nav-icon fas fa-cog"></i>&nbsp;&nbsp;Vehicle Parameters
           </a>
-          <a href="/notifications" on:click|preventDefault={() => handleNavigation('/notifications')} class="nav-button mb-4 {currentPath === '/notifications' ? 'active' : ''}">
-            <i class="nav-icon fas fa-bell"></i>&nbsp;&nbsp;Notifications
+          <a href="/admin" on:click|preventDefault={() => handleNavigation('/admin')} class="nav-button mb-4">
+            <i class="nav-icon fas fa-user"></i>&nbsp;&nbsp;Admin Dashboard
           </a>
           <button on:click|preventDefault={handleLogout} class="nav-button mb-4" type="button">
             <i class="nav-icon fas fa-sign-out-alt"></i>&nbsp;&nbsp;Logout
