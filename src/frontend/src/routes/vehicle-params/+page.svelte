@@ -3,6 +3,7 @@
     import { mavlinkParamStore, type Parameter, type ParameterMeta } from '../../stores/mavlinkStore';
     import { onMount } from 'svelte';
     import { get, writable, type Writable } from 'svelte/store';
+    import Modal from '../../components/Modal.svelte';
 
     const loading: Writable<boolean> = writable(false);
     const error: Writable<string | null> = writable(null);
@@ -79,10 +80,78 @@
             writeParameter(param_id, parseFloat(target.value));
         }
     }
+
+    async function exportParameters() {
+        // downloads a JSON file with all parameters
+        const params = Object.values($mavlinkParamStore);
+        const blob = new Blob([JSON.stringify(params)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'parameters.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    async function importParameters() {
+        // reads a JSON file with parameters and sends them to the server
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = async () => {
+            if (input.files && input.files.length > 0) {
+                const file = input.files[0];
+                const reader = new FileReader();
+                reader.onload = async () => {
+                    try {
+                        const params = JSON.parse(reader.result as string);
+                        for (const param of params) {
+                            await writeParameter(param.param_id, param.param_value);
+                        }
+                    } catch (err: any) {
+                        error.set(`Failed to import parameters: ${err.message}`);
+                    }
+                };
+                reader.readAsText(file);
+            }
+        };
+        input.click();
+    }
+
+    async function confirmSetDefaults() {
+        let modal = new Modal({
+            target: document.body,
+            props: {
+                title: 'Reset Parameters',
+                content: 'Are you sure you want to reset all parameters to their default values?',
+                isOpen: true,
+                confirmation: true,
+                notification: false,
+                onConfirm: async () => {
+                    await setDefaults();
+                    modal.$destroy();
+                },
+            }
+        });
+    }
+
+    async function setDefaults() {
+        try {
+            loading.set(true);
+            error.set(null);
+            
+            // TODO: Implement set defaults
+
+        } catch (err: any) {
+            error.set(err.message);
+        } finally {
+            loading.set(false);
+        }
+    }
 </script>
 
 <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">
-    <div class="dashboard w-full grid grid-cols-12 grid-rows-6 gap-4 p-5 rounded-[30px] rounded-l-none overflow-auto h-[90vh] max-h-[90vh]"
+    <div class="dashboard w-full grid grid-cols-12 grid-rows-6 gap-4 p-5 rounded-[30px] rounded-l-none overflow-auto overflow-x-hidden h-[90vh] max-h-[90vh]"
         style="--secondaryColor: {secondaryColor}"
     >
         <div class="user-settings col-span-12 row-span-6 rounded-2xl h-full p-6" style="--primaryColor: {primaryColor}">
@@ -100,13 +169,40 @@
                             <span class="tooltip">PX4 Reference</span>
                         </a>
                     </h2>
-                    <button 
-                        class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                        on:click={requestParameters}
-                        disabled={$loading}
-                    >
-                        Refresh Parameters
-                    </button>
+                    <div class="space-x-2 text-sm">
+                        <button 
+                            class="relative px-4 py-2 bg-[#6e6e6e] text-white rounded-lg hover:bg-blue-600 transition-colors"
+                            on:click={exportParameters}
+                            disabled={$loading}
+                        >
+                            <i class="fa-solid fa-download"></i>
+                            <span class="tooltip">Export Parameters</span>
+                        </button>
+                        <button 
+                            class="relative px-4 py-2 bg-[#f89d47] text-white rounded-lg hover:bg-[#ec9c33] transition-colors"
+                            on:click={importParameters}
+                            disabled={$loading}
+                        >
+                            <i class="fa-solid fa-upload"></i>
+                            <span class="tooltip">Import Parameters</span>
+                        </button>
+                        <button 
+                            class="relative px-4 py-2 bg-[#e65353] text-white rounded-lg hover:bg-[#ec3e3e] transition-colors"
+                            on:click={confirmSetDefaults}
+                            disabled={$loading}
+                        >
+                            <i class="fa-solid fa-undo"></i>
+                            <span class="tooltip">Reset ALL Parameters to Defaults</span>
+                        </button>
+                        <button 
+                            class="relative px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                            on:click={requestParameters}
+                            disabled={$loading}
+                        >
+                            <i class="fa-solid fa-sync"></i>
+                            <span class="tooltip">Refresh Parameters</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Search -->
@@ -199,12 +295,12 @@
 
     .tooltip {
         position: absolute;
-        top: -200%;
+        top: 100%;
         left: -50%;
-        height: auto;
         display: flex;
         font-size: medium;
-        padding: 0.5em;
+        padding-block: 0;
+        padding-inline: 0.5em;
         border-radius: 0.25rem;
         white-space: nowrap;
         opacity: 0;
@@ -213,9 +309,9 @@
         z-index: 1;
     }
 
-    a:hover .tooltip {
+    a:hover .tooltip, button:hover .tooltip{
         opacity: 1;
         visibility: visible;
-        transform: translateY(5px);
+        transform: translate(-45px, 5px);
     }
 </style>
