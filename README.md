@@ -145,17 +145,44 @@ done
 
 ---
 
-## 🐳 Installation
+## 🐳 Installation Script
+For Production:
 ```bash
+curl -s https://raw.githubusercontent.com/MAV-Manager/mmgcs_public/main/contrib/install.sh | \
+    bash -s --
+```
+For Local Testing with [SITL](https://ardupilot.org/dev/docs/sitl-simulator-software-in-the-loop.html):
+```bash
+curl -s https://raw.githubusercontent.com/MAV-Manager/mmgcs_public/main/contrib/install.sh | \
+    bash -s -- --simulation
+```
+
+<details>
+<summary>👈 View Install Script</summary>
+<p>
+
+```bash
+#!/bin/bash
 cd ~
-rm -rf mmgcs
+sudo rm -rf mmgcs
 git clone https://github.com/MAV-Manager/mmgcs_public.git mmgcs
 cd mmgcs
-docker compose -f docker-compose.prod.yml down
-docker system prune -f
-docker compose -f docker-compose.prod.yml up -d
+
+if [ "$1" == "simulation" ]; then
+    docker compose down && docker system prune -f && docker compose up -d
+else
+    docker compose -f docker-compose.prod.yml down
+    docker system prune -f
+    if libcamera-hello --list-cameras | grep -q "No cameras available!"; then
+        echo "No cameras found."
+        docker compose -f docker-compose.prod.yml up frontend backend -d
+    else
+        docker compose -f docker-compose.prod.yml up frontend backend webrtc -d
+    fi
+fi
 ```
-*Running `docker compose up -d` without the `-f` flag will use the default `docker-compose.yml` file. This file will load a [SiTL](https://ardupilot.org/dev/docs/sitl-simulator-software-in-the-loop.html) instance of ArduCopter for testing purposes.*
+</p>
+</details>
 
 ---
 
