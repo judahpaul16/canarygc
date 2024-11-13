@@ -49,10 +49,6 @@ sleep 5
 sudo ip route del default
 sudo ip route add default dev ppp0
 sudo ip link set dev ppp0 mtu 1400
-PUBLIC_IP=$(curl icanhazip.com)
-# Export the variable for Docker Compose
-echo "export PUBLIC_IP=$PUBLIC_IP" >> ~/.bashrc
-source ~/.bashrc
 
 sudo chown -R $(whoami):www-data /home/$(whoami)
 
