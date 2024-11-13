@@ -36,7 +36,7 @@ services:
     container_name: mmgcs_webrtc
     environment:
       - MTX_PATHS_CAM_SOURCE=rpiCamera
-      - MTX_WEBRTCADDITIONALHOSTS="*"
+      - MTX_WEBRTCICESERVERS=stun:stun.l.google.com:19302
       - MTX_READTIMEOUT=10s
       - MTX_WRITETIMEOUT=10s
       - MTX_API=yes
