@@ -8,8 +8,10 @@ sudo apt-get -y install docker.io nginx ufw wget
 echo "y" | sudo ufw enable
 sudo ufw allow 22
 sudo ufw allow 8090
+sudo ufw allow 8189
 sudo ufw allow 8889
 sudo ufw allow 5173
+sudo ufw allow 3000
 sudo ufw allow in on ppp0
 sudo ufw allow out on ppp0
 sudo iptables -t nat -F
