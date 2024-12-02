@@ -45,6 +45,9 @@
   import Notification from '../components/Notification.svelte';
 
   let pb: PocketBase;
+  let blackboxQueue: string[] = [];
+  let isProcessingQueue = false;
+  let queueProcessInterval: NodeJS.Timeout;
 
   let currentPath = '';
   let heightOfDashboard = 1000;
@@ -158,16 +161,34 @@
   }
 
   async function updateBlackBoxCollection(log: string) {
+    // Add log to queue instead of sending immediately
+    blackboxQueue.push(log);
+  }
+
+  async function processBlackBoxQueue() {
+    if (isProcessingQueue || blackboxQueue.length === 0) return;
+    
+    isProcessingQueue = true;
+    let batch: string[] = [];
     try {
-      // Add new logs to the collection
-      pb.collection('blackbox').create({ log: log });
-    } catch (error : any) {
-      if (error.message.includes('The request was autocancelled')) {
-          // ignore it
-      } else {
-          console.error('Error:', error.message || error);
-          console.error('Stack Trace:', error.stack || 'No stack trace available');
-      }
+        // Take up to 50 items from the queue
+        batch = blackboxQueue.splice(0, 50);
+        if (batch.length === 0) return;
+
+        // Create a single record with multiple logs
+        await pb.collection('blackbox').create({
+            logs: batch
+        });
+    } catch (error: any) {
+        if (error.message.includes('The request was autocancelled')) {
+            // Put items back in queue
+            blackboxQueue.unshift(...batch);
+        } else {
+            console.error('Error:', error.message || error);
+            console.error('Stack Trace:', error.stack || 'No stack trace available');
+        }
+    } finally {
+        isProcessingQueue = false;
     }
   }
 
@@ -194,6 +215,7 @@
       }
     }
   }
+
   type MessageHandler = (text: string) => void;
 
   interface Position {
@@ -432,6 +454,9 @@
     await initializeMissionPlansCollection();
     await initializeBlackBoxCollection();
 
+    // Process queue every 5 seconds
+    queueProcessInterval = setInterval(processBlackBoxQueue, 5000);
+    
     // Set up event listeners for user activity
     window.addEventListener('mousemove', handleUserActivity);
     window.addEventListener('keydown', handleUserActivity);
@@ -470,6 +495,7 @@
     }
     clearInterval(authCheckInterval);
     clearTimeout(inactivityTimer);
+    clearInterval(queueProcessInterval);
   });
 
   afterUpdate(() => {
@@ -537,9 +563,9 @@
       }
     } catch (error: any) {
       if (error.message.includes('The request was autocancelled')) {
-        // ignore it
+          // ignore it
       } else {
-        console.error('Error:', error);
+          console.error('Error:', error);
       }
     }
   }
