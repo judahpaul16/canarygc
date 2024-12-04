@@ -77,7 +77,6 @@
 
   onMount(() => {
     const fetchLiveFeed = async () => {
-
       let response = await fetch(`http://${window.location.hostname}:8889/cam`);
       const liveFeed = document.getElementById('live-feed') as HTMLIFrameElement;
       
