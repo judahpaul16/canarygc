@@ -175,10 +175,9 @@
         batch = blackboxQueue.splice(0, 50);
         if (batch.length === 0) return;
 
-        // Create a single record with multiple logs
-        await pb.collection('blackbox').create({
-            logs: batch
-        });
+        // Create a log for each item in the batch
+        let logPromises = batch.map(log => pb.collection('blackbox').create({ log }));
+        await Promise.all(logPromises);
     } catch (error: any) {
         if (error.message.includes('The request was autocancelled')) {
             // Put items back in queue
