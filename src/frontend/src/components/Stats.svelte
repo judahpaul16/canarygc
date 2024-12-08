@@ -283,6 +283,8 @@
         notification: false,
         onConfirm: async () => {
           await sendMavlinkCommand('DO_GRIPPER' , `${[1, 0]}`); // param2 - 0: release, 1: grip
+          await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1 second
+          await sendMavlinkCommand('DO_GRIPPER' , `${[1, 1]}`); // param2 - 0: release, 1: grip
           modal.$destroy();
         },
       }
