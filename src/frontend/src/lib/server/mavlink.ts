@@ -83,6 +83,8 @@ function setupPacketReader(): void {
             logs.push(logEntry);
             newLogs.push(logEntry);
             if (logEntry.includes('_ACK') && !logEntry.includes('"command":512')) console.log(logEntry);
+            if (logEntry.includes('PARAM_EXT_ACK')) console.log(logEntry);
+            if (logEntry.includes('PARAM_ACK_TRANSACTION')) console.log(logEntry);
         }
     });
 }
@@ -145,23 +147,18 @@ async function requestParameters() {
     await send(port!, request);
 }
 
-async function writeParameter(param: string, value: number, type: number) {
+async function writeParameter(id: string, value: number, type: number) {
     if (!port || !reader) {
         online = false;
         return;
     }
 
-    // Null-terminate `param` if it's less than 16 characters
-    if (param.length < 16) {
-        param = param + '\0';
-    }
-
     const request = new common.ParamSet();
     request.targetSystem = 1;
     request.targetComponent = 1;
-    request.paramId = param;
+    request.paramId = id;
     request.paramValue = value;
-    request.paramType = type as common.MavParamType;
+    request.paramType = type;
     await send(port!, request);
 }
 
