@@ -75,9 +75,10 @@
 
             if (!response.ok) throw new Error(await response.text());
             success.set(`Parameter ${id} written successfully`);
-
+            setTimeout(() => success.set(null), 5000);
         } catch (err: any) {
             error.set(`Failed to write parameter ${id}: ${err.message}`);
+            setTimeout(() => error.set(null), 5000);
         }
     }
 
@@ -224,15 +225,21 @@
 
                 <!-- Success States -->
                 {#if $success}
-                    <div class="bg-green-500 text-white p-4 rounded-lg mb-4">
+                    <div class="bg-green-500 text-white p-4 rounded-lg mb-4 relative" id="success">
                         {$success}
+                        <button class="absolute top-0 right-0 p-4" on:click={() => success.set(null)}>
+                            <i class="fas fa-xmark"></i>
+                        </button>
                     </div>
                 {/if}
 
                 <!-- Error States -->
                 {#if $error}
-                    <div class="bg-red-500 text-white p-4 rounded-lg mb-4">
+                    <div class="bg-red-500 text-white p-4 rounded-lg mb-4 relative" id="error">
                         {$error}
+                        <button class="absolute top-0 right-0 p-4" on:click={() => error.set(null)}>
+                            <i class="fas fa-xmark"></i>
+                        </button>
                     </div>
                 {/if}
 
