@@ -108,15 +108,15 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
             }
         case 'write_param':
-            let param = request.request.headers.get('param');
+            let id = request.request.headers.get('id')!;
             let value = parseFloat(request.request.headers.get('value')!);
             let type = parseInt(request.request.headers.get('type')!);
             if (isNaN(value) || isNaN(type)) {
                 return new Response('Invalid value or type', { status: 400 });
             }
             try {
-                await writeParameter(param!, value, type);
-                return new Response(`Parameter written: ${param}, value: ${value}, type: ${type}`, { status: 200 });
+                await writeParameter(id, value, type);
+                return new Response(`Parameter written: ${id}, value: ${value}, type: ${type}`, { status: 200 });
             } catch (err) {
                 console.error(err);
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });

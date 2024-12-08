@@ -6,12 +6,14 @@
     import Modal from '../../components/Modal.svelte';
 
     const loading: Writable<boolean> = writable(false);
+    const success: Writable<string | null> = writable(null);
     const error: Writable<string | null> = writable(null);
 
     $: primaryColor = $primaryColorStore;
     $: secondaryColor = $secondaryColorStore;
     
     // Parameter type mapping with index signature
+    // https://mavlink.io/en/messages/common.html#MAV_PARAM_TYPE
     const PARAM_TYPES: { [key: number]: string } = {
         1: 'uint8',
         2: 'int8',
@@ -58,26 +60,31 @@
         }
     }
 
-    async function writeParameter(param_id: string, value: number) {
+    async function writeParameter(id: string, value: number, type: number) {
         try {
             error.set(null);
             const response = await fetch('/api/mavlink/write_param', {
                 method: 'POST',
-                headers: {'content-type': 'application/json'},
-                body: JSON.stringify({ param_id, value })
+                headers: {
+                    'content-type': 'application/json',
+                    'id': id.toString(),
+                    'value': value.toString(),
+                    'type': type.toString(),
+                },
             });
 
             if (!response.ok) throw new Error(await response.text());
+            success.set(`Parameter ${id} written successfully`);
 
         } catch (err: any) {
-            error.set(`Failed to write parameter ${param_id}: ${err.message}`);
+            error.set(`Failed to write parameter ${id}: ${err.message}`);
         }
     }
 
-    function handleParameterChange(event: Event, param_id: string) {
+    function handleParameterChange(event: Event, param_id: string, param_type: number) {
         const target = event.target as HTMLInputElement;
         if (target && target.value) {
-            writeParameter(param_id, parseFloat(target.value));
+            writeParameter(param_id, parseFloat(target.value), param_type);
         }
     }
 
@@ -106,7 +113,7 @@
                     try {
                         const params = JSON.parse(reader.result as string);
                         for (const param of params) {
-                            await writeParameter(param.param_id, param.param_value);
+                            await writeParameter(param.param_id, param.param_value, param.param_type);
                         }
                     } catch (err: any) {
                         error.set(`Failed to import parameters: ${err.message}`);
@@ -215,6 +222,13 @@
                     />
                 </div>
 
+                <!-- Success States -->
+                {#if $success}
+                    <div class="bg-green-500 text-white p-4 rounded-lg mb-4">
+                        {$success}
+                    </div>
+                {/if}
+
                 <!-- Error States -->
                 {#if $error}
                     <div class="bg-red-500 text-white p-4 rounded-lg mb-4">
@@ -243,14 +257,14 @@
                                                 type="number"
                                                 value={param.param_value}
                                                 class="bg-gray-700 rounded p-1 w-32"
-                                                on:change={(e) => handleParameterChange(e, param.param_id)}
+                                                on:change={(e) => handleParameterChange(e, param.param_id, param.param_type)}
                                             />
                                         </td>
                                         <td class="p-2">{PARAM_TYPES[param.param_type] ?? 'unknown'}</td>
                                         <td class="p-2">
                                             <button 
                                                 class="px-2 py-1 bg-gray-600 rounded hover:bg-gray-500 transition-colors"
-                                                on:click={() => writeParameter(param.param_id, param.param_value)}
+                                                on:click={() => writeParameter(param.param_id, param.param_value, param.param_type)}
                                             >
                                                 Save
                                             </button>
