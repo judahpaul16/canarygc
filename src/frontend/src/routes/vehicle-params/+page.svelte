@@ -8,6 +8,7 @@
     const loading: Writable<boolean> = writable(false);
     const success: Writable<string | null> = writable(null);
     const error: Writable<string | null> = writable(null);
+    const modified: Writable<string[]> = writable([]);
 
     $: primaryColor = $primaryColorStore;
     $: secondaryColor = $secondaryColorStore;
@@ -46,6 +47,7 @@
         try {
             loading.set(true);
             error.set(null);
+            success.set(null);
             
             const response = await fetch('/api/mavlink/request_params', {
                 method: 'POST',
@@ -75,6 +77,7 @@
 
             if (!response.ok) throw new Error(await response.text());
             success.set(`Parameter ${id} written successfully`);
+            modified.update(modified => modified.filter(param_id => param_id !== id));
             setTimeout(() => success.set(null), 5000);
         } catch (err: any) {
             error.set(`Failed to write parameter ${id}: ${err.message}`);
@@ -84,9 +87,12 @@
 
     function handleParameterChange(event: Event, param_id: string, param_type: number) {
         const target = event.target as HTMLInputElement;
-        if (target && target.value) {
-            writeParameter(param_id, parseFloat(target.value), param_type);
-        }
+        modified.update(modified => {
+            if (!modified.includes(param_id)) {
+                modified.push(param_id);
+            }
+            return modified;
+        });
     }
 
     async function exportParameters() {
@@ -252,6 +258,7 @@
                                 <th class="text-left p-2">Value</th>
                                 <th class="text-left p-2">Type</th>
                                 <th class="text-left p-2">Actions</th>
+                                <th class="text-left p-2">Status</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -262,7 +269,7 @@
                                         <td class="p-2">
                                             <input 
                                                 type="number"
-                                                value={param.param_value}
+                                                bind:value={param.param_value}
                                                 class="bg-gray-700 rounded p-1 w-32"
                                                 on:change={(e) => handleParameterChange(e, param.param_id, param.param_type)}
                                             />
@@ -275,6 +282,10 @@
                                             >
                                                 Save
                                             </button>
+                                        </td>
+                                        <td class="p-2">
+                                            <span class="text-orange-300" hidden={!$modified.includes(param.param_id)}>Modified</span>
+                                            <span class="text-green-300" hidden={$modified.includes(param.param_id)}>Saved</span>
                                         </td>
                                     </tr>
                                 {/each}

@@ -116,6 +116,7 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
             }
             try {
                 await writeParameter(id, value, type);
+                console.log(`Parameter written: ${id}, value: ${value}, type: ${type}`);
                 return new Response(`Parameter written: ${id}, value: ${value}, type: ${type}`, { status: 200 });
             } catch (err) {
                 console.error(err);

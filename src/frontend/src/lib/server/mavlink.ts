@@ -151,12 +151,17 @@ async function writeParameter(param: string, value: number, type: number) {
         return;
     }
 
+    // Null-terminate `param` if it's less than 16 characters
+    if (param.length < 16) {
+        param = param + '\0';
+    }
+
     const request = new common.ParamSet();
     request.targetSystem = 1;
     request.targetComponent = 1;
     request.paramId = param;
     request.paramValue = value;
-    request.paramType = type;
+    request.paramType = type as common.MavParamType;
     await send(port!, request);
 }
 
