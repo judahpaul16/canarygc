@@ -1,10 +1,32 @@
 import { writable } from 'svelte/store';
-import type { AdminAuthResponse, RecordAuthResponse, RecordModel } from 'pocketbase';
+import type { AdminAuthResponse, RecordAuthResponse, RecordModel, AuthModel } from 'pocketbase';
 
-type AuthData = AdminAuthResponse | RecordAuthResponse<RecordModel> | null;
+type AuthData = {
+  record?: AuthModel | null;
+  admin?: AuthModel | null;
+  token: string;
+  expires: number;
+} | null;
 
 function createAuthStore() {
-  const { subscribe, set, update } = writable<AuthData>(null);
+  let initialAuthData: AuthData = null;
+  
+  if (typeof window !== 'undefined') {
+    const savedAuthData = localStorage.getItem('authData');
+    initialAuthData = savedAuthData ? JSON.parse(savedAuthData) : null;
+  }
+  const { subscribe, set, update } = writable<AuthData>(initialAuthData);
+
+  // Subscribe to store changes to update localStorage
+  subscribe(value => {
+    if (typeof window !== 'undefined') {
+      if (value) {
+        localStorage.setItem('authData', JSON.stringify(value));
+      } else {
+        localStorage.removeItem('authData');
+      }
+    }
+  });
 
   return {
     subscribe,
@@ -56,6 +78,10 @@ function createAuthStore() {
         }
 
         const result = await response.json();
+        
+        // Update the auth store with the login result
+        set(result);
+        
         return result;
       } catch (error) {
         console.error('Login error:', error);
@@ -77,6 +103,10 @@ function createAuthStore() {
         }
 
         const result = await response.json();
+        
+        // Clear the auth store on logout
+        set(null);
+        
         return result;
       } catch (error) {
         console.error('Logout error:', error);
@@ -97,7 +127,7 @@ function createAuthStore() {
       });
     },
     checkExpired: () => {
-      let isExpired = false;
+      let isExpired = (typeof window === 'undefined' || !localStorage.getItem('authData')) ? true : false;
       update(currentAuthData => {
         // Check if the current auth data exists and has an expiration
         if (currentAuthData && 'expires' in currentAuthData) {
