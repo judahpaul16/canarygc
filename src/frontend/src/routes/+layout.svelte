@@ -452,6 +452,7 @@
     
     await initializeMissionPlansCollection();
     await initializeBlackBoxCollection();
+    await checkLoadedMission();
 
     // Process queue every 5 seconds
     queueProcessInterval = setInterval(processBlackBoxQueue, 5000);
@@ -474,8 +475,6 @@
       await cleanupBlackBoxCollection();
       await checkOnlineStatus();
     }, 1100);
-
-    await checkLoadedMission();
     
     const dashboard = document.querySelector('.dashboard');
     if (dashboard) {
