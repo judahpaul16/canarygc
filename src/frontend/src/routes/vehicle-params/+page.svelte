@@ -68,7 +68,7 @@
             const response = await fetch('/api/mavlink/write_param', {
                 method: 'POST',
                 headers: {
-                    'content-type': 'application/json',
+                    'content-type': 'application/json; charset=utf-8',
                     'id': id.toString(),
                     'value': value.toString(),
                     'type': type.toString(),

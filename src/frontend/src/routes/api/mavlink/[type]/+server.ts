@@ -115,9 +115,12 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
                 return new Response('Invalid value or type', { status: 400 });
             }
             try {
-                await writeParameter(id, value, type);
-                console.log(`Parameter written: ${id}, value: ${value}, type: ${type}`);
-                return new Response(`Parameter written: ${id}, value: ${value}, type: ${type}`, { status: 200 });
+                // Null-terminate `id` if it's less than 16 characters
+                // https://mavlink.io/en/services/parameter.html#parameter-names
+                let processedId = id.padEnd(16, '\0');
+                await writeParameter(processedId, value, type);
+                console.log(`Parameter written: ${processedId}, value: ${value}, type: ${type}`);
+                return new Response(`Parameter written: ${processedId}, value: ${value}, type: ${type}`, { status: 200 });
             } catch (err) {
                 console.error(err);
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
