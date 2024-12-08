@@ -37,17 +37,22 @@
     }
 
     // Set up input focus handlers
-    const inputs = ['email', 'password', 'confirmPassword'].map(
-      id => document.getElementById(id) as HTMLInputElement
-    ).filter(Boolean);
+    setTimeout(() => {
+      const inputs = ['email', 'password', 'confirmPassword']
+        .map(id => document.getElementById(id) as HTMLInputElement)
+        .filter(Boolean);
 
-    inputs.forEach(input => {
-      ['focus', 'click'].forEach(event => {
-        input?.addEventListener(event, () => {
-          inputs.forEach(i => i.autofocus = i === input);
+      // Manage autofocus dynamically
+      inputs.forEach(input => {
+        ['focus', 'click'].forEach(event => {
+          input.addEventListener(event, () => {
+            // Ensure only the current input has autofocus
+            inputs.forEach(i => i.removeAttribute('autofocus'));
+            input.setAttribute('autofocus', 'true');
+          });
         });
       });
-    });
+    }, 1000);
   });
 
   function calculatePasswordStrength(pass: string): number {
