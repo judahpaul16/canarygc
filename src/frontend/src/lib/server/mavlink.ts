@@ -83,8 +83,6 @@ function setupPacketReader(): void {
             logs.push(logEntry);
             newLogs.push(logEntry);
             if (logEntry.includes('_ACK') && !logEntry.includes('"command":512')) console.log(logEntry);
-            if (logEntry.includes('PARAM_EXT_ACK')) console.log(logEntry);
-            if (logEntry.includes('PARAM_ACK_TRANSACTION')) console.log(logEntry);
         }
     });
 }

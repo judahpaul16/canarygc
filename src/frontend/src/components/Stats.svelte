@@ -282,7 +282,7 @@
         confirmation: true,
         notification: false,
         onConfirm: async () => {
-          await sendMavlinkCommand('DO_GRIPPER' , `${[1, 0]}`); // param2 - 0: release, 1: grip
+          await sendMavlinkCommand('DO_GRIPPER' , `${[0, 0]}`); // param2 - 0: release, 1: grip
           modal.$destroy();
         },
       }
