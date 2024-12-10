@@ -235,10 +235,10 @@
   }
 
   // Helper functions to extract and parse values from log text
-  const extractValue = (text: string, pattern: string): string | null => {
-    const match = text.match(new RegExp(`"${pattern}":\\s*("[^"]*"|\\-?\\d+)`, 'g'));
-    return match ? match.toString().replace(`"${pattern}":`, '') : null;
-  };
+  function extractValue(text: string, key: string): string {
+    const match = text.match(new RegExp(`"${key}":"?([^,"]+)"?`));
+    return match ? match[1].replace(/^"|"$/g, '') : '';
+  }
 
   const parseLocation = (lat: string | null, lon: string | null): Position | null => {
     if (!lat || !lon) return null;
@@ -266,6 +266,42 @@
     });
     setTimeout(() => notification.$destroy(), config.duration || 10000);
   };
+
+  function decodeParameterValue(encodedValue: string, paramType: string): number {
+    const value = parseFloat(encodedValue);
+    const type = parseInt(paramType);
+    
+    if (isNaN(value)) {
+        console.warn('Invalid parameter value:', encodedValue);
+        return 0;
+    }
+    
+    switch (type) {
+        case 1: // uint8
+            return Math.min(255, Math.max(0, Math.round(value)));
+        case 2: // int8
+            return Math.min(127, Math.max(-128, Math.round(value)));
+        case 3: // uint16
+            return Math.min(65535, Math.max(0, Math.round(value)));
+        case 4: // int16
+            return Math.min(32767, Math.max(-32768, Math.round(value)));
+        case 5: // uint32
+            return Math.min(4294967295, Math.max(0, Math.round(value)));
+        case 6: // int32
+            return Math.min(2147483647, Math.max(-2147483648, Math.round(value)));
+        case 7: // uint64
+        case 8: // int64
+            console.warn('64-bit integers may not be fully precise in JavaScript');
+            return value;
+        case 9: // float
+            return value;
+        case 10: // double
+            return value;
+        default:
+            console.warn('Unknown parameter type:', type);
+            return value;
+    }
+  }
 
   // Message handlers for different MAVLink message types
   const messageHandlers: Record<string, MessageHandler> = {
@@ -394,18 +430,28 @@
     PARAM_VALUE: (text: string) => {
       const paramId = extractValue(text, 'paramId');
       const paramValue = extractValue(text, 'paramValue');
-      if (paramId && paramValue) {
-        let param: Parameter = {
-          param_id: paramId,
-          param_value: parseInt(paramValue),
-          param_type: parseInt(extractValue(text, 'paramType') || '0'),
-          param_count: parseInt(extractValue(text, 'paramCount') || '0'),
-          param_index: parseInt(extractValue(text, 'paramIndex') || '0')
-        };
-        // update the store at the index of the parameter
-        let params = get(mavlinkParamStore);
-        params[param.param_id] = param;
-        mavlinkParamStore.set(params);
+      const paramType = extractValue(text, 'paramType');
+      
+      if (paramId && paramValue && paramType) {
+          console.log('Raw PARAM_VALUE message:', text);
+          console.log('Extracted values:', {
+              paramId,
+              paramValue,
+              paramType,
+              decodedValue: decodeParameterValue(paramValue, paramType)
+          });
+          
+          let param: Parameter = {
+              param_id: paramId,
+              param_value: decodeParameterValue(paramValue, paramType),
+              param_type: parseInt(paramType),
+              param_count: parseInt(extractValue(text, 'paramCount') || '0'),
+              param_index: parseInt(extractValue(text, 'paramIndex') || '0')
+          };
+          // update the store at the index of the parameter
+          let params = get(mavlinkParamStore);
+          params[paramId] = param;
+          mavlinkParamStore.set(params);
       }
     }
   };
