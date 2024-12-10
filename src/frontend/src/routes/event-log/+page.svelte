@@ -69,7 +69,7 @@
             showParamValue = checked;
         } else if (message === 'GLOBAL_POSITION_INT') {
             showGPSRawInt = checked;
-        } else if (message === 'SYS_STATUS') {
+        } else if (message === 'BATTERY_STATUS') {
             showSysStatus = checked;
         }
     }
@@ -167,8 +167,8 @@
                         <label for="Toggle PARAM_VALUE">PARAM_VALUE</label>
                         <input type="checkbox" class="form-checkbox" name="Toggle GLOBAL_POSITION_INT" checked={showGPSRawInt} on:change={(event) => handleShowMessage(event, 'GLOBAL_POSITION_INT')}>
                         <label for="Toggle GLOBAL_POSITION_INT">GLOBAL_POSITION_INT</label>
-                        <input type="checkbox" class="form-checkbox" name="Toggle SYS_STATUS" checked={showSysStatus} on:change={(event) => handleShowMessage(event, 'SYS_STATUS')}>
-                        <label for="Toggle SYS_STATUS">SYS_STATUS</label>
+                        <input type="checkbox" class="form-checkbox" name="Toggle BATTERY_STATUS" checked={showSysStatus} on:change={(event) => handleShowMessage(event, 'BATTERY_STATUS')}>
+                        <label for="Toggle BATTERY_STATUS">BATTERY_STATUS</label>
                     </div>
                     <div class="btns flex gap-4">
                         <button class="btn btn-primary bg-red-400 hover:bg-red-500 relative" on:click={confirmClear}>
@@ -201,7 +201,7 @@
                             <span style="display: {showParamValue ? 'block' : 'none'}">{@html getHighlightedLog(log)}</span>
                         {:else if log.indexOf('GLOBAL_POSITION_INT') !== -1}
                             <span style="display: {showGPSRawInt ? 'block' : 'none'}">{@html getHighlightedLog(log)}</span>
-                        {:else if log.indexOf('SYS_STATUS') !== -1}
+                        {:else if log.indexOf('BATTERY_STATUS') !== -1}
                             <span style="display: {showSysStatus ? 'block' : 'none'}">{@html getHighlightedLog(log)}</span>
                         {:else}
                             <span>{@html getHighlightedLog(log)}</span>

@@ -98,7 +98,7 @@ function handlePortClose(): void {
     logs.push('MAVLink connection closed');
 }
 
-async function requestSysStatus() {
+async function requestStatus() {
     if (!port || !reader) {
         online = false;
         return;
@@ -128,7 +128,7 @@ async function requestSysStatus() {
     request = new common.RequestMessageCommand();
     request.targetSystem = 1;
     request.targetComponent = 1;
-    request.messageId = common.SysStatus.MSG_ID;
+    request.messageId = common.BatteryStatus.MSG_ID;
     request.responseTarget = 1;
     await send(port!, request);
 }
@@ -277,7 +277,7 @@ function convertBigIntToNumber(obj: any): any {
 
 export {
     initializePort,
-    requestSysStatus,
+    requestStatus,
     requestParameters,
     writeParameter,
     sendMavlinkCommand,

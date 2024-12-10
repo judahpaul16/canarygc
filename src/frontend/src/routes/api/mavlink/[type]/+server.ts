@@ -5,7 +5,7 @@ import {
     online,
     connecting,
     initializePort,
-    requestSysStatus,
+    requestStatus,
     requestParameters,
     writeParameter,
     sendMavlinkCommand,
@@ -23,7 +23,7 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
             try {
                 let connected = (port && reader && online);
                 if (!connected) await initializePort();
-                else await requestSysStatus();
+                else await requestStatus();
 
                 if (logs.length > 0) {
                     const logsToSend = newLogs.slice();
