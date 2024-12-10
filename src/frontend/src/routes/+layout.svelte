@@ -377,7 +377,7 @@
       });
     },
 
-    SYS_STATUS: (text: string) => {
+    BATTERY_STATUS: (text: string) => {
       const battery = extractValue(text, 'batteryRemaining');
       if (battery) mavBatteryStore.set(parseInt(battery));
     },
