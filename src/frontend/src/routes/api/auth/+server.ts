@@ -41,8 +41,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     
     // Throw a 401 Unauthorized error with more details
     throw error(401, {
-      message: 'Authentication failed',
-      details: err instanceof Error ? err.message : 'Unknown error'
+      message: `Authentication failed: ${err instanceof Error ? err.message : 'Unknown error'}`
     });
   }
 };
