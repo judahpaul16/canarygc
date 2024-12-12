@@ -509,7 +509,7 @@
 
     // Auth Checks
     authCheckInterval = setInterval(async () => {
-      if (typeof window !== 'undefined' && authData.checkExpired() && window.location.pathname !== '/') {
+      if (authData === null || (typeof window !== 'undefined' && authData.checkExpired() && window.location.pathname !== '/')) {
         authData.set(null);
         goto('/login');
       }
