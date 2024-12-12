@@ -314,7 +314,7 @@
       const heading = extractValue(text, 'hdg');
       if (heading) mavHeadingStore.set(parseFloat(heading) / 100);
 
-      const altitude = extractValue(text, 'alt');
+      const altitude = extractValue(text, 'relativeAlt');
       if (altitude) mavAltitudeStore.set(parseFloat(altitude) / 1000);
 
       const speed = calculateSpeed(text);
