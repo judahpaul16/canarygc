@@ -509,7 +509,14 @@
 
     // Auth Checks
     authCheckInterval = setInterval(async () => {
-      if (authData === null || (typeof window !== 'undefined' && authData.checkExpired() && window.location.pathname !== '/')) {
+      let adminExists = false;
+      try {
+        const admins = await pb.admins.getList(1, 1);
+        adminExists = admins.items.length > 0;
+      } catch (error: any) {
+        console.error('Error:', error);
+      }
+      if (adminExists === false || (typeof window !== 'undefined' && authData.checkExpired() && window.location.pathname !== '/')) {
         authData.set(null);
         goto('/login');
       }
