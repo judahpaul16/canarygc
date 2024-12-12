@@ -283,8 +283,9 @@
         confirmation: true,
         notification: false,
         onConfirm: async () => {
-          await sendMavlinkCommand('DO_SET_SERVO' , `${[9, 1100]}`); // param2 - 1900: release, 1100: grip
-          await sendMavlinkCommand('DO_SET_SERVO' , `${[9, 1900]}`); // param2 - 1900: release, 1100: grip
+          await sendMavlinkCommand('DO_SET_SERVO' , `${[9, 1050]}`); // param2 - 1900: release, 1100: grip
+          await new Promise((resolve) => setTimeout(resolve, 500)); // Wait 0.5 seconds
+          await sendMavlinkCommand('DO_SET_SERVO' , `${[9, 1950]}`); // param2 - 1900: release, 1100: grip
           modal.$destroy();
         },
       }
