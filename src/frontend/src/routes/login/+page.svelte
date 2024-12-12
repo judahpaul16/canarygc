@@ -57,7 +57,7 @@
 
   function calculatePasswordStrength(pass: string): number {
     let strength = 0;
-    if (pass.length >= 8) strength += 1;
+    if (pass.length >= 10) strength += 1;
     if (pass.match(/[a-z]/) && pass.match(/[A-Z]/)) strength += 1;
     if (pass.match(/\d/)) strength += 1;
     if (pass.match(/[^a-zA-Z\d]/)) strength += 1;
@@ -153,7 +153,7 @@
               </div>
             </div>
             <div class="text-xs mt-1">
-              Password must contain at least 8 characters, including uppercase, lowercase, numbers, and special characters
+              Password must contain at least 10 characters, including uppercase, lowercase, numbers, and special characters
             </div>
           </div>
         {/if}

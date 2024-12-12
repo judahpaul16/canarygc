@@ -79,6 +79,7 @@
                 notification: false,
                 onConfirm: async () => {
                     let title = get(missionPlanTitleStore);
+                    if (title === "") title = "Untitled Mission Plan";
                     await handleSave(title, actions);
                 },
                 onCancel: () => {
