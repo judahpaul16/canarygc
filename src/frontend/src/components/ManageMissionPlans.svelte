@@ -91,7 +91,7 @@
   }
 
   async function handleLoad(title: string, actions: MissionPlanActions) {
-    sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true', 'false'); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+    sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true'); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
 
     // Clear the current mission plan
     try {

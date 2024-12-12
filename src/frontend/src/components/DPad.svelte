@@ -49,25 +49,25 @@
 <div class="dpad-container relative flex items-center justify-center w-48 h-48">
   <nav class="d-pad relative" style="--tertiaryColor: {tertiaryColor}">
     <button class="up" on:click={() => {
-        if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true', 'false');
+        if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true');
         setPositionLocal('10', '0', `-${altitude}`);
       }}>
       <i class="fas fa-chevron-up"></i>
     </button>
     <button class="right" on:click={() => {
-        if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true', 'false');
+        if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true');
         setPositionLocal('0', '10', `-${altitude}`);
       }}>
       <i class="fas fa-chevron-right"></i>
     </button>
     <button class="down" on:click={() => {
-        if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true', 'false');
+        if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true');
         setPositionLocal('-10', '0', `-${altitude}`);
       }}>
       <i class="fas fa-chevron-down"></i>
     </button>
     <button class="left" on:click={() => {
-        if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true', 'false');
+        if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true');
         setPositionLocal('0', '-10', `-${altitude}`);
       }}>
       <i class="fas fa-chevron-left"></i>
