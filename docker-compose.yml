@@ -30,8 +30,6 @@ services:
       resources:
         limits:
           memory: 700m
-    depends_on:
-      - sitl
     restart: always
 
   sitl:
