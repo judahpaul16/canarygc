@@ -432,15 +432,7 @@
       const paramValue = extractValue(text, 'paramValue');
       const paramType = extractValue(text, 'paramType');
       
-      if (paramId && paramValue && paramType) {
-          console.log('Raw PARAM_VALUE message:', text);
-          console.log('Extracted values:', {
-              paramId,
-              paramValue,
-              paramType,
-              decodedValue: decodeParameterValue(paramValue, paramType)
-          });
-          
+      if (paramId && paramValue && paramType) {          
           let param: Parameter = {
               param_id: paramId,
               param_value: decodeParameterValue(paramValue, paramType),
@@ -495,10 +487,13 @@
     // @ts-ignore
     document.querySelector('.bg')!.style.background = "url('bg-map.webp') no-repeat center center fixed";
     pb = new PocketBase(`http://${window.location.hostname}:8090`);
+    pb.autoCancellation(false);
     
-    await initializeMissionPlansCollection();
-    await initializeBlackBoxCollection();
-    await checkLoadedMission();
+    setTimeout(() => {
+      initializeMissionPlansCollection();
+      initializeBlackBoxCollection();
+      checkLoadedMission();
+    }, 2000);
 
     // Process queue every 5 seconds
     queueProcessInterval = setInterval(processBlackBoxQueue, 5000);

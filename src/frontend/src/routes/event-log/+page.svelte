@@ -144,6 +144,7 @@
 
     onMount(() => {
         pb = new PocketBase(`http://${window.location.hostname}:8090`);
+        pb.autoCancellation(false);
     });
 
     afterUpdate(() => {

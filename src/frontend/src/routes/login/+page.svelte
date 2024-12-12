@@ -26,6 +26,7 @@
   
   onMount(async () => {
     pb = new PocketBase(`http://${window.location.hostname}:8090`);
+    pb.autoCancellation(false);
     
     try {
       // Check if admin exists

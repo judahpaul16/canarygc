@@ -9,6 +9,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   // console.log('PocketBase URL:', pbUrl);
   
   event.locals.pb = new PocketBase(pbUrl);
+  event.locals.pb.autoCancellation(false);
   
   // Optional: Load user if authenticated
   const cookie = event.request.headers.get('cookie');

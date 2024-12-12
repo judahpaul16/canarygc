@@ -36,6 +36,7 @@
 
     onMount(() => {
         pb = new PocketBase(`http://${window.location.hostname}:8090`);
+        pb.autoCancellation(false);
     });
 
     async function sendMavlinkCommand(command: string, params: string  = '', useCmdLong: string = 'false', useArduPilotMega: string = 'false') {
