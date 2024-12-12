@@ -1,3 +1,4 @@
+import { authData } from '../../../../stores/authStore';
 import type { RequestHandler } from './$types';
 import { error, json } from '@sveltejs/kit';
 
@@ -25,7 +26,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     });
 
     // Automatically authenticate the new admin
-    const authData = await locals.pb.admins.authWithPassword(email, password);
+    const response = await locals.pb.admins.authWithPassword(email, password);
+    authData.set({
+      token: response.token,
+      expires: Date.now() + 3600 * 1000, // set expiration to 1 hour from now
+      admin: response.admin,
+      record: null, // Set record to null since it's an admin response
+    });
 
     return json({ 
       success: true, 
@@ -40,8 +47,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     
     // Provide more detailed error response
     throw error(400, {
-      message: 'Registration failed',
-      details: err instanceof Error ? err.message : 'Unknown error'
+      message: `Registration failed: ${err instanceof Error ? err.message : 'Unknown error'}`
     });
   }
 };

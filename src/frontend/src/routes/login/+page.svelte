@@ -97,7 +97,12 @@
           passwordConfirm: confirmPassword,
         });
         const authDataResponse = await pb.admins.authWithPassword(email, password);
-        authData.set(authDataResponse);
+        authData.set({
+          token: authDataResponse.token,
+          expires: Date.now() + 3600 * 1000, // Set expiration to 1 hour from now
+          admin: authDataResponse.admin,
+          record: null, // Set record to null since it's an admin response
+        });
         goto('/dashboard');
       } catch (err: any) {
         error = err.message;
@@ -105,12 +110,22 @@
     } else {
       try {
         const authDataResponse = await pb.admins.authWithPassword(email, password);
-        authData.set(authDataResponse);
+        authData.set({
+          token: authDataResponse.token,
+          expires: Date.now() + 3600 * 1000, // Set expiration to 1 hour from now
+          admin: authDataResponse.admin,
+          record: null, // Set record to null since it's an admin response
+        });
         goto('/dashboard');
       } catch (err: any) {
         try {
           const authDataResponse = await pb.collection('users').authWithPassword(email, password);
-          authData.set(authDataResponse);
+          authData.set({
+            token: authDataResponse.token,
+            expires: Date.now() + 3600 * 1000, // Set expiration to 1 hour from now
+            admin: null, // Set admin to null since it's a user response
+            record: null, // Set record to null since it's an admin response
+          });
           goto('/dashboard');
         } catch (err: any) {
           error = err.message;

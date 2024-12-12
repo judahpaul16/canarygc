@@ -34,7 +34,7 @@ export const handle: Handle = async ({ event, resolve }) => {
           [event.locals.pb.authStore.model?.collectionName === 'admins' ? 'admin' : 'record']: 
             event.locals.pb.authStore.model,
           token: event.locals.pb.authStore.token,
-          expires: event.locals.pb.authStore.model?.['expires'] || Date.now() + (24 * 60 * 60 * 1000),
+          expires: event.locals.pb.authStore.model?.['expires'] || Date.now() + 3600 * 1000, // 1 hour
         };
         
         // Sync with client-side store
