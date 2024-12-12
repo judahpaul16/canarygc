@@ -44,7 +44,7 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
             let params: string | number[] | null = request.request.headers.get('params');
             let useArduPilotMega = request.request.headers.get('useArduPilotMega');
             let useCmdLong = request.request.headers.get('useCmdLong');
-            if (useCmdLong === null) useCmdLong = 'true';
+            if (useCmdLong === null) useCmdLong = 'false';
             if (params) params = params.split(',').map((param) => {
                 return parseFloat(param);
             });

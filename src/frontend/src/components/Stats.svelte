@@ -144,14 +144,15 @@
     return formattedTime;
   }
 
-  async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
+  async function sendMavlinkCommand(command: string, params: string  = '', useCmdLong: string = 'false', useArduPilotMega: string = 'false') {
     const response = await fetch(`/api/mavlink/send_command`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         'command': command,
         'params': params,
-        'useArduPilotMega': useArduPilotMega
+        'useArduPilotMega': useArduPilotMega,
+        'useCmdLong': useCmdLong,
       },
     });
     if (response.ok) {
@@ -282,7 +283,7 @@
         confirmation: true,
         notification: false,
         onConfirm: async () => {
-          await sendMavlinkCommand('DO_GRIPPER' , `${[0, 0]}`); // param2 - 0: release, 1: grip
+          await sendMavlinkCommand('DO_GRIPPER' , `${[1, 0]}`, 'true'); // param2 - 0: release, 1: grip
           modal.$destroy();
         },
       }
