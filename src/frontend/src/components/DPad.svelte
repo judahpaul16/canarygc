@@ -10,13 +10,14 @@
   $: mavMode = $mavModeStore;
   $: altitude = $mavAltitudeStore;
 
-  async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
+  async function sendMavlinkCommand(command: string, params: string  = '', useCmdLong: string = 'false', useArduPilotMega: string = 'false') {
     const response = await fetch(`/api/mavlink/send_command`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         'command': command,
         'params': params,
+        'useCmdLong': useCmdLong,
         'useArduPilotMega': useArduPilotMega
       },
     });
@@ -48,25 +49,25 @@
 <div class="dpad-container relative flex items-center justify-center w-48 h-48">
   <nav class="d-pad relative" style="--tertiaryColor: {tertiaryColor}">
     <button class="up" on:click={() => {
-        if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
+        if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true', 'false');
         setPositionLocal('10', '0', `-${altitude}`);
       }}>
       <i class="fas fa-chevron-up"></i>
     </button>
     <button class="right" on:click={() => {
-        if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
+        if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true', 'false');
         setPositionLocal('0', '10', `-${altitude}`);
       }}>
       <i class="fas fa-chevron-right"></i>
     </button>
     <button class="down" on:click={() => {
-        if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
+        if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true', 'false');
         setPositionLocal('-10', '0', `-${altitude}`);
       }}>
       <i class="fas fa-chevron-down"></i>
     </button>
     <button class="left" on:click={() => {
-        if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
+        if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true', 'false');
         setPositionLocal('0', '-10', `-${altitude}`);
       }}>
       <i class="fas fa-chevron-left"></i>

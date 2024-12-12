@@ -45,13 +45,14 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
             let useArduPilotMega = request.request.headers.get('useArduPilotMega');
             let useCmdLong = request.request.headers.get('useCmdLong');
             if (useCmdLong === null) useCmdLong = 'false';
+            if (useArduPilotMega === null) useArduPilotMega = 'false';
             if (params) params = params.split(',').map((param) => {
                 return parseFloat(param);
             });
             try {
                 if (command) {
                     if (params === null) params = [];
-                    await sendMavlinkCommand(command, params as number[], useArduPilotMega === 'true', useCmdLong === 'true');
+                    await sendMavlinkCommand(command, params as number[], useCmdLong === 'true', useArduPilotMega === 'true');
                     console.log(`MAVLink Command sent: ${command}, params: [${params}]`);
                     return new Response(`MAVLink Command sent: ${command}, params: [${params}]`, { status: 200 });
                 } else {

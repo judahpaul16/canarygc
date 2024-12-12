@@ -38,20 +38,21 @@
         pb = new PocketBase(`http://${window.location.hostname}:8090`);
     });
 
-    async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
+    async function sendMavlinkCommand(command: string, params: string  = '', useCmdLong: string = 'false', useArduPilotMega: string = 'false') {
         const response = await fetch(`/api/mavlink/send_command`, {
-        method: 'POST',
-        headers: {
-            'content-type': 'application/json',
-            'command': command,
-            'params': params,
-            'useArduPilotMega': useArduPilotMega
-        },
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json',
+                'command': command,
+                'params': params,
+                'useCmdLong': useCmdLong,
+                'useArduPilotMega': useArduPilotMega
+            },
         });
         if (response.ok) {
-        console.log(await response.text());
+            console.log(await response.text());
         } else {
-        console.error(`Error: ${await response.text()}`);
+            console.error(`Error: ${await response.text()}`);
         }
     }
 
@@ -90,7 +91,7 @@
     }
 
     async function handleLoad(title: string, actions: MissionPlanActions) {
-        sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+        sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true', 'false'); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
 
         // Clear the current mission plan
         try {
@@ -356,8 +357,7 @@
                             headers: {
                                 "content-type": "application/json",
                                 "command": "DO_SET_HOME",
-                                "params": `${[useCurrent, 0, 0, 0, lat, lon, alt]}`,
-                                "useCmdLong": "false",
+                                "params": `${[useCurrent, 0, 0, 0, lat, lon, alt]}`
                             },
                         });
                         if (response.ok) {

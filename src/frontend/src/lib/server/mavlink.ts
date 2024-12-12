@@ -160,7 +160,7 @@ async function writeParameter(id: string, value: number, type: number) {
     await send(port!, request);
 }
 
-async function sendMavlinkCommand(command: string, params: number[], useArduPilotMega = false, useCmdLong = true) {
+async function sendMavlinkCommand(command: string, params: number[], useCmdLong = false, useArduPilotMega = false) {
     if (!port || !reader) {
         online = false;
         return;

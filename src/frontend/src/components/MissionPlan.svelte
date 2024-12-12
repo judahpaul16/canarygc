@@ -50,13 +50,14 @@
     input.addEventListener('input', resizeInput);
   });
 
-  async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
+  async function sendMavlinkCommand(command: string, params: string  = '', useCmdLong: string = 'false', useArduPilotMega: string = 'false') {
     const response = await fetch(`/api/mavlink/send_command`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         'command': command,
         'params': params,
+        'useCmdLong': useCmdLong,
         'useArduPilotMega': useArduPilotMega
       },
     });
@@ -77,7 +78,7 @@
         confirmation: true,
         notification: false,
         onConfirm: async () => {
-          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 6]}`); // 6 is RTL: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+          await sendMavlinkCommand('DO_SET_MODE', `${[1, 6]}`, 'true', 'false'); // 6 is RTL: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           modal.$destroy();
           const notification = new Notification({
             target: document.body,
@@ -103,7 +104,7 @@
         confirmation: true,
         notification: false,
         onConfirm: async () => {
-          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 16]}`); // 16 is POSHOLD: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+          await sendMavlinkCommand('DO_SET_MODE', `${[1, 16]}`, 'true', 'false'); // 16 is POSHOLD: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           modal.$destroy();
           const notification = new Notification({
             target: document.body,
@@ -132,12 +133,12 @@
           missionIndexStore.set(1);
           missionCompleteStore.set(false);
           if (get(mavStateStore) === 'STANDBY') {
-            await sendMavlinkCommand('DO_SET_MODE' , `${[1, 4]}`); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+            await sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true', 'false'); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
             await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[1, 0]}`); // param2: 21196 bypasses pre-arm checks
-            await sendMavlinkCommand('NAV_TAKEOFF', `${[0, 0, 0, 0, 0, 0, 10]}`);
+            await sendMavlinkCommand('NAV_TAKEOFF', `${[0, 0, 0, 0, 0, 0, 10]}`, 'false'); // Takeoff to 10m
             await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds
           }
-          await sendMavlinkCommand('DO_SET_MODE' , `${[1, 3]}`); // 3 is AUTO Mode: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+          await sendMavlinkCommand('DO_SET_MODE', `${[1, 3]}`, 'true', 'false'); // 3 is AUTO Mode: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           modal.$destroy();
           const notification = new Notification({
             target: document.body,

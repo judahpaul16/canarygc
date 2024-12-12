@@ -25,13 +25,14 @@
   $: altitude = $mavAltitudeStore;
   $: mavSatellite = $mavSatelliteStore;
 
-  async function sendMavlinkCommand(command: string, params: string  = '', useArduPilotMega: string = 'false') {
+  async function sendMavlinkCommand(command: string, params: string  = '', useCmdLong: string = 'false', useArduPilotMega: string = 'false') {
     const response = await fetch(`/api/mavlink/send_command`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         'command': command,
         'params': params,
+        'useCmdLong': useCmdLong,
         'useArduPilotMega': useArduPilotMega
       },
     });
@@ -119,7 +120,7 @@
       <div class="flex flex-col items-center">
         <div class="label text-sm mb-1" title="Altitude Up">Altitude Up</div>
         <button class="alt-button rounded-full" on:click={() => {
-          if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
+          if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true', 'false');
           setPositionLocal('0', '0', `-${altitude + 10}`)
         }}>
           <i class="alt-up fas fa-arrow-up"></i>
@@ -128,7 +129,7 @@
       <div class="flex flex-col items-center justify-center">
         <div class="label text-sm mb-1" title="Altitude Down">Altitude Down</div>
         <button class="alt-button rounded-full" on:click={() => {
-            if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
+            if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true', 'false');
             setPositionLocal('0', '0', `-${altitude - 10}`)
           }}>
             <i class="alt-down fas fa-arrow-down"></i>
@@ -141,7 +142,7 @@
         <div class="label text-sm mb-1">Rotate Left</div>
         <button class="rotate-button rotate-left rounded-full"
           on:click={() => {
-              if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
+              if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true', 'false');
               sendMavlinkCommand('CONDITION_YAW', `${[10, 10, -1, 1]}`);
             }}>
           <i class="fas fa-rotate-left"></i>
@@ -151,7 +152,7 @@
         <div class="label text-sm mb-1">Rotate Right</div>
         <button class="rotate-button rotate-right rounded-full"
           on:click={() => {
-              if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`);
+              if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true', 'false');
               sendMavlinkCommand('CONDITION_YAW', `${[10, 10, 1, 1]}`);
             }}>
           <i class="fas fa-rotate-right"></i>
