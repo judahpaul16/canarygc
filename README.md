@@ -59,29 +59,6 @@ CYAN='\033[0;36m'
 WHITE='\033[0;37m'
 NC='\033[0m' # No Color
 
-configure_network_routing() {
-    # Check if default route exists
-    if ! ip route | grep -q default; then
-        echo "Default route not found. Configuring network routing with wlan0..."
-        echo "Configuring default route..."
-        sudo ip route add default gw 192.168.2.1 || sudo ip route add default via 192.168.2.1 dev wlan0
-    fi
-
-    # Ensure DNS is configured
-    if [ ! -s /etc/resolv.conf ]; then
-        echo "Configuring DNS servers..."
-        sudo tee /etc/resolv.conf << EOF
-nameserver 8.8.8.8
-nameserver 1.1.1.1
-EOF
-    fi
-}
-
-# Trap any errors
-set -e
-trap 'echo "Error: Command failed. Exiting..."; exit 1' ERR
-
-configure_network_routing
 
 if [[ "$1" != "--install-only" ]]; then
   sudo apt-get update
@@ -99,58 +76,63 @@ if [[ "$1" != "--install-only" ]]; then
   sudo ufw allow 8889
   sudo ufw allow 5173
   sudo ufw allow 3000
-  sudo ufw allow in on ppp0
-  sudo ufw allow out on ppp0
-  sudo iptables -t nat -F
   echo "y" | sudo ufw reload
 
-  # Configure NetworkManager to manage WiFi while allowing manual 4G modem setup
-  sudo tee /etc/NetworkManager/conf.d/4g-modem.conf > /dev/null << EOF
-[device]
-# Prevent NetworkManager from managing the 4G modem interface
-unmanaged-devices+=interface-name:ppp0
-EOF
+  # Setup 4G networking if available
+  modem=$(mmcli -L | grep -oP '/org/freedesktop/ModemManager1/Modem/\K[0-9]+')
+  sudo mmcli -m $modem --simple-connect='apn=simbase,ip-type=ipv4v6' # Replace 'simbase' with your carrier's APN
+  # Extract Bearer path from ModemManager
+  bearer=$(mmcli -m $modem  | grep -oP 'Bearer\s+\|\s+paths:\s+/org/freedesktop/ModemManager1/Bearer/\K[0-9]+')
 
-# Restart NetworkManager to apply the configuration
-sudo systemctl restart NetworkManager
-sudo systemctl status NetworkManager --no-pager
-
-# Configure 4G modem
-sudo tee /etc/chatscripts/lte > /dev/null << EOF
-ABORT 'BUSY'
-ABORT 'NO CARRIER'
-ABORT 'ERROR'
-TIMEOUT 12
-"" 'AT'
-OK 'ATZ'
-OK 'AT+CGDCONT=1,"IP","simbase"'
-OK 'ATD*99#'
-CONNECT ''
-EOF
-
-  sudo tee /etc/ppp/peers/lte > /dev/null << EOF
-/dev/ttyUSB2
-115200
-connect "/usr/sbin/chat -v -f /etc/chatscripts/lte"
-noauth
-defaultroute
-usepeerdns
-persist
-defaultroute
-replacedefaultroute
-EOF
-
-  # Connect 4G modem
-  sudo pon lte
-  sleep 5
-  # Check if ppp0 exists before applying configurations
-  if ip link show ppp0 > /dev/null 2>&1; then
-      sudo ip route del default
-      sudo ip route add default dev ppp0
-      sudo ip link set dev ppp0 mtu 1400
-  else
-      echo -e "${RED}Device ppp0 not found. Check that your 4G modem is connected and your SIM card is activated. Skipping ppp0 configurations.${NC}"
+  # Check if the bearer number was successfully extracted
+  if [ -z "$bearer" ]; then
+      echo "Failed to extract Bearer number."
+      exit 1
   fi
+
+  # Get Bearer details
+  bearer_info=$(mmcli --bearer=$bearer)
+
+  # Extract relevant information
+  ipv4_address=$(echo "$bearer_info" | grep -oP 'address:\s*\K[0-9.]+')
+  ipv4_gateway=$(echo "$bearer_info" | grep -oP 'gateway:\s*\K[0-9.]+')
+  ipv4_dns=$(echo "$bearer_info" | grep -oP 'dns:\s*\K[0-9., ]+' | tr ',' '\n')
+  mtu=$(echo "$bearer_info" | grep -oP 'mtu:\s*\K[0-9]+')
+  interface=$(echo "$bearer_info" | grep -oP 'interface:\s*\K[a-z]+[0-9]+')
+
+  # Validate extracted data
+  if [ -z "$ipv4_address" ] || [ -z "$ipv4_gateway" ] || [ -z "$interface" ]; then
+      echo "Failed to extract necessary network configuration."
+      exit 1
+  fi
+
+  # Set up the cellular network interface
+  echo "Setting up the network interface: $interface"
+
+  # Bring up the interface
+  sudo ip link set "$interface" up
+
+  # Set IPv4 address
+  sudo ip addr add "$ipv4_address"/32 dev "$interface"
+
+  # Set MTU if available
+  if [ -n "$mtu" ]; then
+      sudo ip link set dev "$interface" mtu "$mtu"
+  fi
+
+  # Set default route
+  sudo ip route add default dev "$interface"
+
+  # Configure DNS
+  echo "Configuring DNS..."
+  for dns_server in $ipv4_dns; do
+      # Check if the DNS server is already in /etc/resolv.conf
+      if ! grep -q "nameserver $dns_server" /etc/resolv.conf; then
+          echo "nameserver $dns_server" | sudo tee -a /etc/resolv.conf > /dev/null
+      fi
+  done
+
+  echo "Network setup completed for interface $interface."
 
   sudo chown -R $(whoami):www-data /home/$(whoami)
 
@@ -173,24 +155,32 @@ EOF
       exit 0
   fi
 
-  sudo tee /etc/docker/daemon.json > /dev/null << EOF
+  # Enable IP forwarding
+  echo "Enabling IP forwarding..."
+  echo 1 | sudo tee /proc/sys/net/ipv4/ip_forward > /dev/null
+  if ! grep -q "net.ipv4.ip_forward=1" /etc/sysctl.conf; then
+      echo "net.ipv4.ip_forward=1" | sudo tee -a /etc/sysctl.conf > /dev/null
+      sudo sysctl -p > /dev/null
+  fi
+
+  # Set up NAT for the wwan0 interface
+  echo "Setting up NAT for wwan0..."
+  sudo iptables -t nat -A POSTROUTING -o wwan0 -j MASQUERADE
+
+  sudo apt-get install iptables-persistent -y
+  sudo netfilter-persistent save
+
+  # Configure Docker to avoid IP conflicts
+  echo "Configuring Docker..."
+  sudo tee /etc/docker/daemon.json > /dev/null <<EOF
 {
-  "iptables": true,
-  "default-address-pools": [
-    {"base":"172.18.0.0/16","size":24}
-  ],
-  "log-driver": "json-file",
-  "log-opts": {
-    "max-size": "10m",
-    "max-file": "3"
-  },
-  "dns": ["8.8.8.8", "8.8.4.4"],
-  "metrics-addr": "127.0.0.1:9323",
-  "experimental": false,
-  "live-restore": true
+    "bip": "192.168.1.1/24",
+    "dns": ["8.8.8.8", "8.8.4.4"]
 }
 EOF
 
+  # Restart Docker service
+  echo "Restarting Docker..."
   sudo systemctl restart docker
 
   # Check and enable all uarts with dtoverlay=uartx
@@ -200,8 +190,6 @@ EOF
       fi
   done
 fi
-
-configure_network_routing
 
 cd ~
 sudo rm -rf mmgcs
