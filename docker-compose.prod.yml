@@ -1,7 +1,6 @@
 services:
   backend:
-    build:
-      context: ./src/backend
+    image: elestio/pocketbase:v0.22.14
     volumes:
       - ./src/backend/pb_data:/pb_data
     ports:
@@ -12,6 +11,7 @@ services:
         limits:
           memory: 700m
     restart: always
+    user: 0:0
 
   frontend:
     build:
