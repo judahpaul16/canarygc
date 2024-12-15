@@ -163,12 +163,18 @@ if [[ "$1" != "--install-only" ]]; then
         sudo sysctl -p > /dev/null
     fi
     
-    # Set up NAT for the wwan0 interface
-    echo "Setting up NAT for wwan0..."
-    sudo iptables -t nat -A POSTROUTING -o wwan0 -j MASQUERADE
+    # Add UFW rules for Docker
+    echo "Adding UFW rules for Docker..."
+    sudo ufw allow in on docker0 from 192.168.1.0/24 to any
+    sudo ufw allow out on docker0 from 192.168.1.0/24 to any
     
-    sudo apt-get install iptables-persistent -y
-    sudo DEBIAN_FRONTEND=noninteractive netfilter-persistent save < /dev/null
+    sudo iptables -t nat -A POSTROUTING -o wwan0 -j MASQUERADE
+    sudo ufw route allow in on docker0 out on wwan0
+    sudo ufw route allow out on wwan0 in on docker0
+    # Save iptables rules using ufw
+    echo "Saving iptables rules using ufw..."
+    echo "y" | sudo ufw disable
+    echo "y" | sudo ufw enable
     
     # Configure Docker to avoid IP conflicts
     echo "Configuring Docker..."
