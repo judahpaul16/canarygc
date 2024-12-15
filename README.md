@@ -59,7 +59,7 @@ CYAN='\033[0;36m'
 WHITE='\033[0;37m'
 NC='\033[0m' # No Color
 
-
+#### SETUP ####
 if [[ "$1" != "--install-only" ]]; then
     sudo apt-get update
     sudo apt-get -y install docker.io nginx ufw wget network-manager
@@ -168,11 +168,11 @@ if [[ "$1" != "--install-only" ]]; then
     sudo iptables -t nat -A POSTROUTING -o wwan0 -j MASQUERADE
     
     sudo apt-get install iptables-persistent -y
-    sudo netfilter-persistent save
+    sudo DEBIAN_FRONTEND=noninteractive netfilter-persistent save < /dev/null
     
     # Configure Docker to avoid IP conflicts
     echo "Configuring Docker..."
-  sudo tee /etc/docker/daemon.json > /dev/null <<EOF
+    sudo tee /etc/docker/daemon.json > /dev/null <<EOF
 {
     "bip": "192.168.1.1/24",
     "dns": ["8.8.8.8", "8.8.4.4"]
@@ -191,6 +191,32 @@ EOF
     done
 fi
 
+#### INSTALL ####
+if [[ "$1" != "--setup-only" ]]; then
+    cd ~
+    sudo rm -rf mmgcs
+    git clone https://github.com/MAV-Manager/mmgcs_public.git mmgcs
+    cd mmgcs
+    sudo chown -R $(whoami):www-data /home/$(whoami)/mmgcs
+    sudo chmod +x contrib/setup.sh
+    
+    if [[ "$1" == "--simulation" ]]; then
+        docker compose down && docker system prune -f && docker compose up -d
+    else
+        docker compose -f docker-compose.prod.yml down
+        docker system prune -f
+        if libcamera-hello --list-cameras | grep -q "No cameras available!"; then
+            echo "No cameras found."
+            docker compose -f docker-compose.prod.yml up frontend backend -d
+        else
+            docker compose -f docker-compose.prod.yml up frontend backend webrtc -d
+        fi
+    fi
+    sleep 5
+    docker ps
+fi
+
+#### 4G SERVICE ####
 if [[ "$1" != "--install-only" && "$1" != "--setup-only" ]]; then
     # Create systemd service file
   sudo tee /etc/systemd/system/mobile-network-setup.service > /dev/null <<EOF
@@ -212,26 +238,6 @@ EOF
     sudo systemctl enable mobile-network-setup.service
     sudo systemctl start mobile-network-setup.service
     sudo systemctl status mobile-network-setup.service --no-pager
-fi
-
-if [[ "$1" != "--setup-only" ]]; then
-    cd ~
-    sudo rm -rf mmgcs
-    git clone https://github.com/MAV-Manager/mmgcs_public.git mmgcs
-    cd mmgcs
-    
-    if [[ "$1" == "--simulation" ]]; then
-        docker compose down && docker system prune -f && docker compose up -d
-    else
-        docker compose -f docker-compose.prod.yml down
-        docker system prune -f
-        if libcamera-hello --list-cameras | grep -q "No cameras available!"; then
-            echo "No cameras found."
-            docker compose -f docker-compose.prod.yml up frontend backend -d
-        else
-            docker compose -f docker-compose.prod.yml up frontend backend webrtc -d
-        fi
-    fi
 fi
 ```
 </p>
