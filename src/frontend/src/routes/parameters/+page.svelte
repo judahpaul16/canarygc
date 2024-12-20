@@ -338,6 +338,10 @@
     .dashboard {
         background-color: var(--secondaryColor);
     }
+
+    .dashboard * {
+        transition: 0s !important;
+    }
   
     .user-settings {
         background: var(--primaryColor);

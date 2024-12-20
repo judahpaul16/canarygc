@@ -99,11 +99,6 @@
     function clearLogs() {
         logs = [];
         mavlinkLogStore.set(logs);
-        pb.collection('blackbox').getFullList().then((list) => {
-            list.forEach((item) => {
-                pb.collection('blackbox').delete(item.id);
-            });
-        });
     }
 
     function confirmClear() {

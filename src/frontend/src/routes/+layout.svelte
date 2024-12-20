@@ -45,9 +45,6 @@
   import Notification from '../components/Notification.svelte';
 
   let pb: PocketBase;
-  let blackboxQueue: string[] = [];
-  let isProcessingQueue = false;
-  let queueProcessInterval: NodeJS.Timeout;
 
   let currentPath = '';
   let heightOfDashboard = 1000;
@@ -103,9 +100,6 @@
       if (response.ok) {
         const data = await response.json();
         if (data.length > 0) {
-          Object.keys(data).forEach(key => {
-            updateBlackBoxCollection(JSON.stringify(data[key]));
-          });
           data.forEach((log: string) => {
             getLogs(log.replace(/\\"/g, '"') + '\n');
           });
@@ -149,61 +143,6 @@
               console.error("Error:", error);
           }
         }
-      }
-    } catch (error: any) {
-      if (error.message.includes('The request was autocancelled')) {
-        // ignore it
-      } else {
-        console.error('Error:', error.message || error);
-        console.error('Stack Trace:', error.stack || 'No stack trace available');
-      }
-    }
-  }
-
-  async function updateBlackBoxCollection(log: string) {
-    // Add log to queue instead of sending immediately
-    blackboxQueue.push(log);
-  }
-
-  async function processBlackBoxQueue() {
-    if (isProcessingQueue || blackboxQueue.length === 0) return;
-    
-    isProcessingQueue = true;
-    let batch: string[] = [];
-    try {
-        // Take up to 50 items from the queue
-        batch = blackboxQueue.splice(0, 50);
-        if (batch.length === 0) return;
-
-        // Create a log for each item in the batch
-        let logPromises = batch.map(log => pb.collection('blackbox').create({ log }));
-        await Promise.all(logPromises);
-    } catch (error: any) {
-        if (error.message.includes('The request was autocancelled')) {
-            // Put items back in queue
-            blackboxQueue.unshift(...batch);
-        } else {
-            console.error('Error:', error.message || error);
-            console.error('Stack Trace:', error.stack || 'No stack trace available');
-        }
-    } finally {
-        isProcessingQueue = false;
-    }
-  }
-
-  async function cleanupBlackBoxCollection() {
-    try {
-      let records = await pb.collection('blackbox').getFullList();
-      if (records.length > 1000) {
-        // Sort records by creation date (or timestamp) to find the oldest ones
-        records.sort((a, b) => new Date(a.created).getTime() - new Date(b.created).getTime());
-
-        // Keep the latest 1,000 records
-        let recordsToDelete = records.slice(0, records.length - 1000);
-
-        // Delete the selected records
-        let deletePromises = recordsToDelete.map(record => pb.collection('blackbox').delete(record.id));
-        Promise.all(deletePromises);
       }
     } catch (error: any) {
       if (error.message.includes('The request was autocancelled')) {
@@ -491,12 +430,8 @@
     
     setTimeout(() => {
       initializeMissionPlansCollection();
-      initializeBlackBoxCollection();
       checkLoadedMission();
     }, 2000);
-
-    // Process queue every 5 seconds
-    queueProcessInterval = setInterval(processBlackBoxQueue, 5000);
     
     // Set up event listeners for user activity
     window.addEventListener('mousemove', handleUserActivity);
@@ -520,7 +455,6 @@
         authData.set(null);
         goto('/login');
       }
-      await cleanupBlackBoxCollection();
       await checkOnlineStatus();
     }, 1100);
     
@@ -541,7 +475,6 @@
     }
     clearInterval(authCheckInterval);
     clearTimeout(inactivityTimer);
-    clearInterval(queueProcessInterval);
   });
 
   afterUpdate(() => {
@@ -591,31 +524,6 @@
     }
   }
 
-  async function initializeBlackBoxCollection() {
-    try {
-      const collections = await pb.collections.getFullList();
-      const collectionExists = collections.some(c => c.name === 'blackbox');
-      
-      if (!collectionExists) {
-        const newCollection = {
-          name: 'blackbox',
-          type: 'base',
-          schema: [
-            { name: 'log', type: 'text', options: { maxSize: 100000000 } }
-          ]
-        };
-        await pb.collections.create(newCollection);
-        console.log('Collection "blackbox" created successfully.');
-      }
-    } catch (error: any) {
-      if (error.message.includes('The request was autocancelled')) {
-          // ignore it
-      } else {
-          console.error('Error:', error);
-      }
-    }
-  }
-
   function handleNavigation(path: string, target: string = '') {
     if (target === '_blank') window.open(path, target);
     else if (currentPath !== path) goto(path);
@@ -630,14 +538,42 @@
   function toggleNav() {
     isNavOpen = !isNavOpen;
   }
+  
+  function toggleDarkMode() {
+    const map = document.getElementById('map');
+    if (map) {
+      map.classList.toggle('dark');
+    }
+    darkMode = !darkMode;
+    darkModeStore.set(darkMode);
+    if (darkMode) {
+      // @ts-ignore
+      document.querySelector('.bg')!.style.background = "url('bg-map.webp') no-repeat center center fixed";
+      primaryColorStore.set('#1c1c1e');
+      secondaryColorStore.set('#121212');
+      tertiaryColorStore.set('#2d2d2d');
+    } else {
+      // @ts-ignore
+      document.querySelector('.bg')!.style.background = "url('bg-map-light.webp') no-repeat center center fixed";
+      primaryColorStore.set('#ffffff');
+      secondaryColorStore.set('#e7e9ef');
+      tertiaryColorStore.set('#d7d7d7');
+    }
+  }
 </script>
 
-<main class="bg-black flex overflow-auto">
+<main class="bg-black flex overflow-auto"
+  style="--heightOfDashboard: {heightOfDashboard}px; --primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
+>
   <div class="bg fixed w-full h-full "></div>
+  <div class="dark-mode-btn absolute top-4 left-4 z-20">
+    <button class="nav-button" aria-label="Toggle Dark Mode" on:click={toggleDarkMode}>
+      <i class="nav-icon fas {darkMode ? 'fa-sun' : 'fa-moon'}"></i>
+    </button>
+  </div>
   <div class="bg-[#0000001f] flex w-full h-full z-10">
     <!-- Desktop Navigation -->
     <nav class="desktop-nav w-min h-full p-4 grid opacity-0 z-20"
-      style="--heightOfDashboard: {heightOfDashboard}px; --primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
       class:opacity={!isNavHidden ? 1 : 0}
     >
         <div class="flex-grow flex flex-col items-center">
@@ -754,6 +690,17 @@
     filter: blur(2px);
   }
 
+  .dark-mode-btn {
+    z-index: 25;
+    background-color: rgb(from var(--primaryColor) r g b / 0.5);
+    border-radius: 50%;
+  }
+
+  .dark-mode-btn button:hover {
+    color: var(--fontColor);
+    background-color: transparent;
+  }
+
   .separator {
     background-color: var(--tertiaryColor);
   }
@@ -831,6 +778,16 @@
     main > div {
       flex-direction: column;
     } 
+
+    .dark-mode-btn {
+      top: unset;
+      left: unset;
+      right: 1rem;
+      bottom: 1rem;
+      padding: 0.5rem;
+      background-color: var(--tertiaryColor);
+      border: 1px solid var(--secondaryColor);
+    }
 
     .slot-container {
       padding: 0;
