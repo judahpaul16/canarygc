@@ -5,7 +5,7 @@
   export let isOpen: boolean = false;
   export let confirmation: boolean = false;
   export let notification: boolean = false;
-  export let inputs: { type: string, placeholder: string }[] | null = null;
+  export let inputs: { type: string, placeholder: string, required: boolean }[] | null = null;
   export let inputValues: string[] = [];
   export let onConfirm: () => void = () => {};
   export let onCancel: () => void = () => {};
@@ -39,7 +39,7 @@
       ids.push(`input-${input.type}-${inputs.indexOf(input)}`);
     });
     
-    if (inputs && inputValues.length < inputs.length && inputs.some(input => input.type !== 'checkbox')) {
+    if (inputs && inputs.some(input => input.required && !(document.querySelector(`#${ids[inputs.indexOf(input)]}`) as HTMLInputElement).value)) {
       alert('Please enter a valid value for all inputs.');
       return;
     } else if (inputs) {
