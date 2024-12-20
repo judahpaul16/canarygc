@@ -659,7 +659,7 @@
               <i class="nav-icon fas fa-bars-staggered"></i>
               <div class="tooltip text-white">Event Log</div>
             </button>
-            <button on:click|preventDefault={() => handleNavigation('/vehicle-params')} class="nav-button mb-4 {currentPath === '/vehicle-params' ? 'active' : ''}">
+            <button on:click|preventDefault={() => handleNavigation('/parameters')} class="nav-button mb-4 {currentPath === '/parameters' ? 'active' : ''}">
               <i class="nav-icon fas fa-cog"></i>
               <div class="tooltip text-white">Vehicle Parameters</div>
             </button>
@@ -717,7 +717,7 @@
           <a href="/event-log" on:click|preventDefault={() => handleNavigation('/event-log')} class="nav-button mb-4 {currentPath === '/event-log' ? 'active' : ''}">
             <i class="nav-icon fas fa-bars-staggered"></i>&nbsp;&nbsp;Event Log
           </a>
-          <a href="/user-settings" on:click|preventDefault={() => handleNavigation('/vehicle-params')} class="nav-button mb-4 {currentPath === '/vehicle-params' ? 'active' : ''}">
+          <a href="/user-settings" on:click|preventDefault={() => handleNavigation('/parameters')} class="nav-button mb-4 {currentPath === '/parameters' ? 'active' : ''}">
             <i class="nav-icon fas fa-cog"></i>&nbsp;&nbsp;Vehicle Parameters
           </a>
           <a href="/admin" on:click|preventDefault={() => handleNavigation('/admin')} class="nav-button mb-4">
