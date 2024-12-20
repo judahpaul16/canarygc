@@ -562,7 +562,7 @@
     color: green;
   }
   .battery-status.yellow {
-    color: yellow;
+    color: #e7b908;
   }
   .battery-status.red {
     color: red;
