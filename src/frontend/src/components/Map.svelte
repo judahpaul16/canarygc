@@ -8,7 +8,7 @@
     type MissionPlanActions,
     missionIndexStore
   } from '../stores/missionPlanStore';
-  import { get } from 'svelte/store';
+  import { get, writable } from 'svelte/store';
   import Modal from './Modal.svelte';
 
   export let hideOverlay: boolean = false;
@@ -27,7 +27,7 @@
   let altitudeAngelMap: any;
   let leafletMap: any = get(mapStore);
   let currentMap: 'altitudeAngel' | 'leaflet' = 'leaflet'; // Default to Leaflet
-  let zoom = 17;
+  let zoom = 18;
 
   let actions: MissionPlanActions = {};
   let action_types = [
@@ -49,12 +49,14 @@
   let mavMarker: L.Marker;
   let isDragging = false;
   let darkMode = get(darkModeStore);
+  const lockViewStore = writable(true);
   
   $: darkMode = $darkModeStore;
   $: primaryColor = $primaryColorStore;
   $: secondaryColor = $secondaryColorStore;
   $: tertiaryColor = $tertiaryColorStore;
   $: fontColor = darkMode ? '#ffffff' : '#000000';
+  $: lockView = $lockViewStore;
 
   $: leafletMap = $mapStore;
   $: mavHeading = $mavHeadingStore,
@@ -199,6 +201,11 @@
       if (altitudeAngelDiv) altitudeAngelDiv.style.display = 'block';
       if (leafletDiv) leafletDiv.style.display = 'none';
     }
+  }
+
+  function toggleLockView() {
+    lockView = !lockView;
+    lockViewStore.set(lockView);
   }
 
   function toggleFullScreen(element: HTMLElement) {
@@ -431,8 +438,8 @@
             .bindPopup('MAV is here: ' + mavLocation.lat + ', ' + mavLocation.lng);
           leafletMap.addLayer(mavMarker);
           updateMarkersAndPolylines();
-          if (!isDragging) {
-            leafletMap.flyTo(mavLocation as L.LatLng, zoom);
+          if (lockView) {
+            leafletMap.flyTo(mavLocation as L.LatLng);
           }
         }
       };
@@ -489,6 +496,9 @@
 <div class="map-container" style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};">
   <div id="aamap" class="relative h-full"></div>
   <div id={id !== null ? id : 'map'} class="relative h-full rounded-2xl z-0"></div>
+  <button class="map-btn absolute top-[6.8rem] right-2 text-[#ffffff] bg-opacity-75 p-2 {lockView ? 'px-[15px]' : 'px-[13px]'} rounded-full" on:click={toggleLockView}> 
+    <i class="fas {lockView ? 'fa-lock' : 'fa-lock-open'}"></i>
+  </button>
   <button class="map-btn absolute top-[3.8rem] right-2 text-[#ffffff] bg-opacity-75 p-2 px-3 rounded-full" on:click={toggleDarkMode}>
     {#if darkMode} <i class="fas fa-sun px-[2px]"></i> {:else} <i class="fas fa-moon"></i> {/if}
   </button>
