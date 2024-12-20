@@ -161,16 +161,22 @@
     // Determine the next index
     const newIndex = Object.keys(actions).length;
 
+    let location = { lat: 0, lng: 0 };
     let type = 'NAV_WAYPOINT';
-    if (newIndex === 0) type = 'NAV_TAKEOFF';
+    if (newIndex === 0 || newIndex === 1) type = 'NAV_TAKEOFF';
+    if (newIndex === 0 || newIndex === 1) location = mavLocation;
+    else location = {
+      lat: Object.values(actions)[newIndex - 1].lat,
+      lng: Object.values(actions)[newIndex - 1].lon
+    };
 
     // Add new action
     actions = { 
       ...actions, 
       [newIndex]: {
         type: type,
-        lat: mavLocation.lat,
-        lon: mavLocation.lng,
+        lat: location.lat,
+        lon: location.lng,
         alt: null,
         notes: '',
         param1: null,
@@ -181,6 +187,7 @@
     };
 
     missionPlanActionsStore.set(actions);
+    if (newIndex === 0) addAction();
   }
 
   async function removeAction(id: string) {
@@ -356,87 +363,89 @@
         <hr>
         {#key actions}
           {#each Object.keys(actions) as index}
-            <div id="action-{index}" class="flex items-center action-container">
-                <div class="form-checkbox">
-                    <span>{index}</span>
-                </div>
-                <div class="separator"></div>
-                <div class="form-input text-center">
-                    <label for="action" class="text-[9pt]">Action Type</label>
-                    <a href="https://ardupilot.org/copter/docs/mission-command-list.html" target="_blank" class="text-[#61cd89] ml-1" title="More Information">
-                        <i class="fas fa-info-circle text-[9pt]"></i>
-                    </a>
-                    <select class="mt-1" name="action" id="action-{index}-type" on:change={updateActionType} value={actions[Number(index)].type}>
-                    {#each action_types as action_type}
-                        <option value="{action_type}">{action_type}</option>
-                    {/each}
-                    </select>
-                    <div class="text-center flex justify-center items-center gap-2 mt-2">
-                      <label for="altitude" class="text-[9pt] mr-1">Altitude</label>
-                      <input type="number" min="0" name="altitude" id="altitude-{index}" class="altitude" placeholder="0: current alt" value={String(actions[Number(index)].alt ?? '')} on:change={updateAltitude}>
-                      <span class="text-xs text-gray-400">m</span>
-                    </div>
-                </div>
-                <div class="separator"></div>
-                <div class="form-input text-center grid gap-1">
-                  <h2 class="text-[9pt]">
-                    Coordinates
-                    <a href="https://www.latlong.net/" target="_blank" class="text-[#61cd89] ml-1" title="Get Coordinates">
-                      <i class="fas fa-info-circle"></i>
-                    </a>
-                  </h2>
-                  <div class="flex justify-between items-center gap-1">
-                    <span class="text-[8pt] mr-2">Lat</span>
-                    <input type="number" step="0.0001" id="lat-{index}" placeholder="eg. 33.749" value={actions[Number(index)].lat} on:change={updateLat} />
-                    <span class="text-lg text-gray-400">°</span>
+            {#if Number(index) !== 0 }
+              <div id="action-{index}" class="flex items-center action-container">
+                  <div class="form-checkbox">
+                      <span>{index}</span>
                   </div>
-                  <div class="flex justify-between items-center gap-1">
-                    <span class="text-[8pt] mr-2">Lon</span>
-                    <input type="number" step="0.0001" id="lon-{index}" placeholder="eg. -84.388" value={actions[Number(index)].lon} on:change={updateLon} />
-                    <span class="text-lg text-gray-400">°</span>
+                  <div class="separator"></div>
+                  <div class="form-input text-center">
+                      <label for="action" class="text-[9pt]">Action Type</label>
+                      <a href="https://ardupilot.org/copter/docs/mission-command-list.html" target="_blank" class="text-[#61cd89] ml-1" title="More Information">
+                          <i class="fas fa-info-circle text-[9pt]"></i>
+                      </a>
+                      <select class="mt-1" name="action" id="action-{index}-type" on:change={updateActionType} value={actions[Number(index)].type}>
+                      {#each action_types as action_type}
+                          <option value="{action_type}">{action_type}</option>
+                      {/each}
+                      </select>
+                      <div class="text-center flex justify-center items-center gap-2 mt-2">
+                        <label for="altitude" class="text-[9pt] mr-1">Altitude</label>
+                        <input type="number" min="0" name="altitude" id="altitude-{index}" class="altitude" placeholder="0: current alt" value={String(actions[Number(index)].alt ?? '')} on:change={updateAltitude}>
+                        <span class="text-xs text-gray-400">m</span>
+                      </div>
                   </div>
-                </div>
-                <div class="separator"></div>
-                <div class="form-input text-center grid gap-1">
-                  <h2 class="text-[9pt] mb-1">
-                    Parameters
-                    <a href="https://mavlink.io/en/messages/common.html#mav_commands" target="_blank" class="text-[#61cd89] ml-1" title="More Information">
-                      <i class="fas fa-info-circle"></i>
-                    </a>
-                  </h2>
-                  <div class="flex justify-between items-center gap-3">
-                    <div class="flex justify-between items-center gap-3">
-                      <span class="text-[8pt]">P1</span>
-                      <input type="number" id="param1-{index}" placeholder="Empty" value={actions[Number(index)].param1} on:change={updateParam} />
+                  <div class="separator"></div>
+                  <div class="form-input text-center grid gap-1">
+                    <h2 class="text-[9pt]">
+                      Coordinates
+                      <a href="https://www.latlong.net/" target="_blank" class="text-[#61cd89] ml-1" title="Get Coordinates">
+                        <i class="fas fa-info-circle"></i>
+                      </a>
+                    </h2>
+                    <div class="flex justify-between items-center gap-1">
+                      <span class="text-[8pt] mr-2">Lat</span>
+                      <input type="number" step="0.0001" id="lat-{index}" placeholder="eg. 33.749" value={actions[Number(index)].lat} on:change={updateLat} />
+                      <span class="text-lg text-gray-400">°</span>
                     </div>
-                    <div class="flex justify-between items-center gap-3">
-                      <span class="text-[8pt]">P2</span>
-                      <input type="number" id="param2-{index}" placeholder="Empty" value={actions[Number(index)].param2} on:change={updateParam} />
+                    <div class="flex justify-between items-center gap-1">
+                      <span class="text-[8pt] mr-2">Lon</span>
+                      <input type="number" step="0.0001" id="lon-{index}" placeholder="eg. -84.388" value={actions[Number(index)].lon} on:change={updateLon} />
+                      <span class="text-lg text-gray-400">°</span>
                     </div>
                   </div>
-                  <div class="flex justify-between items-center gap-3">
+                  <div class="separator"></div>
+                  <div class="form-input text-center grid gap-1">
+                    <h2 class="text-[9pt] mb-1">
+                      Parameters
+                      <a href="https://mavlink.io/en/messages/common.html#mav_commands" target="_blank" class="text-[#61cd89] ml-1" title="More Information">
+                        <i class="fas fa-info-circle"></i>
+                      </a>
+                    </h2>
                     <div class="flex justify-between items-center gap-3">
-                      <span class="text-[8pt]">P3</span>
-                      <input type="number" id="param3-{index}" placeholder="Empty" value={actions[Number(index)].param3} on:change={updateParam} />
+                      <div class="flex justify-between items-center gap-3">
+                        <span class="text-[8pt]">P1</span>
+                        <input type="number" id="param1-{index}" placeholder="Empty" value={actions[Number(index)].param1} on:change={updateParam} />
+                      </div>
+                      <div class="flex justify-between items-center gap-3">
+                        <span class="text-[8pt]">P2</span>
+                        <input type="number" id="param2-{index}" placeholder="Empty" value={actions[Number(index)].param2} on:change={updateParam} />
+                      </div>
                     </div>
                     <div class="flex justify-between items-center gap-3">
-                      <span class="text-[8pt]">P4</span>
-                      <input type="number" id="param4-{index}" placeholder="Empty" value={actions[Number(index)].param4} on:change={updateParam} />
+                      <div class="flex justify-between items-center gap-3">
+                        <span class="text-[8pt]">P3</span>
+                        <input type="number" id="param3-{index}" placeholder="Empty" value={actions[Number(index)].param3} on:change={updateParam} />
+                      </div>
+                      <div class="flex justify-between items-center gap-3">
+                        <span class="text-[8pt]">P4</span>
+                        <input type="number" id="param4-{index}" placeholder="Empty" value={actions[Number(index)].param4} on:change={updateParam} />
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div class="separator"></div>
-                <div class="form-input flex flex-col gap-1 items-center justify-center">
-                    <h2 class="text-[9pt]">Additional Notes</h2>
-                    <textarea placeholder="Notes" value={actions[Number(index)].notes} id="notes-{index}" on:change={updateNotes}></textarea>
-                </div>
-                <div class="separator"></div>
-                <button class="delete-action relative rounded-lg px-3 py-2 text-sm" on:click={() => removeAction(index)}>
-                    <i class="fas fa-trash-alt text-red-400"></i>
-                    <span class="tooltip">Delete Action</span>
-                </button>
-            </div>
-            <hr>
+                  <div class="separator"></div>
+                  <div class="form-input flex flex-col gap-1 items-center justify-center">
+                      <h2 class="text-[9pt]">Additional Notes</h2>
+                      <textarea placeholder="Notes" value={actions[Number(index)].notes} id="notes-{index}" on:change={updateNotes}></textarea>
+                  </div>
+                  <div class="separator"></div>
+                  <button class="delete-action relative rounded-lg px-3 py-2 text-sm" on:click={() => removeAction(index)}>
+                      <i class="fas fa-trash-alt text-red-400"></i>
+                      <span class="tooltip">Delete Action</span>
+                  </button>
+              </div>
+              <hr>
+            {/if}
           {/each}
         {/key}
       </div>

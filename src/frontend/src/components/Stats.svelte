@@ -14,11 +14,13 @@
     mavSpeedStore,
     mavBatteryStore,
     mavArmedStateStore,
-    mavLocationStore
+    mavLocationStore,
+    mavlinkParamStore
   } from '../stores/mavlinkStore';
   import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../stores/customizationStore';
   import { markersStore } from '../stores/mapStore';
   import { get } from 'svelte/store';
+  import { onMount } from 'svelte';
 
   import Modal from './Modal.svelte';
   import Notification from './Notification.svelte';
@@ -55,6 +57,10 @@
   $: missionLoaded = $missionPlanTitleStore !== '';
   $: markers = $markersStore;
   $: eta = calculateETA(missionProgress, $mavLocationStore);
+
+  onMount(() => {
+    requestParameters();
+  });
 
   function getMissionProgress(index: number, count: number, mavLocation: L.LatLng): number {
     let progress: number = 0;
@@ -162,6 +168,81 @@
     }
   }
 
+  async function requestParameters() {
+        try {
+            
+            const response = await fetch('/api/mavlink/request_params', {
+                method: 'POST',
+                headers: {
+                  'content-type': 'application/json'
+                },
+            });
+
+            if (!response.ok) throw new Error(await response.text());
+        } catch (err: any) {
+            console.error('Failed to request parameter:', err.message);
+        }
+    }
+
+  function encodeParameterValue(value: number, paramType: number): number {
+    // Ensure the value is within valid range for the type
+    switch (paramType) {
+      case 1: // uint8
+        return Math.min(255, Math.max(0, Math.round(value)));
+      case 2: // int8
+        return Math.min(127, Math.max(-128, Math.round(value)));
+      case 3: // uint16
+        return Math.min(65535, Math.max(0, Math.round(value)));
+      case 4: // int16
+        return Math.min(32767, Math.max(-32768, Math.round(value)));
+      case 5: // uint32
+        return Math.min(4294967295, Math.max(0, Math.round(value)));
+      case 6: // int32
+        return Math.min(2147483647, Math.max(-2147483648, Math.round(value)));
+      case 7: // uint64
+      case 8: // int64
+        console.warn('64-bit integers may not be fully precise in JavaScript');
+        return value;
+      case 9: // float
+        return value;
+      case 10: // double
+        return value;
+      default:
+        console.warn('Unknown parameter type:', paramType);
+        return value;
+      }
+    }
+
+    async function writeParameter(id: string, value: number, type: number) {
+      try {
+        const encodedValue = encodeParameterValue(value, type);
+        
+        // Remove any extra quotes from the parameter ID
+        const cleanId = id.replace(/^"|"$/g, '');
+        
+        console.log('Writing parameter:', {
+          id: cleanId,
+          originalValue: value,
+          encodedValue,
+          type
+        });
+        
+        const response = await fetch('/api/mavlink/write_param', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json; charset=utf-8',
+            'id': cleanId,
+            'value': encodedValue.toString(),
+            'type': type.toString(),
+          },
+        });
+
+        if (!response.ok) throw new Error(await response.text());
+      } catch (err: any) {
+        console.error('Failed to write parameter:', err.message);
+      }
+    }
+
   function confirmCalibration() {
     let modal = new Modal({
       target: document.body,
@@ -192,7 +273,7 @@
       target: document.body,
       props: {
         title: 'Stop Mission',
-        content: 'Are you sure you want to stop the flight?',
+        content: 'Are you sure you want to stop the mission?',
         isOpen: true,
         confirmation: true,
         notification: false,
@@ -218,12 +299,12 @@
       target: document.body,
       props: {
         title: 'Pause Mission',
-        content: 'Are you sure you want to pause the flight?',
+        content: 'Are you sure you want to pause the mission?',
         isOpen: true,
         confirmation: true,
         notification: false,
         onConfirm: async () => {
-          await sendMavlinkCommand('DO_SET_MODE', `${[1, 16]}`, 'true'); // 16 is POSHOLD: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+          await sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true'); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           modal.$destroy();
           const notification = new Notification({
             target: document.body,
@@ -239,18 +320,27 @@
     });
   }
 
-  function resumeMission() {
+  async function startMission() {
+    let encodedValue = encodeParameterValue(get(mavlinkParamStore).RTL_ALT.param_value, get(mavlinkParamStore).RTL_ALT.param_type);
     let modal = new Modal({
       target: document.body,
       props: {
         title: 'Start / Resume Mission',
-        content: 'Are you sure you want to resume the flight?',
+        content: 'Are you sure you want to start the mission? Please specify the RTL_ALT paramter (Return to Launch Altitude) in centimeters, considering any potential obstacles between the RTL waypoint and the launch location.',
         isOpen: true,
         confirmation: true,
         notification: false,
+        inputs: [
+          {
+            type: 'number',
+            placeholder: `RTL_ALT: ${encodedValue} cm`,
+          }
+        ],
         onConfirm: async () => {
           missionIndexStore.set(1);
           missionCompleteStore.set(false);
+          await writeParameter('RTL_ALT', parseInt(modal.inputValues![0]), get(mavlinkParamStore).RTL_ALT.param_type);
+          await writeParameter('RTL_CLIMB_MIN', 0, get(mavlinkParamStore).RTL_CLIMB_MIN.param_type);
           if (get(mavStateStore) === 'STANDBY') {
             await sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true'); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
             await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[1, 0]}`, 'true'); // param2: 21196 bypasses pre-arm checks
@@ -283,6 +373,7 @@
         confirmation: true,
         notification: false,
         onConfirm: async () => {
+          if (mavMode !== 'GUIDED') await sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true'); // param2: 4 (GUIDED) see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           await sendMavlinkCommand('DO_SET_SERVO' , `${[9, 1050]}`); // param2 - 1900: release, 1100: grip
           await new Promise((resolve) => setTimeout(resolve, 500)); // Wait 0.5 seconds
           await sendMavlinkCommand('DO_SET_SERVO' , `${[9, 1950]}`); // param2 - 1900: release, 1100: grip
@@ -308,7 +399,7 @@
           }
         ],
         onConfirm: async () => {
-          await sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true'); // param2: 4 (GUIDED) see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+          if (mavMode !== 'GUIDED') await sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true'); // param2: 4 (GUIDED) see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
           await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[1, 0]}`, 'true'); // param2: 21196 bypasses pre-arm checks
           await sendMavlinkCommand('NAV_TAKEOFF', `${[0, 0, 0, 0, 0, 0, parseInt(modal.inputValues![0])]}`, 'true');
         },
@@ -402,7 +493,7 @@
           {#if !checkMode('AUTO', mavMode) || systemState === 'STANDBY'}
             <div class="relative group">
               <button
-                class="circular-button" on:click={resumeMission}
+                class="circular-button" on:click={startMission}
                 disabled={checkMode('AUTO', mavMode) && systemState !== 'STANDBY' || !missionLoaded}
               >
                 <i class="fas fa-play"></i>

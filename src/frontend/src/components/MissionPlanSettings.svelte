@@ -142,8 +142,26 @@
         }
     }
         
+    function duplicateTakeoffAndShift(actions: Record<string, any>): Record<string, any> {
+        const newActions: Record<string, any> = {};
+        
+        // First, add the duplicated takeoff points
+        newActions['0'] = { ...actions['1'] };
+        newActions['1'] = { ...actions['1'] };
+        
+        // Then shift the remaining points up
+        Object.keys(actions).forEach((key, index) => {
+            if (key !== '0' && key !== '1') {
+                newActions[(parseInt(key)).toString()] = { ...actions[key] };
+            }
+        });
+        
+        return newActions;
+    }
+
     async function handleSave(title: string, plan: MissionPlanActions) {
-        await handleLoad(title, plan);
+        plan = duplicateTakeoffAndShift(plan);
+        handleLoad(title, plan);
 
         let id = "";
         let missionExists = async () => {
