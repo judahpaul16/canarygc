@@ -421,8 +421,24 @@
     resetInactivityTimer();
     authData.refreshTimestamp();
   }
+  
+
+  async function requestParameters() {
+    try {
+      const response = await fetch('/api/mavlink/request_params', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json'
+        },
+      });
+      if (!response.ok) throw new Error(await response.text());
+    } catch (err: any) {
+      console.error('Failed to request parameter:', err.message);
+    }
+  }
 
   onMount(async () => {
+    requestParameters();
     // @ts-ignore
     document.querySelector('.bg')!.style.background = "url('bg-map.webp') no-repeat center center fixed";
     pb = new PocketBase(`http://${window.location.hostname}:8090`);

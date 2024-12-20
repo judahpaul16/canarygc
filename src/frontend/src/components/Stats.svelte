@@ -20,7 +20,6 @@
   import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../stores/customizationStore';
   import { markersStore } from '../stores/mapStore';
   import { get } from 'svelte/store';
-  import { onMount } from 'svelte';
 
   import Modal from './Modal.svelte';
   import Notification from './Notification.svelte';
@@ -57,10 +56,6 @@
   $: missionLoaded = $missionPlanTitleStore !== '';
   $: markers = $markersStore;
   $: eta = calculateETA(missionProgress, $mavLocationStore);
-
-  onMount(() => {
-    requestParameters();
-  });
 
   function getMissionProgress(index: number, count: number, mavLocation: L.LatLng): number {
     let progress: number = 0;
@@ -167,23 +162,7 @@
       console.error(`Error: ${await response.text()}`);
     }
   }
-
-  async function requestParameters() {
-        try {
-            
-            const response = await fetch('/api/mavlink/request_params', {
-                method: 'POST',
-                headers: {
-                  'content-type': 'application/json'
-                },
-            });
-
-            if (!response.ok) throw new Error(await response.text());
-        } catch (err: any) {
-            console.error('Failed to request parameter:', err.message);
-        }
-    }
-
+  
   function encodeParameterValue(value: number, paramType: number): number {
     // Ensure the value is within valid range for the type
     switch (paramType) {
