@@ -329,23 +329,25 @@
       leafletMap?.removeLayer(markers.get(index)!);
     }
 
-    // Add new marker with updated info if leafletMap and action are valid
-    if (L && leafletMap && action) {
-      const { type, lat, lon } = action;
-      const iconIndex = action_types.indexOf(type);
-      
-      if (!isNaN(lat) && !isNaN(lon) && iconIndex >= 0) {
-        const marker = L.marker([lat, lon], { icon: icons[iconIndex] })
-          .bindPopup(`${index} - ${type}`);
-        try { leafletMap.addLayer(marker); } catch (e) { return; }
-        if (!hideOverlay) marker.openPopup();
-        markers.set(index, marker);
+    if (index !== 0) {
+      // Add new marker with updated info if leafletMap and action are valid
+      if (L && leafletMap && action) {
+        const { type, lat, lon } = action;
+        const iconIndex = action_types.indexOf(type);
+        
+        if (!isNaN(lat) && !isNaN(lon) && iconIndex >= 0) {
+          const marker = L.marker([lat, lon], { icon: icons[iconIndex] })
+            .bindPopup(`${index} - ${type}`);
+          try { leafletMap.addLayer(marker); } catch (e) { return; }
+          if (!hideOverlay) marker.openPopup();
+          markers.set(index, marker);
+        }
       }
-    }
 
-    // Remove polylines connected to this action and update all polylines
-    removeConnectedPolylines(index);
-    updateMarkersAndPolylines();
+      // Remove polylines connected to this action and update all polylines
+      removeConnectedPolylines(index);
+      updateMarkersAndPolylines();
+    }
   }
 
   function updateMarkersAndPolylines(reindex: boolean = false) {
