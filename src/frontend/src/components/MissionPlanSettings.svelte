@@ -326,6 +326,7 @@
                     {
                         type: "checkbox",
                         placeholder: "Clear on Flight Controller",
+                        required: false,
                     },
                 ],
                 onConfirm: () => {
@@ -349,14 +350,17 @@
                     {
                         type: "number",
                         placeholder: "Latitude",
+                        required: false,
                     },
                     {
                         type: "number",
                         placeholder: "Longitude",
+                        required: false,
                     },
                     {
                         type: "number",
                         placeholder: "Altitude",
+                        required: false,
                     },
                 ],
                 onConfirm: async () => {
