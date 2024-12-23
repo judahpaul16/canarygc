@@ -288,7 +288,7 @@
                 <!-- Parameter List -->
                 <div class="flex-grow overflow-y-auto">
                     <table class="w-full text-white">
-                        <thead class="sticky top-0 bg-gray-800">
+                        <thead class="sticky top-0" style={ $darkModeStore ? 'background-color: #1f2937' : 'background-color: slategrey' }>
                             <tr>
                                 <th class="text-left p-2">Parameter</th>
                                 <th class="text-left p-2">Value</th>
@@ -313,7 +313,7 @@
                                         <td class="p-2 param_type">{PARAM_TYPES[param.param_type] ?? 'unknown'}</td>
                                         <td class="p-2">
                                             <button 
-                                                class="px-2 py-1 bg-gray-600 rounded hover:bg-gray-500 transition-colors"
+                                                class="px-2 py-1 bg-[#1aac6e] rounded hover:bg-[#2a7757] transition-colors"
                                                 on:click={() => writeParameter(param.param_id, param.param_value, param.param_type)}
                                             >
                                                 Save

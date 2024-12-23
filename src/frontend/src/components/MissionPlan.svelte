@@ -450,7 +450,7 @@
                       </select>
                       <div class="text-center flex justify-center items-center gap-2 mt-2">
                         <label for="altitude" class="text-[9pt] mr-1">Altitude</label>
-                        <input type="number" min="0" name="altitude" id="altitude-{index}" class="altitude" placeholder="0: current alt" value={String(actions[Number(index)].alt ?? '')} on:change={updateAltitude}>
+                        <input type="number" min="0" max="100" name="altitude" id="altitude-{index}" class="altitude" placeholder="0: current alt" value={String(actions[Number(index)].alt ?? '')} on:change={updateAltitude}>
                         <span class="text-xs text-gray-400">m</span>
                       </div>
                   </div>
@@ -464,12 +464,12 @@
                     </h2>
                     <div class="flex justify-between items-center gap-1">
                       <span class="text-[8pt] mr-2">Lat</span>
-                      <input type="number" step="0.0001" id="lat-{index}" placeholder="eg. 33.749" value={actions[Number(index)].lat} on:change={updateLat} />
+                      <input type="number" step="0.00001" id="lat-{index}" placeholder="eg. 33.749" value={actions[Number(index)].lat} on:change={updateLat} />
                       <span class="text-lg text-gray-400">°</span>
                     </div>
                     <div class="flex justify-between items-center gap-1">
                       <span class="text-[8pt] mr-2">Lon</span>
-                      <input type="number" step="0.0001" id="lon-{index}" placeholder="eg. -84.388" value={actions[Number(index)].lon} on:change={updateLon} />
+                      <input type="number" step="0.00001" id="lon-{index}" placeholder="eg. -84.388" value={actions[Number(index)].lon} on:change={updateLon} />
                       <span class="text-lg text-gray-400">°</span>
                     </div>
                   </div>

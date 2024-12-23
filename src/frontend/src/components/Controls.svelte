@@ -104,7 +104,7 @@
         </div>
         <div class="flex flex-col items-center justify-center">
           <div class="label text-sm mb-1">Go to Altitude<span class="text-xs text-gray-400 mt-1 ml-1">(m)</span></div>
-          <input type="number" min="0" class="form-input" placeholder="100 m" bind:value={altitudeSetPoint} />
+          <input type="number" min="0" max="100" class="form-input" placeholder="100 m" bind:value={altitudeSetPoint} />
         </div>
         <button class="set-btn text-[8pt] rounded-full py-1 px-3 mt-2"
           on:click|preventDefault={() => {

@@ -582,7 +582,7 @@
   style="--heightOfDashboard: {heightOfDashboard}px; --primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
 >
   <div class="bg fixed w-full h-full "></div>
-  <div class="dark-mode-btn absolute top-4 left-4 z-20">
+  <div class="dark-mode-btn absolute top-2 left-2 z-20">
     <button class="nav-button" aria-label="Toggle Dark Mode" on:click={toggleDarkMode}>
       <i class="nav-icon fas {darkMode ? 'fa-sun' : 'fa-moon'}"></i>
     </button>
