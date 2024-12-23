@@ -597,51 +597,51 @@
             <button on:click|preventDefault={() => handleNavigation('/')}>
               <img src="/logo.png" alt="Logo" class="w-12 h-12">
             </button>
-          </div>
-          {#if $authData}
-            <button on:click|preventDefault={() => handleNavigation('/dashboard')} class="nav-button mb-4 {currentPath === '/dashboard' ? 'active' : ''}">
+            </div>
+            {#if $authData}
+            <a href="/dashboard" class="nav-button mb-4 {currentPath === '/dashboard' ? 'active' : ''}">
               <i class="nav-icon fas fa-tachometer-alt"></i>
               <div class="tooltip text-white">Dashboard</div>
-            </button>
-            <button on:click|preventDefault={() => handleNavigation('/mission-planner')} class="nav-button mb-4 {currentPath === '/mission-planner' ? 'active' : ''}">
+            </a>
+            <a href="/mission-planner" class="nav-button mb-4 {currentPath === '/mission-planner' ? 'active' : ''}">
               <i class="nav-icon fas fa-route"></i>
               <div class="tooltip text-white">Mission Planner</div>
-            </button>
-            <button on:click|preventDefault={() => handleNavigation('/event-log')} class="nav-button mb-4 {currentPath === '/event-log' ? 'active' : ''}">
+            </a>
+            <a href="/event-log" class="nav-button mb-4 {currentPath === '/event-log' ? 'active' : ''}">
               <i class="nav-icon fas fa-bars-staggered"></i>
               <div class="tooltip text-white">Event Log</div>
-            </button>
-            <button on:click|preventDefault={() => handleNavigation('/parameters')} class="nav-button mb-4 {currentPath === '/parameters' ? 'active' : ''}">
+            </a>
+            <a href="/parameters" class="nav-button mb-4 {currentPath === '/parameters' ? 'active' : ''}">
               <i class="nav-icon fas fa-cog"></i>
               <div class="tooltip text-white">Vehicle Parameters</div>
-            </button>
+            </a>
             <div class="separator h-[2px] w-[80%] rounded-2xl mb-4"></div>
-            <button on:click|preventDefault={() => handleNavigation('/admin', "_blank")} class="nav-button mb-4">
+            <a href={`http://${window.location.hostname}:8090/_/`} target="_blank" class="nav-button mb-4">
               <i class="nav-icon fas fa-user"></i>
               <div class="tooltip text-white">Admin Dashboard</div>
-            </button>
-            <button on:click={handleLogout} class="nav-button mb-4">
+            </a>
+            <a href="/login" on:click|preventDefault={handleLogout} class="nav-button mb-4">
               <i class="nav-icon fas fa-sign-out-alt"></i>
               <div class="tooltip text-white">Logout</div>
-            </button>
-          {:else}
-            <button on:click|preventDefault={() => handleNavigation('/login')} class="nav-button mb-4 {currentPath === '/login' ? 'active' : ''}">
+            </a>
+            {:else}
+            <a href="/login" class="nav-button mb-4 {currentPath === '/login' ? 'active' : ''}">
               <i class="nav-icon fas fa-sign-in-alt"></i>
               <div class="tooltip text-white">Login</div>
-            </button>
-          {/if}
-        </div>
-        <div class="flex flex-col justify-self-end gap-3">
-          <button class="nav-button" aria-label="GitHub" on:click|preventDefault={() => window.open('https://github.com/MAV-Manager/mmgcs', '_blank')}>
+            </a>
+            {/if}
+          </div>
+          <div class="flex flex-col justify-self-end gap-3">
+            <a class="nav-button" aria-label="GitHub" href="https://github.com/MAV-Manager/mmgcs" target="_blank">
             <i class="nav-icon fab fa-github"></i>
             <div class="tooltip text-white">GitHub</div>
-          </button>
-          <div class="separator h-[2px] w-[80%] mx-auto mb-2 rounded-2xl"></div>
-          <button class="nav-button" aria-label="FAA Rules" on:click|preventDefault={() => window.open('https://www.faa.gov/uas', '_blank')}>
+            </a>
+            <div class="separator h-[2px] w-[80%] mx-auto mb-2 rounded-2xl"></div>
+            <a class="nav-button" aria-label="FAA Rules" href="https://www.faa.gov/uas" target="_blank">
             <i class="nav-icon fas fa-plane-circle-exclamation"></i>
             <div class="tooltip text-white">FAA Rules and Regulations for Unmanned Aircraft Systems (UAS)</div>
-          </button>
-        </div>
+            </a>
+          </div>
     </nav>
 
     <!-- Mobile Navigation -->
