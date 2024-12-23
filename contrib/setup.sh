@@ -38,7 +38,6 @@ if [[ "$1" != "--install-only" ]]; then
     # Check if the bearer number was successfully extracted
     if [ -z "$bearer" ]; then
         echo "Failed to extract Bearer number."
-        exit 1
     fi
     
     # Get Bearer details
@@ -54,7 +53,6 @@ if [[ "$1" != "--install-only" ]]; then
     # Validate extracted data
     if [ -z "$ipv4_address" ] || [ -z "$ipv4_gateway" ] || [ -z "$interface" ]; then
         echo "Failed to extract necessary network configuration."
-        exit 1
     fi
     
     # Set up the cellular network interface
