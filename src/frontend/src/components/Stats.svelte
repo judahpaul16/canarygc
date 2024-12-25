@@ -306,21 +306,21 @@
       target: document.body,
       props: {
         title: 'Start / Resume Mission',
-        content: 'Are you sure you want to start the mission? Please specify RTL_ALT (Return to Launch Altitude) in CENTIMETERS. Make sure to consider any potential obstacles between the RTL waypoint and the launch location.',
+        content: 'Are you sure you want to start the mission? Please specify RTL_ALT (Return to Launch Altitude) in METERS. Make sure to consider any potential obstacles between the RTL waypoint and the launch location.',
         isOpen: true,
         confirmation: true,
         notification: false,
         inputs: [
           {
             type: 'number',
-            placeholder: `RTL_ALT: ${encodedValue} cm`,
+            placeholder: `RTL_ALT: ${encodedValue / 100} m`,
             required: true,
           }
         ],
         onConfirm: async () => {
           missionIndexStore.set(1);
           missionCompleteStore.set(false);
-          await writeParameter('RTL_ALT', parseInt(modal.inputValues![0]), get(mavlinkParamStore).RTL_ALT.param_type);
+          await writeParameter('RTL_ALT', parseInt(modal.inputValues![0]) * 100, get(mavlinkParamStore).RTL_ALT.param_type);
           await writeParameter('RTL_CLIMB_MIN', 0, get(mavlinkParamStore).RTL_CLIMB_MIN.param_type);
           if (get(mavStateStore) === 'STANDBY') {
             await sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true'); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
