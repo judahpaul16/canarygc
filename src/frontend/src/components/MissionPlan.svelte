@@ -192,14 +192,14 @@
         inputs: [
           {
             type: 'number',
-            placeholder: `RTL_ALT: ${encodedValue} cm`,
+            placeholder: `RTL_ALT: ${encodedValue / 100} m`,
             required: true,
           }
         ],
         onConfirm: async () => {
           missionIndexStore.set(1);
           missionCompleteStore.set(false);
-          await writeParameter('RTL_ALT', parseInt(modal.inputValues![0]), get(mavlinkParamStore).RTL_ALT.param_type);
+          await writeParameter('RTL_ALT', parseInt(modal.inputValues![0]) * 100, get(mavlinkParamStore).RTL_ALT.param_type);
           await writeParameter('RTL_CLIMB_MIN', 0, get(mavlinkParamStore).RTL_CLIMB_MIN.param_type);
           if (get(mavStateStore) === 'STANDBY') {
             await sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true'); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
@@ -218,6 +218,26 @@
             }
           });
           setTimeout(() => notification.$destroy(), 10000);
+        },
+      }
+    });
+  }
+
+  function releasePayload() {
+    let modal = new Modal({
+      target: document.body,
+      props: {
+        title: 'Confirm Release Payload',
+        content: 'Are you sure you want to release the payload?\nUse caution and ensure the drop zone is clear.',
+        isOpen: true,
+        confirmation: true,
+        notification: false,
+        onConfirm: async () => {
+          if (mavMode !== 'GUIDED') await sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true'); // param2: 4 (GUIDED) see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+          await sendMavlinkCommand('DO_SET_SERVO' , `${[9, 1050]}`); // param2 - 1900: release, 1100: grip
+          await new Promise((resolve) => setTimeout(resolve, 500)); // Wait 0.5 seconds
+          await sendMavlinkCommand('DO_SET_SERVO' , `${[9, 1950]}`); // param2 - 1900: release, 1100: grip
+          modal.$destroy();
         },
       }
     });
@@ -398,9 +418,9 @@
         <i class="fas fa-question-circle"></i>
         How do I create a mission plan?
       </a>
-      <button class="px-2 py-1 bg-[#588ae7] rounded-lg hover:bg-[#6f9ff9]" on:click={() => {}}>
-          <i class="fas fa-check"></i>
-          <div class="tooltip">Validate Mission Plan</div>
+      <button class="px-2 py-1 bg-[#588ae7] rounded-lg hover:bg-[#6f9ff9]" on:click={() => {releasePayload()}}>
+          <i class="fas fa-parachute-box"></i>
+          <div class="tooltip">Release Payload</div>
       </button>
       {#if !checkMode('AUTO', mavMode) || systemState === 'STANDBY'}
         <button class="px-2 py-1 bg-[#55b377] rounded-lg hover:bg-[#61cd89]"

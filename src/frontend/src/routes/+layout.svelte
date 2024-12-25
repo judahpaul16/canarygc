@@ -438,7 +438,6 @@
   }
 
   onMount(async () => {
-    requestParameters();
     // @ts-ignore
     document.querySelector('.bg')!.style.background = "url('bg-map.webp') no-repeat center center fixed";
     pb = new PocketBase(`http://${window.location.hostname}:8090`);
@@ -447,6 +446,7 @@
     setTimeout(() => {
       initializeMissionPlansCollection();
       checkLoadedMission();
+      requestParameters();
     }, 2000);
     
     // Set up event listeners for user activity
