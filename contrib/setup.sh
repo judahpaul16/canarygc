@@ -11,7 +11,7 @@ WHITE='\033[0;37m'
 NC='\033[0m' # No Color
 
 #### SETUP ####
-if [[ "$1" != "--install-only" ]]; then
+if [[ "$1" != "--install-only" && "$1" != "--simulation" ]]; then
     sudo apt-get update
     sudo apt-get -y install docker.io nginx ufw wget network-manager
     
@@ -172,7 +172,7 @@ if [[ "$1" != "--setup-only" ]]; then
 fi
 
 #### 4G SERVICE ####
-if [[ "$1" != "--install-only" && "$1" != "--setup-only" ]]; then
+if [[ "$1" != "--install-only" && "$1" != "--setup-only" && "$1" != "--simulation" ]]; then
     # Create systemd service file
   sudo tee /etc/systemd/system/mobile-network-setup.service > /dev/null <<EOF
 [Unit]
