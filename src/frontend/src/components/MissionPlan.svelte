@@ -185,7 +185,7 @@
       target: document.body,
       props: {
         title: 'Start / Resume Mission',
-        content: 'Are you sure you want to start the mission? Please specify RTL_ALT (Return to Launch Altitude) in CENTIMETERS. Make sure to consider any potential obstacles between the RTL waypoint and the launch location.',
+        content: 'Are you sure you want to start the mission? Please specify RTL_ALT (Return to Launch Altitude) in METERS. Make sure to consider any potential obstacles between the RTL waypoint and the launch location.',
         isOpen: true,
         confirmation: true,
         notification: false,
