@@ -364,6 +364,15 @@
     const select = event.target as HTMLSelectElement;
     const index = Number(select.id.split('-')[1]);
     actions[index].type = select.value;
+    if (select.value === 'DO_SET_SERVO') {
+      actions[index].param1 = 9;
+      actions[index].param2 = 1950;
+    } else if (select.value === 'DO_REPEAT_SERVO') {
+      actions[index].param1 = 9;
+      actions[index].param2 = 1950;
+      actions[index].param3 = 2;
+      actions[index].param4 = 1;
+    }
     missionPlanActionsStore.set(actions);
   }
 
