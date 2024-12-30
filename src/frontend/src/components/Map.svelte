@@ -183,16 +183,37 @@
     
     updateMAVMarker();
 
-    leafletMap.on('click', (e: L.LeafletMouseEvent) => {
-      const lat = e.latlng.lat;
-      const lon = e.latlng.lng;
-      const index = Object.keys(actions).length;
-      const action = { type: 'NAV_WAYPOINT', lat, lon, alt: null, notes: '', param1: null, param2: null, param3: null, param4: null };
-      actions[index] = action;
-      missionPlanActionsStore.set(actions);
-      updateMap(index);
+    // Add location display overlay
+    const locationDisplay = document.createElement('div');
+    locationDisplay.id = 'location-display';
+    locationDisplay.style.cssText = 'position: absolute; bottom: 10px; left: 10px; background: rgba(255,255,255,0.8); padding: 5px; border-radius: 4px; z-index: 1000;';
+    if (hideOverlay) locationDisplay.style.display = 'none';
+    document.getElementById(id)!.appendChild(locationDisplay);
+
+    // Update location display when MAV position changes
+    function updateLocationDisplay() {
+        locationDisplay.textContent = `MAV Location: ${mavLocation.lat.toFixed(6)}°, ${mavLocation.lng.toFixed(6)}°`;
+    }
+    updateLocationDisplay();
+
+    // Subscribe to MAV location changes
+    mavLocationStore.subscribe(location => {
+        mavLocation = location;
+        updateLocationDisplay();
     });
-    
+
+    leafletMap.on('click', (e: L.LeafletMouseEvent) => {
+      if (Object.keys(actions).length > 1) {
+        const lat = e.latlng.lat;
+        const lon = e.latlng.lng;
+        const index = Object.keys(actions).length;
+        const action = { type: 'NAV_WAYPOINT', lat, lon, alt: null, notes: '', param1: null, param2: null, param3: null, param4: null };
+        actions[index] = action;
+        missionPlanActionsStore.set(actions);
+        updateMap(index);
+      }
+    });
+
     mapStore.set(leafletMap);
     mavLocationStore.set(mavLocation);
   }
@@ -247,28 +268,6 @@
     const el = document.querySelector('.map-container');
     if (el instanceof HTMLElement) {
       toggleFullScreen(el);
-    }
-  }
-
-  function toggleDarkMode() {
-    const map = document.getElementById('map');
-    if (map) {
-      map.classList.toggle('dark');
-      darkMode = !darkMode;
-      darkModeStore.set(darkMode);
-    }
-    if (darkMode) {
-      // @ts-ignore
-      document.querySelector('.bg')!.style.background = "url('bg-map.webp') no-repeat center center fixed";
-      primaryColorStore.set('#1c1c1e');
-      secondaryColorStore.set('#121212');
-      tertiaryColorStore.set('#2d2d2d');
-    } else {
-      // @ts-ignore
-      document.querySelector('.bg')!.style.background = "url('bg-map-light.webp') no-repeat center center fixed";
-      primaryColorStore.set('#ffffff');
-      secondaryColorStore.set('#e7e9ef');
-      tertiaryColorStore.set('#d7d7d7');
     }
   }
 
@@ -506,11 +505,8 @@
 <div class="map-container" style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};">
   <div id="aamap" class="relative h-full"></div>
   <div id={id !== null ? id : 'map'} class="relative h-full rounded-2xl z-0"></div>
-  <button class="map-btn absolute top-[6.8rem] right-2 text-[#ffffff] bg-opacity-75 p-2 {lockView ? 'px-[15px]' : 'px-[13px]'} rounded-full" on:click={toggleLockView}> 
+  <button class="map-btn absolute top-[3.8rem] right-2 text-[#ffffff] bg-opacity-75 p-2 {lockView ? 'px-[15px]' : 'px-[13px]'} rounded-full" on:click={toggleLockView}> 
     <i class="fas {lockView ? 'fa-lock' : 'fa-lock-open'}"></i>
-  </button>
-  <button class="map-btn absolute top-[3.8rem] right-2 text-[#ffffff] bg-opacity-75 p-2 px-3 rounded-full" on:click={toggleDarkMode}>
-    {#if darkMode} <i class="fas fa-sun px-[2px]"></i> {:else} <i class="fas fa-moon"></i> {/if}
   </button>
   <button class="map-btn absolute top-3 right-2 text-[#ffffff] bg-opacity-75 p-2 px-[14px] rounded-full" on:click={handleFullScreen}>
     <i class="fas fa-expand"></i>
