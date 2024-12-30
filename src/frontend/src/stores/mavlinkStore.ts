@@ -1,7 +1,7 @@
 import { writable } from 'svelte/store';
 
 let L: typeof import('leaflet');
-let latLng = { lat: 33.7909, lng: -84.388 };
+let latLng = { lat: 33.79105092934356, lng: -84.37130870603511 };
 
 export interface Parameter {
     param_id: string;

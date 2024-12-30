@@ -557,7 +557,7 @@
   
   function toggleDarkMode() {
     const map = document.getElementById('map');
-    if (map) {
+    if (map && !map.classList.contains('satellite')) {
       map.classList.toggle('dark');
     }
     darkMode = !darkMode;
