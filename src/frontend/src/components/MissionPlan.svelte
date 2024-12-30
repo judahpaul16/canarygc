@@ -367,11 +367,18 @@
     if (select.value === 'DO_SET_SERVO') {
       actions[index].param1 = 9;
       actions[index].param2 = 1950;
+      actions[index].param3 = null;
+      actions[index].param4 = null;
     } else if (select.value === 'DO_REPEAT_SERVO') {
       actions[index].param1 = 9;
       actions[index].param2 = 1950;
       actions[index].param3 = 2;
       actions[index].param4 = 1;
+    } else {
+      actions[index].param1 = null;
+      actions[index].param2 = null;
+      actions[index].param3 = null;
+      actions[index].param4 = null;
     }
     missionPlanActionsStore.set(actions);
   }
