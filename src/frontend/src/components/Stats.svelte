@@ -56,6 +56,7 @@
   $: missionLoaded = $missionPlanTitleStore !== '';
   $: markers = $markersStore;
   $: eta = calculateETA(missionProgress, $mavLocationStore);
+  $: remainingDistance = calculateRemainingDistance($missionIndexStore, $mavLocationStore, $markersStore);
 
   function getMissionProgress(index: number, count: number, mavLocation: L.LatLng): number {
     let progress: number = 0;
@@ -72,6 +73,7 @@
     let section = ((1 / count) * 100) * (index - 1);
     progress = progress * ((1 / count) * 100);
     progress = parseFloat((Math.min(section + progress, 100)).toFixed(2));
+    if (systemState === 'STANDBY') progress = 0;
     addSample(progress, Date.now());
     return progress;
   }
@@ -143,6 +145,23 @@
     ].join(':');
 
     return formattedTime;
+  }
+
+  function calculateRemainingDistance(index: number, mavLocation: any, markers: Map<number, L.Marker>): number {
+    let totalDistance = 0;
+    
+    // Calculate total distance from current position to end through remaining waypoints
+    let currentPos = mavLocation;
+    for (let i = index; i <= markers.size; i++) {
+        const nextMarker = markers.get(i);
+        if (nextMarker) {
+            const nextPos = nextMarker.getLatLng();
+            totalDistance += haversine(currentPos.lat, currentPos.lng, nextPos.lat, nextPos.lng);
+            currentPos = nextPos;
+        }
+    }
+    
+    return parseFloat((totalDistance * 1000).toFixed(2)); // Returns distance in meters
   }
 
   async function sendMavlinkCommand(command: string, params: string  = '', useCmdLong: string = 'false', useArduPilotMega: string = 'false') {
@@ -439,7 +458,10 @@
       </div>
       <div class="flex flex-col items-center justify-end">
         <div class="w-full">
-          <span>Mission Progress: {systemState === 'Unknown' ? '--' : mavMode === 'AUTO' ? missionProgress : 0}% (ETA {eta})</span>
+          <span>
+            Mission Progress: {systemState === 'Unknown' ? '--' : mavMode === 'AUTO' ? missionProgress : 0}% (ETA {eta})
+            <span class="text-[#66e1ff]"> {mavMode === 'AUTO' ? (parseFloat(remainingDistance.toFixed(2)) || 0) : 0} m remaining</span>
+          </span>
           <div class="progress-bar rounded-full h-2.5 mt-3">
             <div class="progress-bar-inner h-2.5 rounded-full" style="width: {mavMode === 'AUTO' ? missionProgress : 0}%;"></div>
           </div>
