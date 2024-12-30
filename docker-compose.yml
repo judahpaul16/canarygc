@@ -36,8 +36,8 @@ services:
     image: radarku/ardupilot-sitl:latest
     environment:
       - INSTANCE=0
-      - LAT=33.7909
-      - LON=-84.3722
+      - LAT=33.79105092934356
+      - LON=-84.37130870603511
       - ALT=0
       - DIR=0
       - MODEL=quad

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import '@fortawesome/fontawesome-free/css/all.min.css';
-  import { mapStore, markersStore, polylinesStore } from '../stores/mapStore';
+  import { mapStore, markersStore, polylinesStore, mapTypeStore, mapTileLayerStore } from '../stores/mapStore';
   import { mavLocationStore, mavHeadingStore } from '../stores/mavlinkStore';
   import {
     missionPlanActionsStore,
@@ -21,13 +21,12 @@
     tertiaryColorStore
   } from '../stores/customizationStore';
 
-  const apiKey = import.meta.env.VITE_ALTITUDE_ANGEL_API_KEY;
-
   let L: typeof import('leaflet');
-  let altitudeAngelMap: any;
   let leafletMap: any = get(mapStore);
-  let currentMap: 'altitudeAngel' | 'leaflet' = 'leaflet'; // Default to Leaflet
+  let mapType: string = get(mapTypeStore);
+  let currentTileLayer = get(mapTileLayerStore);
   let zoom = 18;
+  const lockViewStore = writable(true);
 
   let actions: MissionPlanActions = {};
   let action_types = [
@@ -49,7 +48,6 @@
   let mavMarker: L.Marker;
   let isDragging = false;
   let darkMode = get(darkModeStore);
-  const lockViewStore = writable(true);
   
   $: darkMode = $darkModeStore;
   $: primaryColor = $primaryColorStore;
@@ -59,6 +57,8 @@
   $: lockView = $lockViewStore;
 
   $: leafletMap = $mapStore;
+  $: mapType = $mapTypeStore;
+  $: currentTileLayer = $mapTileLayerStore;
   $: mavHeading = $mavHeadingStore,
         updateMAVMarker();
   $: mavLocation = $mavLocationStore,
@@ -97,11 +97,6 @@
       L = (await import('leaflet')).default;
       if (id !== null) initializeLeafletMap(id);
       else initializeLeafletMap();
-
-      // Load and initialize Altitude Angel
-      await loadScript('js/jquery-3.2.1.min.js');
-      await loadScript('js/altitudeAngelMap.js');
-      initializeAltitudeAngelMap();
     } catch (error) {
       console.error('Script loading failed', error);
     }
@@ -138,37 +133,27 @@
     document.addEventListener('scrollDown', () => { zoom = zoom - 1 });
   });
 
-  function initializeAltitudeAngelMap() {
-    const { aa } = window as any;
-    if (typeof aa !== 'undefined') {
-      const features = [
-        aa.features.displayUserLocation,
-        aa.features.currentLocationOnStart,
-        ...(hideOverlay ? [
-          aa.features.hideMapTileSelector,
-          aa.features.hideMenuPanel,
-          aa.features.hideMenuBar,
-          aa.features.hideSearch,
-          aa.features.hideUTMStatusIcons
-        ] : [])
-      ];
-
-      altitudeAngelMap = aa.initialize({
-        target: 'aamap',
-        baseUrl: 'https://dronesafetymap.com',
-        authDetails: { apiKey },
-        features: features,
-      });
-    } else {
-      console.error('Altitude Angel Map not loaded');
-    }
-  }
-
   function initializeLeafletMap(id: string = 'map') {
     leafletMap = L.map(id).setView(mavLocation, zoom);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {}).addTo(leafletMap);
+    if (mapType === 'openstreetmap') {
+      currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          minZoom: 0,
+          maxZoom: 20,
+        }).addTo(leafletMap);
+      mapType = 'openstreetmap';
+      mapTypeStore.set('openstreetmap');
+      mapTileLayerStore.set(currentTileLayer);
+    } else {
+      currentTileLayer = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.jpg', {
+          minZoom: 0,
+          maxZoom: 20,
+        }).addTo(leafletMap);
+      mapType = 'satellite';
+      mapTypeStore.set('satellite');
+      mapTileLayerStore.set(currentTileLayer);
+    }
     if (darkMode) {
-      document.getElementById('map')!.classList.add('dark');
+      if (mapType !== 'satellite') document.getElementById('map')!.classList.add('dark');
       // @ts-ignore
       document.querySelector('.bg')!.style.background = "url('bg-map.webp') no-repeat center center fixed";
       primaryColorStore.set('#1c1c1e');
@@ -219,18 +204,30 @@
   }
 
   function toggleMap() {
-    const altitudeAngelDiv = document.getElementById('aamap');
-    const leafletDiv = document.getElementById('map');
-
-    if (currentMap === 'altitudeAngel') {
-      currentMap = 'leaflet';
-      if (altitudeAngelDiv) altitudeAngelDiv.style.display = 'none';
-      if (leafletDiv) leafletDiv.style.display = 'block';
-      window.dispatchEvent(new Event('resize'));
+    if (currentTileLayer) {
+        currentTileLayer.remove();
+    }
+    const map = document.getElementById('map')!;
+    if (leafletMap && mapType === 'satellite') {
+      mapType = 'openstreetmap';
+      if (darkMode) map.classList.add('dark');
+      map.classList.remove('satellite');
+      currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        minZoom: 0,
+        maxZoom: 20,
+      }).addTo(leafletMap);
+      mapTypeStore.set('openstreetmap');
+      mapTileLayerStore.set(currentTileLayer);
     } else {
-      currentMap = 'altitudeAngel';
-      if (altitudeAngelDiv) altitudeAngelDiv.style.display = 'block';
-      if (leafletDiv) leafletDiv.style.display = 'none';
+      mapType = 'satellite';
+      map.classList.remove('dark');
+      map.classList.add('satellite');
+      currentTileLayer = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.jpg', {
+        minZoom: 0,
+        maxZoom: 20,
+      }).addTo(leafletMap);
+      mapTypeStore.set('satellite');
+      mapTileLayerStore.set(currentTileLayer);
     }
   }
 
@@ -240,6 +237,7 @@
   }
 
   function toggleFullScreen(element: HTMLElement) {
+    if (window.location.href.includes('dashboard')) hideOverlay = !hideOverlay;
     if (!document.fullscreenElement) {
       element.requestFullscreen().catch(err => {
         new Modal({
@@ -464,16 +462,12 @@
     width: 100%;
   }
 
-  #aamap, #map {
+  #map {
     height: 100%;
     width: 100%;
     position: absolute;
     top: 0;
     left: 0;
-  }
-
-  #aamap {
-    display: none;
   }
 
   #map {
@@ -503,7 +497,6 @@
 </style>
 
 <div class="map-container" style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};">
-  <div id="aamap" class="relative h-full"></div>
   <div id={id !== null ? id : 'map'} class="relative h-full rounded-2xl z-0"></div>
   <button class="map-btn absolute top-[3.8rem] right-2 text-[#ffffff] bg-opacity-75 p-2 {lockView ? 'px-[15px]' : 'px-[13px]'} rounded-full" on:click={toggleLockView}> 
     <i class="fas {lockView ? 'fa-lock' : 'fa-lock-open'}"></i>
@@ -514,8 +507,8 @@
   {#if !hideOverlay}
     <label id="map-toggle" class="flex justify-center cursor-pointer my-2 absolute top-1 right-2 left-2 w-fit m-auto rounded-3xl p-2 pl-3 text-sm items-center">
       <input type="checkbox" value="" class="sr-only peer" on:click={toggleMap}>
-      <span class="text-[#ffffff]"><i class="fas fa-map"></i>&nbsp;&nbsp;{currentMap === 'altitudeAngel' ? 'Altitude Angel' : 'Leaflet'}</span>
-      <div class="relative w-11 h-6 ml-3 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-[#61cd89] peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-[#d94d7c]"></div>
+      <span class="text-[#ffffff]"><i class="fas fa-map"></i>&nbsp;&nbsp;{mapType === 'openstreetmap' ? 'OpenStreetMap' : 'Satellite'}</span>
+      <div class="relative w-11 h-6 ml-3 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-[#6ac3ff] peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-[#2b7c3f]"></div>
     </label>
   {/if}
 </div>
