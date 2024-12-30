@@ -182,6 +182,16 @@
     if (hideOverlay) Array.from(document.querySelectorAll('.map-btn i')).forEach((element) => element.style.fontSize = "small");
     
     updateMAVMarker();
+
+    leafletMap.on('click', (e: L.LeafletMouseEvent) => {
+      const lat = e.latlng.lat;
+      const lon = e.latlng.lng;
+      const index = Object.keys(actions).length;
+      const action = { type: 'NAV_WAYPOINT', lat, lon, alt: null, notes: '', param1: null, param2: null, param3: null, param4: null };
+      actions[index] = action;
+      missionPlanActionsStore.set(actions);
+      updateMap(index);
+    });
     
     mapStore.set(leafletMap);
     mavLocationStore.set(mavLocation);
