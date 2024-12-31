@@ -438,24 +438,24 @@
     </button>
     <button on:click={toggleMissionPlans}>
         <i class="fas fa-globe text-[#5398e6]"></i>
-        Manage Plans
+        Manage Missions
     </button>
     <button on:click={saveMissionPlan}>
         <i class="fas fa-save text-[#61cd89]"></i>
-        Save & Load Plan
+        Save & Load Mission
     </button>
     <button on:click={confirmClear}>
         <i class="fas fa-trash-alt text-[#f87171]"></i>
-        Clear Plan
+        Clear Mission
     </button>
     <div id="import-export" class="flex items-center justify-center gap-2">
         <button on:click={importPlan}>
             <i class="fas fa-upload"></i>
-            <span class="text-[8.5pt]">Import Plan</span>
+            <span class="text-[8.5pt]">Import Mission</span>
         </button>
         <button on:click={exportMissionPlan}>
             <i class="fas fa-download"></i>
-            <span class="text-[8.5pt]">Export Plan</span>
+            <span class="text-[8.5pt]">Export Mission</span>
         </button>
     </div>
 </section>
