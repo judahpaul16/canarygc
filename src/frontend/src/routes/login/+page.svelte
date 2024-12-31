@@ -57,7 +57,7 @@
 
     // Check if already logged in and redirect to dashboard
     setInterval(() => {
-      if (authData && !authData.checkExpired()) {
+      if (authData && !authData.checkExpired() && window.location.pathname.includes('login')) {
         goto('/dashboard');
       }
     }, 1000);
