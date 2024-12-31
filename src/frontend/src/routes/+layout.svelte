@@ -43,6 +43,7 @@
   import { get } from 'svelte/store';
   import Offline from '../components/Offline.svelte';
   import Notification from '../components/Notification.svelte';
+    import { mapTypeStore } from '../stores/mapStore';
 
   let pb: PocketBase;
 
@@ -556,9 +557,11 @@
   }
   
   function toggleDarkMode() {
-    const map = document.getElementById('map');
-    if (map && !map.classList.contains('satellite')) {
-      map.classList.toggle('dark');
+    let map = document.getElementById('map');
+    if (map && get(mapTypeStore) !== 'satellite') {
+      map.classList.add('dark');
+    } else if (map && get(mapTypeStore) === 'satellite') {
+      map.classList.remove('dark');
     }
     darkMode = !darkMode;
     darkModeStore.set(darkMode);
