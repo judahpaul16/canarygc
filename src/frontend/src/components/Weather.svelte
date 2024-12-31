@@ -66,7 +66,7 @@
           weatherImage = '';
         }
 
-        temperature = `${temp}°C / ${temp * 1.8 + 32}°F`;
+        temperature = `${temp}°C / ${(temp * 1.8 + 32).toFixed(1)}°F`;
 
         const rainData = weatherData.hourly.precipitation_probability;
         if (rainData && rainData.length > 0) {
