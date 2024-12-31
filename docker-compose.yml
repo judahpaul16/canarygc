@@ -32,6 +32,7 @@ services:
           memory: 700m
     restart: always
 
+  # Ardupilot SITL
   sitl:
     image: radarku/ardupilot-sitl:latest
     environment:
@@ -49,3 +50,20 @@ services:
       - "5760:5760"
     healthcheck:
       timeout: 10s
+
+  # PX4 SITL
+  # sitl:
+  #   build:
+  #     context: ./src/sitl
+  #     dockerfile: Dockerfile.px4
+  #   container_name: mmgcs_sitl
+  #   ports:
+  #     - "5760:5760"
+  #   environment:
+  #     - PX4_HOME_LAT=33.79105092934356
+  #     - PX4_HOME_LON=-84.37130870603511
+  #     - PX4_HOME_ALT=0
+  #     - PX4_SIM_SPEED_FACTOR=1
+  #     - PX4_VEHICLE=quad
+  #   healthcheck:
+  #     timeout: 10s
