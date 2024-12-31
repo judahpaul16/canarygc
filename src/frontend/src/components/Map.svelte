@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import { mapStore, markersStore, polylinesStore, mapTypeStore, mapTileLayerStore } from '../stores/mapStore';
-  import { mavLocationStore, mavHeadingStore } from '../stores/mavlinkStore';
+  import { mavLocationStore, mavHeadingStore, mavAltitudeStore } from '../stores/mavlinkStore';
   import {
     missionPlanActionsStore,
     type MissionPlanActions,
@@ -172,7 +172,7 @@
 
     // Update location display when MAV position changes
     function updateLocationDisplay() {
-        locationDisplay.textContent = `MAV Location: ${mavLocation.lat.toFixed(6)}°, ${mavLocation.lng.toFixed(6)}°`;
+        locationDisplay.textContent = `MAV Location: ${mavLocation.lat.toFixed(6)}°, ${mavLocation.lng.toFixed(6)}°, Yaw Angle: ${mavHeading}°, Altitude: ${get(mavAltitudeStore)}m`;
     }
     updateLocationDisplay();
 
@@ -202,7 +202,7 @@
     if (currentTileLayer) {
         currentTileLayer.remove();
     }
-    const map = document.getElementById('map')!;
+    let map = document.getElementById('map')!;
     if (leafletMap && mapType === 'satellite') {
       mapType = 'openstreetmap';
       if (darkMode) map.classList.add('dark');
