@@ -56,6 +56,11 @@
   let authCheckInterval: NodeJS.Timeout;
   const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
 
+  const batteryAlerts = [50, 20, 15, 10, 5];
+  let batteryAlertIndex = 0;
+  let batteryAlertShown = false;
+  
+  $: battery = $mavBatteryStore;
   $: online = $onlineStore;
   $: darkMode = $darkModeStore;
   $: primaryColor = $primaryColorStore;
@@ -66,6 +71,17 @@
   $: isNavHidden = currentPath === '/' || currentPath === '/login';
   $: missionCountStore.set(Object.keys($missionPlanActionsStore).length - 1);
   $: actions = $missionPlanActionsStore;
+  $: if (battery && battery <= batteryAlerts[batteryAlertIndex] && !batteryAlertShown) {
+    showNotification({
+      title: 'Low Battery Alert',
+      content: `Battery level is at ${battery}%. It's highly recommended to return to home or land immediately to prevent a crash.`,
+      type: battery <= 20 ? 'error' : 'warning',
+    });
+    batteryAlertIndex++;
+    batteryAlertShown = true;
+  } else if (battery && battery > batteryAlerts[batteryAlertIndex]) {
+    batteryAlertShown = false;
+  }
 
   // @ts-ignore
   String.prototype.toProperCase = function () {
