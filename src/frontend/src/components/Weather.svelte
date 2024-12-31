@@ -66,7 +66,7 @@
           weatherImage = '';
         }
 
-        temperature = `${temp}°C`;
+        temperature = `${temp}°C / ${temp * 1.8 + 32}°F`;
 
         const rainData = weatherData.hourly.precipitation_probability;
         if (rainData && rainData.length > 0) {
@@ -123,8 +123,8 @@
       <div class="weather-detail wind">Wind Direction: {windDirection}</div>
       <img src={weatherImage} alt={weatherDescription} class="weather-icon" />
       <div class="weather-summary">{weatherDescription}</div>
-      <div class="weather-detail temp">Temp: {temperature}</div>
       <div class="weather-detail rain">Rain Chance: {rainChance}</div>
+      <div class="weather-detail temp">Temp: {temperature}</div>
     {/if}
   </div>
 {:else}
@@ -140,8 +140,8 @@
       <div class="weather-detail wind">Wind Direction: {windDirection}</div>
       <img src={weatherImage} alt={weatherDescription} class="weather-icon" />
       <div class="weather-summary">{weatherDescription}</div>
-      <div class="weather-detail temp">Temp: {temperature}</div>
       <div class="weather-detail rain">Rain Chance: {rainChance}</div>
+      <div class="weather-detail temp">Temp: {temperature}</div>
     {/if}
       <br/>
       <div class="location text-italic">Based on MAV location
