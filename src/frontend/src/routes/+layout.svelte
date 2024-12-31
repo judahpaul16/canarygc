@@ -558,20 +558,26 @@
   
   function toggleDarkMode() {
     let map = document.getElementById('map');
-    if (map && get(mapTypeStore) !== 'satellite') {
-      map.classList.add('dark');
-    } else if (map && get(mapTypeStore) === 'satellite') {
-      map.classList.remove('dark');
-    }
     darkMode = !darkMode;
     darkModeStore.set(darkMode);
+    if (map && get(mapTypeStore) !== 'satellite') {
+      map.classList.add('dark');
+    } else {
+      map!.classList.remove('dark');
+    }
     if (darkMode) {
+      if (map && get(mapTypeStore) !== 'satellite') {
+        map.classList.add('dark');
+      }
       // @ts-ignore
       document.querySelector('.bg')!.style.background = "url('bg-map.webp') no-repeat center center fixed";
       primaryColorStore.set('#1c1c1e');
       secondaryColorStore.set('#121212');
       tertiaryColorStore.set('#2d2d2d');
     } else {
+      if (map && get(mapTypeStore) !== 'satellite') {
+        map.classList.remove('dark');
+      }
       // @ts-ignore
       document.querySelector('.bg')!.style.background = "url('bg-map-light.webp') no-repeat center center fixed";
       primaryColorStore.set('#ffffff');
