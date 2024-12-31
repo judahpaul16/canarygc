@@ -168,12 +168,7 @@
     
     updateMAVMarker();
 
-    // Add location display overlay
-    const locationDisplay = document.createElement('div');
-    locationDisplay.id = 'location-display';
-    locationDisplay.style.cssText = 'position: absolute; bottom: 10px; left: 10px; background: rgba(255,255,255,0.8); padding: 5px; border-radius: 4px; z-index: 1000;';
-    if (hideOverlay) locationDisplay.style.display = 'none';
-    document.getElementById(id)!.appendChild(locationDisplay);
+    const locationDisplay = document.querySelector('#location-display')!;
 
     // Update location display when MAV position changes
     function updateLocationDisplay() {
@@ -494,6 +489,15 @@
   .map-btn:hover {
     opacity: 0.7;
   }
+  #location-display {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    background: rgba(255,255,255,0.8);
+    padding: 5px;
+    border-radius: 4px;
+    z-index: 1000;
+  }
 </style>
 
 <div class="map-container" style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};">
@@ -504,11 +508,10 @@
   <button class="map-btn absolute top-3 right-2 text-[#ffffff] bg-opacity-75 p-2 px-[14px] rounded-full" on:click={handleFullScreen}>
     <i class="fas fa-expand"></i>
   </button>
-  {#if !hideOverlay}
-    <label id="map-toggle" class="flex justify-center cursor-pointer my-2 absolute top-1 right-2 left-2 w-fit m-auto rounded-3xl p-2 pl-3 text-sm items-center">
-      <input type="checkbox" value="" class="sr-only peer" on:click={toggleMap}>
-      <span class="text-[#ffffff]"><i class="fas fa-map"></i>&nbsp;&nbsp;{mapType === 'openstreetmap' ? 'OpenStreetMap' : 'Satellite'}</span>
-      <div class="relative w-11 h-6 ml-3 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-[#6ac3ff] peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-[#2b7c3f]"></div>
-    </label>
-  {/if}
+  <label id="map-toggle" class="flex justify-center cursor-pointer my-2 absolute top-1 right-2 left-2 w-fit m-auto rounded-3xl p-2 pl-3 text-sm items-center" style={!hideOverlay ? 'display: flex;' : 'display: none;'}>
+    <input type="checkbox" value="" class="sr-only peer" on:click={toggleMap}>
+    <span class="text-[#ffffff]"><i class="fas fa-map"></i>&nbsp;&nbsp;{mapType === 'openstreetmap' ? 'OpenStreetMap' : 'Satellite'}</span>
+    <div class="relative w-11 h-6 ml-3 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-[#6ac3ff] peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-[#2b7c3f]"></div>
+  </label>
+  <div id="location-display" class="text-black text-sm" style={!hideOverlay ? 'display: block;' : 'display: none;'}></div>
 </div>
