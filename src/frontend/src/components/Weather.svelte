@@ -41,6 +41,8 @@
   let weatherDescription = '';
   let weatherImage = '';
   let rainChance = '';
+  let windSpeed = '';
+  let windDirection = '';
   let error = '';
 
   async function fetchWeather() {
@@ -72,7 +74,27 @@
         } else {
           rainChance = 'N/A';
         }
-
+        console.log(weatherData.current_weather);
+        windSpeed = weatherData.current_weather.windspeed;
+        windDirection = weatherData.current_weather.winddirection;
+        if (parseFloat(windDirection.toString()) > 337.5 || parseFloat(windDirection.toString()) < 22.5) {
+          windDirection += '° N';
+        } else if (parseFloat(windDirection.toString()) > 22.5 && parseFloat(windDirection.toString()) < 67.5) {
+          windDirection += '° NE';
+        } else if (parseFloat(windDirection.toString()) > 67.5 && parseFloat(windDirection.toString()) < 112.5) {
+          windDirection += '° E';
+        } else if (parseFloat(windDirection.toString()) > 112.5 && parseFloat(windDirection.toString()) < 157.5) {
+          windDirection += '° SE';
+        } else if (parseFloat(windDirection.toString()) > 157.5 && parseFloat(windDirection.toString()) < 202.5) {
+          windDirection += '° S';
+        } else if (parseFloat(windDirection.toString()) > 202.5 && parseFloat(windDirection.toString()) < 247.5) {
+          windDirection += '° SW';
+        } else if (parseFloat(windDirection.toString()) > 247.5 && parseFloat(windDirection.toString()) < 292.5) {
+          windDirection += '° W';
+        } else if (parseFloat(windDirection.toString()) > 292.5 && parseFloat(windDirection.toString()) < 337.5) {
+          windDirection += '° NW';
+        }
+        
         locationName = geocodeData.display_name;
       } else {
         error = weatherData.reason || 'Failed to fetch weather data';
@@ -93,14 +115,16 @@
 </script>
 
 {#if isDashboard}
-  <div class="weather min-w-[max-content] h-full max-h-[190px] overflow-y-auto text-center transform -translate-y-[10px]">
+  <div class="weather min-w-[max-content] h-full max-h-[190px] overflow-y-visible text-center transform -translate-y-[10px]">
     {#if error}
       <div class="error">{error}</div>
     {:else}
+      <div class="weather-detail wind">Wind Speed: {windSpeed} m/s</div>
+      <div class="weather-detail wind">Wind Direction: {windDirection}</div>
       <img src={weatherImage} alt={weatherDescription} class="weather-icon" />
       <div class="weather-summary">{weatherDescription}</div>
-      <div class="weather-detail">Temp: {temperature}</div>
-      <div class="weather-detail">Rain Chance: {rainChance}</div>
+      <div class="weather-detail temp">Temp: {temperature}</div>
+      <div class="weather-detail rain">Rain Chance: {rainChance}</div>
     {/if}
   </div>
 {:else}
@@ -108,18 +132,21 @@
     class="weather rounded-2xl h-full overflow-y-auto p-4"
     style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
   >
-    <div class="weather-header">Weather Advisory</div>
-    <div class="location text-italic">Based on MAV location
-      <span id="location-name"><br><br>{locationName}</span>
-    </div>
+  <div class="weather-header">Weather Advisory</div>
     {#if error}
       <div class="error">{error}</div>
     {:else}
+      <div class="weather-detail wind">Wind Speed: {windSpeed} m/s</div>
+      <div class="weather-detail wind">Wind Direction: {windDirection}</div>
       <img src={weatherImage} alt={weatherDescription} class="weather-icon" />
       <div class="weather-summary">{weatherDescription}</div>
-      <div class="weather-detail">Temp: {temperature}</div>
-      <div class="weather-detail">Rain Chance: {rainChance}</div>
+      <div class="weather-detail temp">Temp: {temperature}</div>
+      <div class="weather-detail rain">Rain Chance: {rainChance}</div>
     {/if}
+      <br/>
+      <div class="location text-italic">Based on MAV location
+        <span id="location-name"><br/>{locationName}</span>
+      </div>
   </div>
 {/if}
 
@@ -131,7 +158,6 @@
     text-align: center;
     display: flex;
     flex-direction: column;
-    justify-content: center;
   }
 
   .weather > img {
@@ -150,11 +176,11 @@
   }
 
   .weather-summary {
-    font-size: 1rem;
+    font-size: 0.85rem;
   }
 
   .weather-detail {
-    font-size: 1rem;
+    font-size: 0.85rem;
   }
 
   .error {
@@ -168,11 +194,11 @@
     margin-inline: auto;
   }
 
-  #location-name {
-    color: #ffcb0d;
+  #location-name, .weather-detail.wind {
+    color: #66e1ff;
   }
   
-  @media (max-height: 750px) {
+  @media (max-height: 650px) {
     #location-name {
       display: none;
     }

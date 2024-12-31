@@ -92,7 +92,7 @@
     </div>
   </div>
   <div class="flex w-full justify-center">
-    <div class="weather column flex flex-col items-center justify-center">
+    <div class="weather column flex flex-col items-center justify-end">
       <Weather {mavLocation} isDashboard={true} />
     </div>
     <div class="separator"></div>
