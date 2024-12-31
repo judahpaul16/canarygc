@@ -1,0 +1,91 @@
+FROM ubuntu:20.04
+
+# Prevent interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Create a script to handle apt-get update and install with retries
+RUN echo '\
+#!/bin/bash\n\
+for i in {1..3}; do\n\
+    apt-get update && apt-get install -y "$@" && break || sleep 15;\n\
+done\n\
+' > /usr/local/bin/apt-get-install-with-retries.sh \
+&& chmod +x /usr/local/bin/apt-get-install-with-retries.sh
+
+# Install basic dependencies
+RUN /usr/local/bin/apt-get-install-with-retries.sh \
+    git \
+    sudo \
+    lsb-release \
+    tzdata \
+    wget \
+    python3-dev \
+    python3-pip \
+    python3-empy \
+    python3-toml \
+    python3-numpy \
+    python3-yaml \
+    cmake \
+    ninja-build
+
+# Install required Python packages
+RUN pip3 install --upgrade pip && \
+    pip3 install kconfiglib && \
+    pip3 install packaging && \
+    pip3 install jinja2 && \
+    pip3 install pyros-genmsg && \
+    pip3 install numpy && \
+    pip3 install toml && \
+    pip3 install pyulog && \
+    pip3 install jsonschema
+
+# Download and run PX4 simulation setup script
+RUN wget https://raw.githubusercontent.com/PX4/Devguide/master/build_scripts/ubuntu_sim.sh \
+    && chmod +x ubuntu_sim.sh \
+    && ./ubuntu_sim.sh
+
+# Clone PX4 Firmware
+RUN git clone https://github.com/PX4/PX4-Autopilot.git Firmware
+WORKDIR Firmware
+
+# Initialize submodules
+RUN git submodule update --init --recursive
+
+# Enable GStreamer plugin
+RUN mkdir -p Tools/sitl_gazebo && touch Tools/sitl_gazebo/CMakeLists.txt
+RUN sed -i -e 's/option(BUILD_GSTREAMER_PLUGIN "enable gstreamer plugin" OFF)/option(BUILD_GSTREAMER_PLUGIN "enable gstreamer plugin" ON)/g' Tools/sitl_gazebo/CMakeLists.txt
+
+# Install specific GStreamer packages
+RUN /usr/local/bin/apt-get-install-with-retries.sh \
+    gstreamer1.0-tools \
+    gstreamer1.0-plugins-base \
+    gstreamer1.0-plugins-good \
+    gstreamer1.0-plugins-bad \
+    gstreamer1.0-plugins-ugly \
+    libgstreamer1.0-dev \
+    libgstreamer-plugins-base1.0-dev \
+    gstreamer1.0-x
+
+# Install MAVProxy dependencies
+RUN /usr/local/bin/apt-get-install-with-retries.sh \
+    python3-matplotlib \
+    python3-wxgtk4.0 \
+    python3-lxml
+
+# Install MAVProxy
+RUN pip3 install MAVProxy
+
+# Set environment variables
+ENV PX4_HOME_LAT=42.3898
+ENV PX4_HOME_LON=-71.1476
+ENV PX4_HOME_ALT=14.2
+ENV HOST_IP=192.168.1.211
+
+# Build PX4 SITL
+RUN DONT_RUN=1 make px4_sitl_default gazebo
+
+# Copy and set up entrypoint
+COPY entrypoint.sh /
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["192.168.1.211"]
