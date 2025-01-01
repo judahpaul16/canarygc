@@ -44,6 +44,7 @@
 		"leaflet": "^1.9.4",
 		"node-mavlink": "^2.0.7",
 		"pocketbase": "^0.21.3",
-		"serialport": "^12.0.0"
+		"serialport": "^12.0.0",
+		"svelte-maplibre": "^1.0.0-next.7"
 	}
 }

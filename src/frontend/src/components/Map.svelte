@@ -10,6 +10,7 @@
   } from '../stores/missionPlanStore';
   import { get, writable } from 'svelte/store';
   import Modal from './Modal.svelte';
+  import ThreeDMap from './3DMap.svelte';
 
   export let hideOverlay: boolean = false;
   export let mavLocation: L.LatLng | { lat: number; lng: number };;
@@ -501,7 +502,8 @@
 </style>
 
 <div class="map-container" style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};">
-  <div id={id !== null ? id : 'map'} class="relative h-full rounded-2xl z-0"></div>
+  <!-- <div id={id !== null ? id : 'map'} class="relative h-full rounded-2xl z-0"></div> -->
+  <ThreeDMap />
   <button class="map-btn absolute top-[3.8rem] right-2 text-[#ffffff] bg-opacity-75 p-2 {lockView ? 'px-[15px]' : 'px-[13px]'} rounded-full" on:click={toggleLockView}> 
     <i class="fas {lockView ? 'fa-lock' : 'fa-lock-open'}"></i>
   </button>
