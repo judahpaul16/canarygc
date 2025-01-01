@@ -425,6 +425,12 @@
   function resetInactivityTimer() {
     if (inactivityTimer) clearTimeout(inactivityTimer);
     inactivityTimer = setTimeout(handleInactivity, INACTIVITY_TIMEOUT);
+    authData.set({
+          token: $authData!.token, // Keep the token
+          expires: Date.now() + 3600 * 1000, // Set expiration to 1 hour from now
+          admin: $authData!.admin, // Keep admin status
+          record: null, // Set record to null since it's an admin response
+        })
   }
 
   function handleInactivity() {
