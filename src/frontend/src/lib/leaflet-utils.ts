@@ -1,4 +1,4 @@
-import type * as L from 'leaflet';
+import * as L from 'leaflet';
 
 export interface MapConfig {
   initialLocation: L.LatLngExpression;
