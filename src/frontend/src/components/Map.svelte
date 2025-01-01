@@ -10,9 +10,11 @@
   } from '../stores/missionPlanStore';
   import { get, writable } from 'svelte/store';
   import Modal from './Modal.svelte';
+  import { LeafletMapManager } from '../lib/leaflet-utils';
+  import type * as L from 'leaflet';
 
   export let hideOverlay: boolean = false;
-  export let mavLocation: L.LatLng | { lat: number; lng: number };;
+  export let mavLocation: L.LatLng | { lat: number; lng: number };
   export let id: string | null = null;
   import {
     darkModeStore,
@@ -21,10 +23,10 @@
     tertiaryColorStore
   } from '../stores/customizationStore';
 
-  let L: typeof import('leaflet');
-  let leafletMap: any = get(mapStore);
+  let mapManager: LeafletMapManager;
+  let leafletMap: L.Map | null = null;
   let mapType: string = get(mapTypeStore);
-  let currentTileLayer = get(mapTileLayerStore);
+  let currentTileLayer: L.TileLayer | null = get(mapTileLayerStore);
   let zoom = 18;
   const lockViewStore = writable(true);
 
@@ -45,7 +47,7 @@
   let markers: Map<number, L.Marker> = get(markersStore); // Map to keep track of markers
   let polylines: Map<string, L.Polyline> = get(polylinesStore); // Map to keep track of polylines
   let mavHeading: number = 0;
-  let mavMarker: L.Marker;
+  let mavMarker: L.Marker | null = null;
   let isDragging = false;
   let darkMode = get(darkModeStore);
   
@@ -94,100 +96,81 @@
   onMount(async () => {
     try {
       // Load and initialize Leaflet
-      L = (await import('leaflet')).default;
-      if (id !== null) initializeLeafletMap(id);
-      else initializeLeafletMap();
+      await import('leaflet');
+
+      // Create map manager
+      mapManager = new LeafletMapManager({
+        initialLocation: mavLocation,
+        zoom: zoom,
+        mapType: mapType as 'openstreetmap' | 'satellite'
+      });
+
+      // Initialize map
+      leafletMap = mapManager.initializeMap(id !== null ? id : 'map');
+
+      // Create icons
+      icons = action_markers.map((marker) => 
+        mapManager.createIcon({ iconUrl: marker })
+      );
+
+      // Initial map updates
+      Object.keys(actions).forEach((index) => {
+        updateMap(Number(index));
+      });
     } catch (error) {
-      console.error('Script loading failed', error);
+      console.error('Map initialization failed', error);
     }
 
+    // Event listeners for dragging and zoom
+    document.addEventListener('mousedown', () => { isDragging = true });
+    document.addEventListener('mouseup', () => { isDragging = false });
+    document.addEventListener('touchstart', () => { isDragging = true});
+    document.addEventListener('touchend', () => { isDragging = false });
+
+    // Fullscreen event
     document.addEventListener('fullscreenchange', () => {
       setTimeout(() => {
         window.dispatchEvent(new Event('resize'));
       }, 1000);
     });
 
-    icons = action_markers.map((marker) => {
-      return L.icon({
-        iconUrl: marker,
-        iconSize: [45, 45],
-        iconAnchor: [23, 40],
-        popupAnchor: [0, -45],
-        shadowSize: [41, 41]
-      });
-    });
-
-    Object.keys(actions).forEach((index) => {
-      updateMap(Number(index));
-    });
-    
-    document.addEventListener('mousedown', () => { isDragging = true });
-    document.addEventListener('mouseup', () => { isDragging = false });
-    document.addEventListener('touchstart', () => { isDragging = true});
-    document.addEventListener('touchend', () => { isDragging = false });
-    let zoomIn = document.querySelector('.leaflet-control-zoom-in');
-    let zoomOut = document.querySelector('.leaflet-control-zoom-out');
-    if (zoomIn) zoomIn.addEventListener('click', () => { zoom = zoom + 1 });
-    if (zoomOut) zoomOut.addEventListener('click', () => { zoom = zoom - 1 });
-    document.addEventListener('scrollUp', () => { zoom = zoom + 1 });
-    document.addEventListener('scrollDown', () => { zoom = zoom - 1 });
-  });
-
-  function initializeLeafletMap(id: string = 'map') {
-    leafletMap = L.map(id).setView(mavLocation, zoom);
-    if (mapType === 'openstreetmap') {
-      currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          minZoom: 0,
-          maxZoom: 20,
-        }).addTo(leafletMap);
-      mapType = 'openstreetmap';
-      mapTypeStore.set('openstreetmap');
-      mapTileLayerStore.set(currentTileLayer);
-    } else {
-      currentTileLayer = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.jpg', {
-          minZoom: 0,
-          maxZoom: 20,
-        }).addTo(leafletMap);
-      mapType = 'satellite';
-      mapTypeStore.set('satellite');
-      mapTileLayerStore.set(currentTileLayer);
-    }
+    // Dark mode and background handling
     if (darkMode) {
       if (mapType !== 'satellite') document.getElementById('map')!.classList.add('dark');
-      // @ts-ignore
-      document.querySelector('.bg')!.style.background = "url('bg-map.webp') no-repeat center center fixed";
+      document.querySelector('.bg')!.setAttribute('style', "background: url('bg-map.webp') no-repeat center center fixed");
       primaryColorStore.set('#1c1c1e');
     } else {
-      // @ts-ignore
-      document.querySelector('.bg')!.style.background = "url('bg-map-light.webp') no-repeat center center fixed";
+      document.querySelector('.bg')!.setAttribute('style', "background: url('bg-map-light.webp') no-repeat center center fixed");
       primaryColorStore.set('#ffffff');
     }
 
-    // @ts-ignore
-    if (hideOverlay) Array.from(document.querySelectorAll('.map-btn i')).forEach((element) => element.style.fontSize = "small");
-    
-    updateMAVMarker();
-
+    // Location display setup
     const locationDisplay = document.querySelector('#location-display')!;
-
-    // Update location display when MAV position changes
     function updateLocationDisplay() {
-        locationDisplay.textContent = `MAV Location: ${mavLocation.lat.toFixed(6)}°, ${mavLocation.lng.toFixed(6)}°, Yaw Angle: ${mavHeading}°, Altitude: ${get(mavAltitudeStore)}m`;
+      locationDisplay.textContent = `MAV Location: ${mavLocation.lat.toFixed(6)}°, ${mavLocation.lng.toFixed(6)}°, Yaw Angle: ${mavHeading}°, Altitude: ${get(mavAltitudeStore)}m`;
     }
     updateLocationDisplay();
-
-    // Subscribe to MAV location changes
     mavLocationStore.subscribe(location => {
-        mavLocation = location;
-        updateLocationDisplay();
+      mavLocation = location;
+      updateLocationDisplay();
     });
 
+    // Map click event for adding waypoints
     leafletMap.on('click', (e: L.LeafletMouseEvent) => {
       if (Object.keys(actions).length > 1) {
-        const lat = e.latlng.lat;
-        const lon = e.latlng.lng;
+        const { lat, lng: lon } = e.latlng;
         const index = Object.keys(actions).length;
-        const action = { type: 'NAV_WAYPOINT', lat, lon, alt: null, notes: '', param1: null, param2: null, param3: null, param4: null };
+        const action = { 
+          type: 'NAV_WAYPOINT', 
+          lat, 
+          lon, 
+          alt: null, 
+          notes: '', 
+          param1: null, 
+          param2: null, 
+          param3: null, 
+          param4: null 
+        };
         actions[index] = action;
         missionPlanActionsStore.set(actions);
         updateMap(index);
@@ -196,33 +179,27 @@
 
     mapStore.set(leafletMap);
     mavLocationStore.set(mavLocation);
-  }
+  });
 
   function toggleMap() {
-    if (currentTileLayer) {
-        currentTileLayer.remove();
-    }
+    if (!mapManager || !leafletMap) return;
+
+    const newMapType = mapType === 'satellite' ? 'openstreetmap' : 'satellite';
+    mapType = newMapType;
+    mapTypeStore.set(newMapType);
+
+    // Update tile layer using LeafletMapManager
+    currentTileLayer = mapManager.setTileLayer(newMapType);
+    mapTileLayerStore.set(currentTileLayer);
+
+    // Update map styling
     let map = document.getElementById('map')!;
-    if (leafletMap && mapType === 'satellite') {
-      mapType = 'openstreetmap';
+    if (newMapType === 'openstreetmap') {
       if (darkMode) map.classList.add('dark');
       map.classList.remove('satellite');
-      currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        minZoom: 0,
-        maxZoom: 20,
-      }).addTo(leafletMap);
-      mapTypeStore.set('openstreetmap');
-      mapTileLayerStore.set(currentTileLayer);
     } else {
-      mapType = 'satellite';
       map.classList.remove('dark');
       map.classList.add('satellite');
-      currentTileLayer = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.jpg', {
-        minZoom: 0,
-        maxZoom: 20,
-      }).addTo(leafletMap);
-      mapTypeStore.set('satellite');
-      mapTileLayerStore.set(currentTileLayer);
     }
   }
 
@@ -265,18 +242,18 @@
   }
 
   function removeAllMarkers() {
+    if (!mapManager || !leafletMap) return;
+
     markers.forEach((marker) => {
       // not the first marker
-      if (leafletMap?.hasLayer(marker) && marker.getLatLng() !== mavLocation) {
-        leafletMap.removeLayer(marker);
+      if (marker.getLatLng() !== mavLocation) {
+        mapManager.removeLayer(marker);
       }
     });
     markers.clear();
 
     polylines.forEach(polyline => {
-      if (leafletMap?.hasLayer(polyline)) {
-        leafletMap.removeLayer(polyline);
-      }
+      mapManager.removeLayer(polyline);
     });
     polylines.clear();
     markersStore.set(markers);
@@ -292,9 +269,7 @@
     connectedKeys.forEach(key => {
       const polyline = polylines.get(key);
       if (polyline) {
-        if (leafletMap?.hasLayer(polyline)) {
-          leafletMap.removeLayer(polyline);
-        }
+        mapManager?.removeLayer(polyline);
         polylines.delete(key);
       }
     });
@@ -305,21 +280,18 @@
     const polylineToRemove = polylines.get(key);
 
     if (polylineToRemove) {
-      if (leafletMap?.hasLayer(polylineToRemove)) {
-        leafletMap.removeLayer(polylineToRemove);
-      }
+      mapManager?.removeLayer(polylineToRemove);
       polylines.delete(key);
     }
   }
 
   function addPolyline(start: L.LatLng, end: L.LatLng) {
+    if (!mapManager) return;
+
     const key = generatePolylineKey(start, end);
     removePolyline(start, end); // Ensure no old polyline is left
 
-    const latlngs: L.LatLngExpression[] = [start, end];
-    const polyline = L.polyline(latlngs, { color: 'red' });
-    leafletMap?.addLayer(polyline);
-
+    const polyline = mapManager.addPolyline(start, end);
     polylines.set(key, polyline);
   }
 
@@ -330,25 +302,32 @@
   }
 
   async function updateMap(index: number) {
+    if (!mapManager || !leafletMap) return;
+
     // Retrieve the action details using the index
     const action = actions[index];
     
     // Remove existing marker if it exists
     if (markers.has(index)) {
-      leafletMap?.removeLayer(markers.get(index)!);
+      mapManager.removeLayer(markers.get(index)!);
     }
 
     if (index !== 0) {
       // Add new marker with updated info if leafletMap and action are valid
-      if (L && leafletMap && action) {
+      if (action) {
         const { type, lat, lon } = action;
         const iconIndex = action_types.indexOf(type);
         
         if (!isNaN(lat) && !isNaN(lon) && iconIndex >= 0) {
-          const marker = L.marker([lat, lon], { icon: icons[iconIndex] })
-            .bindPopup(`${index} - ${type}`);
-          try { leafletMap.addLayer(marker); } catch (e) { return; }
-          if (!hideOverlay) marker.openPopup();
+          const marker = mapManager.addMarker(
+            [lat, lon], 
+            icons[iconIndex], 
+            `${index} - ${type}`
+          );
+          
+          if (!hideOverlay) {
+            marker.openPopup();
+          }
           markers.set(index, marker);
         }
       }
@@ -360,11 +339,13 @@
   }
 
   function updateMarkersAndPolylines(reindex: boolean = false) {
+    if (!mapManager || !leafletMap) return;
+
     if (reindex) {
       // Remove last marker
       const lastMarker = markers.get(Object.keys(actions).length + 1);
       if (lastMarker) {
-        leafletMap?.removeLayer(lastMarker);
+        mapManager.removeLayer(lastMarker);
         markers.delete(Object.keys(actions).length + 1);
       }
       // Update the popup content for each marker
@@ -376,9 +357,7 @@
 
     // Clear existing polylines before recalculating
     polylines.forEach(polyline => {
-      if (leafletMap?.hasLayer(polyline)) {
-        leafletMap.removeLayer(polyline);
-      }
+      mapManager.removeLayer(polyline);
     });
     polylines.clear();
 
@@ -412,40 +391,36 @@
   }
 
   function updateMAVMarker() {
-    if (leafletMap && mavLocation) {
-      let img = new Image();
-      img.src = '/map/here.png'; // Use static path directly
-      try { L.icon } catch (e) { return; }
-      img.onload = () => {
-        let canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        let ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.translate(img.width / 2, img.height / 2);
-          ctx.rotate((mavHeading) * Math.PI / 180);
-          ctx.drawImage(img, -img.width / 2, -img.height / 2);
-          ctx.save();
-          let icon = L.icon({
-            iconUrl: canvas.toDataURL(),
-            iconSize: [45, 45],
-            iconAnchor: [23, 20],
-            popupAnchor: [0, -15],
-            shadowSize: [41, 41]
-          });
-          if (mavMarker) {
-            leafletMap.removeLayer(mavMarker);
-          }
-          mavMarker = L.marker(mavLocation as L.LatLng, { icon: icon })
-            .bindPopup('MAV is here: ' + mavLocation.lat + ', ' + mavLocation.lng);
-          leafletMap.addLayer(mavMarker);
-          updateMarkersAndPolylines();
-          if (lockView) {
-            leafletMap.flyTo(mavLocation as L.LatLng);
-          }
+    if (!mapManager || !leafletMap || !mavLocation) return;
+
+    const img = new Image();
+    img.src = '/map/here.png';
+    
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      
+      if (ctx) {
+        ctx.translate(img.width / 2, img.height / 2);
+        ctx.rotate((mavHeading) * Math.PI / 180);
+        ctx.drawImage(img, -img.width / 2, -img.height / 2);
+        
+        // Update MAV marker using LeafletMapManager
+        mavMarker = mapManager.updateMavMarker(
+          mavLocation, 
+          mavHeading, 
+          canvas.toDataURL()
+        );
+
+        updateMarkersAndPolylines();
+        
+        if (lockView && mavLocation) {
+          mapManager.flyTo(mavLocation);
         }
-      };
-    }
+      }
+    };
   }
 </script>
 
