@@ -1,14 +1,22 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import '@fortawesome/fontawesome-free/css/all.min.css';
-  import { mapStore, markersStore, polylinesStore, mapTypeStore, mapTileLayerStore } from '../stores/mapStore';
+  import {
+    mapStore,
+    markersStore,
+    polylinesStore,
+    mapTypeStore,
+    mapTileLayerStore,
+    mapZoomStore,
+    lockViewStore
+  } from '../stores/mapStore';
   import { mavLocationStore, mavHeadingStore, mavAltitudeStore } from '../stores/mavlinkStore';
   import {
     missionPlanActionsStore,
     type MissionPlanActions,
     missionIndexStore
   } from '../stores/missionPlanStore';
-  import { get, writable } from 'svelte/store';
+  import { get } from 'svelte/store';
   import Modal from './Modal.svelte';
   import ThreeDMap from './3DMap.svelte';
 
@@ -26,8 +34,7 @@
   let leafletMap: any = get(mapStore);
   let mapType: string = get(mapTypeStore);
   let currentTileLayer = get(mapTileLayerStore);
-  let zoom = 18;
-  const lockViewStore = writable(true);
+  let zoom = get(mapZoomStore);
 
   let actions: MissionPlanActions = {};
   let action_types = [
@@ -56,6 +63,8 @@
   $: tertiaryColor = $tertiaryColorStore;
   $: fontColor = darkMode ? '#ffffff' : '#000000';
   $: lockView = $lockViewStore;
+  $: zoom = $mapZoomStore,
+    mapZoomStore.set(zoom);
 
   $: leafletMap = $mapStore;
   $: mapType = $mapTypeStore;
@@ -135,26 +144,28 @@
   });
 
   function initializeLeafletMap(id: string = 'map') {
+    let threedmap = document.getElementById('threedmap')!;
+    if (threedmap) threedmap.style.display = 'none';
     leafletMap = L.map(id).setView(mavLocation, zoom);
-    if (mapType === 'openstreetmap') {
+    if (mapType.toLowerCase() === 'openstreetmap') {
       currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           minZoom: 0,
           maxZoom: 20,
         }).addTo(leafletMap);
-      mapType = 'openstreetmap';
-      mapTypeStore.set('openstreetmap');
+      mapType = 'OpenStreetMap';
+      mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
     } else {
       currentTileLayer = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.jpg', {
           minZoom: 0,
           maxZoom: 20,
         }).addTo(leafletMap);
-      mapType = 'satellite';
-      mapTypeStore.set('satellite');
+      mapType = 'Satellite';
+      mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
     }
     if (darkMode) {
-      if (mapType !== 'satellite') document.getElementById('map')!.classList.add('dark');
+      if (mapType.toLowerCase() !== 'satellite') document.getElementById('map')!.classList.add('dark');
       // @ts-ignore
       document.querySelector('.bg')!.style.background = "url('bg-map.webp') no-repeat center center fixed";
       primaryColorStore.set('#1c1c1e');
@@ -204,26 +215,39 @@
         currentTileLayer.remove();
     }
     let map = document.getElementById('map')!;
-    if (leafletMap && mapType === 'satellite') {
-      mapType = 'openstreetmap';
+    let threedmap = document.getElementById('threedmap')!;
+    if (leafletMap && mapType.toLowerCase() === '3d') {
+      map.style.display = 'block';
+      threedmap.style.display = 'none';
+      mapType = 'OpenStreetMap';
       if (darkMode) map.classList.add('dark');
       map.classList.remove('satellite');
       currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         minZoom: 0,
         maxZoom: 20,
       }).addTo(leafletMap);
-      mapTypeStore.set('openstreetmap');
+      mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
-    } else {
-      mapType = 'satellite';
+    } else if (leafletMap && mapType.toLowerCase() === 'openstreetmap') {
+      map.style.display = 'block';
+      threedmap.style.display = 'none';
+      mapType = 'Satellite';
       map.classList.remove('dark');
       map.classList.add('satellite');
       currentTileLayer = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.jpg', {
         minZoom: 0,
         maxZoom: 20,
       }).addTo(leafletMap);
-      mapTypeStore.set('satellite');
+      mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
+    } else if (leafletMap && mapType.toLowerCase() === 'satellite') {
+      map.style.display = 'none';
+      threedmap.style.display = 'block';
+      mapType = '3D';
+      map.classList.remove('dark');
+      map.classList.remove('satellite');
+      mapTypeStore.set(mapType);
+      mapTileLayerStore.set(null);
     }
   }
 
@@ -502,7 +526,7 @@
 </style>
 
 <div class="map-container" style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};">
-  <!-- <div id={id !== null ? id : 'map'} class="relative h-full rounded-2xl z-0"></div> -->
+  <div id={id !== null ? id : 'map'} class="relative h-full rounded-2xl z-0"></div>
   <ThreeDMap />
   <button class="map-btn absolute top-[3.8rem] right-2 text-[#ffffff] bg-opacity-75 p-2 {lockView ? 'px-[15px]' : 'px-[13px]'} rounded-full" on:click={toggleLockView}> 
     <i class="fas {lockView ? 'fa-lock' : 'fa-lock-open'}"></i>
@@ -512,8 +536,13 @@
   </button>
   <label id="map-toggle" class="flex justify-center cursor-pointer my-2 absolute top-1 right-2 left-2 w-fit m-auto rounded-3xl p-2 pl-3 text-sm items-center" style={!hideOverlay ? 'display: flex;' : 'display: none;'}>
     <input type="checkbox" value="" class="sr-only peer" on:click={toggleMap}>
-    <span class="text-[#ffffff]"><i class="fas fa-map"></i>&nbsp;&nbsp;{mapType === 'openstreetmap' ? 'OpenStreetMap' : 'Satellite'}</span>
-    <div class="relative w-11 h-6 ml-3 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-[#6ac3ff] peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-[#2b7c3f]"></div>
+    <span class="text-white flex items-center gap-2">
+      <i class="fas fa-map"></i>
+      <span>{mapType}</span>
+    </span>
+    <div class="relative w-16 h-6 ml-3 bg-[#2b7c3f rounded-full transition-colors peer-focus:outline-none" class:bg-blue-500={mapType === 'OpenStreetMap'} class:bg-green-500={mapType === 'Satellite'} class:bg-purple-500={mapType === '3D'}>
+      <div class="absolute top-[2px] left-[2px] bg-white rounded-full h-5 w-5 transition-all duration-300" style:transform={mapType === 'OpenStreetMap' ? 'translateX(0)' : mapType === 'Satellite' ? 'translateX(100%)' : 'translateX(200%)'}></div>
+    </div>
   </label>
   <div id="location-display" class="text-black text-sm" style={!hideOverlay ? 'display: block;' : 'display: none;'}></div>
 </div>
