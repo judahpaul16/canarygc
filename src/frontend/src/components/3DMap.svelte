@@ -96,13 +96,14 @@
         let ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.translate(img.width / 2, img.height / 2);
-          ctx.rotate((mavHeading) * Math.PI / 180);
           ctx.drawImage(img, -img.width / 2, -img.height / 2);
           ctx.save();
           canvas.style.width = '50px';
           canvas.style.height = '50px';
           marker = new Marker({ element: canvas });
           marker.setLngLat([mavLocation.lng, mavLocation.lat]);
+          // offset camera bearing
+          marker.setRotation(mavHeading - map.getBearing());
           marker.addTo(map);
         }
       };
