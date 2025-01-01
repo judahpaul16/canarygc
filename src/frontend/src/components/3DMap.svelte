@@ -108,7 +108,7 @@
         }
       };
       if (get(lockViewStore)) {
-        map.flyTo({
+        map.jumpTo({
           center: [mavLocation.lng, mavLocation.lat],
           zoom: get(mapZoomStore),
           speed: 0.5,
