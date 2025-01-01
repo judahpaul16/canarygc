@@ -14,7 +14,7 @@ git clone https://github.com/MAV-Manager/mmgcs_public.git mmgcs
 cd mmgcs
 
 docker compose down
-docker system prune -f
+docker system prune -af
 docker compose up
 
 endlocal

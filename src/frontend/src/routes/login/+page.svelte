@@ -54,7 +54,14 @@
         });
       });
     }, 1000);
-  });
+
+    // Check if already logged in and redirect to dashboard
+    setInterval(() => {
+      if (authData && !authData.checkExpired() && window.location.pathname.includes('login')) {
+        goto('/dashboard');
+      }
+    }, 1000);
+   });
 
   function calculatePasswordStrength(pass: string): number {
     let strength = 0;

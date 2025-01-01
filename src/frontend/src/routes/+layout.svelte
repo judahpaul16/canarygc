@@ -56,6 +56,11 @@
   let authCheckInterval: NodeJS.Timeout;
   const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
 
+  const batteryAlerts = [50, 20, 15, 10, 5];
+  let batteryAlertIndex = 0;
+  let batteryAlertShown = false;
+  
+  $: battery = $mavBatteryStore;
   $: online = $onlineStore;
   $: darkMode = $darkModeStore;
   $: primaryColor = $primaryColorStore;
@@ -66,6 +71,17 @@
   $: isNavHidden = currentPath === '/' || currentPath === '/login';
   $: missionCountStore.set(Object.keys($missionPlanActionsStore).length - 1);
   $: actions = $missionPlanActionsStore;
+  $: if (battery && battery <= batteryAlerts[batteryAlertIndex] && !batteryAlertShown) {
+    showNotification({
+      title: 'Low Battery Alert',
+      content: `Battery level is at ${battery}%. It's highly recommended to return to home or land immediately to prevent a crash.`,
+      type: battery <= 20 ? 'error' : 'warning',
+    });
+    batteryAlertIndex++;
+    batteryAlertShown = true;
+  } else if (battery && battery > batteryAlerts[batteryAlertIndex]) {
+    batteryAlertShown = false;
+  }
 
   // @ts-ignore
   String.prototype.toProperCase = function () {
@@ -409,6 +425,12 @@
   function resetInactivityTimer() {
     if (inactivityTimer) clearTimeout(inactivityTimer);
     inactivityTimer = setTimeout(handleInactivity, INACTIVITY_TIMEOUT);
+    authData.set({
+          token: $authData!.token, // Keep the token
+          expires: Date.now() + 3600 * 1000, // Set expiration to 1 hour from now
+          admin: $authData!.admin, // Keep admin status
+          record: null, // Set record to null since it's an admin response
+        })
   }
 
   function handleInactivity() {
@@ -558,20 +580,26 @@
   
   function toggleDarkMode() {
     let map = document.getElementById('map');
-    if (map && get(mapTypeStore) !== 'satellite') {
-      map.classList.add('dark');
-    } else if (map && get(mapTypeStore) === 'satellite') {
-      map.classList.remove('dark');
-    }
     darkMode = !darkMode;
     darkModeStore.set(darkMode);
+    if (map && get(mapTypeStore) !== 'satellite') {
+      map.classList.add('dark');
+    } else {
+      map!.classList.remove('dark');
+    }
     if (darkMode) {
+      if (map && get(mapTypeStore) !== 'satellite') {
+        map.classList.add('dark');
+      }
       // @ts-ignore
       document.querySelector('.bg')!.style.background = "url('bg-map.webp') no-repeat center center fixed";
       primaryColorStore.set('#1c1c1e');
       secondaryColorStore.set('#121212');
       tertiaryColorStore.set('#2d2d2d');
     } else {
+      if (map && get(mapTypeStore) !== 'satellite') {
+        map.classList.remove('dark');
+      }
       // @ts-ignore
       document.querySelector('.bg')!.style.background = "url('bg-map-light.webp') no-repeat center center fixed";
       primaryColorStore.set('#ffffff');
