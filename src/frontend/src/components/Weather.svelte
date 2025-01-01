@@ -74,7 +74,6 @@
         } else {
           rainChance = 'N/A';
         }
-        console.log(weatherData.current_weather);
         windSpeed = weatherData.current_weather.windspeed;
         windDirection = weatherData.current_weather.winddirection;
         if (parseFloat(windDirection.toString()) > 337.5 || parseFloat(windDirection.toString()) < 22.5) {
