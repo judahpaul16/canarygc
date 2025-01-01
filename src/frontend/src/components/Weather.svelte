@@ -47,7 +47,7 @@
 
   async function fetchWeather() {
     try {
-      const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${mavLocation.lat}&longitude=${mavLocation.lng}&current_weather=true&hourly=precipitation_probability`);
+      const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${mavLocation.lat}&longitude=${mavLocation.lng}&current_weather=true&hourly=precipitation_probability&wind_speed_unit=ms`);
       const weatherData = await weatherResponse.json();
 
       const geocodeResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${mavLocation.lat}&lon=${mavLocation.lng}`);
