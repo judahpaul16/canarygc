@@ -466,7 +466,7 @@
           leafletMap.addLayer(mavMarker);
           updateMarkersAndPolylines();
           if (lockView) {
-            leafletMap.flyTo(mavLocation as L.LatLng);
+            leafletMap.flyTo(mavLocation as L.LatLng, zoom, { duration: 0.5 });
           }
         }
       };
