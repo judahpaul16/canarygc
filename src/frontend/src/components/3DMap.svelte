@@ -76,6 +76,10 @@
         );
     });
 
+    map.on('zoom', () => {
+      mapZoomStore.set(map.getZoom());
+    });
+
     setInterval(() => {
       updateMAVMarker();
     }, 1000);
