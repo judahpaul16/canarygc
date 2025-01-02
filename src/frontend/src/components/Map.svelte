@@ -127,6 +127,12 @@
       updateMap(Number(index));
     });
     
+    document.addEventListener('fullscreenchange', () => {
+        if (window.location.href.includes('dashboard')) hideOverlay = true;
+        setTimeout(() => {
+          window.dispatchEvent(new Event('resize'));
+        }, 1000);
+    });
     document.addEventListener('mousedown', () => { isDragging = true });
     document.addEventListener('mouseup', () => { isDragging = false });
     document.addEventListener('touchstart', () => { isDragging = true});

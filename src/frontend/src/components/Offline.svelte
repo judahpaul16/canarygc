@@ -33,6 +33,7 @@
       class:max-w-sm={!isMinimized}
       class:w-full={!isMinimized}
       class:w-64={isMinimized}
+      class:brightness-125={isMinimized}
     >
         <div class="relative">
             <button
