@@ -472,7 +472,7 @@
           leafletMap.addLayer(mavMarker);
           updateMarkersAndPolylines();
           if (lockView) {
-            leafletMap.flyTo(mavLocation as L.LatLng, get(mapZoomStore));
+            leafletMap.setView(mavLocation as L.LatLng, get(mapZoomStore));
           }
         }
       };
