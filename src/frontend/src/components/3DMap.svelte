@@ -119,7 +119,7 @@
           marker.addTo(map);
         }
       };
-      if (get(lockViewStore)) {
+      if (get(lockViewStore) && !map.isMoving()) {
         map.jumpTo({
           center: [mavLocation.lng, mavLocation.lat],
           zoom: get(mapZoomStore),
