@@ -426,13 +426,20 @@
   async function resetInactivityTimer() {
     if (inactivityTimer) clearTimeout(inactivityTimer);
     inactivityTimer = setTimeout(handleInactivity, INACTIVITY_TIMEOUT);
-    let adminAuthResponse = await pb.admins.authRefresh();
-    authData.set({
-          token: $authData ? $authData.token : adminAuthResponse.token,
-          expires: Date.now() + 3600 * 1000, // Set expiration to 1 hour from now
-          admin: $authData ? $authData.admin : adminAuthResponse.admin,
-          record: null, // Set record to null since it's an admin response
-        })
+    let adminAuthResponse = null;
+    try {
+      adminAuthResponse = await pb.admins.authRefresh();
+    } catch (error: any) {
+      console.error('Error:', error);
+    }
+    if (adminAuthResponse) {
+      authData.set({
+        token: $authData ? $authData.token : adminAuthResponse.token,
+        expires: Date.now() + 3600 * 1000, // Set expiration to 1 hour from now
+        admin: $authData ? $authData.admin : adminAuthResponse.admin,
+        record: null, // Set record to null since it's an admin response
+      });
+    }
   }
 
   function handleInactivity() {
@@ -443,7 +450,7 @@
   }
 
   function handleUserActivity() {
-    if (!logout) resetInactivityTimer();
+    if (!logout && !window.location.pathname.includes('login') && window.location.pathname !== '/') resetInactivityTimer();
     authData.refreshTimestamp();
   }
   
@@ -479,9 +486,6 @@
     window.addEventListener('keydown', handleUserActivity);
     window.addEventListener('click', handleUserActivity);
     window.addEventListener('scroll', handleUserActivity);
-
-    // Initial setup of inactivity timer
-    resetInactivityTimer();
 
     // Auth Checks
     authCheckInterval = setInterval(async () => {
