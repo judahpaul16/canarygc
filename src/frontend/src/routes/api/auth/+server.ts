@@ -28,7 +28,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       
       case 'logout':
         // Clear the authentication
-        console.log('Logging out admin');
         locals.pb.authStore.clear();
         return json({ success: true, message: 'Logged out successfully' });
       
