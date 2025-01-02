@@ -4,7 +4,7 @@
   import { mavHeadingStore, mavLocationStore } from '../stores/mavlinkStore';
   import { mapZoomStore, lockViewStore } from '../stores/mapStore';
   import { get } from 'svelte/store';
-  const { Map, Marker } = pkg;
+  const { Map, Marker, NavigationControl } = pkg;
 
   let map: any;
   let marker: any;
@@ -73,6 +73,14 @@
                 }
             },
             labelLayerId
+        );
+
+        map.addControl(
+            new NavigationControl({
+                visualizePitch: true,
+                showZoom: true,
+                showCompass: true
+            }), 'top-left'
         );
     });
 
