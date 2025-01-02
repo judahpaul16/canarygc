@@ -588,7 +588,7 @@
     if (map && get(mapTypeStore) !== 'satellite') {
       map.classList.add('dark');
     } else {
-      map!.classList.remove('dark');
+      if (map) map.classList.remove('dark');
     }
     if (darkMode) {
       if (map && get(mapTypeStore) !== 'satellite') {
