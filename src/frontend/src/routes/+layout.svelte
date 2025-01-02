@@ -55,6 +55,7 @@
   let inactivityTimer: NodeJS.Timeout;
   let authCheckInterval: NodeJS.Timeout;
   const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
+  let logout = false;
 
   const batteryAlerts = [50, 20, 15, 10, 5];
   let batteryAlertIndex = 0;
@@ -442,7 +443,7 @@
   }
 
   function handleUserActivity() {
-    resetInactivityTimer();
+    if (!logout) resetInactivityTimer();
     authData.refreshTimestamp();
   }
   
@@ -570,7 +571,8 @@
   }
 
   function handleLogout() {
-    authData.set(null);
+    logout = true;
+    authData.logout();
     goto('/login');
   }
 
