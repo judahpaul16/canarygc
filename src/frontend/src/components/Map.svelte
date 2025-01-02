@@ -8,7 +8,8 @@
     mapTypeStore,
     mapTileLayerStore,
     mapZoomStore,
-    lockViewStore
+    lockViewStore,
+    threeDMapStore
   } from '../stores/mapStore';
   import { mavLocationStore, mavHeadingStore, mavAltitudeStore } from '../stores/mavlinkStore';
   import {
@@ -19,6 +20,8 @@
   import { get } from 'svelte/store';
   import Modal from './Modal.svelte';
   import ThreeDMap from './3DMap.svelte';
+  import pkg from 'maplibre-gl';
+  const { Marker } = pkg;
 
   export let hideOverlay: boolean = false;
   export let mavLocation: L.LatLng | { lat: number; lng: number };;
@@ -32,6 +35,7 @@
 
   let L: typeof import('leaflet');
   let leafletMap: any = get(mapStore);
+  let threeDMap: any = get(threeDMapStore);
   let mapType: string = get(mapTypeStore);
   let currentTileLayer = get(mapTileLayerStore);
   let zoom = get(mapZoomStore);
@@ -52,6 +56,8 @@
   let icons: L.Icon[] = [];
   let markers: Map<number, L.Marker> = get(markersStore); // Map to keep track of markers
   let polylines: Map<string, L.Polyline> = get(polylinesStore); // Map to keep track of polylines
+  let markers3D: Map<number, any> = new Map();
+  let polylines3D: string[] = [];
   let mavHeading: number = 0;
   let mavMarker: L.Marker;
   let isDragging = false;
@@ -66,6 +72,7 @@
   $: zoom = $mapZoomStore;
 
   $: leafletMap = $mapStore;
+  $: threeDMap = $threeDMapStore;
   $: mapType = $mapTypeStore;
   $: currentTileLayer = $mapTileLayerStore;
   $: mavHeading = $mavHeadingStore,
@@ -89,16 +96,6 @@
     Object.keys(actions).forEach((index) => {
       updateMap(Number(index));
     });
-
-  const loadScript = (src: string): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = src;
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error(`Failed to load script ${src}`));
-      document.head.appendChild(script);
-    });
-  };
 
   onMount(async () => {
     try {
@@ -304,6 +301,14 @@
     });
     markers.clear();
 
+    markers3D.forEach(marker => {
+      let index = Array.from(markers3D.entries()).find(([index, value]) => value === marker)![0];
+      if (markers3D.has(index)) {
+        marker.remove();
+      }
+    });
+    markers3D.clear();
+
     polylines.forEach(polyline => {
       if (leafletMap?.hasLayer(polyline)) {
         leafletMap.removeLayer(polyline);
@@ -312,6 +317,12 @@
     polylines.clear();
     markersStore.set(markers);
     polylinesStore.set(polylines);
+
+    polylines3D.forEach(polyline => {
+      threeDMap?.removeLayer(polyline);
+      threeDMap?.removeSource(polyline);
+    });
+    polylines3D = [];
   }
   
   function removeConnectedPolylines(index: number) {
@@ -328,6 +339,9 @@
         }
         polylines.delete(key);
       }
+      threeDMap?.removeLayer(key);
+      threeDMap?.removeSource(key);
+      polylines3D = polylines3D.filter(polyline => polyline !== key);
     });
   }
 
@@ -340,6 +354,9 @@
         leafletMap.removeLayer(polylineToRemove);
       }
       polylines.delete(key);
+      threeDMap.removeLayer(key);
+      threeDMap.removeSource(key);
+      polylines3D = polylines3D.filter(polyline => polyline !== key);
     }
   }
 
@@ -350,8 +367,37 @@
     const latlngs: L.LatLngExpression[] = [start, end];
     const polyline = L.polyline(latlngs, { color: 'red' });
     leafletMap?.addLayer(polyline);
-
     polylines.set(key, polyline);
+
+    // 3D Map
+    if (threeDMap) {
+      const geojson = {
+        'type': 'Feature',
+        'properties': {},
+        'geometry': {
+          'type': 'LineString',
+          'coordinates': [[start.lng, start.lat], [end.lng, end.lat]]
+        }
+      };
+      threeDMap.addSource(key, {
+        'type': 'geojson',
+        'data': geojson
+      });
+      threeDMap.addLayer({
+        'id': key,
+        'type': 'line',
+        'source': key,
+        'layout': {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        'paint': {
+          'line-color': '#BF93E4',
+          'line-width': 5
+        }
+      });
+      polylines3D.push(key);
+    }
   }
 
   function generatePolylineKey(start: L.LatLng, end: L.LatLng): string {
@@ -379,8 +425,36 @@
           const marker = L.marker([lat, lon], { icon: icons[iconIndex] })
             .bindPopup(`${index} - ${type}`);
           try { leafletMap.addLayer(marker); } catch (e) { return; }
-          if (!hideOverlay) marker.openPopup();
           markers.set(index, marker);
+        }
+      }
+
+      // 3D Map
+      if (threeDMap && action) {
+        const { type, lat, lon } = action;
+        if (!isNaN(lat) && !isNaN(lon)) {
+          let img = new Image();
+          img.src = action_markers[action_types.indexOf(type)];
+          img.onload = () => {
+            let canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            let ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.translate(img.width / 2, img.height / 2);
+              ctx.drawImage(img, -img.width / 2, -img.height / 2);
+              ctx.save();
+              canvas.style.width = '50px';
+              canvas.style.height = '50px';
+              const marker = new Marker({ element: canvas });
+              marker.setLngLat([lon, lat]);
+              if (markers3D.has(index)) {
+                markers3D.get(index).remove();
+              }
+              markers3D.set(index, marker);
+              marker.addTo(threeDMap);
+            }
+          }
         }
       }
 
@@ -396,6 +470,7 @@
       const lastMarker = markers.get(Object.keys(actions).length + 1);
       if (lastMarker) {
         leafletMap?.removeLayer(lastMarker);
+        markers3D.delete(Object.keys(actions).length + 1);
         markers.delete(Object.keys(actions).length + 1);
       }
       // Update the popup content for each marker
@@ -412,7 +487,12 @@
       }
     });
     polylines.clear();
-
+    polylines3D.forEach(polyline => {
+      threeDMap?.removeLayer(polyline);
+      threeDMap?.removeSource(polyline);
+    });
+    polylines3D = [];
+    
     const markerEntries = Array.from(markers.entries()).sort((a, b) => a[0] - b[0]); // Ensure order by index
 
     for (let i = 0; i < markerEntries.length - 1; i++) {

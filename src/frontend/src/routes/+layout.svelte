@@ -422,13 +422,14 @@
     }
   }
 
-  function resetInactivityTimer() {
+  async function resetInactivityTimer() {
     if (inactivityTimer) clearTimeout(inactivityTimer);
     inactivityTimer = setTimeout(handleInactivity, INACTIVITY_TIMEOUT);
+    let adminAuthResponse = await pb.admins.authRefresh();
     authData.set({
-          token: $authData!.token, // Keep the token
+          token: $authData ? $authData.token : adminAuthResponse.token,
           expires: Date.now() + 3600 * 1000, // Set expiration to 1 hour from now
-          admin: $authData!.admin, // Keep admin status
+          admin: $authData ? $authData.admin : adminAuthResponse.admin,
           record: null, // Set record to null since it's an admin response
         })
   }
