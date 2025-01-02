@@ -1,14 +1,15 @@
 <script lang="ts">
-  import pkg from 'maplibre-gl';
   import { onMount } from 'svelte';
   import { mavHeadingStore, mavLocationStore } from '../stores/mavlinkStore';
-  import { mapZoomStore, lockViewStore } from '../stores/mapStore';
+  import { mapZoomStore, lockViewStore, threeDMapStore } from '../stores/mapStore';
   import { get } from 'svelte/store';
+  import pkg from 'maplibre-gl';
   const { Map, Marker, NavigationControl } = pkg;
 
   let map: any;
   let marker: any;
 
+  $: map = $threeDMapStore;
   $: mavLocation = $mavLocationStore;
   $: mavHeading = $mavHeadingStore;
 
@@ -88,6 +89,8 @@
       mapZoomStore.set(map.getZoom());
     });
 
+    threeDMapStore.set(map);
+
     setInterval(() => {
       updateMAVMarker();
     }, 1000);
@@ -96,9 +99,7 @@
   
   function updateMAVMarker() {
     if (mavLocation) {
-      if (marker) {
-        marker.remove();
-      }
+      marker?.remove();
       let img = new Image();
       img.src = '/map/here.png'; // Use static path directly
       img.onload = () => {
