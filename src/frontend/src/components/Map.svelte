@@ -63,8 +63,7 @@
   $: tertiaryColor = $tertiaryColorStore;
   $: fontColor = darkMode ? '#ffffff' : '#000000';
   $: lockView = $lockViewStore;
-  $: zoom = $mapZoomStore,
-    mapZoomStore.set(zoom);
+  $: zoom = $mapZoomStore;
 
   $: leafletMap = $mapStore;
   $: mapType = $mapTypeStore;
@@ -137,11 +136,18 @@
     document.addEventListener('touchend', () => { isDragging = false });
     let zoomIn = document.querySelector('.leaflet-control-zoom-in');
     let zoomOut = document.querySelector('.leaflet-control-zoom-out');
-    if (zoomIn) zoomIn.addEventListener('click', () => { zoom = zoom + 1 });
-    if (zoomOut) zoomOut.addEventListener('click', () => { zoom = zoom - 1 });
-    document.addEventListener('scrollUp', () => { zoom = zoom + 1 });
-    document.addEventListener('scrollDown', () => { zoom = zoom - 1 });
+    if (zoomIn) zoomIn.addEventListener('click', () => { updateZoom(1) });
+    if (zoomOut) zoomOut.addEventListener('click', () => { updateZoom(-1) });
+    let map = get(mapStore);
+    map?.on('zoom', () => {
+      mapZoomStore.set(map.getZoom());
+    });
   });
+
+  function updateZoom(delta: number) {
+    zoom += delta;
+    mapZoomStore.set(zoom);
+  }
 
   function initializeLeafletMap(id: string = 'map') {
     let threedmap = document.getElementById('threedmap')!;
@@ -466,7 +472,7 @@
           leafletMap.addLayer(mavMarker);
           updateMarkersAndPolylines();
           if (lockView) {
-            leafletMap.flyTo(mavLocation as L.LatLng, zoom, { duration: 0.5 });
+            leafletMap.flyTo(mavLocation as L.LatLng, get(mapZoomStore));
           }
         }
       };
