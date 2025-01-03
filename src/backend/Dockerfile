@@ -1,34 +1,26 @@
 FROM golang:1.23.4-alpine AS builder
 
-# Set the working directory inside the container
 WORKDIR /app
 
-# Copy the Go module files
+# Copy the go module files and download dependencies
 COPY go.mod go.sum ./
-
-# Download and install the dependencies
 RUN go mod download
 
-# Copy the rest of the application source code
+# Copy the source code and other necessary directories and files into the container
 COPY . .
 
-# Build the application
-RUN go build -o my-go-auth .
+# Build the Go app
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
 
-# Use a smaller base image for the final stage
-FROM alpine:latest
+# Start a new stage from scratch for a smaller final image
+FROM alpine:latest  
 
-# Set the working directory
-WORKDIR /app
+# Install CA certificates
+RUN apk --no-cache add ca-certificates
 
-# Copy the binary from the builder stage
-COPY --from=builder /app/my-go-auth .
+# Copy the pre-built binary file from the previous stage
+COPY --from=builder /app/main .
 
-# Copy the frontend files
-COPY fe ./fe
+EXPOSE 8090
 
-# Expose the port the application will run on
-EXPOSE 8000
-
-# Command to run the application
-CMD ["./my-go-auth"]
+CMD ["./main"]

@@ -9,7 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/mattn/go-sqlite3"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/razsa/go-auth/internal/database"
 )
 
