@@ -4,7 +4,7 @@ go 1.23.4
 
 require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/gofiber/fiber/v2 v2.52.5
+	github.com/gofiber/fiber/v2 v2.52.6
 	github.com/mattn/go-sqlite3 v1.14.24
 	golang.org/x/crypto v0.31.0
 )
@@ -15,7 +15,7 @@ require (
 	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mattn/go-runewidth v0.0.15 // indirect
+	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.55.0 // indirect
