@@ -1,17 +1,14 @@
 services:
   backend:
-    image: elestio/pocketbase:v0.22.14
+    build: 
+      context: ./src/backend
+      dockerfile: Dockerfile
     volumes:
-      - ./src/backend/pb_data:/pb_data
+      - ./src/backend/:/app
     ports:
       - "8090:8090"
     container_name: mmgcs_backend
-    deploy:
-      resources:
-        limits:
-          memory: 700m
     restart: always
-    user: 0:0
 
   frontend:
     build:
