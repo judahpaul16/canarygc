@@ -11,7 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
 
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/razsa/go-auth/internal/database"
 )
 
@@ -20,7 +20,7 @@ const SecretKey = "secret"
 var queries *database.Queries
 
 func init() {
-	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(localhost:3306)/%s", os.Getenv("USER"), os.Getenv("PASSWORD"), os.Getenv("DB_NAME")))
+	db, err := sql.Open("sqlite3", "auth.db")
 	if err != nil {
 		panic("could not connect to the database: " + err.Error())
 	}
@@ -123,7 +123,7 @@ func User(c *fiber.Ctx) error {
 		})
 	}
 
-	user, err := queries.GetUserByID(c.Context(), int32(userID))
+	user, err := queries.GetUserByID(c.Context(), int64(userID))
 	if err != nil {
 		return err
 	}
