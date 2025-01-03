@@ -11,7 +11,5 @@ func Setup(app *fiber.App) {
 	app.Post("/api/login", controllers.Login)
 	app.Get("/api/user", controllers.User)
 	app.Post("/api/logout", controllers.Logout)
-	app.Get("/map", func(c *fiber.Ctx) error {
-		return c.SendFile("fe/map.html")
 	})
 }
