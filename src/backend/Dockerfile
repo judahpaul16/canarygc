@@ -1,20 +1,35 @@
-FROM debian:latest
+e the official Golang image as the base image
+FROM golang:1.23.4-alpine AS builder
 
-RUN apt-get update && apt-get install -y wget unzip
+# Set the working directory inside the container
+WORKDIR /app
 
-ENV POCKETBASE_VERSION=0.22.14
+# Copy the Go module files
+COPY go.mod go.sum ./
 
-RUN ARCH=$(dpkg --print-architecture) && \
-    if [ "$ARCH" = "amd64" ]; then \
-        wget https://github.com/pocketbase/pocketbase/releases/download/v${POCKETBASE_VERSION}/pocketbase_${POCKETBASE_VERSION}_linux_amd64.zip; \
-    elif [ "$ARCH" = "arm64" ]; then \
-        wget https://github.com/pocketbase/pocketbase/releases/download/v${POCKETBASE_VERSION}/pocketbase_${POCKETBASE_VERSION}_linux_arm64.zip; \
-    fi && \
-    unzip pocketbase_${POCKETBASE_VERSION}_linux_*.zip -d /usr/local/bin/ && \
-    rm pocketbase_${POCKETBASE_VERSION}_linux_*.zip
+# Download and install the dependencies
+RUN go mod download
 
-EXPOSE 8090
+# Copy the rest of the application source code
+COPY . .
 
-VOLUME /pb_data
+# Build the application
+RUN go build -o my-go-auth .
 
-CMD ["pocketbase", "serve", "--http=0.0.0.0:8090", "--dir", "/pb_data"]
+# Use a smaller base image for the final stage
+FROM alpine:latest
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the binary from the builder stage
+COPY --from=builder /app/my-go-auth .
+
+# Copy the frontend files
+COPY fe ./fe
+
+# Expose the port the application will run on
+EXPOSE 8000
+
+# Command to run the application
+CMD ["./my-go-auth"]
