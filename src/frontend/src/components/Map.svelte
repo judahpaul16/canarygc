@@ -127,8 +127,8 @@
       updateMap(Number(index));
     });
     
-    document.addEventListener('fullscreenchange', () => {
-        if (window.location.href.includes('dashboard')) hideOverlay = true;
+    document.addEventListener('fullscreenchange', (e) => {
+      if (!document.fullscreenElement && window.location.href.includes('dashboard')) hideOverlay = true;
         setTimeout(() => {
           window.dispatchEvent(new Event('resize'));
         }, 1000);
