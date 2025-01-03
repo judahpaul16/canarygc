@@ -2,8 +2,6 @@ package controllers
 
 import (
 	"database/sql"
-	"fmt"
-	"os"
 	"strconv"
 	"time"
 
@@ -123,7 +121,7 @@ func User(c *fiber.Ctx) error {
 		})
 	}
 
-	user, err := queries.GetUserByID(c.Context(), int64(userID))
+	user, err := queries.GetUserByID(c.Context(), int32(userID))
 	if err != nil {
 		return err
 	}
