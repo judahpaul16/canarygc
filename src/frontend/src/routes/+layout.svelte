@@ -589,10 +589,6 @@
           <div class="tooltip text-white">Vehicle Parameters</div>
         </a>
         <div class="separator h-[2px] w-[80%] rounded-2xl mb-4"></div>
-        <a href={`http://${window.location.hostname}:8090/_/`} target="_blank" class="nav-button mb-4">
-          <i class="nav-icon fas fa-user"></i>
-          <div class="tooltip text-white">Admin Dashboard</div>
-        </a>
         <a href="/login" on:click|preventDefault={handleLogout} class="nav-button mb-4">
           <i class="nav-icon fas fa-sign-out-alt"></i>
           <div class="tooltip text-white">Logout</div>
