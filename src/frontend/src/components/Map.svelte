@@ -127,8 +127,8 @@
       updateMap(Number(index));
     });
     
-    document.addEventListener('fullscreenchange', () => {
-        if (window.location.href.includes('dashboard')) hideOverlay = true;
+    document.addEventListener('fullscreenchange', (e) => {
+      if (!document.fullscreenElement && window.location.href.includes('dashboard')) hideOverlay = true;
         setTimeout(() => {
           window.dispatchEvent(new Event('resize'));
         }, 1000);
@@ -159,15 +159,15 @@
     if (mapType.toLowerCase() === 'openstreetmap') {
       currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           minZoom: 0,
-          maxZoom: 20,
+          maxZoom: 21,
         }).addTo(leafletMap);
       mapType = 'OpenStreetMap';
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
     } else {
-      currentTileLayer = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.jpg', {
+      currentTileLayer = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.png', {
           minZoom: 0,
-          maxZoom: 20,
+          maxZoom: 21,
         }).addTo(leafletMap);
       mapType = 'Satellite';
       mapTypeStore.set(mapType);
@@ -233,7 +233,7 @@
       map.classList.remove('satellite');
       currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         minZoom: 0,
-        maxZoom: 20,
+        maxZoom: 21,
       }).addTo(leafletMap);
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
@@ -245,7 +245,7 @@
       map.classList.add('satellite');
       currentTileLayer = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.jpg', {
         minZoom: 0,
-        maxZoom: 20,
+        maxZoom: 21,
       }).addTo(leafletMap);
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
