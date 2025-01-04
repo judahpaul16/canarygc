@@ -132,41 +132,47 @@
     }
   }
 
-  // async function checkLoadedMission() {
-  //   try {
-  //     const response = await pb.collection('mission_plans').getFullList();
-  //     if (response.length > 0) {
-  //       const loadedMission = response.find((mission: any) => mission.isLoaded === 1);
-  //       if (loadedMission) {
-  //         missionPlanTitleStore.set(loadedMission.title);
-  //         missionPlanActionsStore.set(loadedMission.actions);
-  //         try {
-  //             let response = await fetch("/api/mavlink/load_mission", {
-  //                 method: "POST",
-  //                 headers: {
-  //                     "content-type": "application/json",
-  //                     "actions": JSON.stringify(loadedMission.actions),
-  //                 },
-  //             });
-  //             if (response.ok) {
-  //                 console.log(await response.text());
-  //             } else {
-  //                 console.error(`Error: ${await response.text()}`);
-  //             }
-  //         } catch (error) {
-  //             console.error("Error:", error);
-  //         }
-  //       }
-  //     }
-  //   } catch (error: any) {
-  //     if (error.message.includes('The request was autocancelled')) {
-  //       // ignore it
-  //     } else {
-  //       console.error('Error:', error.message || error);
-  //       console.error('Stack Trace:', error.stack || 'No stack trace available');
-  //     }
-  //   }
-  // }
+  async function checkLoadedMission() {
+    try {
+      const response = await fetch('/api/mission/list', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      let responseData = await response.json();
+      if (responseData.length > 0) {
+        const loadedMission = responseData.find((mission: any) => mission.isLoaded === 1);
+        if (loadedMission) {
+          missionPlanTitleStore.set(loadedMission.title);
+          missionPlanActionsStore.set(loadedMission.actions);
+          try {
+              let response = await fetch("/api/mavlink/load_mission", {
+                  method: "POST",
+                  headers: {
+                      "content-type": "application/json",
+                      "actions": JSON.stringify(loadedMission.actions),
+                  },
+              });
+              if (response.ok) {
+                  console.log(await response.text());
+              } else {
+                  console.error(`Error: ${await response.text()}`);
+              }
+          } catch (error) {
+              console.error("Error:", error);
+          }
+        }
+      }
+    } catch (error: any) {
+      if (error.message.includes('The request was autocancelled')) {
+        // ignore it
+      } else {
+        console.error('Error:', error.message || error);
+        console.error('Stack Trace:', error.stack || 'No stack trace available');
+      }
+    }
+  }
 
   type MessageHandler = (text: string) => void;
 
@@ -438,7 +444,7 @@
     document.querySelector('.bg')!.style.background = "url('bg-map.webp') no-repeat center center fixed";
 
     setTimeout(() => {
-      // checkLoadedMission();
+      checkLoadedMission();
       requestParameters();
     }, 2000);
     
