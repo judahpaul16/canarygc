@@ -60,12 +60,14 @@
         },
       });
       let records = await response.json();
-      missionPlans = records.map((record: any) => ({
-        id: record.id,
-        title: record.title,
-        actions: JSON.parse(record.actions),
-        isLoaded: record.isLoaded,
-      }));
+      if (Object.keys(records).length > 0) {
+        missionPlans = records.map((record: any) => ({
+          id: record.id,
+          title: record.title,
+          actions: JSON.parse(record.actions),
+          isLoaded: record.isLoaded,
+        }));
+      }
     } catch (error) {
       console.error("Error fetching mission plans:", error);
     }
