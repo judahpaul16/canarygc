@@ -145,7 +145,7 @@
         const loadedMission = responseData.find((mission: any) => mission.isLoaded === 1);
         if (loadedMission) {
           missionPlanTitleStore.set(loadedMission.title);
-          missionPlanActionsStore.set(loadedMission.actions);
+          missionPlanActionsStore.set(JSON.parse(loadedMission.actions));
           try {
               let response = await fetch("/api/mavlink/load_mission", {
                   method: "POST",
