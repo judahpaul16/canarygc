@@ -1,6 +1,5 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { createClient } from "@libsql/client";
-import { hex } from 'node-mavlink';
 
 export const POST: RequestHandler = async (event): Promise<Response> => {
     let client = createClient({ url: 'file:/app/src/data.db' });
