@@ -1,59 +1,39 @@
-import type { Handle } from '@sveltejs/kit';
-import PocketBase from 'pocketbase';
-import { authData } from './stores/authStore';
+import { lucia } from "$lib/server/auth";
+import type { Handle } from "@sveltejs/kit";
+
+declare global {
+  namespace App {
+	interface Locals {
+		user: import("lucia").User | null;
+		session: import("lucia").Session | null;
+	}
+  }
+}
 
 export const handle: Handle = async ({ event, resolve }) => {
-  // Create PocketBase instance for each server-side request
-  // Use the full URL to ensure correct port
-  const pbUrl = `http://${event.url.hostname === 'localhost' ? 'localhost' : event.url.hostname}:8090`;
-  // console.log('PocketBase URL:', pbUrl);
-  
-  event.locals.pb = new PocketBase(pbUrl);
-  event.locals.pb.autoCancellation(false);
-  
-  // Optional: Load user if authenticated
-  const cookie = event.request.headers.get('cookie');
-  // console.log('Received cookie:', cookie);
-  
-  if (cookie) {
-    try {
-      event.locals.pb.authStore.loadFromCookie(cookie);
-      
-      // console.log('Auth store after loading cookie:', {
-      //   isValid: event.locals.pb.authStore.isValid,
-      //   model: event.locals.pb.authStore.model,
-      //   token: event.locals.pb.authStore.token
-      // });
-      
-      // Refresh the authentication if possible
-      if (event.locals.pb.authStore.isValid) {
-        await event.locals.pb.collection('users').authRefresh();
-        
-        // Flexible auth data conversion
-        const authDataToStore = {
-          [event.locals.pb.authStore.model?.collectionName === 'admins' ? 'admin' : 'record']: 
-            event.locals.pb.authStore.model,
-          token: event.locals.pb.authStore.token,
-          expires: event.locals.pb.authStore.model?.['expires'] || Date.now() + 3600 * 1000, // 1 hour
-        };
-        
-        // Sync with client-side store
-        authData.set(authDataToStore);
-      }
-    } catch (error) {
-      // Invalid or expired token
-      console.error('Error loading auth from cookie:', error);
-      event.locals.pb.authStore.clear();
-      authData.set(null); // Clear client-side store as well
-    }
-  }
+	const sessionId = event.cookies.get(lucia.sessionCookieName);
+	if (!sessionId) {
+		event.locals.user = null;
+		event.locals.session = null;
+		return resolve(event);
+	}
 
-  const response = await resolve(event);
-
-  // Add the authentication cookie to the response
-  const authCookie = event.locals.pb.authStore.exportToCookie({ httpOnly: false });
-  // console.log('Setting auth cookie:', authCookie);
-  response.headers.append('set-cookie', authCookie);
-
-  return response;
+	const { session, user } = await lucia.validateSession(sessionId);
+	if (session && session.fresh) {
+		const sessionCookie = lucia.createSessionCookie(session.id);
+		event.cookies.set(sessionCookie.name, sessionCookie.value, {
+			path: ".",
+			...sessionCookie.attributes
+		});
+	}
+	if (!session) {
+		const sessionCookie = lucia.createBlankSessionCookie();
+		event.cookies.set(sessionCookie.name, sessionCookie.value, {
+			path: ".",
+			...sessionCookie.attributes
+		});
+	}
+	event.locals.user = user;
+	event.locals.session = session;
+	return resolve(event);
 };

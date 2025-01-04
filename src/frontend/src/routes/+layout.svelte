@@ -2,9 +2,7 @@
   import { MavType, MavState, MavAutopilot } from 'mavlink-mappings/dist/lib/minimal';
   import { MavCmd, MavResult } from 'mavlink-mappings/dist/lib/common';
   import { CopterMode } from 'mavlink-mappings/dist/lib/ardupilotmega';
-  import PocketBase from 'pocketbase';
   import '@fortawesome/fontawesome-free/css/all.min.css';
-  import { authData } from '../stores/authStore';
   import { page } from '$app/stores';
   import { onMount, onDestroy, afterUpdate } from 'svelte';
   import { goto } from '$app/navigation';
@@ -40,27 +38,25 @@
     secondaryColorStore,
     tertiaryColorStore
   } from '../stores/customizationStore';
-  import { get } from 'svelte/store';
+  import { loggedInStore } from '../stores/authStore';
+  import { get, writable } from 'svelte/store';
   import Offline from '../components/Offline.svelte';
   import Notification from '../components/Notification.svelte';
-    import { mapTypeStore } from '../stores/mapStore';
-
-  let pb: PocketBase;
+  import { mapTypeStore } from '../stores/mapStore';
 
   let currentPath = '';
   let heightOfDashboard = 1000;
   let logs: string[] = [];
   let online = get(onlineStore);
 
-  let inactivityTimer: NodeJS.Timeout;
-  let authCheckInterval: NodeJS.Timeout;
-  const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
-  let logout = false;
+  let statusCheckInterval: NodeJS.Timeout;
+  let loggedIn = get(loggedInStore);
 
   const batteryAlerts = [50, 20, 15, 10, 5];
   let batteryAlertIndex = 0;
   let batteryAlertShown = false;
   
+  $: loggedIn = $loggedInStore;
   $: battery = $mavBatteryStore;
   $: online = $onlineStore;
   $: darkMode = $darkModeStore;
@@ -69,7 +65,7 @@
   $: tertiaryColor = $tertiaryColorStore;
   $: fontColor = darkMode ? '#ffffff' : '#000000';
   $: currentPath = $page.url.pathname;
-  $: isNavHidden = currentPath === '/' || currentPath === '/login';
+  $: isNavHidden = currentPath === '/' || currentPath === '/login' || currentPath === '/register';
   $: missionCountStore.set(Object.keys($missionPlanActionsStore).length - 1);
   $: actions = $missionPlanActionsStore;
   $: if (battery && battery <= batteryAlerts[batteryAlertIndex] && !batteryAlertShown) {
@@ -136,41 +132,41 @@
     }
   }
 
-  async function checkLoadedMission() {
-    try {
-      const response = await pb.collection('mission_plans').getFullList();
-      if (response.length > 0) {
-        const loadedMission = response.find((mission: any) => mission.isLoaded === 1);
-        if (loadedMission) {
-          missionPlanTitleStore.set(loadedMission.title);
-          missionPlanActionsStore.set(loadedMission.actions);
-          try {
-              let response = await fetch("/api/mavlink/load_mission", {
-                  method: "POST",
-                  headers: {
-                      "content-type": "application/json",
-                      "actions": JSON.stringify(loadedMission.actions),
-                  },
-              });
-              if (response.ok) {
-                  console.log(await response.text());
-              } else {
-                  console.error(`Error: ${await response.text()}`);
-              }
-          } catch (error) {
-              console.error("Error:", error);
-          }
-        }
-      }
-    } catch (error: any) {
-      if (error.message.includes('The request was autocancelled')) {
-        // ignore it
-      } else {
-        console.error('Error:', error.message || error);
-        console.error('Stack Trace:', error.stack || 'No stack trace available');
-      }
-    }
-  }
+  // async function checkLoadedMission() {
+  //   try {
+  //     const response = await pb.collection('mission_plans').getFullList();
+  //     if (response.length > 0) {
+  //       const loadedMission = response.find((mission: any) => mission.isLoaded === 1);
+  //       if (loadedMission) {
+  //         missionPlanTitleStore.set(loadedMission.title);
+  //         missionPlanActionsStore.set(loadedMission.actions);
+  //         try {
+  //             let response = await fetch("/api/mavlink/load_mission", {
+  //                 method: "POST",
+  //                 headers: {
+  //                     "content-type": "application/json",
+  //                     "actions": JSON.stringify(loadedMission.actions),
+  //                 },
+  //             });
+  //             if (response.ok) {
+  //                 console.log(await response.text());
+  //             } else {
+  //                 console.error(`Error: ${await response.text()}`);
+  //             }
+  //         } catch (error) {
+  //             console.error("Error:", error);
+  //         }
+  //       }
+  //     }
+  //   } catch (error: any) {
+  //     if (error.message.includes('The request was autocancelled')) {
+  //       // ignore it
+  //     } else {
+  //       console.error('Error:', error.message || error);
+  //       console.error('Stack Trace:', error.stack || 'No stack trace available');
+  //     }
+  //   }
+  // }
 
   type MessageHandler = (text: string) => void;
 
@@ -423,38 +419,6 @@
     }
   }
 
-  async function resetInactivityTimer() {
-    if (inactivityTimer) clearTimeout(inactivityTimer);
-    inactivityTimer = setTimeout(handleInactivity, INACTIVITY_TIMEOUT);
-    let adminAuthResponse = null;
-    try {
-      adminAuthResponse = await pb.admins.authRefresh();
-    } catch (error: any) {
-      console.error('Error:', error);
-    }
-    if (adminAuthResponse) {
-      authData.set({
-        token: $authData ? $authData.token : adminAuthResponse.token,
-        expires: Date.now() + 3600 * 1000, // Set expiration to 1 hour from now
-        admin: $authData ? $authData.admin : adminAuthResponse.admin,
-        record: null, // Set record to null since it's an admin response
-      });
-    }
-  }
-
-  function handleInactivity() {
-    if (authData.checkExpired()) {
-      authData.set(null);
-      goto('/login');
-    }
-  }
-
-  function handleUserActivity() {
-    if (!logout && !window.location.pathname.includes('login') && window.location.pathname !== '/') resetInactivityTimer();
-    authData.refreshTimestamp();
-  }
-  
-
   async function requestParameters() {
     try {
       const response = await fetch('/api/mavlink/request_params', {
@@ -472,34 +436,32 @@
   onMount(async () => {
     // @ts-ignore
     document.querySelector('.bg')!.style.background = "url('bg-map.webp') no-repeat center center fixed";
-    pb = new PocketBase(`http://${window.location.hostname}:8090`);
-    pb.autoCancellation(false);
-    
+
     setTimeout(() => {
-      initializeMissionPlansCollection();
-      checkLoadedMission();
+      // checkLoadedMission();
       requestParameters();
     }, 2000);
     
+    let checkCookieInterval = setInterval(() => {
+      const lastActivity = parseInt(document.cookie.replace(/(?:(?:^|.*;\s*)lastActivity\s*=\s*([^;]*).*$)|^.*$/, '$1'));
+      console.log('Last Activity:', Date.now() - lastActivity);
+      if (Date.now() - lastActivity > 600000) {
+        clearInterval(checkCookieInterval);
+        loggedInStore.set(false);
+        handleLogout();
+      } else {
+        loggedInStore.set(true);
+      }
+    }, 1000);
+
     // Set up event listeners for user activity
-    window.addEventListener('mousemove', handleUserActivity);
-    window.addEventListener('keydown', handleUserActivity);
-    window.addEventListener('click', handleUserActivity);
-    window.addEventListener('scroll', handleUserActivity);
+    window.addEventListener('mousemove', refreshCookie);
+    window.addEventListener('keydown', refreshCookie);
+    window.addEventListener('click', refreshCookie);
+    window.addEventListener('scroll', refreshCookie);
 
     // Auth Checks
-    authCheckInterval = setInterval(async () => {
-      let adminExists = false;
-      try {
-        const admins = await pb.admins.getList(1, 1);
-        adminExists = admins.items.length > 0;
-      } catch (error: any) {
-        console.error('Error:', error);
-      }
-      if (adminExists === false || (typeof window !== 'undefined' && authData.checkExpired() && window.location.pathname !== '/')) {
-        authData.set(null);
-        goto('/login');
-      }
+    statusCheckInterval = setInterval(async () => {
       await checkOnlineStatus();
     }, 1100);
     
@@ -518,8 +480,7 @@
     if (resizeObserver) {
       resizeObserver.disconnect();
     }
-    clearInterval(authCheckInterval);
-    clearTimeout(inactivityTimer);
+    clearInterval(statusCheckInterval);
   });
 
   afterUpdate(() => {
@@ -542,42 +503,19 @@
     }
   });
 
-  async function initializeMissionPlansCollection() {
-    try {
-      const collections = await pb.collections.getFullList();
-      const collectionExists = collections.some(c => c.name === 'mission_plans');
-      
-      if (!collectionExists) {
-        const newCollection = {
-          name: 'mission_plans',
-          type: 'base',
-          schema: [
-            { name: 'title', type: 'text', default: 'Untitled Mission', options: { maxSize: 100000000 } },
-            { name: 'actions', type: 'json', required: true, options: { maxSize: 100000000 } },
-            { name: 'isLoaded', type: 'number', default: 0 }
-          ]
-        };
-        await pb.collections.create(newCollection);
-        console.log('Collection "mission_plans" created successfully.');
-      }
-    } catch (error: any) {
-      if (error.message.includes('The request was autocancelled')) {
-        // ignore it
-      } else {
-        console.error('Error:', error);
-      }
-    }
+  function refreshCookie() {
+    if (loggedIn) document.cookie = 'lastActivity=' + Date.now();
+  }
+
+  function handleLogout() {
+    loggedInStore.set(false);
+    document.cookie = 'lastActivity=' + Date.UTC(1970);
+    goto('/login');
   }
 
   function handleNavigation(path: string, target: string = '') {
     if (target === '_blank') window.open(path, target);
     else if (currentPath !== path) goto(path);
-  }
-
-  function handleLogout() {
-    logout = true;
-    authData.logout();
-    goto('/login');
   }
 
   let isNavOpen = false;
@@ -627,59 +565,57 @@
   </div>
   <div class="bg-[#0000001f] flex w-full h-full z-10">
     <!-- Desktop Navigation -->
-    <nav class="desktop-nav w-min h-full p-4 grid opacity-0 z-20"
-      class:opacity={!isNavHidden ? 1 : 0}
-    >
-        <div class="flex-grow flex flex-col items-center">
-          <div class="mb-5">
-            <button on:click|preventDefault={() => handleNavigation('/')}>
-              <img src="/logo.png" alt="Logo" class="w-12 h-12">
-            </button>
-            </div>
-            {#if $authData}
-            <a href="/dashboard" class="nav-button mb-4 {currentPath === '/dashboard' ? 'active' : ''}">
-              <i class="nav-icon fas fa-tachometer-alt"></i>
-              <div class="tooltip text-white">Dashboard</div>
-            </a>
-            <a href="/mission-planner" class="nav-button mb-4 {currentPath === '/mission-planner' ? 'active' : ''}">
-              <i class="nav-icon fas fa-route"></i>
-              <div class="tooltip text-white">Mission Planner</div>
-            </a>
-            <a href="/event-log" class="nav-button mb-4 {currentPath === '/event-log' ? 'active' : ''}">
-              <i class="nav-icon fas fa-bars-staggered"></i>
-              <div class="tooltip text-white">Event Log</div>
-            </a>
-            <a href="/parameters" class="nav-button mb-4 {currentPath === '/parameters' ? 'active' : ''}">
-              <i class="nav-icon fas fa-cog"></i>
-              <div class="tooltip text-white">Vehicle Parameters</div>
-            </a>
-            <div class="separator h-[2px] w-[80%] rounded-2xl mb-4"></div>
-            <a href={`http://${window.location.hostname}:8090/_/`} target="_blank" class="nav-button mb-4">
-              <i class="nav-icon fas fa-user"></i>
-              <div class="tooltip text-white">Admin Dashboard</div>
-            </a>
-            <a href="/login" on:click|preventDefault={handleLogout} class="nav-button mb-4">
-              <i class="nav-icon fas fa-sign-out-alt"></i>
-              <div class="tooltip text-white">Logout</div>
-            </a>
-            {:else}
-            <a href="/login" class="nav-button mb-4 {currentPath === '/login' ? 'active' : ''}">
-              <i class="nav-icon fas fa-sign-in-alt"></i>
-              <div class="tooltip text-white">Login</div>
-            </a>
-            {/if}
-          </div>
-          <div class="flex flex-col justify-self-end gap-3">
-            <a class="nav-button" aria-label="GitHub" href="https://github.com/MAV-Manager/mmgcs" target="_blank">
-            <i class="nav-icon fab fa-github"></i>
-            <div class="tooltip text-white">GitHub</div>
-            </a>
-            <div class="separator h-[2px] w-[80%] mx-auto mb-2 rounded-2xl"></div>
-            <a class="nav-button" aria-label="FAA Rules" href="https://www.faa.gov/uas" target="_blank">
-            <i class="nav-icon fas fa-plane-circle-exclamation"></i>
-            <div class="tooltip text-white">FAA Rules and Regulations for Unmanned Aircraft Systems (UAS)</div>
-            </a>
-          </div>
+    <nav class="desktop-nav w-min h-full p-4 grid opacity-0 z-20" class:opacity={!isNavHidden ? 1 : 0}>
+      <div class="flex-grow flex flex-col items-center">
+        <div class="mb-5">
+          <button on:click|preventDefault={() => handleNavigation('/')}>
+            <img src="/logo.png" alt="Logo" class="w-12 h-12">
+          </button>
+        </div>
+        {#if loggedIn}
+        <a href="/dashboard" class="nav-button mb-4 {currentPath === '/dashboard' ? 'active' : ''}">
+          <i class="nav-icon fas fa-tachometer-alt"></i>
+          <div class="tooltip text-white">Dashboard</div>
+        </a>
+        <a href="/mission-planner" class="nav-button mb-4 {currentPath === '/mission-planner' ? 'active' : ''}">
+          <i class="nav-icon fas fa-route"></i>
+          <div class="tooltip text-white">Mission Planner</div>
+        </a>
+        <a href="/event-log" class="nav-button mb-4 {currentPath === '/event-log' ? 'active' : ''}">
+          <i class="nav-icon fas fa-bars-staggered"></i>
+          <div class="tooltip text-white">Event Log</div>
+        </a>
+        <a href="/parameters" class="nav-button mb-4 {currentPath === '/parameters' ? 'active' : ''}">
+          <i class="nav-icon fas fa-cog"></i>
+          <div class="tooltip text-white">Vehicle Parameters</div>
+        </a>
+        <div class="separator h-[2px] w-[80%] rounded-2xl mb-4"></div>
+        <a href={`http://${window.location.hostname}:8090/_/`} target="_blank" class="nav-button mb-4">
+          <i class="nav-icon fas fa-user"></i>
+          <div class="tooltip text-white">Admin Dashboard</div>
+        </a>
+        <a href="/login" on:click|preventDefault={handleLogout} class="nav-button mb-4">
+          <i class="nav-icon fas fa-sign-out-alt"></i>
+          <div class="tooltip text-white">Logout</div>
+        </a>
+        {:else}
+        <a href="/login" class="nav-button mb-4 {currentPath === '/login' ? 'active' : ''}">
+          <i class="nav-icon fas fa-sign-in-alt"></i>
+          <div class="tooltip text-white">Login</div>
+        </a>
+        {/if}
+      </div>
+      <div class="flex flex-col justify-self-end gap-3">
+        <a class="nav-button" aria-label="GitHub" href="https://github.com/MAV-Manager/mmgcs" target="_blank">
+        <i class="nav-icon fab fa-github"></i>
+        <div class="tooltip text-white">GitHub</div>
+        </a>
+        <div class="separator h-[2px] w-[80%] mx-auto mb-2 rounded-2xl"></div>
+        <a class="nav-button" aria-label="FAA Rules" href="https://www.faa.gov/uas" target="_blank">
+        <i class="nav-icon fas fa-plane-circle-exclamation"></i>
+        <div class="tooltip text-white">FAA Rules and Regulations for Unmanned Aircraft Systems (UAS)</div>
+        </a>
+      </div>
     </nav>
 
     <!-- Mobile Navigation -->
@@ -697,7 +633,7 @@
         </a>
       </div>
       <div class={`mobile-nav-links ${isNavOpen ? 'block' : 'hidden'} flex flex-col items-center mt-4`}>
-        {#if $authData}
+        {#if loggedIn}
           <a href="/dashboard" on:click|preventDefault={() => handleNavigation('/dashboard')} class="nav-button mb-4 {currentPath === '/dashboard' ? 'active' : ''}">
             <i class="nav-icon fas fa-tachometer-alt"></i>&nbsp;&nbsp;Dashboard
           </a>
