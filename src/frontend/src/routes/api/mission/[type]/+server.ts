@@ -38,8 +38,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
             }
         case 'unload':
             try {
-                let title = event.request.headers.get('title');
-                client.execute({sql: "UPDATE mission SET isLoaded = false WHERE title = ?", args: [title]});
+                client.execute({sql: "UPDATE mission SET isLoaded = false", args: []});
                 
                 return new Response(JSON.stringify({}), {
                     status: 200,
