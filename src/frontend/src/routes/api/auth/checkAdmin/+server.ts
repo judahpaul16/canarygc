@@ -2,7 +2,7 @@ import type { RequestHandler } from '@sveltejs/kit';
 import { createClient } from "@libsql/client";
 
 export const POST: RequestHandler = async (event): Promise<Response> => {
-    let client = createClient({ url: 'file:src/stores/data.db' });
+    let client = createClient({ url: 'file:/app/src/data.db' });
     let adminExists = false;
     await client.execute("SELECT * FROM user").then((result) => {
         if (result.rows.length > 0) {
