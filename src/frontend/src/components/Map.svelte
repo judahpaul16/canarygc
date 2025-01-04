@@ -165,7 +165,7 @@
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
     } else {
-      currentTileLayer = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.jpg', {
+      currentTileLayer = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.png', {
           minZoom: 0,
           maxZoom: 20,
         }).addTo(leafletMap);
