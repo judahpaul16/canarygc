@@ -36,7 +36,7 @@ function createAuthStore() {
     update,
     registerAdmin: async (email: string, password: string, passwordConfirm: string) => {
       try {
-        const response = await fetch('http://localhost:8000/api/register', {
+        const response = await fetch('http://localhost:8090/api/register', {
           method: 'POST',
           body: JSON.stringify({ 
             email, 
@@ -62,7 +62,7 @@ function createAuthStore() {
     },
     loginAdmin: async (email: string, password: string) => {
       try {
-        const response = await fetch('http://localhost:8000/api/login', {
+        const response = await fetch('http://localhost:8090/api/login', {
           method: 'POST',
           body: JSON.stringify({ 
             email, 
@@ -91,7 +91,7 @@ function createAuthStore() {
     },
     logout: async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/logout', {
+        const response = await fetch('http://localhost:8090/api/logout', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
