@@ -11,7 +11,8 @@
 		"lint": "eslint ."
 	},
 	"optionalDependencies": {
-		"@rollup/rollup-darwin-arm64": "^4.21.0"
+		"@rollup/rollup-darwin-arm64": "^4.21.0",
+		"@rollup/rollup-linux-x64-musl": "^4.29.1"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^3.0.0",
@@ -49,7 +50,6 @@
 		"lucia": "^3.2.2",
 		"maplibre-gl": "^5.0.0",
 		"node-mavlink": "^2.0.7",
-		"pocketbase": "^0.21.3",
 		"serialport": "^12.0.0"
 	}
 }
