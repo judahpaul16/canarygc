@@ -443,6 +443,17 @@
     // @ts-ignore
     document.querySelector('.bg')!.style.background = "url('bg-map.webp') no-repeat center center fixed";
 
+    setInterval(() => {
+      let nav = document.querySelector('.desktop-nav');
+      if (nav && currentPath === '/' || currentPath === '/login' || currentPath === '/register') {
+        // @ts-ignore
+        nav.style.display = 'none';
+      } else {
+        // @ts-ignore
+        nav.style.display = 'grid';
+      }
+    }, 1000);
+
     setTimeout(() => {
       checkLoadedMission();
       requestParameters();
