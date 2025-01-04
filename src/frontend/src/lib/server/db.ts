@@ -1,6 +1,6 @@
 import sqlite from "libsql";
 
-export const db = new sqlite("/app/src/data.db");
+export const db = new sqlite("./src/data.db");
 
 db.exec(`CREATE TABLE IF NOT EXISTS user (
     id TEXT NOT NULL PRIMARY KEY,
