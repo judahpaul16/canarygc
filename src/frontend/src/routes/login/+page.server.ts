@@ -8,7 +8,7 @@ import type { DatabaseUser } from "$lib/server/db";
 
 export const load: ServerLoad = async (event) => {
 	if (event.locals.user) {
-		return redirect(302, "/");
+		return redirect(302, "/dashboard");
 	}
 	return {};
 };
@@ -72,6 +72,6 @@ export const actions: Actions = {
 			...sessionCookie.attributes
 		});
 
-		return redirect(302, "/");
+		return redirect(302, "/dashboard");
 	}
 };
