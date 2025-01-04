@@ -159,7 +159,7 @@
     if (mapType.toLowerCase() === 'openstreetmap') {
       currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           minZoom: 0,
-          maxZoom: 20,
+          maxZoom: 21,
         }).addTo(leafletMap);
       mapType = 'OpenStreetMap';
       mapTypeStore.set(mapType);
@@ -167,7 +167,7 @@
     } else {
       currentTileLayer = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.png', {
           minZoom: 0,
-          maxZoom: 20,
+          maxZoom: 21,
         }).addTo(leafletMap);
       mapType = 'Satellite';
       mapTypeStore.set(mapType);
@@ -233,7 +233,7 @@
       map.classList.remove('satellite');
       currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         minZoom: 0,
-        maxZoom: 20,
+        maxZoom: 21,
       }).addTo(leafletMap);
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
@@ -245,7 +245,7 @@
       map.classList.add('satellite');
       currentTileLayer = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.jpg', {
         minZoom: 0,
-        maxZoom: 20,
+        maxZoom: 21,
       }).addTo(leafletMap);
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
