@@ -6,9 +6,9 @@ import type { RequestHandler } from '@sveltejs/kit';
 
 import type { DatabaseUser } from "$lib/server/db";
 
-export const POST: RequestHandler = async (request): Promise<Response> => {
+export const POST: RequestHandler = async (event): Promise<Response> => {
     try {
-        const headers = request.request.headers;
+        const headers = event.request.headers;
         const username = headers.get("username");
         const password = headers.get("password");
 
@@ -69,10 +69,10 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
             });
         }
 
-        const session = request.locals.session;
+        const session = event.locals.session;
         if (session) {
             const sessionCookie = lucia.createSessionCookie(session.id);
-            request.cookies.set(sessionCookie.name, sessionCookie.value, {
+            event.cookies.set(sessionCookie.name, sessionCookie.value, {
                 path: ".",
                 ...sessionCookie.attributes
             });

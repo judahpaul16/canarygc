@@ -1,5 +1,4 @@
 <script lang="ts">
-    import PocketBase from "pocketbase";
     import { mapStore} from "../stores/mapStore";
     import {
         missionPlanTitleStore,
@@ -19,8 +18,6 @@
     import { onMount } from "svelte";
     import Notification from "./Notification.svelte";
 
-    let pb: PocketBase;
-
     let actions: MissionPlanActions = get(missionPlanActionsStore);
     let title: string = "";
 
@@ -33,11 +30,6 @@
     $: secondaryColor = $secondaryColorStore;
     $: tertiaryColor = $tertiaryColorStore;
     $: fontColor = darkMode ? "#ffffff" : "#000000";
-
-    onMount(() => {
-        pb = new PocketBase(`http://${window.location.hostname}:8090`);
-        pb.autoCancellation(false);
-    });
 
     async function sendMavlinkCommand(command: string, params: string  = '', useCmdLong: string = 'false', useArduPilotMega: string = 'false') {
         const response = await fetch(`/api/mavlink/send_command`, {
@@ -111,14 +103,21 @@
             console.error("Error:", error);
         }
         
-        await pb.collection("mission_plans").getFullList().then((response) => {
-            if (response.length > 0) {
-                response.forEach(async (item) => {
-                    if (item.isLoaded === 1) {
-                        await pb.collection("mission_plans").update(item.id, { isLoaded: 0 });
-                    }
-                });
-            }
+        // Unload all mission plans first
+        await fetch("/api/mission/unload", {
+            method: "POST",
+            headers: {
+                "content-type": "application/json",
+            },
+        });
+
+        // Load the new mission plan
+        await fetch("/api/mission/load", {
+            method: "POST",
+            headers: {
+                "content-type": "application/json",
+                "title": title,
+            },
         });
 
         missionPlanTitleStore.set(title);
@@ -163,28 +162,34 @@
         plan = duplicateTakeoffAndShift(plan);
         handleLoad(title, plan);
 
-        let id = "";
-        let missionExists = async () => {
-            let exists = false;
-            await pb.collection("mission_plans").getFirstListItem(`title = "${title}"`).catch((error) => {
-                exists = false;
-            }).then((response) => {
-                if (response) {
-                    exists = true;
-                    id = response.id;
-                }
-            });
-            return exists;
-        };        
-        if (await missionExists()) {
-            await handleUpdate(id, title, plan);
+        let missionExists = false;
+        let response = await fetch("/api/mission/checkExists", {
+            method: "POST",
+            headers: {
+                "content-type": "application/json",
+                "title": title,
+            },
+        });
+        let responseData = await response.json();
+        console.log(responseData);
+        if (responseData.length > 0) missionExists = true;
+
+        if (missionExists) {
+            await handleUpdate(title, plan);
         } else {
             let missionPlan = {
                 title: title,
                 actions: plan,
                 isLoaded: 1,
             };
-            let response = await pb.collection("mission_plans").create(missionPlan).catch((error) => {
+            let response = await fetch("/api/mission/save", {
+                method: "POST",
+                headers: {
+                    "content-type": "application/json",
+                    "title": missionPlan.title,
+                    "actions": JSON.stringify(missionPlan.actions),
+                },
+            }).catch((error) => {
                 new Modal({
                     target: document.body,
                     props: {
@@ -212,13 +217,20 @@
         }
     }
 
-    async function handleUpdate(id: string, title: string, plan: MissionPlanActions) {
+    async function handleUpdate(title: string, plan: MissionPlanActions) {
         let missionPlan = {
             title: title,
             actions: plan,
             isLoaded: 1,
         };
-        let response = await pb.collection("mission_plans").update(id, missionPlan).catch((error) => {
+        let response = await fetch("/api/mission/update", {
+            method: "POST",
+            headers: {
+                "content-type": "application/json",
+                "title": missionPlan.title,
+                "actions": JSON.stringify(missionPlan.actions),
+            },
+        }).catch((error) => {
             new Modal({
                 target: document.body,
                 props: {

@@ -17,8 +17,8 @@ import {
     logs
 } from '$lib/server/mavlink';
 
-export const POST: RequestHandler = async (request): Promise<Response> => {
-    switch (request.params.type) {
+export const POST: RequestHandler = async (event): Promise<Response> => {
+    switch (event.params.type) {
         case 'heartbeat':
             try {
                 let connected = (port && reader && online);
@@ -40,10 +40,10 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
             }
         case 'send_command':
-            let command = request.request.headers.get('command');
-            let params: string | number[] | null = request.request.headers.get('params');
-            let useArduPilotMega = request.request.headers.get('useArduPilotMega');
-            let useCmdLong = request.request.headers.get('useCmdLong');
+            let command = event.request.headers.get('command');
+            let params: string | number[] | null = event.request.headers.get('params');
+            let useArduPilotMega = event.request.headers.get('useArduPilotMega');
+            let useCmdLong = event.request.headers.get('useCmdLong');
             if (useCmdLong === null) useCmdLong = 'false';
             if (useArduPilotMega === null) useArduPilotMega = 'false';
             if (params) params = params.split(',').map((param) => {
@@ -72,7 +72,7 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
             }
         case 'load_mission':
-            let actions = request.request.headers.get('actions');
+            let actions = event.request.headers.get('actions');
             try {
                 if (actions) {
                     await setMissionCount(Object.keys(JSON.parse(actions)).length);
@@ -87,9 +87,9 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
             }
         case 'set_position_local':
-            let x: number = parseInt(request.request.headers.get('x')!);
-            let y: number = parseInt(request.request.headers.get('y')!);
-            let z: number = parseInt(request.request.headers.get('z')!);
+            let x: number = parseInt(event.request.headers.get('x')!);
+            let y: number = parseInt(event.request.headers.get('y')!);
+            let z: number = parseInt(event.request.headers.get('z')!);
             if (isNaN(x) || isNaN(y) || isNaN(z)) {
                 return new Response('Invalid coordinates', { status: 400 });
             }
@@ -109,9 +109,9 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
             }
         case 'write_param':
-            let id = request.request.headers.get('id')!;
-            let value = parseFloat(request.request.headers.get('value')!);
-            let type = parseInt(request.request.headers.get('type')!);
+            let id = event.request.headers.get('id')!;
+            let value = parseFloat(event.request.headers.get('value')!);
+            let type = parseInt(event.request.headers.get('type')!);
             if (isNaN(value) || isNaN(type)) {
                 return new Response('Invalid value or type', { status: 400 });
             }
@@ -127,6 +127,6 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
             }
         default:
-            return new Response(`Invalid request type: ${request.params.type}`, { status: 400 });
+            return new Response(`Invalid request type: ${event.params.type}`, { status: 400 });
     };
 };
