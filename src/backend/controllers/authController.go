@@ -9,7 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 	"github.com/razsa/go-auth/internal/database"
 )
 
@@ -18,7 +18,7 @@ const SecretKey = "secret"
 var queries *database.Queries
 
 func init() {
-	db, err := sql.Open("sqlite3", "auth.db")
+	db, err := sql.Open("sqlite", "./auth.db")
 	if err != nil {
 		panic("could not connect to the database: " + err.Error())
 	}
@@ -93,8 +93,11 @@ func Login(c *fiber.Ctx) error {
 
 	// Redirect to the map view after successful login
 	return c.JSON(fiber.Map{
-		"message":  "success",
-		"redirect": "/map", // Tell the frontend where to redirect
+		"user": fiber.Map{
+            "id":    user.ID,
+            "email": user.Email,
+            "name":  user.Name,
+        },
 	})
 }
 
