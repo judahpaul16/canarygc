@@ -3,10 +3,7 @@
     import { mavlinkLogStore, mavStateStore } from '../../stores/mavlinkStore';
     import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../../stores/customizationStore';
     import Modal from '../../components/Modal.svelte';
-    import PocketBase from 'pocketbase';
     import { get } from 'svelte/store';
-
-    let pb: PocketBase;
     
     let logs: string[] = get(mavlinkLogStore);
     let logContainer: HTMLElement;
@@ -136,11 +133,6 @@
         document.body.appendChild(element);
         element.click();
     }
-
-    onMount(() => {
-        pb = new PocketBase(`http://${window.location.hostname}:8090`);
-        pb.autoCancellation(false);
-    });
 
     afterUpdate(() => {
         logContainer.scrollTop = logContainer.scrollHeight;

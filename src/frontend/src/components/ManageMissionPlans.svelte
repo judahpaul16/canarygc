@@ -1,5 +1,4 @@
 <script lang="ts">
-  import PocketBase from "pocketbase";
   import {
     missionPlanTitleStore,
     missionPlanActionsStore,
@@ -16,8 +15,6 @@
   } from '../stores/customizationStore';
   import Notification from "./Notification.svelte";
 
-  let pb: PocketBase;
-
   export let title: string = "Manage Mission Plans";
   export let isModal = false;
   export let isOpen: boolean = true;
@@ -33,8 +30,6 @@
   $: actions = $missionPlanActionsStore;
 
   onMount(() => {
-    pb = new PocketBase(`http://${window.location.hostname}:8090`);
-    pb.autoCancellation(false);
     getMissionPlans();
   });
 
@@ -58,10 +53,18 @@
 
   async function getMissionPlans() {
     try {
-      const records = await pb.collection("mission_plans").getFullList();
-      missionPlans = records.map((record) => ({
+      let response = await fetch("/api/mission/list", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+      });
+      let records = await response.json();
+      missionPlans = records.map((record: any) => ({
         id: record.id,
         title: record.title,
+        actions: JSON.parse(record.actions),
+        isLoaded: record.isLoaded,
       }));
     } catch (error) {
       console.error("Error fetching mission plans:", error);
@@ -77,10 +80,8 @@
         isOpen: true,
         confirmation: true,
         notification: false,
-        onConfirm: async (p: any = plan) => {
-          let response = await pb.collection("mission_plans").getFirstListItem(`id = "${p.id}"`);
-          let { title, actions } = response;
-          await handleSave(title, actions);
+        onConfirm: async () => {
+          await handleLoad(plan.title, plan.actions);
           isOpen = false;
         },
         onCancel: () => {
@@ -110,14 +111,21 @@
       console.error("Error:", error);
     }
 
-    await pb.collection("mission_plans").getFullList().then((response) => {
-      if (response.length > 0) {
-        response.forEach(async (item) => {
-          if (item.isLoaded === 1) {
-            await pb.collection("mission_plans").update(item.id, { isLoaded: 0 });
-          }
-        });
-      }
+    // Unload all mission plans first
+    await fetch("/api/mission/unload", {
+        method: "POST",
+        headers: {
+            "content-type": "application/json",
+        },
+    });
+
+    // Load the new mission plan
+    await fetch("/api/mission/load", {
+        method: "POST",
+        headers: {
+            "content-type": "application/json",
+            "title": title,
+        },
     });
 
     missionPlanTitleStore.set(title);
@@ -144,38 +152,44 @@
   async function handleSave(title: string, plan: MissionPlanActions) {
       await handleLoad(title, plan);
 
-      let id = "";
-      let missionExists = async () => {
-          let exists = false;
-          await pb.collection("mission_plans").getFirstListItem(`title = "${title}"`).catch((error) => {
-              exists = false;
-          }).then((response) => {
-              if (response) {
-                  exists = true;
-                  id = response.id;
-              }
-          });
-          return exists;
-      };        
-      if (await missionExists()) {
-          await handleUpdate(id, title, plan);
+      let missionExists = false;
+      let response = await fetch("/api/mission/checkExists", {
+        method: "POST",
+        headers: {
+            "content-type": "application/json",
+            "title": title,
+        },
+      });
+      let responseData = await response.json();
+      console.log(responseData);
+      if (responseData.length > 0) missionExists = true;
+      
+      if (missionExists) {
+          await handleUpdate(title, plan);
       } else {
           let missionPlan = {
-              title: title,
-              actions: plan,
-              isLoaded: 1,
+            title: title,
+            actions: plan,
+            isLoaded: 1,
           };
-          let response = await pb.collection("mission_plans").create(missionPlan).catch((error) => {
-              new Modal({
-                  target: document.body,
-                  props: {
-                      title: "Error",
-                      content: error.message,
-                      isOpen: true,
-                      confirmation: false,
-                      notification: true,
-                  },
-              });
+          let response = await fetch("/api/mission/save", {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              "title": missionPlan.title,
+              "actions": JSON.stringify(missionPlan.actions),
+            },
+          }).catch((error) => {
+            new Modal({
+              target: document.body,
+              props: {
+                title: "Error",
+                content: error.message,
+                isOpen: true,
+                confirmation: false,
+                notification: true,
+              },
+            });
           });
           if (response) {
             let notification = new Notification({
@@ -193,13 +207,20 @@
       }
   }
 
-  async function handleUpdate(id: string, title: string, plan: MissionPlanActions) {
+  async function handleUpdate(title: string, plan: MissionPlanActions) {
     let missionPlan = {
       title: title,
       actions: plan,
       isLoaded: 1,
     };
-    let response = await pb.collection("mission_plans").update(id, missionPlan).catch((error) => {
+    let response = await fetch("/api/mission/update", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "title": missionPlan.title,
+        "actions": JSON.stringify(missionPlan.actions),
+      },
+    }).catch((error) => {
       new Modal({
         target: document.body,
         props: {
@@ -226,7 +247,7 @@
     }
 }
 
-  async function deleteMissionPlan(id: string) {
+  async function deleteMissionPlan(title: string) {
     const modal = new Modal({
       target: document.body,
       props: {
@@ -236,7 +257,7 @@
         confirmation: true,
         notification: false,
         onConfirm: async () => {
-          await handleDelete(id);
+          await handleDelete(title);
           modal.$destroy();
         },
         onCancel: () => {
@@ -246,10 +267,16 @@
     });
   }
 
-  async function handleDelete(id: string) {
+  async function handleDelete(title: string) {
     try {
-      await pb.collection("mission_plans").delete(id);
-      missionPlans = missionPlans.filter((plan) => plan.id !== id);
+      await fetch(`/api/mission/delete`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "title": title,
+        },
+      });
+      missionPlans = missionPlans.filter((plan) => plan.title !== title);
     } catch (error) {
       console.error("Error deleting mission plan:", error);
     }
@@ -307,7 +334,7 @@
                 <span>{plan.title}</span>
                 <div class="flex items-center gap-2">
                   <button
-                    on:click={() => deleteMissionPlan(plan.id)}
+                    on:click={() => deleteMissionPlan(plan.title)}
                     class="text-red-500 hover:text-red-700">Delete</button
                   >
                   <button
@@ -353,7 +380,7 @@
               <span class="mr-2" title={plan.title}>{plan.title.substring(0, 11)}{#if plan.title.length >= 11}...{/if}</span>
               <div class="flex items-center gap-3 float-right relative">
                 <button
-                  on:click={() => deleteMissionPlan(plan.id)}
+                  on:click={() => deleteMissionPlan(plan.title)}
                   class="text-red-400 hover:text-red-600">
                     <i class="fas fa-trash-alt text-sm"></i>
                     <div class="tooltip">Delete</div>

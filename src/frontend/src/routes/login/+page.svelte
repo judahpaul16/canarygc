@@ -7,7 +7,6 @@
   } from '../../stores/customizationStore';
   import { onMount } from 'svelte';
   import { loggedInStore } from '../../stores/authStore';
-  import { createClient } from "@libsql/client";
 
   $: darkMode = $darkModeStore;
   $: primaryColor = $primaryColorStore;
@@ -19,16 +18,19 @@
   let password = '';
   let error = '';
   let passwordStrength = 0;
-  let client = createClient({ url: 'data.db' });
   
   onMount(async () => {    
     if ($loggedInStore) window.location.href = '/dashboard';
-    client.execute('SELECT * FROM user').then((result: any) => {
-      if (result.rows.length <= 0) {
-        window.location.href = '/register';
+    await fetch('/api/auth/checkAdmin', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
       }
-    }).catch((err: any) => {
-      console.error('Error checking admin existence:', err);
+    }).then(async (response) => {
+      let result = await response.json();
+      if (!result.adminExists) {
+          window.location.href = '/register';
+      }
     });
 
     // Set up input focus handlers

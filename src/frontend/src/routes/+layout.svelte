@@ -444,7 +444,6 @@
     
     let checkCookieInterval = setInterval(() => {
       const lastActivity = parseInt(document.cookie.replace(/(?:(?:^|.*;\s*)lastActivity\s*=\s*([^;]*).*$)|^.*$/, '$1'));
-      console.log('Last Activity:', Date.now() - lastActivity);
       if (Date.now() - lastActivity > 600000) {
         clearInterval(checkCookieInterval);
         loggedInStore.set(false);
@@ -461,8 +460,8 @@
     window.addEventListener('scroll', refreshCookie);
 
     // Auth Checks
-    statusCheckInterval = setInterval(async () => {
-      await checkOnlineStatus();
+    statusCheckInterval = setInterval(() => {
+      checkOnlineStatus();
     }, 1100);
     
     const dashboard = document.querySelector('.dashboard');
@@ -494,7 +493,7 @@
       });
       resizeObserver.observe(dashboard);
     }
-    if (window.location.pathname === '/' || window.location.pathname === '/login') {
+    if (currentPath === '/' || currentPath === '/login' || currentPath === '/register') {
       // @ts-ignore
       document.querySelector('.desktop-nav').style.display = 'none';
     } else {
@@ -510,7 +509,7 @@
   function handleLogout() {
     loggedInStore.set(false);
     document.cookie = 'lastActivity=' + Date.UTC(1970);
-    goto('/login');
+    if (!window.location.pathname.includes('register')) goto('/login');
   }
 
   function handleNavigation(path: string, target: string = '') {
@@ -565,7 +564,7 @@
   </div>
   <div class="bg-[#0000001f] flex w-full h-full z-10">
     <!-- Desktop Navigation -->
-    <nav class="desktop-nav w-min h-full p-4 grid opacity-0 z-20" class:opacity={!isNavHidden ? 1 : 0}>
+    <nav class="desktop-nav w-min h-full p-4 grid opacity-0 z-20" class:opacity={isNavHidden ? 0 : 1}>
       <div class="flex-grow flex flex-col items-center">
         <div class="mb-5">
           <button on:click|preventDefault={() => handleNavigation('/')}>
@@ -665,7 +664,7 @@
     </div>
 
     {#key online}
-      {#if !online && currentPath !== '/login' && currentPath !== '/'}
+      {#if !online && currentPath !== '/login' && currentPath !== '/' && currentPath !== '/register'}
         <Offline />
       {/if}
     {/key}

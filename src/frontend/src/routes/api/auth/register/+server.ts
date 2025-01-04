@@ -6,12 +6,10 @@ import { SqliteError } from "libsql";
 import { db } from "$lib/server/db";
 import type { RequestHandler } from '@sveltejs/kit';
 
-export const POST: RequestHandler = async (request): Promise<Response> => {
-    const headers = request.request.headers;
+export const POST: RequestHandler = async (event): Promise<Response> => {
+    const headers = event.request.headers;
     const username = headers.get("username");
     const password = headers.get("password");
-    console.log(username);
-    console.log(password); 
     if (
         typeof username !== "string" ||
         username.length < 3 ||
@@ -48,10 +46,10 @@ export const POST: RequestHandler = async (request): Promise<Response> => {
             username,
             passwordHash
         );
-        const session = request.locals.session;
+        const session = event.locals.session;
         if (session) {
             const sessionCookie = lucia.createSessionCookie(session.id);
-            request.cookies.set(sessionCookie.name, sessionCookie.value, {
+            event.cookies.set(sessionCookie.name, sessionCookie.value, {
                 path: ".",
                 ...sessionCookie.attributes
             });

@@ -22,12 +22,15 @@
     
     onMount(async () => {    
         if ($loggedInStore) window.location.href = '/dashboard';
-        try {
-            // Check if admin exists
-            // If exists redirect to login page
-        } catch (err) {
-            console.error('Error checking admin existence:', err);
-        }
+        await fetch('/api/auth/checkAdmin', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json'
+          }
+        }).then(async (response) => {
+          let result = await response.json();
+          if (result.adminExists) window.location.href = '/login';
+        })
     
         // Set up input focus handlers
         setTimeout(() => {
