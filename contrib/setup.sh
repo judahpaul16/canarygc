@@ -162,9 +162,9 @@ if [[ "$1" != "--setup-only" ]]; then
         docker system prune -af
         if libcamera-hello --list-cameras | grep -q "No cameras available!"; then
             echo "No cameras found."
-            docker compose -f docker-compose.prod.yml up frontend backend -d
+            docker compose -f docker-compose.prod.yml up frontend -d
         else
-            docker compose -f docker-compose.prod.yml up frontend backend webrtc -d
+            docker compose -f docker-compose.prod.yml up frontend webrtc -d
         fi
     fi
     sleep 5
