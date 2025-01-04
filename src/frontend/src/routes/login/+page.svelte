@@ -1,7 +1,4 @@
 <script lang="ts">
-  import PocketBase from 'pocketbase';
-  import { authData } from '../../stores/authStore';
-  import { goto } from '$app/navigation';
   import {
     darkModeStore,
     primaryColorStore,
@@ -9,6 +6,8 @@
     tertiaryColorStore
   } from '../../stores/customizationStore';
   import { onMount } from 'svelte';
+  import { loggedInStore } from '../../stores/authStore';
+  import { createClient } from "@libsql/client";
 
   $: darkMode = $darkModeStore;
   $: primaryColor = $primaryColorStore;
@@ -18,24 +17,19 @@
 
   let email = '';
   let password = '';
-  let confirmPassword = '';
   let error = '';
-  let isRegistrationMode = false;
   let passwordStrength = 0;
-  let pb: PocketBase;
+  let client = createClient({ url: 'data.db' });
   
-  onMount(async () => {
-    pb = new PocketBase(`http://${window.location.hostname}:8090`);
-    pb.autoCancellation(false);
-    
-    try {
-      // Check if admin exists
-      const adminList = await pb.admins.getList(1, 1);
-      isRegistrationMode = adminList.items.length === 0;
-    } catch (err) {
+  onMount(async () => {    
+    if ($loggedInStore) window.location.href = '/dashboard';
+    client.execute('SELECT * FROM user').then((result: any) => {
+      if (result.rows.length <= 0) {
+        window.location.href = '/register';
+      }
+    }).catch((err: any) => {
       console.error('Error checking admin existence:', err);
-      isRegistrationMode = true; // Assume registration needed if can't check
-    }
+    });
 
     // Set up input focus handlers
     setTimeout(() => {
@@ -54,14 +48,30 @@
         });
       });
     }, 1000);
+  });
 
-    // Check if already logged in and redirect to dashboard
-    setInterval(() => {
-      if (authData && !authData.checkExpired() && window.location.pathname.includes('login')) {
-        goto('/dashboard');
-      }
-    }, 1000);
-   });
+  async function handleSubmit() {
+    if (!email || !password) {
+      error = 'Please fill in all fields';
+      return;
+    }
+    let response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'username': email,
+        'password': password
+      },
+    })
+    if (response.status === 200) {
+      loggedInStore.set(true);
+      document.cookie = 'lastActivity=' + Date.now();
+      window.location.href = '/dashboard';
+    } else {
+      let responseText = await response.json();
+      error = `Error: ${responseText.message}`;
+    }
+  }
 
   function calculatePasswordStrength(pass: string): number {
     let strength = 0;
@@ -83,67 +93,10 @@
   }
 
   $: passwordStrength = calculatePasswordStrength(password);
-
-  async function handleSubmit() {
-    error = '';
-    
-    if (isRegistrationMode) {
-      if (password !== confirmPassword) {
-        error = 'Passwords do not match';
-        return;
-      }
-      if (passwordStrength < 3) {
-        error = 'Password is not strong enough';
-        return;
-      }
-      
-      try {
-        const adminData = await pb.admins.create({
-          email,
-          password,
-          passwordConfirm: confirmPassword,
-        });
-        const authDataResponse = await pb.admins.authWithPassword(email, password);
-        authData.set({
-          token: authDataResponse.token,
-          expires: Date.now() + 3600 * 1000, // Set expiration to 1 hour from now
-          admin: authDataResponse.admin,
-          record: null, // Set record to null since it's an admin response
-        });
-        goto('/dashboard');
-      } catch (err: any) {
-        error = err.message;
-      }
-    } else {
-      try {
-        const authDataResponse = await pb.admins.authWithPassword(email, password);
-        authData.set({
-          token: authDataResponse.token,
-          expires: Date.now() + 3600 * 1000, // Set expiration to 1 hour from now
-          admin: authDataResponse.admin,
-          record: null, // Set record to null since it's an admin response
-        });
-        goto('/dashboard');
-      } catch (err: any) {
-        try {
-          const authDataResponse = await pb.collection('users').authWithPassword(email, password);
-          authData.set({
-            token: authDataResponse.token,
-            expires: Date.now() + 3600 * 1000, // Set expiration to 1 hour from now
-            admin: null, // Set admin to null since it's a user response
-            record: null, // Set record to null since it's an admin response
-          });
-          goto('/dashboard');
-        } catch (err: any) {
-          error = err.message;
-        }
-      }
-    }
-  }
 </script>
 
 <sveltekit:head>
-  <title>MAV Manager GCS - {isRegistrationMode ? 'Register' : 'Login'}</title>
+  <title>MAV Manager GCS - Login</title>
 </sveltekit:head>
 
 <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0" 
@@ -151,7 +104,7 @@
 >
   <div class="dashboard w-fit h-fit flex flex-col justify-center p-10 rounded-3xl max-w-[400px]">
     <h2 class="text-2xl font-bold mb-4 text-center">
-      {isRegistrationMode ? 'Create Admin Account' : 'Login to GCS'}
+      Login to GCS
     </h2>
     {#if error}
       <div class="mb-4 p-2 bg-red-100 text-red-700 rounded">{error}</div>
@@ -164,37 +117,9 @@
       <div class="mb-4">
         <label for="password" class="block">Password</label>
         <input type="password" id="password" bind:value={password} class="w-full px-3 py-2 rounded" required />
-        {#if isRegistrationMode}
-          <div class="mt-2">
-            <div class="flex justify-start items-center">
-              <div class="text-sm min-w-fit mr-3">{getPasswordStrengthText(passwordStrength)}</div>
-              <div class="w-[70%] h-2 bg-gray-200 rounded">
-                <div
-                  class="h-full rounded transition-all duration-300"
-                  style="width: {(passwordStrength / 4) * 100}%; background-color: {getPasswordStrengthColor(passwordStrength)}"
-                ></div>
-              </div>
-            </div>
-            <div class="text-xs mt-1">
-              Password must contain at least 10 characters, including uppercase, lowercase, numbers, and special characters
-            </div>
-          </div>
-        {/if}
       </div>
-      {#if isRegistrationMode}
-        <div class="mb-4">
-          <label for="confirmPassword" class="block">Confirm Password</label>
-          <input
-            type="password"
-            id="confirmPassword"
-            bind:value={confirmPassword}
-            class="w-full px-3 py-2 rounded"
-            required
-          />
-        </div>
-      {/if}
       <button type="submit" class="w-full py-2 rounded">
-        {isRegistrationMode ? 'Create Account' : 'Login'}
+        Login
       </button>
     </form>
   </div>

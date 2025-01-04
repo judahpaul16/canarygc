@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { authData } from '../stores/authStore';
   import {
     darkModeStore,
     primaryColorStore,
@@ -7,8 +6,6 @@
     tertiaryColorStore
   } from '../stores/customizationStore';
 
-  let user;
-  $: user = $authData;
   $: darkMode = $darkModeStore;
   $: primaryColor = $primaryColorStore;
   $: secondaryColor = $secondaryColorStore;
@@ -25,13 +22,9 @@
 >
   <div class="card p-8 rounded-3xl shadow-lg max-w-md w-full">
     <h1 class="text-3xl font-bold mb-4 text-center">MAV Manager GCS</h1>
-    {#if user}
-      <p class="text-lg text-center">Hello, {user?.record?.name || 'admin'}!
-        Continue to <a href="/dashboard" class="text-blue-500 underline">dashboard</a>.
-      </p>
-    {:else}
-      <p class="text-lg text-center">You are not logged in. Please <a href="/login" class="text-blue-500 underline">login</a>.</p>
-    {/if}
+    <p class="text-lg text-center">Hello, admin!
+      Continue to <a href="/dashboard" class="text-blue-500 underline">dashboard</a>.
+    </p>
     <!-- Useful Documentation -->
       <!-- MAVLink -->
       <div class="mt-4 mavlink">

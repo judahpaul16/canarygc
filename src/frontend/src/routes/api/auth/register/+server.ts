@@ -1,53 +1,82 @@
-import { authData } from '../../../../stores/authStore';
-import type { RequestHandler } from './$types';
-import { error, json } from '@sveltejs/kit';
+import { lucia } from "$lib/server/auth";
+import { redirect } from "@sveltejs/kit";
+import { generateId } from "lucia";
+import { hash } from "@node-rs/argon2";
+import { SqliteError } from "libsql";
+import { db } from "$lib/server/db";
+import type { RequestHandler } from '@sveltejs/kit';
 
-export const POST: RequestHandler = async ({ request, locals }) => {
-  try {
-    // Check if an admin already exists
-    const admins = await locals.pb.admins.getList(1, 1);
-    if (admins.totalItems > 0) {
-      throw error(400, 'An admin account already exists');
+export const POST: RequestHandler = async (request): Promise<Response> => {
+    const headers = request.request.headers;
+    const username = headers.get("username");
+    const password = headers.get("password");
+    console.log(username);
+    console.log(password); 
+    if (
+        typeof username !== "string" ||
+        username.length < 3 ||
+        username.length > 31
+    ) {
+        return new Response(JSON.stringify({ message: "Invalid username" }), {
+            status: 400,
+            headers: {
+                "content-type": "application/json"
+            }
+        });
+    }
+    if (typeof password !== "string" || password.length < 6 || password.length > 255) {
+        return new Response(JSON.stringify({ message: "Invalid password" }), {
+            status: 400,
+            headers: {
+                "content-type": "application/json"
+            }
+        });
     }
 
-    // Parse registration data
-    const { email, password, passwordConfirm } = await request.json();
+    const passwordHash = await hash(password, {
+        // recommended minimum parameters
+        memoryCost: 19456,
+        timeCost: 2,
+        outputLen: 32,
+        parallelism: 1
+    });
+    const userId = generateId(15);
 
-    // Validate input
-    if (!email || !password || password !== passwordConfirm) {
-      throw error(400, 'Invalid registration details');
+    try {
+        db.prepare("INSERT INTO user (id, username, password_hash) VALUES(?, ?, ?)").run(
+            userId,
+            username,
+            passwordHash
+        );
+        const session = request.locals.session;
+        if (session) {
+            const sessionCookie = lucia.createSessionCookie(session.id);
+            request.cookies.set(sessionCookie.name, sessionCookie.value, {
+                path: ".",
+                ...sessionCookie.attributes
+            });
+        }
+    } catch (e: any) {
+        if (e instanceof SqliteError && e.code === "SQLITE_CONSTRAINT_UNIQUE") {
+            return new Response(JSON.stringify({ message: "Username already taken" }), {
+                status: 400,
+                headers: {
+                    "content-type": "application/json"
+                }
+            });
+        }
+        return new Response(JSON.stringify({ message: e.stack }), {
+            status: 500,
+            headers: {
+                "content-type": "application/json"
+            }
+        });
     }
 
-    // Create admin account
-    const createdAdmin = await locals.pb.admins.create({
-      email,
-      password,
-      passwordConfirm
+    return new Response(JSON.stringify({ message: "Success" }), {
+        status: 200,
+        headers: {
+            "content-type": "application/json"
+        }
     });
-
-    // Automatically authenticate the new admin
-    const response = await locals.pb.admins.authWithPassword(email, password);
-    authData.set({
-      token: response.token,
-      expires: Date.now() + 3600 * 1000, // set expiration to 1 hour from now
-      admin: response.admin,
-      record: null, // Set record to null since it's an admin response
-    });
-
-    return json({ 
-      success: true, 
-      message: 'Admin account created and logged in',
-      admin: {
-        id: createdAdmin.id,
-        email: createdAdmin.email
-      }
-    });
-  } catch (err) {
-    console.error('Admin registration error:', err);
-    
-    // Provide more detailed error response
-    throw error(400, {
-      message: `Registration failed: ${err instanceof Error ? err.message : 'Unknown error'}`
-    });
-  }
-};
+}

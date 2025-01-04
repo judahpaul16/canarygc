@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { authData } from '../../stores/authStore';
   import LiveFeed from '../../components/LiveFeed.svelte';
   import Stats from '../../components/Stats.svelte';
   import Controls from '../../components/Controls.svelte';
@@ -8,7 +7,6 @@
   import { mavLocationStore } from '../../stores/mavlinkStore';
   import { secondaryColorStore } from '../../stores/customizationStore';
 
-  $: user = $authData;
   $: mavLocation = $mavLocationStore;
   $: secondaryColor = $secondaryColorStore;
 

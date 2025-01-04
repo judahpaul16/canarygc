@@ -1,6 +1,5 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { authData } from '../../stores/authStore';
     import Map from '../../components/Map.svelte';
     import Weather from '../../components/Weather.svelte';
     import Compass from '../../components/Compass.svelte';
@@ -9,7 +8,6 @@
     import { mavLocationStore } from '../../stores/mavlinkStore';
     import { primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../../stores/customizationStore';
   
-    $: user = $authData;
     $: mavLocation = $mavLocationStore
     $: primaryColor = $primaryColorStore;
     $: secondaryColor = $secondaryColorStore;
