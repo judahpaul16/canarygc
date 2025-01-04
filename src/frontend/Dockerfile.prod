@@ -2,9 +2,16 @@ FROM node:21-alpine AS build
 
 WORKDIR /app
 
+# Install python3 and sqlite3 to run the setup script
+RUN apk add --no-cache python3 py3-pip sqlite
+
 COPY package*.json ./
 
 RUN npm install
+
+# Copy and run the Python script to initialize the SQLite database
+COPY setup_db.py ./setup_db.py
+RUN python3 ./setup_db.py
 
 COPY . .
 
@@ -17,6 +24,7 @@ WORKDIR /app
 COPY --from=build /app/build ./build
 COPY --from=build /app/package*.json ./
 COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/src/data.db ./src/data.db
 
 EXPOSE 3000
 
