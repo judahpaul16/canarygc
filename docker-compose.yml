@@ -3,8 +3,8 @@ services:
     build: 
       context: ./src/backend
       dockerfile: Dockerfile
-    volumes:
-      - ./src/backend/:/app
+    # volumes:
+    #  - ./src/backend/:/app
     ports:
       - "8090:8090"
     container_name: mmgcs_backend

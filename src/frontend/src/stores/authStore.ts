@@ -1,9 +1,11 @@
 import { writable } from 'svelte/store';
-import type { AdminAuthResponse, RecordAuthResponse, RecordModel, AuthModel } from 'pocketbase';
 
 type AuthData = {
-  record?: AuthModel | null;
-  admin?: AuthModel | null;
+  user?: {
+    id: string;
+    email: string;
+    name: string;
+  } | null;
   token: string;
   expires: number;
 } | null;
@@ -34,7 +36,7 @@ function createAuthStore() {
     update,
     registerAdmin: async (email: string, password: string, passwordConfirm: string) => {
       try {
-        const response = await fetch('/api/auth/register', {
+        const response = await fetch('http://localhost:8000/api/register', {
           method: 'POST',
           body: JSON.stringify({ 
             email, 
@@ -60,12 +62,11 @@ function createAuthStore() {
     },
     loginAdmin: async (email: string, password: string) => {
       try {
-        const response = await fetch('/api/auth', {
+        const response = await fetch('http://localhost:8000/api/login', {
           method: 'POST',
           body: JSON.stringify({ 
             email, 
-            password, 
-            action: 'login' 
+            password 
           }),
           headers: {
             'Content-Type': 'application/json'
@@ -90,13 +91,13 @@ function createAuthStore() {
     },
     logout: async () => {
       try {
-        const response = await fetch('/api/auth', {
+        const response = await fetch('http://localhost:8000/api/logout', {
           method: 'POST',
-          body: JSON.stringify({ action: 'logout' }),
           headers: {
             'Content-Type': 'application/json'
           }
         });
+    
 
         if (!response.ok) {
           throw new Error('Logout failed');
