@@ -1,5 +1,3 @@
-<svelte:options accessors />
-
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { notificationCountStore } from '../stores/notificationCountStore';
