@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onDestroy, onMount, afterUpdate } from 'svelte';
+    import { mount } from 'svelte';
     import { mavlinkLogStore, mavStateStore } from '../../stores/mavlinkStore';
     import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../../stores/customizationStore';
     import Modal from '../../components/Modal.svelte';
@@ -99,29 +100,29 @@
     }
 
     function confirmClear() {
-        let modal = new Modal({
-        target: document.body,
-        props: {
-            title: 'Clear MAVLink Logs',
-            content: 'Are you sure you want to clear all MAVLink Logs? This action cannot be undone.',
-            isOpen: true,
-            confirmation: true,
-            notification: false,
-            onConfirm: () => {
-            clearLogs();
-            modal.$destroy();
-            const newModal = new Modal({
-                target: document.body,
-                props: {
-                title: 'Logs Cleared',
-                content: 'All MAVLink Logs have been cleared successfully.',
+        let modalInstance = mount(Modal, {
+            target: document.body,
+            props: {
+                title: 'Clear MAVLink Logs',
+                content: 'Are you sure you want to clear all MAVLink Logs? This action cannot be undone.',
                 isOpen: true,
-                confirmation: false,
-                notification: true,
+                confirmation: true,
+                notification: false,
+                onConfirm: () => {
+                    clearLogs();
+                    modalInstance.destroy();
+                    const notificationModal = mount(Modal, {
+                        target: document.body,
+                        props: {
+                            title: 'Logs Cleared',
+                            content: 'All MAVLink Logs have been cleared successfully.',
+                            isOpen: true,
+                            confirmation: false,
+                            notification: true,
+                        }
+                    });
                 }
-            });
-            },
-        }
+            }
         });
     }
 

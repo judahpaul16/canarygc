@@ -15,7 +15,7 @@
         tertiaryColorStore
     } from '../stores/customizationStore';
     import { get } from "svelte/store";
-    import { onMount } from "svelte";
+    import { onMount, mount } from "svelte";
     import Notification from "./Notification.svelte";
 
     let actions: MissionPlanActions = get(missionPlanActionsStore);
@@ -50,20 +50,20 @@
     }
 
     function toggleMissionPlans() {
-        const modal = new ManageMissionPlans({
+        const modalInstance = mount(ManageMissionPlans, {
             target: document.body,
             props: {
                 isModal: true,
                 isOpen: true,
                 onCancel: () => {
-                    modal.$destroy();
+                    modalInstance.destroy();
                 },
             },
         });
     }
 
     async function saveMissionPlan() {
-        const modal = new Modal({
+        const modalInstance = mount(Modal, {
             target: document.body,
             props: {
                 title: "Save & Load Mission Plan",
@@ -77,7 +77,7 @@
                     await handleSave(title, actions);
                 },
                 onCancel: () => {
-                    modal.$destroy();
+                    modalInstance.destroy();
                 },
             },
         });
@@ -190,7 +190,7 @@
                     "actions": JSON.stringify(missionPlan.actions),
                 },
             }).catch((error) => {
-                new Modal({
+                const errorModal = mount(Modal, {
                     target: document.body,
                     props: {
                         title: "Error",
@@ -202,17 +202,17 @@
                 });
             });
             if (response) {
-              let notification = new Notification({
-                target: document.body,
-                props: {
-                    title: "Mission Plan Saved",
-                    content: "The mission plan has been saved.",
-                    type: "info",
-                },
-              });
-              setTimeout(() => {
-                  notification.$destroy();
-              }, 3000);
+                const notificationInstance = mount(Notification, {
+                    target: document.body,
+                    props: {
+                        title: "Mission Plan Saved",
+                        content: "The mission plan has been saved.",
+                        type: "info",
+                    },
+                });
+                setTimeout(() => {
+                    notificationInstance.destroy();
+                }, 3000);
             }
         }
     }
@@ -231,7 +231,7 @@
                 "actions": JSON.stringify(missionPlan.actions),
             },
         }).catch((error) => {
-            new Modal({
+            const errorModal = mount(Modal, {
                 target: document.body,
                 props: {
                     title: "Error",
@@ -243,16 +243,16 @@
             });
         });
         if (response) {
-            let notification = new Notification({
+            const notificationInstance = mount(Notification, {
                 target: document.body,
                 props: {
-                title: "Mission Plan Updated",
-                content: "The mission plan has been updated.",
-                type: "info",
+                    title: "Mission Plan Updated",
+                    content: "The mission plan has been updated.",
+                    type: "info",
                 },
             });
             setTimeout(() => {
-                notification.$destroy();
+                notificationInstance.destroy();
             }, 3000);
         }
     }
@@ -326,7 +326,7 @@
     }
 
     function confirmClear() {
-        let modal = new Modal({
+        const modalInstance = mount(Modal, {
             target: document.body,
             props: {
                 title: "Clear Mission Plan",
@@ -342,15 +342,15 @@
                     },
                 ],
                 onConfirm: () => {
-                    removeAllActions(modal.inputValues![0] === "true");
-                    modal.$destroy();
+                    removeAllActions(modalInstance.inputValues![0] === "true");
+                    modalInstance.destroy();
                 },
             },
         });
     }
 
     function setHomeLocation() {
-        let modal = new Modal({
+        const modalInstance = mount(Modal, {
             target: document.body,
             props: {
                 title: "Set Home Location",
@@ -376,9 +376,9 @@
                     },
                 ],
                 onConfirm: async () => {
-                    let lat = Number((parseFloat(modal.inputValues![0]) * 1e7).toFixed(0));
-                    let lon = Number((parseFloat(modal.inputValues![1]) * 1e7).toFixed(0));
-                    let alt = Number(parseFloat(modal.inputValues![2]).toFixed(0));
+                    let lat = Number((parseFloat(modalInstance.inputValues![0]) * 1e7).toFixed(0));
+                    let lon = Number((parseFloat(modalInstance.inputValues![1]) * 1e7).toFixed(0));
+                    let alt = Number(parseFloat(modalInstance.inputValues![2]).toFixed(0));
                     let useCurrent = 0;
                     if (isNaN(lat) || isNaN(lon) || isNaN(alt)) {
                         useCurrent = 1;
@@ -396,7 +396,7 @@
                             },
                         });
                         if (response.ok) {
-                            let newModal = new Modal({
+                            const notificationModal = mount(Modal, {
                                 target: document.body,
                                 props: {
                                     title: "Home Location Set",
@@ -407,10 +407,10 @@
                                 },
                             });
                             setTimeout(() => {
-                                newModal.$destroy();
+                                notificationModal.destroy();
                             }, 3000);
                         } else {
-                            new Modal({
+                            const errorModal = mount(Modal, {
                                 target: document.body,
                                 props: {
                                     title: "Error",
@@ -422,7 +422,7 @@
                             });
                         }
                     } catch (error: any) {
-                        new Modal({
+                        const errorModal = mount(Modal, {
                             target: document.body,
                             props: {
                                 title: "Error",
@@ -433,7 +433,7 @@
                             },
                         });
                     }
-                    modal.$destroy();
+                    modalInstance.destroy();
                 },
             },
         });
