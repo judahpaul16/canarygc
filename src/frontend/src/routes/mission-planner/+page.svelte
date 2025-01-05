@@ -8,10 +8,10 @@
     import { mavLocationStore } from '../../stores/mavlinkStore';
     import { primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../../stores/customizationStore';
   
-    $: mavLocation = $mavLocationStore
-    $: primaryColor = $primaryColorStore;
-    $: secondaryColor = $secondaryColorStore;
-    $: tertiaryColor = $tertiaryColorStore;
+    let mavLocation = $derived($mavLocationStore)
+    let primaryColor = $derived($primaryColorStore);
+    let secondaryColor = $derived($secondaryColorStore);
+    let tertiaryColor = $derived($tertiaryColorStore);
   
     onMount(() => {
       setTimeout(() => {

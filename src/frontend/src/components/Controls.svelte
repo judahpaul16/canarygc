@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run, preventDefault } from 'svelte/legacy';
+
   import Map from './Map.svelte';
   import DPad from './DPad.svelte';
   import Weather from './Weather.svelte';
@@ -11,19 +13,21 @@
   } from '../stores/customizationStore';
   import { get } from 'svelte/store';
 
-  let altitude = get(mavAltitudeStore);
-  let maxSpeed: string = '';
-  let altitudeSetPoint: string = '';
+  let altitude = $state(get(mavAltitudeStore));
+  let maxSpeed: string = $state('');
+  let altitudeSetPoint: string = $state('');
 
-  $: darkMode = $darkModeStore;
-  $: primaryColor = $primaryColorStore;
-  $: secondaryColor = $secondaryColorStore;
-  $: tertiaryColor = $tertiaryColorStore;
-  $: fontColor = darkMode ? '#ffffff' : '#000000';
-  $: mavMode = $mavModeStore;
-  $: mavLocation = $mavLocationStore;
-  $: altitude = $mavAltitudeStore;
-  $: mavSatellite = $mavSatelliteStore;
+  let darkMode = $derived($darkModeStore);
+  let primaryColor = $derived($primaryColorStore);
+  let secondaryColor = $derived($secondaryColorStore);
+  let tertiaryColor = $derived($tertiaryColorStore);
+  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
+  let mavMode = $derived($mavModeStore);
+  let mavLocation = $derived($mavLocationStore);
+  run(() => {
+    altitude = $mavAltitudeStore;
+  });
+  let mavSatellite = $derived($mavSatelliteStore);
 
   async function sendMavlinkCommand(command: string, params: string  = '', useCmdLong: string = 'false', useArduPilotMega: string = 'false') {
     const response = await fetch(`/api/mavlink/send_command`, {
@@ -107,10 +111,10 @@
           <input type="number" min="0" max="100" class="form-input" placeholder="100 m" bind:value={altitudeSetPoint} />
         </div>
         <button class="set-btn text-[8pt] rounded-full py-1 px-3 mt-2"
-          on:click|preventDefault={() => {
+          onclick={preventDefault(() => {
             if (!isNaN(parseInt(maxSpeed))) sendMavlinkCommand('DO_CHANGE_SPEED', `${[1, maxSpeed]}`);
             if (!isNaN(parseInt(altitudeSetPoint))) setPositionLocal('0', '0', `-${altitudeSetPoint}`);
-          }}>
+          })}>
           Set
         </button>
       </form>
@@ -119,7 +123,7 @@
     <div class="alt-btns column flex flex-col items-center justify-center text-center space-y-4">
       <div class="flex flex-col items-center">
         <div class="label text-sm mb-1" title="Altitude Up">Altitude Up</div>
-        <button class="alt-button rounded-full" on:click={() => {
+        <button class="alt-button rounded-full" onclick={() => {
           if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true');
           setPositionLocal('0', '0', `-${altitude + 10}`)
         }}>
@@ -128,7 +132,7 @@
       </div>
       <div class="flex flex-col items-center justify-center">
         <div class="label text-sm mb-1" title="Altitude Down">Altitude Down</div>
-        <button class="alt-button rounded-full" on:click={() => {
+        <button class="alt-button rounded-full" onclick={() => {
             if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true');
             setPositionLocal('0', '0', `-${altitude - 10}`)
           }}>
@@ -141,7 +145,7 @@
       <div id="rotate-left-button" class="flex flex-col items-center">
         <div class="label text-sm mb-1">Rotate Left</div>
         <button class="rotate-button rotate-left rounded-full"
-          on:click={() => {
+          onclick={() => {
               if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true');
               sendMavlinkCommand('CONDITION_YAW', `${[10, 10, -1, 1]}`);
             }}>
@@ -151,7 +155,7 @@
       <div class="flex flex-col items-center">
         <div class="label text-sm mb-1">Rotate Right</div>
         <button class="rotate-button rotate-right rounded-full"
-          on:click={() => {
+          onclick={() => {
               if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true');
               sendMavlinkCommand('CONDITION_YAW', `${[10, 10, 1, 1]}`);
             }}>

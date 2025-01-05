@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { run } from 'svelte/legacy';
+
+  import { onMount, mount } from 'svelte';
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import {
     mapStore,
@@ -23,24 +25,28 @@
   import pkg from 'maplibre-gl';
   const { Marker } = pkg;
 
-  export let hideOverlay: boolean = false;
-  export let mavLocation: L.LatLng | { lat: number; lng: number };;
-  export let id: string | null = null;
   import {
     darkModeStore,
     primaryColorStore,
     secondaryColorStore,
     tertiaryColorStore
   } from '../stores/customizationStore';
+  interface Props {
+    hideOverlay?: boolean;
+    mavLocation: L.LatLng | { lat: number; lng: number };
+    id?: string | null;
+  }
+
+  let { hideOverlay = $bindable(false), mavLocation = $bindable(), id = null }: Props = $props();
 
   let L: typeof import('leaflet');
-  let leafletMap: any = get(mapStore);
-  let threeDMap: any = get(threeDMapStore);
-  let mapType: string = get(mapTypeStore);
-  let currentTileLayer = get(mapTileLayerStore);
-  let zoom = get(mapZoomStore);
+  let leafletMap: any = $state(get(mapStore));
+  let threeDMap: any = $state(get(threeDMapStore));
+  let mapType: string = $state(get(mapTypeStore));
+  let currentTileLayer = $state(get(mapTileLayerStore));
+  let zoom = $state(get(mapZoomStore));
 
-  let actions: MissionPlanActions = {};
+  let actions: MissionPlanActions = $state({});
   let action_types = [
     'NAV_WAYPOINT', 'NAV_SPLINE_WAYPOINT', 'NAV_TAKEOFF', 'NAV_RETURN_TO_LAUNCH', 'NAV_GUIDED_ENABLE', 'NAV_LAND',
     'NAV_LOITER_TIME', 'NAV_LOITER_TURNS', 'NAV_LOITER_UNLIM', 'NAV_PAYLOAD_PLACE', 'DO_WINCH', 'DO_GRIPPER', 'DO_SET_CAM_TRIGG_DIST',
@@ -54,48 +60,19 @@
     'map/do_engine_control.png', 'map/delay.png', 'map/condition_change_alt.png', 'map/condition_distance.png', 'map/condition_yaw.png'
   ];
   let icons: L.Icon[] = [];
-  let markers: Map<number, L.Marker> = get(markersStore); // Map to keep track of markers
-  let polylines: Map<string, L.Polyline> = get(polylinesStore); // Map to keep track of polylines
+  let markers: Map<number, L.Marker> = $state(get(markersStore)); // Map to keep track of markers
+  let polylines: Map<string, L.Polyline> = $state(get(polylinesStore)); // Map to keep track of polylines
   let markers3D: Map<number, any> = new Map();
   let polylines3D: string[] = [];
-  let mavHeading: number = 0;
+  let mavHeading: number = $state(0);
   let mavMarker: L.Marker;
   let isDragging = false;
-  let darkMode = get(darkModeStore);
+  let darkMode = $state(get(darkModeStore));
   
-  $: darkMode = $darkModeStore;
-  $: primaryColor = $primaryColorStore;
-  $: secondaryColor = $secondaryColorStore;
-  $: tertiaryColor = $tertiaryColorStore;
-  $: fontColor = darkMode ? '#ffffff' : '#000000';
-  $: lockView = $lockViewStore;
-  $: zoom = $mapZoomStore;
 
-  $: leafletMap = $mapStore;
-  $: threeDMap = $threeDMapStore;
-  $: mapType = $mapTypeStore;
-  $: currentTileLayer = $mapTileLayerStore;
-  $: mavHeading = $mavHeadingStore,
-        updateMAVMarker();
-  $: mavLocation = $mavLocationStore,
-        updateMAVMarker();
 
-  $: actions = $missionPlanActionsStore,
-    removeAllMarkers(),
-    updateMAVMarker(),
-    Object.keys(actions).forEach((index) => {
-      updateMap(Number(index));
-    });
 
-  $: markers = $markersStore,
-    Object.keys(actions).forEach((index) => {
-      updateMap(Number(index));
-    });
 
-  $: polylines = $polylinesStore,
-    Object.keys(actions).forEach((index) => {
-      updateMap(Number(index));
-    });
 
   onMount(async () => {
     try {
@@ -269,16 +246,16 @@
     if (window.location.href.includes('dashboard')) hideOverlay = !hideOverlay;
     if (!document.fullscreenElement) {
       element.requestFullscreen().catch(err => {
-        new Modal({
-          target: document.body,
-          props: {
-            title: 'Error',
-            content: `Error attempting to enable full-screen mode: ${err.message} (${err.name})`,
-            isOpen: true,
-            confirmation: false,
-            notification: true,
-          },
-        });
+        mount(Modal, {
+                    target: document.body,
+                    props: {
+                      title: 'Error',
+                      content: `Error attempting to enable full-screen mode: ${err.message} (${err.name})`,
+                      isOpen: true,
+                      confirmation: false,
+                      notification: true,
+                    },
+                  });
       });
       setTimeout(() => {
         window.dispatchEvent(new Event('resize'));
@@ -564,6 +541,60 @@
       };
     }
   }
+  run(() => {
+    darkMode = $darkModeStore;
+  });
+  let primaryColor = $derived($primaryColorStore);
+  let secondaryColor = $derived($secondaryColorStore);
+  let tertiaryColor = $derived($tertiaryColorStore);
+  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
+  let lockView;
+  run(() => {
+    lockView = $lockViewStore;
+  });
+  run(() => {
+    zoom = $mapZoomStore;
+  });
+  run(() => {
+    leafletMap = $mapStore;
+  });
+  run(() => {
+    threeDMap = $threeDMapStore;
+  });
+  run(() => {
+    mapType = $mapTypeStore;
+  });
+  run(() => {
+    currentTileLayer = $mapTileLayerStore;
+  });
+  run(() => {
+    mavHeading = $mavHeadingStore,
+          updateMAVMarker();
+  });
+  run(() => {
+    mavLocation = $mavLocationStore,
+          updateMAVMarker();
+  });
+  run(() => {
+    actions = $missionPlanActionsStore,
+      removeAllMarkers(),
+      updateMAVMarker(),
+      Object.keys(actions).forEach((index) => {
+        updateMap(Number(index));
+      });
+  });
+  run(() => {
+    markers = $markersStore,
+      Object.keys(actions).forEach((index) => {
+        updateMap(Number(index));
+      });
+  });
+  run(() => {
+    polylines = $polylinesStore,
+      Object.keys(actions).forEach((index) => {
+        updateMap(Number(index));
+      });
+  });
 </script>
 
 <style lang="css">
@@ -620,14 +651,14 @@
 <div class="map-container" style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};">
   <div id={id !== null ? id : 'map'} class="relative h-full rounded-2xl z-0"></div>
   <ThreeDMap />
-  <button class="map-btn absolute top-[3.8rem] right-2 text-[#ffffff] bg-opacity-75 p-2 {lockView ? 'px-[15px]' : 'px-[13px]'} rounded-full" on:click={toggleLockView}> 
+  <button class="map-btn absolute top-[3.8rem] right-2 text-[#ffffff] bg-opacity-75 p-2 {lockView ? 'px-[15px]' : 'px-[13px]'} rounded-full" onclick={toggleLockView}> 
     <i class="fas {lockView ? 'fa-lock' : 'fa-lock-open'}"></i>
   </button>
-  <button class="map-btn absolute top-3 right-2 text-[#ffffff] bg-opacity-75 p-2 px-[14px] rounded-full" on:click={handleFullScreen}>
+  <button class="map-btn absolute top-3 right-2 text-[#ffffff] bg-opacity-75 p-2 px-[14px] rounded-full" onclick={handleFullScreen}>
     <i class="fas fa-expand"></i>
   </button>
   <label id="map-toggle" class="flex justify-center cursor-pointer my-2 absolute top-1 right-2 left-2 w-fit m-auto rounded-3xl p-2 pl-3 text-sm items-center" style={!hideOverlay ? 'display: flex;' : 'display: none;'}>
-    <input type="checkbox" value="" class="sr-only peer" on:click={toggleMap}>
+    <input type="checkbox" value="" class="sr-only peer" onclick={toggleMap}>
     <span class="text-white flex items-center gap-2">
       <i class="fas fa-map"></i>
       <span>{mapType}</span>

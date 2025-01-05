@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run, preventDefault } from 'svelte/legacy';
+
   import {
     darkModeStore,
     primaryColorStore,
@@ -8,16 +10,16 @@
   import { onMount } from 'svelte';
   import { loggedInStore } from '../../stores/authStore';
 
-  $: darkMode = $darkModeStore;
-  $: primaryColor = $primaryColorStore;
-  $: secondaryColor = $secondaryColorStore;
-  $: tertiaryColor = $tertiaryColorStore;
-  $: fontColor = darkMode ? '#ffffff' : '#000000';
+  let darkMode = $derived($darkModeStore);
+  let primaryColor = $derived($primaryColorStore);
+  let secondaryColor = $derived($secondaryColorStore);
+  let tertiaryColor = $derived($tertiaryColorStore);
+  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
 
-  let email = '';
-  let password = '';
-  let error = '';
-  let passwordStrength = 0;
+  let email = $state('');
+  let password = $state('');
+  let error = $state('');
+  let passwordStrength = $state(0);
   
   onMount(async () => {    
     if ($loggedInStore) window.location.href = '/dashboard';
@@ -94,7 +96,9 @@
     return texts[strength - 1] || 'Too Weak';
   }
 
-  $: passwordStrength = calculatePasswordStrength(password);
+  run(() => {
+    passwordStrength = calculatePasswordStrength(password);
+  });
 </script>
 
 <sveltekit:head>
@@ -111,7 +115,7 @@
     {#if error}
       <div class="mb-4 p-2 bg-red-100 text-red-700 rounded">{error}</div>
     {/if}
-    <form on:submit|preventDefault={handleSubmit}>
+    <form onsubmit={preventDefault(handleSubmit)}>
       <div class="mb-4">
         <label for="email" class="block">Email</label>
         <input type="email" id="email" bind:value={email} class="w-full px-3 py-2 rounded" required />

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import { onMount } from 'svelte';
   import { mavHeadingStore, mavLocationStore } from '../stores/mavlinkStore';
   import { mapZoomStore, lockViewStore, threeDMapStore } from '../stores/mapStore';
@@ -6,12 +8,14 @@
   import pkg from 'maplibre-gl';
   const { Map, Marker, NavigationControl } = pkg;
 
-  let map: any;
+  let map: any = $state();
   let marker: any;
 
-  $: map = $threeDMapStore;
-  $: mavLocation = $mavLocationStore;
-  $: mavHeading = $mavHeadingStore;
+  run(() => {
+    map = $threeDMapStore;
+  });
+  let mavLocation = $derived($mavLocationStore);
+  let mavHeading = $derived($mavHeadingStore);
 
   onMount(() => {
     const MAPTILER_KEY = 'FzmtxzLwraPRISOg9JeU';

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import {
     missionPlanTitleStore,
     missionPlanActionsStore,
@@ -6,7 +8,7 @@
     type MissionPlanActions
   } from "../stores/missionPlanStore";
   import Modal from "./Modal.svelte";
-  import { onMount } from "svelte";
+  import { onMount, mount, unmount } from "svelte";
   import {
     darkModeStore,
     primaryColorStore,
@@ -15,19 +17,30 @@
   } from '../stores/customizationStore';
   import Notification from "./Notification.svelte";
 
-  export let title: string = "Manage Mission Plans";
-  export let isModal = false;
-  export let isOpen: boolean = true;
-  export let onCancel: () => void = () => {};
-  let missionPlans: Array<{ id: string; title: string }> = [];
-  let actions: MissionPlanActions = {};
+  interface Props {
+    title?: string;
+    isModal?: boolean;
+    isOpen?: boolean;
+    onCancel?: () => void;
+  }
 
-  $: darkMode = $darkModeStore;
-  $: primaryColor = $primaryColorStore;
-  $: secondaryColor = darkMode ? $tertiaryColorStore : $secondaryColorStore;
-  $: fontColor = darkMode ? "#ffffff" : "#000000";
-  $: tertiaryColor = $tertiaryColorStore;
-  $: actions = $missionPlanActionsStore;
+  let {
+    title = "Manage Mission Plans",
+    isModal = false,
+    isOpen = $bindable(true),
+    onCancel = () => {}
+  }: Props = $props();
+  let missionPlans: Array<{ id: string; title: string }> = $state([]);
+  let actions: MissionPlanActions = $state({});
+
+  let darkMode = $derived($darkModeStore);
+  let primaryColor = $derived($primaryColorStore);
+  let secondaryColor = $derived(darkMode ? $tertiaryColorStore : $secondaryColorStore);
+  let fontColor = $derived(darkMode ? "#ffffff" : "#000000");
+  let tertiaryColor = $derived($tertiaryColorStore);
+  run(() => {
+    actions = $missionPlanActionsStore;
+  });
 
   onMount(() => {
     getMissionPlans();
@@ -74,23 +87,23 @@
   }
   
   async function loadMissionPlan(plan: any) {
-    const modal = new Modal({
-      target: document.body,
-      props: {
-        title: "Load Mission Plan",
-        content: "Are you sure you want to load this mission plan? This action will overwrite the currently loaded mission plan.",
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        onConfirm: async () => {
-          await handleLoad(plan.title, plan.actions);
-          isOpen = false;
-        },
-        onCancel: () => {
-          modal.$destroy();
-        },
-      },
-    });
+    const modal = mount(Modal, {
+          target: document.body,
+          props: {
+            title: "Load Mission Plan",
+            content: "Are you sure you want to load this mission plan? This action will overwrite the currently loaded mission plan.",
+            isOpen: true,
+            confirmation: true,
+            notification: false,
+            onConfirm: async () => {
+              await handleLoad(plan.title, plan.actions);
+              isOpen = false;
+            },
+            onCancel: () => {
+              unmount(modal);
+            },
+          },
+        });
   }
 
   async function handleLoad(title: string, actions: MissionPlanActions) {
@@ -182,28 +195,28 @@
               "actions": JSON.stringify(missionPlan.actions),
             },
           }).catch((error) => {
-            new Modal({
-              target: document.body,
-              props: {
-                title: "Error",
-                content: error.message,
-                isOpen: true,
-                confirmation: false,
-                notification: true,
-              },
-            });
+            mount(Modal, {
+                            target: document.body,
+                            props: {
+                              title: "Error",
+                              content: error.message,
+                              isOpen: true,
+                              confirmation: false,
+                              notification: true,
+                            },
+                          });
           });
           if (response) {
-            let notification = new Notification({
-              target: document.body,
-              props: {
-                  title: "Mission Plan Saved",
-                  content: "The mission plan has been saved.",
-                  type: "info",
-              },
-            });
+            let notification = mount(Notification, {
+                          target: document.body,
+                          props: {
+                              title: "Mission Plan Saved",
+                              content: "The mission plan has been saved.",
+                              type: "info",
+                          },
+                        });
             setTimeout(() => {
-                notification.$destroy();
+                unmount(notification);
             }, 3000);
           }
       }
@@ -223,50 +236,50 @@
         "actions": JSON.stringify(missionPlan.actions),
       },
     }).catch((error) => {
-      new Modal({
-        target: document.body,
-        props: {
-            title: "Error",
-            content: error.message,
-            isOpen: true,
-            confirmation: false,
-            notification: true,
-        },
-      });
+      mount(Modal, {
+                target: document.body,
+                props: {
+                    title: "Error",
+                    content: error.message,
+                    isOpen: true,
+                    confirmation: false,
+                    notification: true,
+                },
+              });
     });
     if (response) {
-      let notification = new Notification({
-        target: document.body,
-        props: {
-          title: "Mission Plan Updated",
-          content: "The mission plan has been updated.",
-          type: "info",
-        },
-      });
+      let notification = mount(Notification, {
+              target: document.body,
+              props: {
+                title: "Mission Plan Updated",
+                content: "The mission plan has been updated.",
+                type: "info",
+              },
+            });
       setTimeout(() => {
-        notification.$destroy();
+        unmount(notification);
       }, 3000);
     }
 }
 
   async function deleteMissionPlan(title: string) {
-    const modal = new Modal({
-      target: document.body,
-      props: {
-        title: "Delete Mission Plan",
-        content: "Are you sure you want to delete this mission plan?",
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        onConfirm: async () => {
-          await handleDelete(title);
-          modal.$destroy();
-        },
-        onCancel: () => {
-          modal.$destroy();
-        },
-      },
-    });
+    const modal = mount(Modal, {
+          target: document.body,
+          props: {
+            title: "Delete Mission Plan",
+            content: "Are you sure you want to delete this mission plan?",
+            isOpen: true,
+            confirmation: true,
+            notification: false,
+            onConfirm: async () => {
+              await handleDelete(title);
+              unmount(modal);
+            },
+            onCancel: () => {
+              unmount(modal);
+            },
+          },
+        });
   }
 
   async function handleDelete(title: string) {
@@ -322,7 +335,7 @@
           {title}
         </div>
         <button
-          on:click={closeModal}
+          onclick={closeModal}
           class="absolute top-2 right-2 text-gray-400 hover:text-white text-2xl"
         >
           &times;
@@ -336,11 +349,11 @@
                 <span>{plan.title}</span>
                 <div class="flex items-center gap-2">
                   <button
-                    on:click={() => deleteMissionPlan(plan.title)}
+                    onclick={() => deleteMissionPlan(plan.title)}
                     class="text-red-500 hover:text-red-700">Delete</button
                   >
                   <button
-                    on:click={() => loadMissionPlan(plan)}
+                    onclick={() => loadMissionPlan(plan)}
                     class="text-blue-500 hover:text-blue-700">Load</button
                   >
                 </div>
@@ -355,7 +368,7 @@
       </div>
       <div class="flex justify-center px-4 py-2 border-t">
         <button
-            on:click={importPlan}
+            onclick={importPlan}
             class="import-btn bg-transparent px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
           >
           <i class="fas fa-upload mr-1"></i>
@@ -382,14 +395,14 @@
               <span class="mr-2" title={plan.title}>{plan.title.substring(0, 11)}{#if plan.title.length >= 11}...{/if}</span>
               <div class="flex items-center gap-3 float-right relative">
                 <button
-                  on:click={() => deleteMissionPlan(plan.title)}
+                  onclick={() => deleteMissionPlan(plan.title)}
                   class="text-red-400 hover:text-red-600">
                     <i class="fas fa-trash-alt text-sm"></i>
                     <div class="tooltip">Delete</div>
                   </button
                 >
                 <button
-                  on:click={() => loadMissionPlan(plan)}
+                  onclick={() => loadMissionPlan(plan)}
                   class="text-[#62bbff] hover:text-[#377aad]">
                     <i class="fas fa-cloud-arrow-up text-sm"></i>
                     <div class="tooltip">Load</div>
@@ -407,7 +420,7 @@
     </div>
     <div class="absolute left-0 right-0 bottom-0 flex justify-center border-t" style="--tertiaryColor: {tertiaryColor}">
       <button
-          on:click={importPlan}
+          onclick={importPlan}
           class="import-btn hover:bg-[#4b5563] px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
         >
         <i class="fas fa-upload text-xs" title="Import Mission Plan"></i>
