@@ -5,7 +5,6 @@
   import { mapZoomStore, lockViewStore, threeDMapStore } from '../stores/mapStore';
   import { get } from 'svelte/store';
   import pkg from 'maplibre-gl';
-  import '../lib/maplibre-preload.modern.js';
   const { Map, Marker, NavigationControl } = pkg;
 
   let map: any = $state();
@@ -21,7 +20,19 @@
   let mavLocation = $derived($mavLocationStore);
   let mavHeading = $derived($mavHeadingStore);
 
+  function loadScrript() {
+    const script = document.createElement('script');
+    script.src = '/js/maplibre-preload.modern.js';
+    script.async = true;
+    script.onload = () => {
+      console.log('Maplibre GL JS loaded');
+    };
+    document.body.appendChild(script);
+  }
+
   onMount(() => {
+    loadScrript();
+
     const MAPTILER_KEY = 'FzmtxzLwraPRISOg9JeU';
     map = new Map({
       container: 'threedmap',

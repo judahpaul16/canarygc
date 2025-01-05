@@ -611,6 +611,13 @@
       }
     }
   });
+
+  // Update the map when actions store changes
+  $effect(() => {
+    for (let index = 0; index < Object.keys(actions).length; index++) {
+      updateMap(index);
+    }
+  });
 </script>
 
 <style lang="css">
