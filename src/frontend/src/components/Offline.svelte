@@ -1,4 +1,3 @@
-<svelte:options accessors={true} />
 <script lang="ts">
   import {
     darkModeStore,
@@ -7,13 +6,13 @@
     tertiaryColorStore
   } from '../stores/customizationStore';
 
-  let isMinimized = false;
+  let isMinimized = $state(false);
 
-  $: darkMode = $darkModeStore;
-  $: primaryColor = $primaryColorStore;
-  $: secondaryColor = darkMode ? $tertiaryColorStore : $secondaryColorStore;
-  $: tertiaryColor = $tertiaryColorStore;
-  $: fontColor = darkMode ? "#ffffff" : "#000000";
+  let darkMode = $derived($darkModeStore);
+  let primaryColor = $derived($primaryColorStore);
+  let secondaryColor = $derived(darkMode ? $tertiaryColorStore : $secondaryColorStore);
+  let tertiaryColor = $derived($tertiaryColorStore);
+  let fontColor = $derived(darkMode ? "#ffffff" : "#000000");
 
   function toggleMinimize() {
     isMinimized = !isMinimized;
@@ -38,7 +37,7 @@
         <div class="relative">
             <button
               class="absolute right-2 top-2 p-2 hover:bg-opacity-20 hover:bg-black rounded-full transition-colors"
-              on:click={toggleMinimize}
+              onclick={toggleMinimize}
               aria-label={isMinimized ? "Maximize" : "Minimize"}
             >
               {#if isMinimized}
@@ -59,7 +58,7 @@
               </p>
           </div>
           <div class="px-4 py-2 flex justify-center">
-              <button class="px-2 py-1 mb-2 text-center bg-slate-400 hover:bg-[#ff3333] text-white rounded-lg" on:click={() => window.location.reload()}>
+              <button class="px-2 py-1 mb-2 text-center bg-slate-400 hover:bg-[#ff3333] text-white rounded-lg" onclick={() => window.location.reload()}>
                   Refresh Window
               </button>
           </div>

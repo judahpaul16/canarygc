@@ -1,38 +1,43 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
   import { onMount } from 'svelte';
   import { mavHeadingStore, mavLocationStore } from '../stores/mavlinkStore';
   import { mapZoomStore, lockViewStore, threeDMapStore } from '../stores/mapStore';
   import { get } from 'svelte/store';
   import pkg from 'maplibre-gl';
+  import '../lib/maplibre-preload.modern.js';
   const { Map, Marker, NavigationControl } = pkg;
 
-  let map: any;
+  let map: any = $state();
   let marker: any;
+  let lastPosition = {
+    lng: 0,
+    lat: 0
+  };
 
-  $: map = $threeDMapStore;
-  $: mavLocation = $mavLocationStore;
-  $: mavHeading = $mavHeadingStore;
+  run(() => {
+    map = $threeDMapStore;
+  });
+  let mavLocation = $derived($mavLocationStore);
+  let mavHeading = $derived($mavHeadingStore);
 
   onMount(() => {
     const MAPTILER_KEY = 'FzmtxzLwraPRISOg9JeU';
     map = new Map({
       container: 'threedmap',
       style: `https://api.maptiler.com/maps/basic-v2/style.json?key=${MAPTILER_KEY}`,
-      center: [mavLocation.lng, mavLocation.lat], // starting position [lng, lat]
-      zoom: get(mapZoomStore), // starting zoom
+      center: [mavLocation.lng, mavLocation.lat],
+      zoom: get(mapZoomStore),
       pitch: 45,
       canvasContextAttributes: {antialias: true}
     });
     
-    // The 'building' layer in the streets vector source contains building-height
-    // data from OpenStreetMap.
     map.on('load', () => {
         // Insert the layer beneath any symbol layer.
         const layers = map.getStyle().layers;
 
         let labelLayerId;
         for (let i = 0; i < layers.length; i++) {
-            // @ts-ignore
             if (layers[i].type === 'symbol' && layers[i].layout['text-field']) {
                 labelLayerId = layers[i].id;
                 break;
@@ -83,6 +88,12 @@
                 showCompass: true
             }), 'top-left'
         );
+
+        // Store initial position
+        lastPosition = {
+          lng: mavLocation.lng,
+          lat: mavLocation.lat
+        };
     });
 
     map.on('zoom', () => {
@@ -96,12 +107,11 @@
     }, 1000);
   });
 
-  
   function updateMAVMarker() {
     if (mavLocation) {
       marker?.remove();
       let img = new Image();
-      img.src = '/map/here.png'; // Use static path directly
+      img.src = '/map/here.png';
       img.onload = () => {
         let canvas = document.createElement('canvas');
         canvas.width = img.width;
@@ -115,18 +125,37 @@
           canvas.style.height = '50px';
           marker = new Marker({ element: canvas });
           marker.setLngLat([mavLocation.lng, mavLocation.lat]);
-          // offset camera bearing
           marker.setRotation(mavHeading - map.getBearing());
           marker.addTo(map);
         }
       };
-      if (get(lockViewStore) && !map.isMoving()) {
+
+      // Only update map position if locked and distance changed significantly
+      if (get(lockViewStore) && !map.isMoving() && 
+          (Math.abs(lastPosition.lng - mavLocation.lng) > 0.0001 || 
+           Math.abs(lastPosition.lat - mavLocation.lat) > 0.0001)) {
+        
+        // Preload tiles before movement
+        map.cachedJumpTo({
+          center: [mavLocation.lng, mavLocation.lat],
+          zoom: get(mapZoomStore),
+          run: false, // Don't execute movement yet, just preload
+          debug: false // Set to true to see preloading logs
+        });
+
+        // Then execute the actual movement
         map.jumpTo({
           center: [mavLocation.lng, mavLocation.lat],
           zoom: get(mapZoomStore),
           speed: 0.5,
           curve: 1
         });
+
+        // Update last known position
+        lastPosition = {
+          lng: mavLocation.lng,
+          lat: mavLocation.lat
+        };
       }
     }
   }

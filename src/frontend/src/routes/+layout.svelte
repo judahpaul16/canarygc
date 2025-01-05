@@ -1,10 +1,11 @@
+<!-- @migration-task Error while migrating Svelte code: Can't migrate code with afterUpdate. Please migrate by hand. -->
 <script lang="ts">
   import { MavType, MavState, MavAutopilot } from 'mavlink-mappings/dist/lib/minimal';
   import { MavCmd, MavResult } from 'mavlink-mappings/dist/lib/common';
   import { CopterMode } from 'mavlink-mappings/dist/lib/ardupilotmega';
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import { page } from '$app/stores';
-  import { onMount, onDestroy, afterUpdate } from 'svelte';
+  import { onMount, onDestroy, afterUpdate, mount, unmount } from 'svelte';
   import { goto } from '$app/navigation';
   import '../app.css';
   import {
@@ -215,15 +216,15 @@
   };
 
   const showNotification = (config: NotificationConfig) => {
-    const notification = new Notification({
-      target: document.body,
-      props: {
-        title: config.title,
-        content: config.content,
-        type: config.type
-      }
-    });
-    setTimeout(() => notification.$destroy(), config.duration || 10000);
+    const notification = mount(Notification, {
+          target: document.body,
+          props: {
+            title: config.title,
+            content: config.content,
+            type: config.type
+          }
+        });
+    setTimeout(() => unmount(notification), config.duration || 10000);
   };
 
   function decodeParameterValue(encodedValue: string, paramType: string): number {

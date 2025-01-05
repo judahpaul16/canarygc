@@ -1,64 +1,75 @@
-<svelte:options accessors={true} />
 <script lang="ts">
-    import { onMount, afterUpdate, onDestroy } from 'svelte';
-    import { notificationCountStore } from '../stores/notificationCountStore';
-    import { get } from 'svelte/store';
+	import { onMount, onDestroy } from 'svelte';
+	import { notificationCountStore } from '../stores/notificationCountStore';
+	import { get } from 'svelte/store';
 
-    export let id: number = get(notificationCountStore);
-    export let title: string;
-    export let content: string;
-    export let type: string = 'info';
+	let { title, content, type = 'info' } = $props<{
+		id: number;
+		title: string;
+		content: string;
+		type: string;
+	}>();
+	let id = $state(get(notificationCountStore));
 
-    let translateY: string = '0px';
-    let interval: NodeJS.Timeout;
+	let translateY = $state('0px');
+	let interval: NodeJS.Timeout;
 
-    const close = () => {
-        document.getElementById(`notification-${id}`)?.remove();
-        updateTranslateY();
-    };
+	function close() {
+		document.getElementById(`notification-${id}`)?.remove();
+		updateTranslateY();
+	}
 
-    const updateTranslateY = () => {
-        const notifications = Array.from(document.querySelectorAll('.notification'));
-        notificationCountStore.set(notifications.length);
-        const notificationHeight = notifications[notifications.length - 1].clientHeight + 8;
+	function updateTranslateY() {
+		const notifications = Array.from(document.querySelectorAll('.notification'));
+		notificationCountStore.set(notifications.length);
+		const notificationHeight =
+			(notifications[notifications.length - 1] as HTMLElement).clientHeight + 8;
 
-        notifications.forEach((notif, index) => {
-            // @ts-ignore
-            notif.style.transform = `translateY(${index * notificationHeight}px)`;
-        });
-        translateY = `translateY(${notifications.findIndex(n => n.id === `notification-${id}`) * notificationHeight}px)`;
-    };
+		notifications.forEach((notif, index) => {
+			(notif as HTMLElement).style.transform = `translateY(${index * notificationHeight}px)`;
+		});
+		translateY = `translateY(${
+			notifications.findIndex((n) => n.id === `notification-${id}`) * notificationHeight
+		}px)`;
+	}
 
-    onMount(() => {
-        interval = setInterval(() => {
-            updateTranslateY();
-        }, 1000);
-    });
+	onMount(() => {
+		interval = setInterval(() => {
+			updateTranslateY();
+		}, 1000);
+		// Because effects run after state updates, and `updateTranslateY` reads the DOM,
+		// we need to run it in an effect to ensure it runs after the DOM updates.
+		// We could also use `$effect.pre` to run it before the DOM updates,
+		// but in this case it's simpler to use an effect.
+		$effect(() => {
+			updateTranslateY();
+		});
+	});
 
-    onDestroy(() => {
-        clearInterval(interval);
-    });
-
-    afterUpdate(() => {
-        updateTranslateY();
-    });
+	onDestroy(() => {
+		clearInterval(interval);
+	});
 </script>
 
-<div class="notification notification-{type} fixed top-4 right-4 z-50 rounded-lg" id="notification-{id}">
-    <div class="shadow-lg max-w-sm w-full rounded-lg">
-        <div class="relative rounded-[1.5em]">
-            <div class="px-4 py-2 text-lg font-semibold rounded-[1.5em] text-center">
-                {title}
-            </div>
-            <button on:click={close} class="absolute top-2 right-2 text-gray-400 hover:text-white text-2xl">
-                &times;
-            </button>
-        </div>
-        <hr class="border-[#ffffff7c] w-[80%] m-auto rounded" />
-        <div class="px-4 py-2 rounded-[1.5em] text-center">
-            {@html content}
-        </div>
-    </div>
+<div
+	class="notification notification-{type} fixed top-4 right-4 z-50 rounded-lg"
+	id="notification-{id}"
+	style:transform={translateY}
+>
+	<div class="shadow-lg max-w-sm w-full rounded-lg">
+		<div class="relative rounded-[1.5em]">
+			<div class="px-4 py-2 text-lg font-semibold rounded-[1.5em] text-center">
+				{title}
+			</div>
+			<button onclick={close} class="absolute top-2 right-2 text-gray-400 hover:text-white text-2xl">
+				×
+			</button>
+		</div>
+		<hr class="border-[#ffffff7c] w-[80%] m-auto rounded" />
+		<div class="px-4 py-2 rounded-[1.5em] text-center">
+			{@html content}
+		</div>
+	</div>
 </div>
 
 <style>

@@ -8,21 +8,14 @@
     tertiaryColorStore
   } from '../stores/customizationStore';
   
-  export let mavLocation: L.LatLng | { lat: number; lng: number };
-  let heading: string;
+  interface Props {
+    mavLocation: L.LatLng | { lat: number; lng: number };
+  }
 
-  $: darkMode = $darkModeStore;
-  $: primaryColor = $primaryColorStore;
-  $: secondaryColor = $secondaryColorStore;
-  $: tertiaryColor = $tertiaryColorStore;
-  $: fontColor = darkMode ? '#ffffff' : '#000000';
-
-  $: mavLocation = $mavLocationStore,
-    updateCompass($mavHeadingStore);
-  $: heading = formatHeading($mavHeadingStore);
-
-  $: currentLat = formatCoordinates(mavLocation.lat, true);
-  $: currentLong = formatCoordinates(mavLocation.lng, false);
+  let { mavLocation = $bindable() }: Props = $props();
+  let heading: string = $state();
+  let currentLat: string = $state();
+  let currentLong: string = $state();
 
   onMount(() => {
     const updateHeading = (newHeading: number) => {
@@ -67,6 +60,25 @@
       }
     }
   }
+  let darkMode = $derived($darkModeStore);
+  let primaryColor = $derived($primaryColorStore);
+  let secondaryColor = $derived($secondaryColorStore);
+  let tertiaryColor = $derived($tertiaryColorStore);
+  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
+  
+  $effect.pre(() => {
+    mavLocation = $mavLocationStore;
+    currentLat = formatCoordinates(mavLocation.lat, true);
+    currentLong = formatCoordinates(mavLocation.lng, false);
+  });
+
+  $effect(() => {
+    updateCompass($mavHeadingStore);
+  });
+
+  $effect(() => {
+    heading = formatHeading($mavHeadingStore);
+  });
 </script>
 
 <div class="compass rounded-2xl flex flex-col items-center justify-center h-full w-full overflow-auto p-4"
