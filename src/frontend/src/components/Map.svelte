@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { run } from 'svelte/legacy';
-
   import { onMount, mount } from 'svelte';
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import {
@@ -538,59 +536,80 @@
       };
     }
   }
-  run(() => {
-    darkMode = $darkModeStore;
-  });
   let primaryColor = $derived($primaryColorStore);
   let secondaryColor = $derived($secondaryColorStore);
   let tertiaryColor = $derived($tertiaryColorStore);
   let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
   
-  run(() => {
+  // Consolidate store subscriptions
+  $effect(() => {
+    darkMode = $darkModeStore;
     lockView = $lockViewStore;
-  });
-  run(() => {
     zoom = $mapZoomStore;
-  });
-  run(() => {
     leafletMap = $mapStore;
-  });
-  run(() => {
     threeDMap = $threeDMapStore;
-  });
-  run(() => {
     mapType = $mapTypeStore;
-  });
-  run(() => {
     currentTileLayer = $mapTileLayerStore;
   });
-  run(() => {
-    mavHeading = $mavHeadingStore,
-          updateMAVMarker();
+
+  // Handle MAV updates
+  $effect(() => {
+    const newMavHeading = $mavHeadingStore;
+    const newMavLocation = $mavLocationStore;
+    
+    if (newMavHeading !== mavHeading || 
+        (newMavLocation && 
+         (newMavLocation.lat !== mavLocation?.lat || 
+          newMavLocation.lng !== mavLocation?.lng))) {
+      mavHeading = newMavHeading;
+      mavLocation = newMavLocation;
+      if (leafletMap && mavLocation) {
+        updateMAVMarker();
+      }
+    }
   });
-  run(() => {
-    mavLocation = $mavLocationStore,
-          updateMAVMarker();
+
+  // Handle mission plan updates
+  $effect(() => {
+    const newActions = $missionPlanActionsStore;
+    if (newActions && JSON.stringify(newActions) !== JSON.stringify(actions)) {
+      actions = newActions;
+      if (leafletMap) {
+        removeAllMarkers();
+        updateMAVMarker();
+        Object.keys(actions).forEach(index => updateMap(Number(index)));
+      }
+    }
   });
-  run(() => {
-    actions = $missionPlanActionsStore,
-      removeAllMarkers(),
-      updateMAVMarker(),
-      Object.keys(actions).forEach((index) => {
-        updateMap(Number(index));
-      });
+
+  // Handle marker updates
+  $effect(() => {
+    const newMarkers = $markersStore;
+    if (newMarkers && newMarkers.size !== markers.size) {
+      markers = newMarkers;
+      if (leafletMap) {
+        Object.keys(actions).forEach(index => {
+          const markerIndex = Number(index);
+          updateMap(markerIndex);
+        });
+      }
+    }
   });
-  run(() => {
-    markers = $markersStore,
-      Object.keys(actions).forEach((index) => {
-        updateMap(Number(index));
-      });
-  });
-  run(() => {
-    polylines = $polylinesStore,
-      Object.keys(actions).forEach((index) => {
-        updateMap(Number(index));
-      });
+
+  // Handle polyline updates
+  $effect(() => {
+    const newPolylines = $polylinesStore;
+    if (newPolylines && newPolylines.size !== polylines.size) {
+      polylines = newPolylines;
+      if (leafletMap) {
+        Object.keys(actions).forEach(index => {
+          const markerIndex = Number(index);
+          if (markerIndex > 0) {
+            updateMap(markerIndex);
+          }
+        });
+      }
+    }
   });
 </script>
 
