@@ -16,9 +16,8 @@
 
   let { mavLocation = $bindable() }: Props = $props();
   let heading: string = $state();
-
-
-
+  let currentLat: string = $state();
+  let currentLong: string = $state();
 
   onMount(() => {
     const updateHeading = (newHeading: number) => {
@@ -68,15 +67,20 @@
   let secondaryColor = $derived($secondaryColorStore);
   let tertiaryColor = $derived($tertiaryColorStore);
   let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
-  run(() => {
-    mavLocation = $mavLocationStore,
-      updateCompass($mavHeadingStore);
+  
+  $effect.pre(() => {
+    mavLocation = $mavLocationStore;
+    currentLat = formatCoordinates(mavLocation.lat, true);
+    currentLong = formatCoordinates(mavLocation.lng, false);
   });
-  run(() => {
+
+  $effect(() => {
+    updateCompass($mavHeadingStore);
+  });
+
+  $effect(() => {
     heading = formatHeading($mavHeadingStore);
   });
-  let currentLat = $derived(formatCoordinates(mavLocation.lat, true));
-  let currentLong = $derived(formatCoordinates(mavLocation.lng, false));
 </script>
 
 <div class="compass rounded-2xl flex flex-col items-center justify-center h-full w-full overflow-auto p-4"

@@ -1,4 +1,3 @@
-<svelte:options ={true} />
 <script lang="ts">
   import {
     darkModeStore,
