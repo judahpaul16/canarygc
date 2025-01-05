@@ -70,11 +70,6 @@
   let darkMode = $state(get(darkModeStore));
   
   let lockView = $state(get(lockViewStore)); // Declare lockView with $state
-  
-
-
-
-
 
   onMount(async () => {
     try {
