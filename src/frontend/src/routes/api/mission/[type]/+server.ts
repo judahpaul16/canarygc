@@ -55,7 +55,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
                 let title = event.request.headers.get('title');
                 let result = await client.execute({sql: "SELECT * FROM mission WHERE title = ?", args: [title]});
                 
-                return new Response(JSON.stringify(result.rows.length > 0 ? result.rows[0] : {}), {
+                return new Response(JSON.stringify(result.rows.length > 0 ? result.rows : {}), {
                     status: 200,
                     headers: {
                         "content-type": "application/json"
@@ -65,11 +65,11 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
                 console.error(err);
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
             }
-        case ' update':
+        case 'update':
             try {
                 let title = event.request.headers.get('title');
                 let actions = event.request.headers.get('actions');
-                client.execute({sql: "UPDATE mission SET actions = ? WHERE title = ?", args: [actions, title]});
+                await client.execute({sql: "UPDATE mission SET actions = ? WHERE title = ?", args: [actions, title]});
                 
                 return new Response(JSON.stringify({}), {
                     status: 200,
