@@ -24,7 +24,6 @@
     mavArmedStateStore,
     mavSatelliteStore,
     type Parameter,
-    type ParameterMeta
   } from '../stores/mavlinkStore';
   import {
     missionPlanTitleStore,
@@ -40,7 +39,7 @@
     tertiaryColorStore
   } from '../stores/customizationStore';
   import { loggedInStore } from '../stores/authStore';
-  import { get, writable } from 'svelte/store';
+  import { get } from 'svelte/store';
   import Offline from '../components/Offline.svelte';
   import Notification from '../components/Notification.svelte';
   import { mapTypeStore } from '../stores/mapStore';
@@ -658,9 +657,6 @@
           </a>
           <a href="/user-settings" on:click|preventDefault={() => handleNavigation('/parameters')} class="nav-button mb-4 {currentPath === '/parameters' ? 'active' : ''}">
             <i class="nav-icon fas fa-cog"></i>&nbsp;&nbsp;Vehicle Parameters
-          </a>
-          <a href="/admin" on:click|preventDefault={() => handleNavigation('/admin')} class="nav-button mb-4">
-            <i class="nav-icon fas fa-user"></i>&nbsp;&nbsp;Admin Dashboard
           </a>
           <button on:click|preventDefault={handleLogout} class="nav-button mb-4" type="button">
             <i class="nav-icon fas fa-sign-out-alt"></i>&nbsp;&nbsp;Logout
