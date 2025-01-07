@@ -22,25 +22,24 @@
 	function updateTranslateY() {
 		const notifications = Array.from(document.querySelectorAll('.notification'));
 		notificationCountStore.set(notifications.length);
-		const notificationHeight =
-			(notifications[notifications.length - 1] as HTMLElement).clientHeight + 8;
+		const lastNotification = notifications[notifications.length - 1] as HTMLElement;
 
-		notifications.forEach((notif, index) => {
-			(notif as HTMLElement).style.transform = `translateY(${index * notificationHeight}px)`;
-		});
-		translateY = `translateY(${
-			notifications.findIndex((n) => n.id === `notification-${id}`) * notificationHeight
-		}px)`;
+		if (lastNotification) {
+			const notificationHeight = lastNotification.clientHeight + 8;
+
+			notifications.forEach((notif, index) => {
+				(notif as HTMLElement).style.transform = `translateY(${index * notificationHeight}px)`;
+			});
+			translateY = `translateY(${
+				notifications.findIndex((n) => n.id === `notification-${id}`) * notificationHeight
+			}px)`;
+		}
 	}
 
 	onMount(() => {
 		interval = setInterval(() => {
 			updateTranslateY();
 		}, 1000);
-		// Because effects run after state updates, and `updateTranslateY` reads the DOM,
-		// we need to run it in an effect to ensure it runs after the DOM updates.
-		// We could also use `$effect.pre` to run it before the DOM updates,
-		// but in this case it's simpler to use an effect.
 		$effect(() => {
 			updateTranslateY();
 		});
