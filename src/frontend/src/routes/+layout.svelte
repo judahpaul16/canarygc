@@ -44,6 +44,9 @@
   import Notification from '../components/Notification.svelte';
   import { mapTypeStore } from '../stores/mapStore';
 
+  // Import utility functions
+  import { toProperCase, extractValue, parseLocation, calculateSpeed } from '../lib/utils/helpers';
+
   let currentPath = '';
   let heightOfDashboard = 1000;
   let logs: string[] = [];
@@ -79,11 +82,6 @@
   } else if (battery && battery > batteryAlerts[batteryAlertIndex]) {
     batteryAlertShown = false;
   }
-
-  // @ts-ignore
-  String.prototype.toProperCase = function () {
-    return this.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase();});
-  };
 
   function updateDashboardHeight() {
     const dashboard = document.querySelector('.dashboard');
@@ -193,27 +191,6 @@
     duration?: number;
   }
 
-  // Helper functions to extract and parse values from log text
-  function extractValue(text: string, key: string): string {
-    const match = text.match(new RegExp(`"${key}":"?([^,"]+)"?`));
-    return match ? match[1].replace(/^"|"$/g, '') : '';
-  }
-
-  const parseLocation = (lat: string | null, lon: string | null): Position | null => {
-    if (!lat || !lon) return null;
-    return {
-      lat: parseFloat(lat) / 1e7,
-      lng: parseFloat(lon) / 1e7
-    };
-  };
-
-  const calculateSpeed = (text: string): number | null => {
-    const vx = parseInt(extractValue(text, 'vx') || '0') / 100;
-    const vy = parseInt(extractValue(text, 'vy') || '0') / 100;
-    const vz = parseInt(extractValue(text, 'vz') || '0') / 100;
-    return Math.sqrt(Math.pow(vx, 2) + Math.pow(vy, 2) + Math.pow(vz, 2));
-  };
-
   const showNotification = (config: NotificationConfig) => {
     const notification = mount(Notification, {
           target: document.body,
@@ -293,11 +270,6 @@
     },
 
     HEARTBEAT: (text: string) => {
-      let toProperCase = (str: string): string => {
-        return str.replace(/\w\S*/g, function(txt) {
-          return txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase();
-        });
-      }
       const type = extractValue(text, 'type');
       if (type) mavTypeStore.set(toProperCase(MavType[parseInt(type)]));
 
