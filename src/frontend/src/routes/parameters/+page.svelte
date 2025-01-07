@@ -6,7 +6,6 @@
     import { onMount, mount, unmount } from 'svelte';
     import { get, writable, type Writable } from 'svelte/store';
     import Modal from '../../components/Modal.svelte';
-    import { text } from '@sveltejs/kit';
 
     const loading: Writable<boolean> = writable(false);
     const success: Writable<string | null> = writable(null);
@@ -234,6 +233,7 @@
                             class="relative px-4 py-2 bg-[#6e6e6e] text-white rounded-lg hover:bg-blue-600 transition-colors"
                             onclick={exportParameters}
                             disabled={$loading}
+                            aria-label="Export Parameters"
                         >
                             <i class="fa-solid fa-download"></i>
                             <span class="tooltip">Export Parameters</span>
@@ -242,6 +242,7 @@
                             class="relative px-4 py-2 bg-[#f89d47] text-white rounded-lg hover:bg-[#ec9c33] transition-colors"
                             onclick={importParameters}
                             disabled={$loading}
+                            aria-label="Import Parameters"
                         >
                             <i class="fa-solid fa-upload"></i>
                             <span class="tooltip">Import Parameters</span>
@@ -250,6 +251,7 @@
                             class="relative px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                             onclick={requestParameters}
                             disabled={$loading}
+                            aria-label="Refresh Parameters"
                         >
                             <i class="fa-solid fa-sync"></i>
                             <span class="tooltip">Refresh Parameters</span>
