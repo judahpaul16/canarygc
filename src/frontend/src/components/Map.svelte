@@ -159,15 +159,15 @@
     if (mapType.toLowerCase() === 'openstreetmap') {
       currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           minZoom: 0,
-          maxZoom: 21,
+          maxZoom: 20,
         }).addTo(leafletMap);
       mapType = 'OpenStreetMap';
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
     } else {
-      currentTileLayer = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.png&api_key=ae953b98-e832-47ca-a71b-654324a329dc', {
+      currentTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
           minZoom: 0,
-          maxZoom: 21,
+          maxZoom: 20,
         }).addTo(leafletMap);
       mapType = 'Satellite';
       mapTypeStore.set(mapType);
@@ -233,7 +233,7 @@
       map.classList.remove('satellite');
       currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         minZoom: 0,
-        maxZoom: 21,
+        maxZoom: 20,
       }).addTo(leafletMap);
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
@@ -243,9 +243,9 @@
       mapType = 'Satellite';
       map.classList.remove('dark');
       map.classList.add('satellite');
-      currentTileLayer = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.jpg', {
+      currentTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         minZoom: 0,
-        maxZoom: 21,
+        maxZoom: 20,
       }).addTo(leafletMap);
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
