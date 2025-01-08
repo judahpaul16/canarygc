@@ -1,11 +1,10 @@
-<!-- @migration-task Error while migrating Svelte code: Can't migrate code with afterUpdate. Please migrate by hand. -->
 <script lang="ts">
   import { MavType, MavState, MavAutopilot } from 'mavlink-mappings/dist/lib/minimal';
   import { MavCmd, MavResult } from 'mavlink-mappings/dist/lib/common';
   import { CopterMode } from 'mavlink-mappings/dist/lib/ardupilotmega';
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import { page } from '$app/stores';
-  import { onMount, onDestroy, afterUpdate, mount, unmount } from 'svelte';
+  import { onMount, onDestroy, mount, unmount } from 'svelte';
   import { goto } from '$app/navigation';
   import '../app.css';
   import {
@@ -47,41 +46,54 @@
   // Import utility functions
   import { toProperCase, extractValue, parseLocation, calculateSpeed } from '../lib/utils/helpers';
 
-  let currentPath = '';
-  let heightOfDashboard = 1000;
-  let logs: string[] = [];
-  let online = get(onlineStore);
+  let currentPath = $state('');
+  let heightOfDashboard = $state(1000);
+  let online = $state($onlineStore);
 
   let statusCheckInterval: NodeJS.Timeout;
-  let loggedIn = get(loggedInStore);
+  let loggedIn = $state($loggedInStore);
 
   const batteryAlerts = [50, 20, 15, 10, 5];
   let batteryAlertIndex = 0;
   let batteryAlertShown = false;
-  
-  $: loggedIn = $loggedInStore;
-  $: battery = $mavBatteryStore;
-  $: online = $onlineStore;
-  $: darkMode = $darkModeStore;
-  $: primaryColor = $primaryColorStore;
-  $: secondaryColor = $secondaryColorStore;
-  $: tertiaryColor = $tertiaryColorStore;
-  $: fontColor = darkMode ? '#ffffff' : '#000000';
-  $: currentPath = $page.url.pathname;
-  $: isNavHidden = currentPath === '/' || currentPath === '/login' || currentPath === '/register';
-  $: missionCountStore.set(Object.keys($missionPlanActionsStore).length - 1);
-  $: actions = $missionPlanActionsStore;
-  $: if (battery && battery <= batteryAlerts[batteryAlertIndex] && !batteryAlertShown) {
-    showNotification({
-      title: 'Low Battery Alert',
-      content: `Battery level is at ${battery}%. It's highly recommended to return to home or land immediately to prevent a crash.`,
-      type: battery <= 20 ? 'error' : 'warning',
-    });
-    batteryAlertIndex++;
-    batteryAlertShown = true;
-  } else if (battery && battery > batteryAlerts[batteryAlertIndex]) {
-    batteryAlertShown = false;
-  }
+
+  // Declare darkMode and other variables
+  let darkMode = $state($darkModeStore);
+  let primaryColor = $state($primaryColorStore);
+  let secondaryColor = $state($secondaryColorStore);
+  let tertiaryColor = $state($tertiaryColorStore);
+  let battery: number;
+
+  $effect(() => {
+      loggedIn = $loggedInStore;
+      battery = $mavBatteryStore;
+      online = $onlineStore;
+      darkMode = $darkModeStore;
+      primaryColor = $primaryColorStore;
+      secondaryColor = $secondaryColorStore;
+      tertiaryColor = $tertiaryColorStore;
+  });
+
+  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
+  $effect(() => (currentPath = $page.url.pathname));
+    let isNavHidden = $derived(
+      currentPath === '/' || currentPath === '/login' || currentPath === '/register'
+    );
+  $effect(() => missionCountStore.set(Object.keys($missionPlanActionsStore).length - 1));
+    let actions = $missionPlanActionsStore;
+  $effect(() => {
+      if (battery && battery <= batteryAlerts[batteryAlertIndex] && !batteryAlertShown) {
+        showNotification({
+            title: 'Low Battery Alert',
+            content: `Battery level is at ${battery}%. It's highly recommended to return to home or land immediately to prevent a crash.`,
+            type: battery <= 20 ? 'error' : 'warning'
+          });
+          batteryAlertIndex++;
+          batteryAlertShown = true;
+      } else if (battery && battery > batteryAlerts[batteryAlertIndex]) {
+          batteryAlertShown = false;
+      }
+  });
 
   function updateDashboardHeight() {
     const dashboard = document.querySelector('.dashboard');
@@ -378,7 +390,7 @@
       }
     }
   };
-
+  let logs = [];
   async function getLogs(text: string) {
     // truncate old logs to save memory
     logs = logs.slice(-1000);
@@ -471,7 +483,8 @@
     clearInterval(statusCheckInterval);
   });
 
-  afterUpdate(() => {
+  // Use the $effect rune to run code after the DOM updates
+  $effect(() => {
     const dashboard = document.querySelector('.dashboard');
     if (dashboard) {
       if (resizeObserver) {
@@ -482,6 +495,7 @@
       });
       resizeObserver.observe(dashboard);
     }
+
     if (currentPath === '/' || currentPath === '/login' || currentPath === '/register') {
       // @ts-ignore
       document.querySelector('.desktop-nav').style.display = 'none';
@@ -489,6 +503,13 @@
       // @ts-ignore
       document.querySelector('.desktop-nav').style.display = 'grid';
     }
+
+    // Cleanup function for the effect
+    return () => {
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+    };
   });
 
   function refreshCookie() {
@@ -506,8 +527,8 @@
     else if (currentPath !== path) goto(path);
   }
 
-  let isNavOpen = false;
-  function toggleNav() {
+   let isNavOpen = $state(false);
+   function toggleNav() {
     isNavOpen = !isNavOpen;
   }
   
