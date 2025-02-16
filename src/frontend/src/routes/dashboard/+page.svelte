@@ -13,7 +13,7 @@
 </script>
 
 <sveltekit:head>
-  <title>MAV Manager GCS - Dashboard</title>
+  <title>Canary Ground Control - Dashboard</title>
 </sveltekit:head>
 
 <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">

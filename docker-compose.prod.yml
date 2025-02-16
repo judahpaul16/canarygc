@@ -7,7 +7,7 @@ services:
       - "/dev/ttyACM0:/dev/ttyACM0"
     ports:
       - "3000:3000"
-    container_name: mmgcs_frontend
+    container_name: canarygc_frontend
     environment:
       - CHOKIDAR_USEPOLLING=true
       - NODE_ENV=production
@@ -19,7 +19,7 @@ services:
 
   webrtc:
     image: bluenviron/mediamtx:latest-rpi
-    container_name: mmgcs_webrtc
+    container_name: canarygc_webrtc
     environment:
       - MTX_PATHS_CAM_SOURCE=rpiCamera
       - MTX_WEBRTCICESERVERS=stun:stun.l.google.com:19302

@@ -1,7 +1,7 @@
-**End User License Agreement (EULA) for MAV Manager FM and MAV Manager GCS**
+**End User License Agreement (EULA) for Canary Ground Control**
 
 **1. Grant of License**  
-The Licensor grants the Licensee a non-exclusive, non-transferable license to use the software products MAV Manager FM (Fleet Management) and MAV Manager GCS (Ground Control Station) ("Software") solely for personal or internal business purposes, subject to the terms and conditions set forth in this agreement.
+The Licensor grants the Licensee a non-exclusive, non-transferable license to use the software products Canary Ground Control (Ground Control Station) ("Software") solely for personal or internal business purposes, subject to the terms and conditions set forth in this agreement.
 
 **2. Restrictions**  
 The Licensee agrees not to:  
