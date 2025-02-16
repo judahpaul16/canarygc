@@ -1,10 +1,10 @@
 <div align="center">
 
-# 🚁 MAV Manager GCS 📡
+# 🚁 Canary Ground Control 📡
 
 ![Raspberry Pi Version](https://img.shields.io/badge/Raspberry_Pi-Zero%20%2F%204B-red?style=flat-square&logo=raspberry-pi)
 ![Docker Compose Version](https://img.shields.io/badge/Docker%20Compose-v2.27.1-blue?style=flat-square&logo=docker)
-![Latest Docker Image](https://img.shields.io/docker/v/judahpaul/mmgcs)
+![Latest Docker Image](https://img.shields.io/docker/v/judahpaul/canarygc)
 
 A web-based ground control station (GCS) for remote autopilot management via the [MAVLink protocol](https://en.wikipedia.org/wiki/MAVLink).
 
@@ -16,7 +16,7 @@ A web-based ground control station (GCS) for remote autopilot management via the
 
 ## 🤔 How Does It Work?
 
-Unlike traditional GCS software, MAV Manager GCS is a web-based application that runs on a Raspberry Pi--making it a part of the flight stack. This enables you to manage your autopilot from anywhere in the world, as long as you have an internet connection.
+Unlike traditional GCS software, Canary Ground Control is a web-based application that runs on a Raspberry Pi--making it a part of the flight stack. This enables you to manage your autopilot from anywhere in the world, as long as you have an internet connection.
 ![Diagram](screenshots/diagram.png)
 
 ---
@@ -25,19 +25,19 @@ Unlike traditional GCS software, MAV Manager GCS is a web-based application that
 
 ### Production Deployment
 ```bash
-curl -s https://raw.githubusercontent.com/MAV-Manager/mmgcs_public/main/contrib/setup.sh | \
+curl -s https://raw.githubusercontent.com/MAV-Manager/canarygc_public/main/contrib/setup.sh | \
     bash -s --
 ```
 
 ### Local Testing with SITL
 ```bash
-curl -s https://raw.githubusercontent.com/MAV-Manager/mmgcs_public/main/contrib/setup.sh | \
+curl -s https://raw.githubusercontent.com/MAV-Manager/canarygc_public/main/contrib/setup.sh | \
     bash -s -- --simulation
 ```
 
 ### Install-Only (Without System Setup)
 ```bash
-curl -s https://raw.githubusercontent.com/MAV-Manager/mmgcs_public/main/contrib/setup.sh | \
+curl -s https://raw.githubusercontent.com/MAV-Manager/canarygc_public/main/contrib/setup.sh | \
     bash -s -- --install-only
 ```
 
@@ -197,10 +197,10 @@ fi
 #### INSTALL ####
 if [[ "$1" != "--setup-only" ]]; then
     cd ~
-    sudo rm -rf mmgcs
-    git clone https://github.com/MAV-Manager/mmgcs_public.git mmgcs
-    cd mmgcs
-    sudo chown -R $(whoami):www-data /home/$(whoami)/mmgcs
+    sudo rm -rf canarygc
+    git clone https://github.com/MAV-Manager/canarygc_public.git canarygc
+    cd canarygc
+    sudo chown -R $(whoami):www-data /home/$(whoami)/canarygc
     sudo chmod +x contrib/setup.sh
     
     if [[ "$1" == "--simulation" ]]; then
@@ -230,7 +230,7 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/home/$(whoami)/mmgcs/contrib/setup.sh --setup-only
+ExecStart=/home/$(whoami)/canarygc/contrib/setup.sh --setup-only
 RemainAfterExit=yes
 
 [Install]

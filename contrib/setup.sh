@@ -149,10 +149,10 @@ fi
 #### INSTALL ####
 if [[ "$1" != "--setup-only" ]]; then
     cd ~
-    sudo rm -rf mmgcs
-    git clone https://github.com/MAV-Manager/mmgcs_public.git mmgcs
-    cd mmgcs
-    sudo chown -R $(whoami):www-data /home/$(whoami)/mmgcs
+    sudo rm -rf canarygc
+    git clone https://github.com/MAV-Manager/canarygc_public.git canarygc
+    cd canarygc
+    sudo chown -R $(whoami):www-data /home/$(whoami)/canarygc
     sudo chmod +x contrib/setup.sh
     
     if [[ "$1" == "--simulation" ]]; then
@@ -182,7 +182,7 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/home/$(whoami)/mmgcs/contrib/setup.sh --setup-only
+ExecStart=/home/$(whoami)/canarygc/contrib/setup.sh --setup-only
 RemainAfterExit=yes
 
 [Install]

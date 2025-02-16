@@ -618,7 +618,7 @@
         {/if}
       </div>
       <div class="flex flex-col justify-self-end gap-3">
-        <a class="nav-button" aria-label="GitHub" href="https://github.com/MAV-Manager/mmgcs" target="_blank">
+        <a class="nav-button" aria-label="GitHub" href="https://github.com/MAV-Manager/canarygc" target="_blank">
         <i class="nav-icon fab fa-github"></i>
         <div class="tooltip text-white">GitHub</div>
         </a>
@@ -639,7 +639,7 @@
         <button class="nav-button" aria-label="Toggle Navigation" on:click={toggleNav}>
           <i class="nav-icon fas fa-bars"></i>
         </button>
-        <span class="text-xl font-semibold">MAV Manager GCS</span>
+        <span class="text-xl font-semibold">Canary Ground Control</span>
         <a href="/" on:click|preventDefault={() => handleNavigation('/')}>
           <img src="/logo.png" alt="Logo" class="w-8 h-8">
         </a>

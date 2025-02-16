@@ -4,14 +4,14 @@ setlocal enabledelayedexpansion
 :: Change to user's home directory
 cd %USERPROFILE%
 
-:: Remove mmgcs directory if it exists
-if exist mmgcs (
-    rmdir /s /q mmgcs
+:: Remove canarygc directory if it exists
+if exist canarygc (
+    rmdir /s /q canarygc
 )
 
 :: Clone the repository
-git clone https://github.com/MAV-Manager/mmgcs_public.git mmgcs
-cd mmgcs
+git clone https://github.com/MAV-Manager/canarygc_public.git canarygc
+cd canarygc
 
 docker compose down
 docker system prune -af

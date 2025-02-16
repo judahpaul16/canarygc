@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile.dev
     ports:
       - "5173:5173"
-    container_name: mmgcs_frontend
+    container_name: canarygc_frontend
     volumes:
       - ./src/frontend:/app
       - /app/node_modules
@@ -31,7 +31,7 @@ services:
       - SPEEDUP=1
       - VEHICLE=ArduCopter
     tty: true
-    container_name: mmgcs_sitl
+    container_name: canarygc_sitl
     ports:
       - "5760:5760"
     healthcheck:
@@ -42,7 +42,7 @@ services:
   #   build:
   #     context: ./src/sitl
   #     dockerfile: Dockerfile.px4
-  #   container_name: mmgcs_sitl
+  #   container_name: canarygc_sitl
   #   ports:
   #     - "5760:5760"
   #   environment:

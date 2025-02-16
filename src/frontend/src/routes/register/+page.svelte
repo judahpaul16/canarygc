@@ -101,7 +101,7 @@
   </script>
   
   <sveltekit:head>
-    <title>MAV Manager GCS - Register</title>
+    <title>Canary Ground Control - Register</title>
   </sveltekit:head>
   
   <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0" 

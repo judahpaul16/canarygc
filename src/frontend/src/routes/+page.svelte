@@ -14,14 +14,14 @@
 </script>
 
 <sveltekit:head>
-  <title>MAV Manager GCS - Home</title>
+  <title>Canary Ground Control - Home</title>
 </sveltekit:head>
 
 <div class="flex items-center justify-center h-full"
   style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
 >
   <div class="card p-8 rounded-3xl shadow-lg max-w-md w-full">
-    <h1 class="text-3xl font-bold mb-4 text-center">MAV Manager GCS</h1>
+    <h1 class="text-3xl font-bold mb-4 text-center">Canary Ground Control</h1>
     <p class="text-lg text-center">Hello, admin!
       Continue to <a href="/dashboard" class="text-blue-500 underline">dashboard</a>.
     </p>
