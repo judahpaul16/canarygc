@@ -56,7 +56,7 @@
                     'fill-extrusion-color': [
                         'interpolate',
                         ['linear'],
-                        ['get', 'render_height'], 0, 'lightgray', 200, 'royalblue', 400, 'lightblue'
+                        ['get', 'render_height'], 0, 'gray', 200, 'royalblue', 400, 'lightblue'
                     ],
                     'fill-extrusion-height': [
                         'interpolate',
@@ -75,6 +75,22 @@
             },
             labelLayerId
         );
+
+        // Add satellite overlay
+        map.addLayer({
+            'id': 'satellite',
+            'type': 'raster',
+            'source': {
+                'type': 'raster',
+                'tiles': [
+                    'http://mt0.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
+                ],
+                'tileSize': 256
+            },
+            'paint': {
+                'raster-opacity': 0.5
+            }
+        });
 
         map.addControl(
             new NavigationControl({

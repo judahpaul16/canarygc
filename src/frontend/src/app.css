@@ -65,7 +65,21 @@ iframe {
   filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
 }
 .leaflet-control-attribution {
-  display: none;
+  display: inline-flex;
+  width: 100% !important;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5em !important;
+  margin: 10px !important;
+  border-radius: 15px;
+}
+.leaflet-control-attribution a {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.leaflet-control-attribution a:hover {
+  color: #3182ce;
 }
 
 .tooltip {
