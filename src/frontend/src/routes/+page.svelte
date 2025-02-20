@@ -20,8 +20,11 @@
 <div class="flex items-center justify-center h-full"
   style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
 >
-  <div class="card p-8 rounded-3xl shadow-lg max-w-md w-full">
-    <h1 class="text-3xl font-bold mb-4 text-center">Canary Ground Control</h1>
+  <div class="card p-8 rounded-3xl shadow-lg">
+    <h1 class="text-3xl font-bold mb-4 text-center inline-flex items-center justify-center">
+      <img src="logo.png" alt="Canary Ground Control Logo" class="mx-auto mb-4 mr-2" style="width: 50px;">
+      Canary Ground Control
+    </h1>
     <p class="text-lg text-center">Hello, admin!
       Continue to <a href="/dashboard" class="text-blue-500 underline">dashboard</a>.
     </p>
