@@ -19,7 +19,7 @@
       container: 'threedmap',
       style: `https://api.maptiler.com/maps/basic-v2/style.json?key=${MAPTILER_KEY}`,
       center: [mavLocation.lng, mavLocation.lat], // starting position [lng, lat]
-      zoom: get(mapZoomStore), // starting zoom
+      zoom: get(mapZoomStore) - 1, // starting zoom
       pitch: 45,
       canvasContextAttributes: {antialias: true}
     });
@@ -102,7 +102,7 @@
     });
 
     map.on('zoom', () => {
-      mapZoomStore.set(map.getZoom());
+      mapZoomStore.set(map.getZoom() + 1);
     });
 
     threeDMapStore.set(map);
@@ -139,7 +139,7 @@
       if (get(lockViewStore) && !map.isMoving()) {
         map.jumpTo({
           center: [mavLocation.lng, mavLocation.lat],
-          zoom: get(mapZoomStore),
+          zoom: get(mapZoomStore) - 1,
           speed: 0.5,
           curve: 1
         });
