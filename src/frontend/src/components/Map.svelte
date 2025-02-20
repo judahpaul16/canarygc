@@ -165,9 +165,10 @@
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
     } else {
-      currentTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      currentTileLayer = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
           minZoom: 0,
           maxZoom: 20,
+          subdomains:['mt0','mt1','mt2','mt3']
         }).addTo(leafletMap);
       mapType = 'Satellite';
       mapTypeStore.set(mapType);
@@ -243,9 +244,10 @@
       mapType = 'Satellite';
       map.classList.remove('dark');
       map.classList.add('satellite');
-      currentTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      currentTileLayer = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
         minZoom: 0,
         maxZoom: 20,
+        subdomains:['mt0','mt1','mt2','mt3']
       }).addTo(leafletMap);
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
