@@ -105,7 +105,8 @@
   style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
 >
   <div class="dashboard w-fit h-fit flex flex-col justify-center p-10 rounded-3xl max-w-[400px]">
-    <h2 class="text-2xl font-bold mb-4 text-center">
+    <h2 class="text-2xl font-bold mb-4 text-center inline-flex items-center justify-center w-fit m-auto">
+      <img src="logo.png" alt="Canary Ground Control Logo" class="mx-auto mb-4 mr-2" style="width: 50px;">
       Login to GCS
     </h2>
     {#if error}
