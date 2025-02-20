@@ -160,6 +160,7 @@
       currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           minZoom: 0,
           maxZoom: 20,
+          attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
         }).addTo(leafletMap);
       mapType = 'OpenStreetMap';
       mapTypeStore.set(mapType);
@@ -168,7 +169,8 @@
       currentTileLayer = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
           minZoom: 0,
           maxZoom: 20,
-          subdomains:['mt0','mt1','mt2','mt3']
+          subdomains:['mt0','mt1','mt2','mt3'],
+          attribution: 'Map data &copy; <a href="https://www.google.com/maps">Google Maps</a>'
         }).addTo(leafletMap);
       mapType = 'Satellite';
       mapTypeStore.set(mapType);
@@ -187,7 +189,6 @@
 
     // @ts-ignore
     if (hideOverlay) Array.from(document.querySelectorAll('.map-btn i')).forEach((element) => element.style.fontSize = "small");
-    
     updateMAVMarker();
 
     const locationDisplay = document.querySelector('#location-display')!;
@@ -216,6 +217,11 @@
       }
     });
 
+    // @ts-ignore
+    if (hideOverlay) document.querySelector('.leaflet-control-attribution')!.style.display = 'none';
+    // @ts-ignore
+    else document.querySelector('.leaflet-control-attribution')!.style.display = 'inline-flex';
+
     mapStore.set(leafletMap);
     mavLocationStore.set(mavLocation);
   }
@@ -235,6 +241,7 @@
       currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         minZoom: 0,
         maxZoom: 20,
+        attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
       }).addTo(leafletMap);
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
@@ -247,7 +254,8 @@
       currentTileLayer = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
         minZoom: 0,
         maxZoom: 20,
-        subdomains:['mt0','mt1','mt2','mt3']
+        subdomains:['mt0','mt1','mt2','mt3'],
+        attribution: 'Map data &copy; <a href="https://www.google.com/maps">Google Maps</a>'
       }).addTo(leafletMap);
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
@@ -260,6 +268,10 @@
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(null);
     }
+    // @ts-ignore
+    if (hideOverlay) document.querySelector('.leaflet-control-attribution')!.style.display = 'none';
+    // @ts-ignore
+    else document.querySelector('.leaflet-control-attribution')!.style.display = 'inline-flex';
   }
 
   function toggleLockView() {
@@ -291,6 +303,10 @@
         window.dispatchEvent(new Event('resize'));
       }, 1000);
     }
+    // @ts-ignore
+    if (hideOverlay) document.querySelector('.leaflet-control-attribution')!.style.display = 'none';
+    // @ts-ignore
+    else document.querySelector('.leaflet-control-attribution')!.style.display = 'inline-flex';
   }
 
   function handleFullScreen() {
@@ -632,7 +648,7 @@
     <input type="checkbox" value="" class="sr-only peer" on:click={toggleMap}>
     <span class="text-white flex items-center gap-2">
       <i class="fas fa-map"></i>
-      <span>{mapType}</span>
+      <span>{mapType == '3D' ? '3D Buildings' : mapType}</span>
     </span>
     <div class="relative w-16 h-6 ml-3 bg-[#2b7c3f rounded-full transition-colors peer-focus:outline-none" class:bg-blue-500={mapType === 'OpenStreetMap'} class:bg-green-500={mapType === 'Satellite'} class:bg-purple-500={mapType === '3D'}>
       <div class="absolute top-[2px] left-[2px] bg-white rounded-full h-5 w-5 transition-all duration-300" style:transform={mapType === 'OpenStreetMap' ? 'translateX(0)' : mapType === 'Satellite' ? 'translateX(100%)' : 'translateX(200%)'}></div>
