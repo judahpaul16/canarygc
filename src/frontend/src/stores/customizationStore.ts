@@ -1,5 +1,7 @@
 import { writable } from 'svelte/store';
 
+export const audoNotificationStore = writable(true);
+
 export const darkModeStore = writable(true);
 export const primaryColorStore = writable('#1c1c1e'); // Light theme: #ffffff, See routes/+layout.svelte: toggleDarkMode()
 export const secondaryColorStore = writable('#121212'); // Light theme: #e7e9ef, See routes/+layout.svelte: toggleDarkMode()

@@ -36,7 +36,8 @@
     darkModeStore,
     primaryColorStore,
     secondaryColorStore,
-    tertiaryColorStore
+    tertiaryColorStore,
+    audoNotificationStore
   } from '../stores/customizationStore';
   import { loggedInStore } from '../stores/authStore';
   import { get, writable } from 'svelte/store';
@@ -59,6 +60,7 @@
   $: loggedIn = $loggedInStore;
   $: battery = $mavBatteryStore;
   $: online = $onlineStore;
+  $: audioNotification = $audoNotificationStore;
   $: darkMode = $darkModeStore;
   $: primaryColor = $primaryColorStore;
   $: secondaryColor = $secondaryColorStore;
@@ -223,6 +225,10 @@
         type: config.type
       }
     });
+    if (audioNotification && (config.type === 'warning' || config.type === 'error')) {
+      const utterance = new SpeechSynthesisUtterance(config.content);
+      speechSynthesis.speak(utterance);
+    }
     setTimeout(() => notification.$destroy(), config.duration || 10000);
   };
 
@@ -568,6 +574,11 @@
       tertiaryColorStore.set('#d7d7d7');
     }
   }
+
+  function toggleAudioNotifications() {
+    audioNotification = !audioNotification;
+    audoNotificationStore.set(audioNotification);
+  }
 </script>
 
 <main class="bg-black flex overflow-auto"
@@ -618,15 +629,15 @@
         {/if}
       </div>
       <div class="flex flex-col justify-self-end gap-3">
+        <button class="nav-button" on:click={toggleAudioNotifications}>
+          <i class="nav-icon fas {audioNotification ? 'fa-volume-up' : 'fa-volume-mute'}"></i>
+          <div class="tooltip text-white">Toggle Audio Notifications</div>
+        </button>
+        <div class="separator h-[2px] w-[80%] mx-auto mb-2 rounded-2xl"></div>
         <button class="nav-button" aria-label="Dark Mode" on:click={toggleDarkMode}>
           <i class="nav-icon fas {darkMode ? 'fa-sun' : 'fa-moon'}"></i>
           <div class="tooltip text-white">Toggle Dark Mode</div>
         </button>
-        <div class="separator h-[2px] w-[80%] mx-auto mb-2 rounded-2xl"></div>
-        <a class="nav-button" aria-label="FAA Rules" href="https://www.faa.gov/uas" target="_blank">
-          <i class="nav-icon fas fa-plane-circle-exclamation"></i>
-          <div class="tooltip text-white">FAA Rules and Regulations for Unmanned Aircraft Systems (UAS)</div>
-        </a>
       </div>
     </nav>
 
