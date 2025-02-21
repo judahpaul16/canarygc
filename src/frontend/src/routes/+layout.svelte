@@ -543,13 +543,13 @@
     let map = document.getElementById('map');
     darkMode = !darkMode;
     darkModeStore.set(darkMode);
-    if (map && get(mapTypeStore) !== 'satellite') {
+    if (map && get(mapTypeStore) !== 'Satellite') {
       map.classList.add('dark');
     } else {
       if (map) map.classList.remove('dark');
     }
     if (darkMode) {
-      if (map && get(mapTypeStore) !== 'satellite') {
+      if (map && get(mapTypeStore) !== 'Satellite') {
         map.classList.add('dark');
       }
       // @ts-ignore
@@ -558,7 +558,7 @@
       secondaryColorStore.set('#121212');
       tertiaryColorStore.set('#2d2d2d');
     } else {
-      if (map && get(mapTypeStore) !== 'satellite') {
+      if (map && get(mapTypeStore) !== 'Satellite') {
         map.classList.remove('dark');
       }
       // @ts-ignore
@@ -618,14 +618,14 @@
         {/if}
       </div>
       <div class="flex flex-col justify-self-end gap-3">
-        <a class="nav-button" aria-label="GitHub" href="https://github.com/MAV-Manager/canarygc" target="_blank">
-        <i class="nav-icon fab fa-github"></i>
-        <div class="tooltip text-white">GitHub</div>
-        </a>
+        <button class="nav-button" aria-label="Dark Mode" on:click={toggleDarkMode}>
+          <i class="nav-icon fas {darkMode ? 'fa-sun' : 'fa-moon'}"></i>
+          <div class="tooltip text-white">Toggle Dark Mode</div>
+        </button>
         <div class="separator h-[2px] w-[80%] mx-auto mb-2 rounded-2xl"></div>
         <a class="nav-button" aria-label="FAA Rules" href="https://www.faa.gov/uas" target="_blank">
-        <i class="nav-icon fas fa-plane-circle-exclamation"></i>
-        <div class="tooltip text-white">FAA Rules and Regulations for Unmanned Aircraft Systems (UAS)</div>
+          <i class="nav-icon fas fa-plane-circle-exclamation"></i>
+          <div class="tooltip text-white">FAA Rules and Regulations for Unmanned Aircraft Systems (UAS)</div>
         </a>
       </div>
     </nav>
@@ -696,6 +696,7 @@
     z-index: 25;
     background-color: rgb(from var(--primaryColor) r g b / 0.5);
     border-radius: 50%;
+    display: none;
   }
 
   .dark-mode-btn button:hover {
@@ -789,6 +790,7 @@
       padding: 0.5rem;
       background-color: var(--tertiaryColor);
       border: 1px solid var(--secondaryColor);
+      display: unset;
     }
 
     .slot-container {
