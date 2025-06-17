@@ -1,13 +1,13 @@
 services:
-  frontend:
+  app:
     build:
-      context: ./src/frontend
+      context: ./compose/svelte-kit
       dockerfile: Dockerfile.prod
     devices:
       - "/dev/ttyACM0:/dev/ttyACM0"
     ports:
       - "3000:3000"
-    container_name: canarygc_frontend
+    container_name: canarygc_app
     environment:
       - CHOKIDAR_USEPOLLING=true
       - NODE_ENV=production

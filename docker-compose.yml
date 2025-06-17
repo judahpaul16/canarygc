@@ -1,13 +1,13 @@
 services:
-  frontend:
+  app:
     build:
-      context: ./src/frontend
+      context: ./compose/svelte-kit
       dockerfile: Dockerfile.dev
     ports:
       - "5173:5173"
-    container_name: canarygc_frontend
+    container_name: canarygc_app
     volumes:
-      - ./src/frontend:/app
+      - ./compose/svelte-kit:/app
       - /app/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true
@@ -40,7 +40,7 @@ services:
   # PX4 SITL
   # sitl:
   #   build:
-  #     context: ./src/sitl
+  #     context: ./compose/sitl
   #     dockerfile: Dockerfile.px4
   #   container_name: canarygc_sitl
   #   ports:
