@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 docker compose down
-docker system prune -af
+docker system prune -f
 docker compose up
 
 endlocal
