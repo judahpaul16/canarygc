@@ -1,5 +1,9 @@
 <div align="center">
 
+<span style="color: red;">⚠️ **Warning**: This project is in **early development** and is not yet ready for production use. Use at your own risk! **It is your responsibility** to understand the risks involved as well as the **laws and regulations** governing the use of unmanned aerial vehicles (UAVs) in your area. ⚠️</span>
+
+<img src="src/frontend/static/logo.png" alt="Canary Ground Control Logo" width="100"/>
+
 # 🚁 Canary Ground Control 📡
 
 ![Raspberry Pi Version](https://img.shields.io/badge/Raspberry_Pi-Zero%20%2F%204B-red?style=flat-square&logo=raspberry-pi)
