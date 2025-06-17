@@ -25,19 +25,19 @@ Unlike traditional GCS software, Canary Ground Control is a web-based applicatio
 
 ### Production Deployment
 ```bash
-curl -s https://raw.githubusercontent.com/MAV-Manager/canarygc_public/main/contrib/setup.sh | \
+curl -s https://raw.githubusercontent.com/judahpaul16/canarygc/main/contrib/setup.sh | \
     bash -s --
 ```
 
 ### Local Testing with SITL
 ```bash
-curl -s https://raw.githubusercontent.com/MAV-Manager/canarygc_public/main/contrib/setup.sh | \
+curl -s https://raw.githubusercontent.com/judahpaul16/canarygc/main/contrib/setup.sh | \
     bash -s -- --simulation
 ```
 
 ### Install-Only (Without System Setup)
 ```bash
-curl -s https://raw.githubusercontent.com/MAV-Manager/canarygc_public/main/contrib/setup.sh | \
+curl -s https://raw.githubusercontent.com/judahpaul16/canarygc/main/contrib/setup.sh | \
     bash -s -- --install-only
 ```
 
@@ -198,7 +198,7 @@ fi
 if [[ "$1" != "--setup-only" ]]; then
     cd ~
     sudo rm -rf canarygc
-    git clone https://github.com/MAV-Manager/canarygc_public.git canarygc
+    git clone https://github.com/judahpaul16/canarygc.git
     cd canarygc
     sudo chown -R $(whoami):www-data /home/$(whoami)/canarygc
     sudo chmod +x contrib/setup.sh

@@ -10,7 +10,7 @@ if exist canarygc (
 )
 
 :: Clone the repository
-git clone https://github.com/MAV-Manager/canarygc_public.git canarygc
+git clone https://github.com/judahpaul16/canarygc.git
 cd canarygc
 
 docker compose down

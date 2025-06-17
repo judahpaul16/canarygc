@@ -150,7 +150,7 @@ fi
 if [[ "$1" != "--setup-only" ]]; then
     cd ~
     sudo rm -rf canarygc
-    git clone git@github.com:judahpaul16/canarygc.git canarygc
+    git clone https://github.com/judahpaul16/canarygc.git
     cd canarygc
     sudo chown -R $(whoami):www-data /home/$(whoami)/canarygc
     sudo chmod +x contrib/setup.sh
