@@ -66,17 +66,17 @@ jobs:
           echo "Building version: $VERSION"
 
           # Build for AMD64
-          DOCKER_DEFAULT_PLATFORM=linux/amd64 docker compose -f docker-compose.prod.yml build frontend
-          docker tag canarygc-frontend ${{ secrets.DOCKERHUB_USERNAME }}/canarygc:$VERSION-amd64
+          DOCKER_DEFAULT_PLATFORM=linux/amd64 docker compose -f docker-compose.prod.yml build app
+          docker tag canarygc-app ${{ secrets.DOCKERHUB_USERNAME }}/canarygc:$VERSION-amd64
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/canarygc:$VERSION-amd64
-          docker tag canarygc-frontend ghcr.io/${{ github.repository_owner }}/canarygc:$VERSION-amd64
+          docker tag canarygc-app ghcr.io/${{ github.repository_owner }}/canarygc:$VERSION-amd64
           docker push ghcr.io/${{ github.repository_owner }}/canarygc:$VERSION-amd64
 
           # Build for ARM64
-          DOCKER_DEFAULT_PLATFORM=linux/arm64 docker compose -f docker-compose.prod.yml build frontend
-          docker tag canarygc-frontend ${{ secrets.DOCKERHUB_USERNAME }}/canarygc:$VERSION-arm64
+          DOCKER_DEFAULT_PLATFORM=linux/arm64 docker compose -f docker-compose.prod.yml build app
+          docker tag canarygc-app ${{ secrets.DOCKERHUB_USERNAME }}/canarygc:$VERSION-arm64
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/canarygc:$VERSION-arm64
-          docker tag canarygc-frontend ghcr.io/${{ github.repository_owner }}/canarygc:$VERSION-arm64
+          docker tag canarygc-app ghcr.io/${{ github.repository_owner }}/canarygc:$VERSION-arm64
           docker push ghcr.io/${{ github.repository_owner }}/canarygc:$VERSION-arm64
 
           # Create and push multi-arch manifests
