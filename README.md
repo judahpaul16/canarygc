@@ -104,4 +104,4 @@ curl -s https://raw.githubusercontent.com/judahpaul16/canarygc/main/contrib/setu
 ---
 
 ## 📜 License
-This software is made available under a propietary End Use License Agreement. See the [`LICENSE`](LICENSE.md) file for more information.
+This software is made available under the MIT License. See the [`LICENSE`](LICENSE.md) file for more information.

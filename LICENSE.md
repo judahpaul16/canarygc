@@ -1,28 +1,21 @@
-**End User License Agreement (EULA) for Canary Ground Control**
+MIT License
 
-**1. Grant of License**  
-The Licensor grants the Licensee a non-exclusive, non-transferable license to use the software products Canary Ground Control (Ground Control Station) ("Software") solely for personal or internal business purposes, subject to the terms and conditions set forth in this agreement.
+Copyright (c) 2025 Judah Paul
 
-**2. Restrictions**  
-The Licensee agrees not to:  
-- Copy, modify, or distribute the Software, except as expressly permitted by this agreement.  
-- Reverse engineer, decompile, or disassemble the Software.  
-- Transfer or sublicense the Software to any third party without the prior written consent of the Licensor.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-**3. Ownership**  
-The Software and all related intellectual property rights are owned by the Licensor. This license does not grant any ownership rights to the Licensee.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-**4. Termination**  
-The Licensor may terminate this agreement if the Licensee breaches any terms of this agreement. Upon termination, the Licensee must cease all use of the Software and destroy all copies.
-
-**5. No Warranty**  
-The Software is provided "as is" without warranty of any kind, either express or implied. The Licensor does not warrant that the Software will be free from defects or that it will meet the Licensee’s requirements.
-
-**6. Limitation of Liability**  
-In no event shall the Licensor be liable for any indirect, incidental, special, or consequential damages arising out of the use or inability to use the Software.
-
-**7. Governing Law**  
-This agreement shall be governed by and construed in accordance with the laws of The United States of America.
-
-**8. Entire Agreement**  
-This agreement constitutes the entire agreement between the parties concerning the Software and supersedes all prior agreements and understandings.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
