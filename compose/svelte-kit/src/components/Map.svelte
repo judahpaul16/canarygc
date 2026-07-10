@@ -75,27 +75,37 @@
   $: threeDMap = $threeDMapStore;
   $: mapType = $mapTypeStore;
   $: currentTileLayer = $mapTileLayerStore;
-  $: mavHeading = $mavHeadingStore,
-        updateMAVMarker();
-  $: mavLocation = $mavLocationStore,
-        updateMAVMarker();
+  $: {
+    mavHeading = $mavHeadingStore;
+    updateMAVMarker();
+  }
+  $: {
+    mavLocation = $mavLocationStore;
+    updateMAVMarker();
+  }
 
-  $: actions = $missionPlanActionsStore,
-    removeAllMarkers(),
-    updateMAVMarker(),
+  $: {
+    actions = $missionPlanActionsStore;
+    removeAllMarkers();
+    updateMAVMarker();
     Object.keys(actions).forEach((index) => {
       updateMap(Number(index));
     });
+  }
 
-  $: markers = $markersStore,
+  $: {
+    markers = $markersStore;
     Object.keys(actions).forEach((index) => {
       updateMap(Number(index));
     });
+  }
 
-  $: polylines = $polylinesStore,
+  $: {
+    polylines = $polylinesStore;
     Object.keys(actions).forEach((index) => {
       updateMap(Number(index));
     });
+  }
 
   onMount(async () => {
     try {

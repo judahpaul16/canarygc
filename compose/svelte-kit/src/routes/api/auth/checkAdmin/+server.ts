@@ -1,15 +1,11 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { createClient } from "@libsql/client";
 
-export const POST: RequestHandler = async (event): Promise<Response> => {
-    let client = createClient({ url: 'file:/app/src/data.db' });
-    let adminExists = false;
-    await client.execute("SELECT * FROM user").then((result) => {
-        if (result.rows.length > 0) {
-            adminExists = true;
-        }
-    });
-    return new Response(JSON.stringify({ adminExists: adminExists }), {
+export const POST: RequestHandler = async (): Promise<Response> => {
+    const client = createClient({ url: 'file:/app/src/data.db' });
+    const result = await client.execute("SELECT * FROM user");
+    const adminExists = result.rows.length > 0;
+    return new Response(JSON.stringify({ adminExists }), {
         status: 200,
         headers: {
             "content-type": "application/json"

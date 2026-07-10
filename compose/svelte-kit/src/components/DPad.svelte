@@ -1,11 +1,10 @@
 <script lang="ts">
   import { mavModeStore, mavAltitudeStore } from '../stores/mavlinkStore';
   import { get } from 'svelte/store';
-  import { primaryColorStore, tertiaryColorStore } from '../stores/customizationStore';
+  import { tertiaryColorStore } from '../stores/customizationStore';
 
   let altitude: number = get(mavAltitudeStore);
 
-  $: primaryColor = $primaryColorStore;
   $: tertiaryColor = $tertiaryColorStore;
   $: mavMode = $mavModeStore;
   $: altitude = $mavAltitudeStore;

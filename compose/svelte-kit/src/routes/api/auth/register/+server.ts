@@ -1,5 +1,4 @@
 import { lucia } from "$lib/server/auth";
-import { redirect } from "@sveltejs/kit";
 import { generateId } from "lucia";
 import { hash } from "@node-rs/argon2";
 import { SqliteError } from "libsql";
@@ -54,7 +53,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
                 ...sessionCookie.attributes
             });
         }
-    } catch (e: any) {
+    } catch (e) {
         if (e instanceof SqliteError && e.code === "SQLITE_CONSTRAINT_UNIQUE") {
             return new Response(JSON.stringify({ message: "Username already taken" }), {
                 status: 400,
@@ -63,7 +62,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
                 }
             });
         }
-        return new Response(JSON.stringify({ message: e.stack }), {
+        return new Response(JSON.stringify({ message: (e as Error).stack }), {
             status: 500,
             headers: {
                 "content-type": "application/json"

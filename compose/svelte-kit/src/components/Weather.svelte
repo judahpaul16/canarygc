@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount } from 'svelte';
   import weatherCodes from '../lib/weathercodes.json';
   import { mavLocationStore } from '../stores/mavlinkStore';
   import {
@@ -54,7 +54,7 @@
       const geocodeData = await geocodeResponse.json();
 
       if (weatherResponse.ok && geocodeResponse.ok) {
-        const { temperature: temp, weathercode, relative_humidity } = weatherData.current_weather;
+        const { temperature: temp, weathercode } = weatherData.current_weather;
         const isDaytime = new Date().getHours() >= 6 && new Date().getHours() < 18;
         const weatherCode = weatherCodesTyped[weathercode];
 
@@ -98,8 +98,8 @@
       } else {
         error = weatherData.reason || 'Failed to fetch weather data';
       }
-    } catch (err : any) {
-      error = err.message || 'Failed to fetch weather data';
+    } catch (err) {
+      error = (err as Error).message || 'Failed to fetch weather data';
     }
   }
 

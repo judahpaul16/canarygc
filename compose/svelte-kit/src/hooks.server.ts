@@ -1,15 +1,6 @@
 import { lucia } from "$lib/server/auth";
 import type { Handle } from "@sveltejs/kit";
 
-declare global {
-  namespace App {
-	interface Locals {
-		user: import("lucia").User | null;
-		session: import("lucia").Session | null;
-	}
-  }
-}
-
 export const handle: Handle = async ({ event, resolve }) => {
 	const sessionId = event.cookies.get(lucia.sessionCookieName);
 	if (!sessionId) {

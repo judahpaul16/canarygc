@@ -1,5 +1,4 @@
 import { lucia } from "$lib/server/auth";
-import { redirect } from "@sveltejs/kit";
 import { verify } from "@node-rs/argon2";
 import { db } from "$lib/server/db";
 import type { RequestHandler } from '@sveltejs/kit';
@@ -77,8 +76,8 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
                 ...sessionCookie.attributes
             });
         }
-    } catch (e: any) {
-        return new Response(JSON.stringify({ message: e.message }), {
+    } catch (e) {
+        return new Response(JSON.stringify({ message: (e as Error).message }), {
             status: 500,
             headers: {
                 "content-type": "application/json"

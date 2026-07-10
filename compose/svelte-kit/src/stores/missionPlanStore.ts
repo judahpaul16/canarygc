@@ -10,7 +10,7 @@ export interface MissionPlanItem {
     param2: number | null;
     param3: number | null;
     param4: number | null;
-    [key: string]: any; // Allow string indexing
+    [key: string]: number | string | null; // Allow string indexing
 }
 
 export type MissionPlanActions = { [key: number]: MissionPlanItem };

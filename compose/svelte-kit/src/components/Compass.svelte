@@ -17,8 +17,10 @@
   $: tertiaryColor = $tertiaryColorStore;
   $: fontColor = darkMode ? '#ffffff' : '#000000';
 
-  $: mavLocation = $mavLocationStore,
+  $: {
+    mavLocation = $mavLocationStore;
     updateCompass($mavHeadingStore);
+  }
   $: heading = formatHeading($mavHeadingStore);
 
   $: currentLat = formatCoordinates(mavLocation.lat, true);

@@ -13,8 +13,8 @@ import { REGISTRY } from '$lib/mavlink-registry'
 let port: SerialPort | Socket | null = null;
 let reader: MavLinkPacketParser | null = null;
 let online = false;
-let logs: string[] = [];
-let newLogs: string[] = [];
+const logs: string[] = [];
+const newLogs: string[] = [];
 let connecting = false;
 
 async function initializePort(): Promise<void> {
@@ -48,7 +48,7 @@ async function closeExistingConnection(): Promise<void> {
 }
 
 async function openNewConnection(): Promise<void> {
-    let isProduction = process.env.NODE_ENV === 'production';
+    const isProduction = process.env.NODE_ENV === 'production';
     if (isProduction === true) {
         // Use UART serial port in production
         port = new SerialPort({ path: '/dev/ttyACM0', baudRate: 115200, lock: false });

@@ -5,17 +5,14 @@
   import {
     darkModeStore,
     primaryColorStore,
-    secondaryColorStore,
-    tertiaryColorStore
+    secondaryColorStore
   } from '../stores/customizationStore';
 
   $: darkMode = $darkModeStore;
   $: primaryColor = $primaryColorStore;
   $: secondaryColor = $secondaryColorStore;
-  $: tertiaryColor = $tertiaryColorStore;
   $: fontColor = darkMode ? '#ffffff' : '#000000';
 
-  let isProduction = false;
   let containerAspect = 16 / 9;
   let videoAspect = 16 / 9;
 
@@ -92,13 +89,6 @@
     setInterval(() => fetchLiveFeed(), 5000);
 
     window.addEventListener('resize', adjustVideoSize);
-
-    let response = fetch('/api/mavlink/heartbeat');
-    response.then((res) => {
-      if (res.status === 200) {
-        isProduction = res.headers.get('isProduction') === 'true';
-      }
-    });
   });
 </script>
 

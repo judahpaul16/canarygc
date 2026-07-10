@@ -25,6 +25,13 @@ export default [
 		}
 	},
 	{
+		// TypeScript and svelte-check already report genuinely undefined
+		// identifiers; eslint's no-undef only false-positives on type-only names.
+		rules: {
+			'no-undef': 'off'
+		}
+	},
+	{
 		ignores: ['build/', '.svelte-kit/', 'dist/']
 	}
 ];
