@@ -4,3 +4,8 @@ node_modules
 
 # Database
 *.db
+
+# Env
+.env
+.env.*
+!.env.example
