@@ -129,7 +129,16 @@ The stack is a single `docker-compose.yml` with two profiles.
 docker compose --profile development up
 ```
 
-The app is served at `http://localhost:5173`; SITL exposes MAVLink on TCP `5760`.
+The app is served at `http://localhost:5173`; SITL exposes MAVLink on TCP `5760`. Set a different host port with `APP_DEV_PORT` in a root `.env` if 5173 collides.
+
+On first run the database is empty, so open `/register` to create the operator account. To reset it later, wipe the dev database and restart:
+
+```bash
+docker compose exec app-dev rm -f /app/src/data.db
+docker compose --profile development restart app-dev
+```
+
+The schema recreates empty on the next boot.
 
 **Production** builds the Node server image and runs the WebRTC camera bridge, talking to a real autopilot over UART:
 
