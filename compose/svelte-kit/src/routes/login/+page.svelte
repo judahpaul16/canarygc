@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { preventDefault } from 'svelte/legacy';
+
   import {
     darkModeStore,
     primaryColorStore,
@@ -8,16 +10,15 @@
   import { onMount } from 'svelte';
   import { loggedInStore } from '../../stores/authStore';
 
-  $: darkMode = $darkModeStore;
-  $: primaryColor = $primaryColorStore;
-  $: secondaryColor = $secondaryColorStore;
-  $: tertiaryColor = $tertiaryColorStore;
-  $: fontColor = darkMode ? '#ffffff' : '#000000';
+  let darkMode = $derived($darkModeStore);
+  let primaryColor = $derived($primaryColorStore);
+  let secondaryColor = $derived($secondaryColorStore);
+  let tertiaryColor = $derived($tertiaryColorStore);
+  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
 
-  let email = '';
-  let password = '';
-  let error = '';
-  let passwordStrength = 0;
+  let email = $state('');
+  let password = $state('');
+  let error = $state('');
   
   onMount(async () => {    
     if ($loggedInStore) window.location.href = '/dashboard';
@@ -75,26 +76,6 @@
     }
   }
 
-  function calculatePasswordStrength(pass: string): number {
-    let strength = 0;
-    if (pass.length >= 10) strength += 1;
-    if (pass.match(/[a-z]/) && pass.match(/[A-Z]/)) strength += 1;
-    if (pass.match(/\d/)) strength += 1;
-    if (pass.match(/[^a-zA-Z\d]/)) strength += 1;
-    return strength;
-  }
-
-  function getPasswordStrengthColor(strength: number): string {
-    const colors = ['#ff4444', '#ffbb33', '#00C851', '#33b5e5'];
-    return colors[strength - 1] || '#ff4444';
-  }
-
-  function getPasswordStrengthText(strength: number): string {
-    const texts = ['Weak', 'Fair', 'Good', 'Strong'];
-    return texts[strength - 1] || 'Too Weak';
-  }
-
-  $: passwordStrength = calculatePasswordStrength(password);
 </script>
 
 <sveltekit:head>
@@ -112,7 +93,7 @@
     {#if error}
       <div class="mb-4 p-2 bg-red-100 text-red-700 rounded">{error}</div>
     {/if}
-    <form on:submit|preventDefault={handleSubmit}>
+    <form onsubmit={preventDefault(handleSubmit)}>
       <div class="mb-4">
         <label for="email" class="block">Email</label>
         <input type="email" id="email" bind:value={email} class="w-full px-3 py-2 rounded" required />

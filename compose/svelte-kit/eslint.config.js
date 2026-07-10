@@ -28,10 +28,18 @@ export default [
 		// TypeScript and svelte-check already report genuinely undefined
 		// identifiers; eslint's no-undef only false-positives on type-only names.
 		rules: {
-			'no-undef': 'off'
+			'no-undef': 'off',
+			'@typescript-eslint/no-unused-vars': [
+				'error',
+				{ argsIgnorePattern: '^_', varsIgnorePattern: '^_' }
+			],
+			// The app deploys at the domain root, so every href already resolves.
+			'svelte/no-navigation-without-resolve': 'off',
+			// Map/Set instances here are imperative marker caches, not template state.
+			'svelte/prefer-svelte-reactivity': 'off'
 		}
 	},
 	{
-		ignores: ['build/', '.svelte-kit/', 'dist/']
+		ignores: ['build/', '.svelte-kit/', '.svelte-kit.old/', 'dist/']
 	}
 ];

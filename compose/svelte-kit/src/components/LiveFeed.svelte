@@ -1,17 +1,17 @@
 <script lang="ts">
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import { onMount } from 'svelte';
-  import Modal from './Modal.svelte';
+  import { showModal } from '../lib/overlays';
   import {
     darkModeStore,
     primaryColorStore,
     secondaryColorStore
   } from '../stores/customizationStore';
 
-  $: darkMode = $darkModeStore;
-  $: primaryColor = $primaryColorStore;
-  $: secondaryColor = $secondaryColorStore;
-  $: fontColor = darkMode ? '#ffffff' : '#000000';
+  let darkMode = $derived($darkModeStore);
+  let primaryColor = $derived($primaryColorStore);
+  let secondaryColor = $derived($secondaryColorStore);
+  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
 
   let containerAspect = 16 / 9;
   let videoAspect = 16 / 9;
@@ -19,15 +19,10 @@
   function toggleFullScreen(element: HTMLElement) {
     if (!document.fullscreenElement) {
       element.requestFullscreen().catch(err => {
-        new Modal({
-          target: document.body,
-          props: {
-            title: 'Error',
-            content: `Error attempting to enable full-screen mode: ${err.message} (${err.name})`,
-            isOpen: true,
-            confirmation: false,
-            notification: true,
-          },
+        showModal({
+          title: 'Error',
+          content: `Error attempting to enable full-screen mode: ${err.message} (${err.name})`,
+          notification: true,
         });
       });
     } else {
@@ -100,10 +95,10 @@
     <iframe allowfullscreen id="live-feed" title="Live Feed" src={ typeof window !== 'undefined' ? `http://${window.location.hostname}:8889/cam`  : ''}></iframe>
     <div class="tab absolute top-2 left-2 bg-[#f24e4eb9] text-[#ffffff] text-md px-2 py-1 rounded-full z-20">Live Feed</div>
     <div class="caution-text opacity-[50%] text-md absolute bottom-2 left-2 bg-[#252525cf] px-2 py-1 mr-[0.5em] rounded-full z-20">Use Caution: The feed may be slightly delayed.</div>
-    <button class="absolute top-2 right-14 p-2 px-[14px] rounded-full z-20 opacity-[60%]" on:click={rotateVideo}>
+    <button class="absolute top-2 right-14 p-2 px-[14px] rounded-full z-20 opacity-[60%]" onclick={rotateVideo}>
       <i class="fas fa-sync-alt"></i>
     </button>
-    <button class="absolute top-2 right-2 p-2 px-[14px] rounded-full z-20 opacity-[60%]" on:click={handleFullScreen}>
+    <button class="absolute top-2 right-2 p-2 px-[14px] rounded-full z-20 opacity-[60%]" onclick={handleFullScreen}>
       <i class="fas fa-expand"></i>
     </button>
   </div>

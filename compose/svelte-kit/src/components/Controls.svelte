@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run, preventDefault } from 'svelte/legacy';
+
   import Map from './Map.svelte';
   import DPad from './DPad.svelte';
   import Weather from './Weather.svelte';
@@ -10,55 +12,36 @@
     tertiaryColorStore
   } from '../stores/customizationStore';
   import { get } from 'svelte/store';
+  import { sendMavlinkCommand, setFlightMode, setPositionLocal } from '../lib/mavlink-client';
+  import { isGuidedLabel } from '../lib/flight-modes';
 
-  let altitude = get(mavAltitudeStore);
-  let maxSpeed: string = '';
-  let altitudeSetPoint: string = '';
+  const SPEED_TYPE_GROUNDSPEED = 1;
+  const YAW_STEP_DEG = 10;
+  const YAW_RATE_DEG_PER_S = 10;
+  const YAW_RELATIVE_OFFSET = 1;
+  const ALTITUDE_STEP_M = 10;
 
-  $: darkMode = $darkModeStore;
-  $: primaryColor = $primaryColorStore;
-  $: secondaryColor = $secondaryColorStore;
-  $: tertiaryColor = $tertiaryColorStore;
-  $: fontColor = darkMode ? '#ffffff' : '#000000';
-  $: mavMode = $mavModeStore;
-  $: mavLocation = $mavLocationStore;
-  $: altitude = $mavAltitudeStore;
-  $: mavSatellite = $mavSatelliteStore;
+  let altitude = $state(get(mavAltitudeStore));
+  let maxSpeed: string = $state('');
+  let altitudeSetPoint: string = $state('');
 
-  async function sendMavlinkCommand(command: string, params: string  = '', useCmdLong: string = 'false', useArduPilotMega: string = 'false') {
-    const response = await fetch(`/api/mavlink/send_command`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'command': command,
-        'params': params,
-        'useCmdLong': useCmdLong,
-        'useArduPilotMega': useArduPilotMega
-      },
-    });
-    if (response.ok) {
-      console.log(await response.text());
-    } else {
-      console.error(`Error: ${await response.text()}`);
-    }
+  async function ensureGuided() {
+    if (!isGuidedLabel(mavMode)) await setFlightMode('GUIDED');
   }
-  
-  async function setPositionLocal(x: string, y: string, z: string) {
-    const response = await fetch("/api/mavlink/set_position_local", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x": x,
-        "y": y,
-        "z": z,
-      },
-    });
-    if (response.ok) {
-      console.log(`Local position set successfully: x: ${x}, y: ${y}, z: ${z}`);
-    } else {
-      console.error("Failed to set local position");
-    }
-  }
+
+  let darkMode = $derived($darkModeStore);
+  let primaryColor = $derived($primaryColorStore);
+  let secondaryColor = $derived($secondaryColorStore);
+  let tertiaryColor = $derived($tertiaryColorStore);
+  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
+  let mavMode = $derived($mavModeStore);
+  let mavLocation = $derived($mavLocationStore);
+  run(() => {
+    altitude = $mavAltitudeStore;
+  });
+  let mavSatellite = $derived($mavSatelliteStore);
+
+
 </script>
 
 <div class="controls px-10 rounded-2xl h-full flex items-center overflow-x-auto overflow-y-hidden gap-4"
@@ -107,10 +90,10 @@
           <input type="number" min="0" max="100" class="form-input" placeholder="100 m" bind:value={altitudeSetPoint} />
         </div>
         <button class="set-btn text-[8pt] rounded-full py-1 px-3 mt-2"
-          on:click|preventDefault={() => {
-            if (!isNaN(parseInt(maxSpeed))) sendMavlinkCommand('DO_CHANGE_SPEED', `${[1, maxSpeed]}`);
-            if (!isNaN(parseInt(altitudeSetPoint))) setPositionLocal('0', '0', `-${altitudeSetPoint}`);
-          }}>
+          onclick={preventDefault(() => {
+            if (!isNaN(parseInt(maxSpeed))) sendMavlinkCommand('DO_CHANGE_SPEED', [SPEED_TYPE_GROUNDSPEED, maxSpeed]);
+            if (!isNaN(parseInt(altitudeSetPoint))) setPositionLocal(0, 0, -parseInt(altitudeSetPoint));
+          })}>
           Set
         </button>
       </form>
@@ -119,18 +102,18 @@
     <div class="alt-btns column flex flex-col items-center justify-center text-center space-y-4">
       <div class="flex flex-col items-center">
         <div class="label text-sm mb-1" title="Altitude Up">Altitude Up</div>
-        <button class="alt-button rounded-full" on:click={() => {
-          if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true');
-          setPositionLocal('0', '0', `-${altitude + 10}`)
+        <button class="alt-button rounded-full" onclick={async () => {
+          await ensureGuided();
+          setPositionLocal(0, 0, -(altitude + ALTITUDE_STEP_M));
         }}>
           <i class="alt-up fas fa-arrow-up"></i>
         </button>
       </div>
       <div class="flex flex-col items-center justify-center">
         <div class="label text-sm mb-1" title="Altitude Down">Altitude Down</div>
-        <button class="alt-button rounded-full" on:click={() => {
-            if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true');
-            setPositionLocal('0', '0', `-${altitude - 10}`)
+        <button class="alt-button rounded-full" onclick={async () => {
+            await ensureGuided();
+            setPositionLocal(0, 0, -(altitude - ALTITUDE_STEP_M));
           }}>
             <i class="alt-down fas fa-arrow-down"></i>
         </button>
@@ -141,9 +124,9 @@
       <div id="rotate-left-button" class="flex flex-col items-center">
         <div class="label text-sm mb-1">Rotate Left</div>
         <button class="rotate-button rotate-left rounded-full"
-          on:click={() => {
-              if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true');
-              sendMavlinkCommand('CONDITION_YAW', `${[10, 10, -1, 1]}`);
+          onclick={async () => {
+              await ensureGuided();
+              sendMavlinkCommand('CONDITION_YAW', [YAW_STEP_DEG, YAW_RATE_DEG_PER_S, -1, YAW_RELATIVE_OFFSET]);
             }}>
           <i class="fas fa-rotate-left"></i>
         </button>
@@ -151,9 +134,9 @@
       <div class="flex flex-col items-center">
         <div class="label text-sm mb-1">Rotate Right</div>
         <button class="rotate-button rotate-right rounded-full"
-          on:click={() => {
-              if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true');
-              sendMavlinkCommand('CONDITION_YAW', `${[10, 10, 1, 1]}`);
+          onclick={async () => {
+              await ensureGuided();
+              sendMavlinkCommand('CONDITION_YAW', [YAW_STEP_DEG, YAW_RATE_DEG_PER_S, 1, YAW_RELATIVE_OFFSET]);
             }}>
           <i class="fas fa-rotate-right"></i>
         </button>

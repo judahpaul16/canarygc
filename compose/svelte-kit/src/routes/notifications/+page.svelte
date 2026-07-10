@@ -1,7 +1,7 @@
 <script lang="ts">
     import { primaryColorStore, secondaryColorStore } from '../../stores/customizationStore';
-    $: primaryColor = $primaryColorStore;
-    $: secondaryColor = $secondaryColorStore;
+    let primaryColor = $derived($primaryColorStore);
+    let secondaryColor = $derived($secondaryColorStore);
   </script>
 
 <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">

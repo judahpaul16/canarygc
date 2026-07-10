@@ -73,7 +73,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
             const actions = event.request.headers.get('actions');
             if (!actions) return new Response('Mission actions not provided', { status: 400 });
             try {
-                const items = Object.entries(JSON.parse(actions));
+                const items = Object.entries(JSON.parse(actions) as Record<string, import('$lib/server/mavlink').MissionItemInput>);
                 await setMissionCount(items.length);
                 for (const [key, val] of items) {
                     await new Promise((resolve) => setTimeout(resolve, 250)); // Pace item uploads

@@ -1,30 +1,35 @@
 <script lang="ts">
-    import { onDestroy, onMount, afterUpdate } from 'svelte';
     import { mavlinkLogStore, mavStateStore } from '../../stores/mavlinkStore';
     import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../../stores/customizationStore';
-    import Modal from '../../components/Modal.svelte';
-    import { get } from 'svelte/store';
-    
-    let logs: string[] = get(mavlinkLogStore);
-    let logContainer: HTMLElement;
-    let showTimeSync = false;
-    let showParamValue = false;
-    let showGPSRawInt = false;
-    let showSysStatus = false;
-    let searchTerm = '';
-    let systemState = get(mavStateStore);
+    import { showModal } from '../../lib/overlays';
 
-    $: logs = $mavlinkLogStore;
-    $: systemState = $mavStateStore;
-    $: darkMode = $darkModeStore;
-    $: primaryColor = $primaryColorStore;
-    $: secondaryColor = $secondaryColorStore;
-    $: tertiaryColor = $tertiaryColorStore;
-    $: fontColor = darkMode ? '#ffffff' : '#000000';
+    const HEARTBEAT_FLASH_MS = 2000;
+
+    let logContainer: HTMLElement | undefined = $state();
+    let showTimeSync = $state(false);
+    let showParamValue = $state(false);
+    let showGPSRawInt = $state(false);
+    let showSysStatus = $state(false);
+    let searchTerm = $state('');
+
+    let logs = $derived($mavlinkLogStore);
+    let systemState = $derived($mavStateStore);
+    let darkMode = $derived($darkModeStore);
+    let primaryColor = $derived($primaryColorStore);
+    let secondaryColor = $derived($secondaryColorStore);
+    let tertiaryColor = $derived($tertiaryColorStore);
+    let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
 
     const heartbeatInfo = 'HEARTBEAT is a message sent by the autopilot to communicate its presence and status to the GCS.';
 
-    $: if (logs[logs.length - 1]?.indexOf('HEARTBEAT') !== -1) triggerHeartbeat();
+    $effect(() => {
+        if (logs[logs.length - 1]?.indexOf('HEARTBEAT') !== -1) triggerHeartbeat();
+    });
+
+    $effect(() => {
+        void logs;
+        if (logContainer) logContainer.scrollTop = logContainer.scrollHeight;
+    });
 
     async function triggerHeartbeat() {
         if (typeof document !== 'undefined') {
@@ -38,90 +43,48 @@
                     icon?.classList.remove('animate-ping');
                     heartbeat.classList.remove('text-green-500');
                     heartbeat.classList.add('text-white');
-                }, 2000);
+                }, HEARTBEAT_FLASH_MS);
             }
         }
     }
 
-    function handleShowMessage(event: Event, message: string) {
-        let checked = (event.target as HTMLInputElement).checked;
-        if (checked) {
-            document.querySelectorAll('pre span').forEach((span) => {
-                if (span.textContent?.includes(message)) {
-                    // @ts-ignore
-                    span.style.display = 'block';
-                }
-            });
-        } else {
-            document.querySelectorAll('pre span').forEach((span) => {
-                if (span.textContent?.includes(message)) {
-                    // @ts-ignore
-                    span.style.display = 'none';
-                }
-            });
-        }
-        if (message === 'TIMESYNC') {
-            showTimeSync = checked;
-        } else if (message === 'PARAM_VALUE') {
-            showParamValue = checked;
-        } else if (message === 'GLOBAL_POSITION_INT') {
-            showGPSRawInt = checked;
-        } else if (message === 'BATTERY_STATUS') {
-            showSysStatus = checked;
-        }
+    interface LogSegment {
+        text: string;
+        hit: boolean;
     }
 
-    function highlightText(event: Event) {
-        searchTerm = (event.target as HTMLInputElement).value.toLowerCase();
-        if (searchTerm === '') {
-            document.querySelectorAll('pre span').forEach((span) => {
-                span.innerHTML = span.innerHTML.replace(/<\/?mark>/g, '');
-            });
-            return;
-        }
-
-        document.querySelectorAll('pre span').forEach((span) => {
-            const text = span.textContent || '';
-            const highlightedText = text.replace(new RegExp(searchTerm, 'gi'), (match) => `<mark>${match}</mark>`);
-            span.innerHTML = highlightedText;
-        });
+    function escapeRegExp(value: string): string {
+        return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 
-    function getHighlightedLog(log: string) {
-        if (!searchTerm) return log;
-        const regex = new RegExp(`(${searchTerm})`, 'gi');
-        return log.replace(regex, '<mark>$1</mark>');
+    // Splits a log line into plain and search-matching segments so matches can
+    // be wrapped in <mark> without rendering the log text as HTML.
+    function segments(log: string): LogSegment[] {
+        if (!searchTerm) return [{ text: log, hit: false }];
+        const regex = new RegExp(`(${escapeRegExp(searchTerm)})`, 'gi');
+        return log
+            .split(regex)
+            .filter((part) => part !== '')
+            .map((part) => ({ text: part, hit: part.toLowerCase() === searchTerm.toLowerCase() }));
     }
 
     function clearLogs() {
-        logs = [];
-        mavlinkLogStore.set(logs);
+        mavlinkLogStore.set([]);
     }
 
     function confirmClear() {
-        let modal = new Modal({
-        target: document.body,
-        props: {
+        showModal({
             title: 'Clear MAVLink Logs',
             content: 'Are you sure you want to clear all MAVLink Logs? This action cannot be undone.',
-            isOpen: true,
             confirmation: true,
-            notification: false,
             onConfirm: () => {
-            clearLogs();
-            modal.$destroy();
-            const newModal = new Modal({
-                target: document.body,
-                props: {
-                title: 'Logs Cleared',
-                content: 'All MAVLink Logs have been cleared successfully.',
-                isOpen: true,
-                confirmation: false,
-                notification: true,
-                }
-            });
+                clearLogs();
+                showModal({
+                    title: 'Logs Cleared',
+                    content: 'All MAVLink Logs have been cleared successfully.',
+                    notification: true
+                });
             },
-        }
         });
     }
 
@@ -133,10 +96,6 @@
         document.body.appendChild(element);
         element.click();
     }
-
-    afterUpdate(() => {
-        logContainer.scrollTop = logContainer.scrollHeight;
-    });
 </script>
 
 <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">
@@ -147,23 +106,23 @@
             <div class="flex items-center justify-between gap-4 mb-4">
                 <h2 class="text-xl">MAVLink Events</h2>
                 <div class="filters flex gap-4 justify-center items-center">
-                    <input type="text" class="form-input" placeholder="Search" on:input={highlightText}/>
+                    <input type="text" class="form-input" placeholder="Search" bind:value={searchTerm}/>
                     <div class="form-checkbox gap-2">
-                        <input type="checkbox" class="form-checkbox" name="Toggle TIMESYNC" checked={showTimeSync} on:change={(event) => handleShowMessage(event, 'TIMESYNC')}>
+                        <input type="checkbox" class="form-checkbox" name="Toggle TIMESYNC" bind:checked={showTimeSync}>
                         <label for="Toggle TIMESYNC" class="mr-2">TIMESYNC</label>
-                        <input type="checkbox" class="form-checkbox" name="Toggle PARAM_VALUE" checked={showParamValue} on:change={(event) => handleShowMessage(event, 'PARAM_VALUE')}>
+                        <input type="checkbox" class="form-checkbox" name="Toggle PARAM_VALUE" bind:checked={showParamValue}>
                         <label for="Toggle PARAM_VALUE">PARAM_VALUE</label>
-                        <input type="checkbox" class="form-checkbox" name="Toggle GLOBAL_POSITION_INT" checked={showGPSRawInt} on:change={(event) => handleShowMessage(event, 'GLOBAL_POSITION_INT')}>
+                        <input type="checkbox" class="form-checkbox" name="Toggle GLOBAL_POSITION_INT" bind:checked={showGPSRawInt}>
                         <label for="Toggle GLOBAL_POSITION_INT">GLOBAL_POSITION_INT</label>
-                        <input type="checkbox" class="form-checkbox" name="Toggle BATTERY_STATUS" checked={showSysStatus} on:change={(event) => handleShowMessage(event, 'BATTERY_STATUS')}>
+                        <input type="checkbox" class="form-checkbox" name="Toggle BATTERY_STATUS" bind:checked={showSysStatus}>
                         <label for="Toggle BATTERY_STATUS">BATTERY_STATUS</label>
                     </div>
                     <div class="btns flex gap-4">
-                        <button class="btn btn-primary bg-red-400 hover:bg-red-500 relative" on:click={confirmClear}>
+                        <button class="btn btn-primary bg-red-400 hover:bg-red-500 relative" onclick={confirmClear}>
                             <i class="fas fa-trash-alt"></i>
                             <div class="tooltip">Clear</div>
                         </button>
-                        <button class="btn btn-primary bg-blue-400 hover:bg-blue-500 relative" on:click={downloadLogs}>
+                        <button class="btn btn-primary bg-blue-400 hover:bg-blue-500 relative" onclick={downloadLogs}>
                             <i class="fas fa-download"></i>
                             <div class="tooltip">Download</div>
                         </button>
@@ -181,18 +140,18 @@
                 </div>
             </div>
             <pre class="text-gray-300 flex flex-col" bind:this={logContainer}>
-                {#each logs as log}
+                {#each logs as log (log)}
                     {#if log.indexOf('HEARTBEAT') === -1 && log.indexOf('MISSION_CURRENT') === -1 && log.indexOf('"command":512') === -1 && log.indexOf('GPS_RAW_INT') === -1}
                         {#if log.indexOf('TIMESYNC') !== -1}
-                            <span style="display: {showTimeSync ? 'block' : 'none'}">{@html getHighlightedLog(log)}</span>
+                            <span style="display: {showTimeSync ? 'block' : 'none'}">{#each segments(log) as seg, i (i)}{#if seg.hit}<mark>{seg.text}</mark>{:else}{seg.text}{/if}{/each}</span>
                         {:else if log.indexOf('PARAM_VALUE') !== -1}
-                            <span style="display: {showParamValue ? 'block' : 'none'}">{@html getHighlightedLog(log)}</span>
+                            <span style="display: {showParamValue ? 'block' : 'none'}">{#each segments(log) as seg, i (i)}{#if seg.hit}<mark>{seg.text}</mark>{:else}{seg.text}{/if}{/each}</span>
                         {:else if log.indexOf('GLOBAL_POSITION_INT') !== -1}
-                            <span style="display: {showGPSRawInt ? 'block' : 'none'}">{@html getHighlightedLog(log)}</span>
+                            <span style="display: {showGPSRawInt ? 'block' : 'none'}">{#each segments(log) as seg, i (i)}{#if seg.hit}<mark>{seg.text}</mark>{:else}{seg.text}{/if}{/each}</span>
                         {:else if log.indexOf('BATTERY_STATUS') !== -1}
-                            <span style="display: {showSysStatus ? 'block' : 'none'}">{@html getHighlightedLog(log)}</span>
+                            <span style="display: {showSysStatus ? 'block' : 'none'}">{#each segments(log) as seg, i (i)}{#if seg.hit}<mark>{seg.text}</mark>{:else}{seg.text}{/if}{/each}</span>
                         {:else}
-                            <span>{@html getHighlightedLog(log)}</span>
+                            <span>{#each segments(log) as seg, i (i)}{#if seg.hit}<mark>{seg.text}</mark>{:else}{seg.text}{/if}{/each}</span>
                         {/if}
                     {/if}
                 {/each}
@@ -210,7 +169,7 @@
     h2, span, label, .system-state {
         color: var(--fontColor);
     }
-  
+
     pre {
         white-space: pre-wrap;
         word-wrap: break-word;

@@ -1,4 +1,7 @@
 <script lang="ts">
+    import { run } from 'svelte/legacy';
+    import { mount, unmount } from 'svelte';
+
     import { mapStore} from "../stores/mapStore";
     import {
         missionPlanTitleStore,
@@ -6,7 +9,6 @@
         missionCompleteStore,
         type MissionPlanActions
         } from "../stores/missionPlanStore";
-    import Modal from "./Modal.svelte";
     import ManageMissionPlans from "./ManageMissionPlans.svelte";
     import {
         darkModeStore,
@@ -15,76 +17,61 @@
         tertiaryColorStore
     } from '../stores/customizationStore';
     import { get } from "svelte/store";
-    import { onMount } from "svelte";
-    import Notification from "./Notification.svelte";
+    import { showModal, notify } from '../lib/overlays';
+    import { setFlightMode, sendMavlinkCommand } from '../lib/mavlink-client';
 
-    let actions: MissionPlanActions = get(missionPlanActionsStore);
-    let title: string = "";
+    const SAVE_FEEDBACK_MS = 3000;
+    const DEGREES_TO_E7 = 1e7;
 
-    $: title = $missionPlanTitleStore
-    $: actions = $missionPlanActionsStore;
-    $: map = $mapStore;
-    
-    $: darkMode = $darkModeStore;
-    $: primaryColor = $primaryColorStore;
-    $: secondaryColor = $secondaryColorStore;
-    $: tertiaryColor = $tertiaryColorStore;
-    $: fontColor = darkMode ? "#ffffff" : "#000000";
+    let actions: MissionPlanActions = $state(get(missionPlanActionsStore));
+    let title: string = $state("");
 
-    async function sendMavlinkCommand(command: string, params: string  = '', useCmdLong: string = 'false', useArduPilotMega: string = 'false') {
-        const response = await fetch(`/api/mavlink/send_command`, {
-            method: 'POST',
-            headers: {
-                'content-type': 'application/json',
-                'command': command,
-                'params': params,
-                'useCmdLong': useCmdLong,
-                'useArduPilotMega': useArduPilotMega
-            },
-        });
-        if (response.ok) {
-            console.log(await response.text());
-        } else {
-            console.error(`Error: ${await response.text()}`);
-        }
-    }
+    run(() => {
+        title = $missionPlanTitleStore
+    });
+    run(() => {
+        actions = $missionPlanActionsStore;
+    });
+    let map = $derived($mapStore);
+
+    let darkMode = $derived($darkModeStore);
+    let primaryColor = $derived($primaryColorStore);
+    let secondaryColor = $derived($secondaryColorStore);
+    let tertiaryColor = $derived($tertiaryColorStore);
+    let fontColor = $derived(darkMode ? "#ffffff" : "#000000");
 
     function toggleMissionPlans() {
-        const modal = new ManageMissionPlans({
+        let closed = false;
+        const close = () => {
+            if (closed) return;
+            closed = true;
+            unmount(instance);
+        };
+        const instance = mount(ManageMissionPlans, {
             target: document.body,
             props: {
                 isModal: true,
                 isOpen: true,
-                onCancel: () => {
-                    modal.$destroy();
-                },
+                onCancel: close,
             },
         });
     }
 
     async function saveMissionPlan() {
-        const modal = new Modal({
-            target: document.body,
-            props: {
-                title: "Save & Load Mission Plan",
-                content: "Are you sure you want to save and load this mission plan? This action will overwrite the currently loaded mission plan.",
-                isOpen: true,
-                confirmation: true,
-                notification: false,
-                onConfirm: async () => {
-                    let title = get(missionPlanTitleStore);
-                    if (title === "") title = "Untitled Mission Plan";
-                    await handleSave(title, actions);
-                },
-                onCancel: () => {
-                    modal.$destroy();
-                },
+        showModal({
+            title: "Save & Load Mission Plan",
+            content: "Are you sure you want to save and load this mission plan? This action will overwrite the currently loaded mission plan.",
+            confirmation: true,
+            onConfirm: async () => {
+                let title = get(missionPlanTitleStore);
+                if (title === "") title = "Untitled Mission Plan";
+                await handleSave(title, actions);
             },
         });
     }
 
     async function handleLoad(title: string, actions: MissionPlanActions) {
-        sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true'); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+        setFlightMode('GUIDED');
 
         // Clear the current mission plan
         try {
@@ -102,7 +89,7 @@
         } catch (error) {
             console.error("Error:", error);
         }
-        
+
         // Unload all mission plans first
         await fetch("/api/mission/unload", {
             method: "POST",
@@ -140,21 +127,21 @@
             console.error("Error:", error);
         }
     }
-        
-    function duplicateTakeoffAndShift(actions: Record<string, any>): Record<string, any> {
-        const newActions: Record<string, any> = {};
-        
+
+    function duplicateTakeoffAndShift(actions: MissionPlanActions): MissionPlanActions {
+        const newActions: MissionPlanActions = {};
+
         // First, add the duplicated takeoff points
-        newActions['0'] = { ...actions['1'] };
-        newActions['1'] = { ...actions['1'] };
-        
+        newActions[0] = { ...actions[1] };
+        newActions[1] = { ...actions[1] };
+
         // Then shift the remaining points up
-        Object.keys(actions).forEach((key, index) => {
+        Object.keys(actions).forEach((key) => {
             if (key !== '0' && key !== '1') {
-                newActions[(parseInt(key)).toString()] = { ...actions[key] };
+                newActions[parseInt(key)] = { ...actions[parseInt(key)] };
             }
         });
-        
+
         return newActions;
     }
 
@@ -190,29 +177,18 @@
                     "actions": JSON.stringify(missionPlan.actions),
                 },
             }).catch((error) => {
-                new Modal({
-                    target: document.body,
-                    props: {
-                        title: "Error",
-                        content: error.message,
-                        isOpen: true,
-                        confirmation: false,
-                        notification: true,
-                    },
+                showModal({
+                    title: "Error",
+                    content: error.message,
+                    notification: true,
                 });
             });
             if (response) {
-              let notification = new Notification({
-                target: document.body,
-                props: {
+                notify({
                     title: "Mission Plan Saved",
                     content: "The mission plan has been saved.",
-                    type: "info",
-                },
-              });
-              setTimeout(() => {
-                  notification.$destroy();
-              }, 3000);
+                    duration: SAVE_FEEDBACK_MS,
+                });
             }
         }
     }
@@ -231,29 +207,18 @@
                 "actions": JSON.stringify(missionPlan.actions),
             },
         }).catch((error) => {
-            new Modal({
-                target: document.body,
-                props: {
-                    title: "Error",
-                    content: error.message,
-                    isOpen: true,
-                    confirmation: false,
-                    notification: true,
-                },
+            showModal({
+                title: "Error",
+                content: error.message,
+                notification: true,
             });
         });
         if (response) {
-            let notification = new Notification({
-                target: document.body,
-                props: {
+            notify({
                 title: "Mission Plan Updated",
                 content: "The mission plan has been updated.",
-                type: "info",
-                },
+                duration: SAVE_FEEDBACK_MS,
             });
-            setTimeout(() => {
-                notification.$destroy();
-            }, 3000);
         }
     }
 
@@ -284,8 +249,7 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        // @ts-ignore
-        a.download = title.replace(/\s/g, "_") || "Untitled_Flight_Plan" + ".json";
+        a.download = `${(title || "Untitled_Flight_Plan").replace(/\s/g, "_")}.json`;
         a.click();
         URL.revokeObjectURL(url);
     }
@@ -298,8 +262,7 @@
         });
 
         document.querySelectorAll("#flight-plan-title").forEach((el) => {
-            // @ts-ignore
-            el.value = "";
+            (el as HTMLInputElement).value = "";
         });
 
         mapStore.set(map);
@@ -326,115 +289,70 @@
     }
 
     function confirmClear() {
-        let modal = new Modal({
-            target: document.body,
-            props: {
-                title: "Clear Mission Plan",
-                content: "Are you sure you want to clear the current mission plan? This action will remove all actions from the map. Check the box to also clear the mission plan on the flight controller.",
-                isOpen: true,
-                confirmation: true,
-                notification: false,
-                inputs: [
-                    {
-                        type: "checkbox",
-                        placeholder: "Clear on Flight Controller",
-                        required: false,
-                    },
-                ],
-                onConfirm: () => {
-                    removeAllActions(modal.inputValues![0] === "true");
-                    modal.$destroy();
+        showModal({
+            title: "Clear Mission Plan",
+            content: "Are you sure you want to clear the current mission plan? This action will remove all actions from the map. Check the box to also clear the mission plan on the flight controller.",
+            confirmation: true,
+            inputs: [
+                {
+                    type: "checkbox",
+                    placeholder: "Clear on Flight Controller",
+                    required: false,
                 },
+            ],
+            onConfirm: (values) => {
+                removeAllActions(values[0] === "true");
             },
         });
     }
 
     function setHomeLocation() {
-        let modal = new Modal({
-            target: document.body,
-            props: {
-                title: "Set Home Location",
-                content: "Please enter the latitude and longitude for home. This is where the MAV will return in RTL mode.",
-                isOpen: true,
-                confirmation: true,
-                notification: false,
-                inputs: [
-                    {
-                        type: "number",
-                        placeholder: "Latitude",
-                        required: false,
-                    },
-                    {
-                        type: "number",
-                        placeholder: "Longitude",
-                        required: false,
-                    },
-                    {
-                        type: "number",
-                        placeholder: "Altitude",
-                        required: false,
-                    },
-                ],
-                onConfirm: async () => {
-                    let lat = Number((parseFloat(modal.inputValues![0]) * 1e7).toFixed(0));
-                    let lon = Number((parseFloat(modal.inputValues![1]) * 1e7).toFixed(0));
-                    let alt = Number(parseFloat(modal.inputValues![2]).toFixed(0));
-                    let useCurrent = 0;
-                    if (isNaN(lat) || isNaN(lon) || isNaN(alt)) {
-                        useCurrent = 1;
-                        lat = 0;
-                        lon = 0;
-                        alt = 0;
-                    }
-                    try {
-                        let response = await fetch("/api/mavlink/send_command", {
-                            method: "POST",
-                            headers: {
-                                "content-type": "application/json",
-                                "command": "DO_SET_HOME",
-                                "params": `${[useCurrent, 0, 0, 0, lat, lon, alt]}`
-                            },
-                        });
-                        if (response.ok) {
-                            let newModal = new Modal({
-                                target: document.body,
-                                props: {
-                                    title: "Home Location Set",
-                                    content: "The home location has been set successfully.",
-                                    isOpen: true,
-                                    confirmation: false,
-                                    notification: true,
-                                },
-                            });
-                            setTimeout(() => {
-                                newModal.$destroy();
-                            }, 3000);
-                        } else {
-                            new Modal({
-                                target: document.body,
-                                props: {
-                                    title: "Error",
-                                    content: "An error occurred while setting the home location.",
-                                    isOpen: true,
-                                    confirmation: false,
-                                    notification: true,
-                                },
-                            });
-                        }
-                    } catch (error: any) {
-                        new Modal({
-                            target: document.body,
-                            props: {
-                                title: "Error",
-                                content: error.message,
-                                isOpen: true,
-                                confirmation: false,
-                                notification: true,
-                            },
-                        });
-                    }
-                    modal.$destroy();
+        showModal({
+            title: "Set Home Location",
+            content: "Please enter the latitude and longitude for home. This is where the MAV will return in RTL mode.",
+            confirmation: true,
+            inputs: [
+                {
+                    type: "number",
+                    placeholder: "Latitude",
+                    required: false,
                 },
+                {
+                    type: "number",
+                    placeholder: "Longitude",
+                    required: false,
+                },
+                {
+                    type: "number",
+                    placeholder: "Altitude",
+                    required: false,
+                },
+            ],
+            onConfirm: async (values) => {
+                let lat = Number((parseFloat(values[0]) * DEGREES_TO_E7).toFixed(0));
+                let lon = Number((parseFloat(values[1]) * DEGREES_TO_E7).toFixed(0));
+                let alt = Number(parseFloat(values[2]).toFixed(0));
+                let useCurrent = 0;
+                if (isNaN(lat) || isNaN(lon) || isNaN(alt)) {
+                    useCurrent = 1;
+                    lat = 0;
+                    lon = 0;
+                    alt = 0;
+                }
+                const ok = await sendMavlinkCommand("DO_SET_HOME", [useCurrent, 0, 0, 0, lat, lon, alt]);
+                if (ok) {
+                    notify({
+                        title: "Home Location Set",
+                        content: "The home location has been set successfully.",
+                        duration: SAVE_FEEDBACK_MS,
+                    });
+                } else {
+                    showModal({
+                        title: "Error",
+                        content: "An error occurred while setting the home location.",
+                        notification: true,
+                    });
+                }
             },
         });
     }
@@ -444,28 +362,28 @@
     class="flight-plan-settings rounded-2xl p-4 h-full"
     style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
 >
-    <button on:click={setHomeLocation}>
+    <button onclick={setHomeLocation}>
         <i class="fas fa-home text-[#ffc64a]"></i>
         Set Home Location
     </button>
-    <button on:click={toggleMissionPlans}>
+    <button onclick={toggleMissionPlans}>
         <i class="fas fa-globe text-[#5398e6]"></i>
         Manage Missions
     </button>
-    <button on:click={saveMissionPlan}>
+    <button onclick={saveMissionPlan}>
         <i class="fas fa-save text-[#61cd89]"></i>
         Save & Load Mission
     </button>
-    <button on:click={confirmClear}>
+    <button onclick={confirmClear}>
         <i class="fas fa-trash-alt text-[#f87171]"></i>
         Clear Mission
     </button>
     <div id="import-export" class="flex items-center justify-center gap-2">
-        <button on:click={importPlan}>
+        <button onclick={importPlan}>
             <i class="fas fa-upload"></i>
             <span class="text-[8.5pt]">Import Mission</span>
         </button>
-        <button on:click={exportMissionPlan}>
+        <button onclick={exportMissionPlan}>
             <i class="fas fa-download"></i>
             <span class="text-[8.5pt]">Export Mission</span>
         </button>

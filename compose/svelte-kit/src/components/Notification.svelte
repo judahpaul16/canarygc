@@ -1,47 +1,62 @@
-<svelte:options accessors={true} />
 <script lang="ts">
-    import { onMount, afterUpdate, onDestroy } from 'svelte';
-    import { notificationCountStore } from '../stores/notificationCountStore';
-    import { get } from 'svelte/store';
+  import { onMount } from 'svelte';
+  import { notificationCountStore } from '../stores/notificationCountStore';
+  import { get } from 'svelte/store';
 
-    export let id: number = get(notificationCountStore);
-    export let title: string;
-    export let content: string;
-    export let type: string = 'info';
+  interface Props {
+    id?: number;
+    title: string;
+    content: string;
+    type?: string;
+  }
 
-    let translateY: string = '0px';
-    let interval: NodeJS.Timeout;
+  let {
+    id = get(notificationCountStore),
+    title,
+    content,
+    type = 'info'
+  }: Props = $props();
 
-    const close = () => {
-        document.getElementById(`notification-${id}`)?.remove();
-        updateTranslateY();
+  const RESTACK_INTERVAL_MS = 1000;
+  const STACK_GAP_PX = 8;
+
+  // Escapes markup, then restores line breaks so notification text can never
+  // inject live HTML (MAVLink STATUSTEXT is attacker-influenced input).
+  function renderSafe(raw: string): string {
+    const escaped = raw
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+    return escaped.replace(/&lt;br\s*\/?&gt;/gi, '<br>');
+  }
+
+  const safeContent = $derived(renderSafe(content));
+
+  const close = () => {
+    document.getElementById(`notification-${id}`)?.remove();
+    updateTranslateY();
+  };
+
+  const updateTranslateY = () => {
+    const notifications = Array.from(document.querySelectorAll('.notification'));
+    notificationCountStore.set(notifications.length);
+    if (notifications.length === 0) return;
+    const notificationHeight = notifications[notifications.length - 1].clientHeight + STACK_GAP_PX;
+
+    notifications.forEach((notif, index) => {
+      (notif as HTMLElement).style.transform = `translateY(${index * notificationHeight}px)`;
+    });
+  };
+
+  onMount(() => {
+    updateTranslateY();
+    const interval = setInterval(updateTranslateY, RESTACK_INTERVAL_MS);
+    return () => {
+      clearInterval(interval);
+      setTimeout(updateTranslateY, 0);
     };
-
-    const updateTranslateY = () => {
-        const notifications = Array.from(document.querySelectorAll('.notification'));
-        notificationCountStore.set(notifications.length);
-        const notificationHeight = notifications[notifications.length - 1].clientHeight + 8;
-
-        notifications.forEach((notif, index) => {
-            // @ts-ignore
-            notif.style.transform = `translateY(${index * notificationHeight}px)`;
-        });
-        translateY = `translateY(${notifications.findIndex(n => n.id === `notification-${id}`) * notificationHeight}px)`;
-    };
-
-    onMount(() => {
-        interval = setInterval(() => {
-            updateTranslateY();
-        }, 1000);
-    });
-
-    onDestroy(() => {
-        clearInterval(interval);
-    });
-
-    afterUpdate(() => {
-        updateTranslateY();
-    });
+  });
 </script>
 
 <div class="notification notification-{type} fixed top-4 right-4 z-50 rounded-lg" id="notification-{id}">
@@ -50,13 +65,14 @@
             <div class="px-4 py-2 text-lg font-semibold rounded-[1.5em] text-center">
                 {title}
             </div>
-            <button on:click={close} class="absolute top-2 right-2 text-gray-400 hover:text-white text-2xl">
+            <button onclick={close} class="absolute top-2 right-2 text-gray-400 hover:text-white text-2xl">
                 &times;
             </button>
         </div>
         <hr class="border-[#ffffff7c] w-[80%] m-auto rounded" />
         <div class="px-4 py-2 rounded-[1.5em] text-center">
-            {@html content}
+            <!-- eslint-disable-next-line svelte/no-at-html-tags -- safeContent is escaped above; only <br> survives -->
+            {@html safeContent}
         </div>
     </div>
 </div>

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import { onMount } from 'svelte';
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import {
@@ -18,29 +20,33 @@
     missionIndexStore
   } from '../stores/missionPlanStore';
   import { get } from 'svelte/store';
-  import Modal from './Modal.svelte';
+  import { showModal } from '../lib/overlays';
   import ThreeDMap from './3DMap.svelte';
   import pkg from 'maplibre-gl';
   const { Marker } = pkg;
 
-  export let hideOverlay: boolean = false;
-  export let mavLocation: L.LatLng | { lat: number; lng: number };;
-  export let id: string | null = null;
   import {
     darkModeStore,
     primaryColorStore,
     secondaryColorStore,
     tertiaryColorStore
   } from '../stores/customizationStore';
+  interface Props {
+    hideOverlay?: boolean;
+    mavLocation: L.LatLng | { lat: number; lng: number };
+    id?: string | null;
+  }
+
+  let { hideOverlay = $bindable(false), mavLocation = $bindable(), id = null }: Props = $props();
 
   let L: typeof import('leaflet');
-  let leafletMap: any = get(mapStore);
-  let threeDMap: any = get(threeDMapStore);
-  let mapType: string = get(mapTypeStore);
-  let currentTileLayer = get(mapTileLayerStore);
-  let zoom = get(mapZoomStore);
+  let leafletMap: L.Map | null = $state(get(mapStore));
+  let threeDMap: pkg.Map | null = $state(get(threeDMapStore));
+  let mapType: string = $state(get(mapTypeStore));
+  let currentTileLayer = $state(get(mapTileLayerStore));
+  let zoom = $state(get(mapZoomStore));
 
-  let actions: MissionPlanActions = {};
+  let actions: MissionPlanActions = $state({});
   let action_types = [
     'NAV_WAYPOINT', 'NAV_SPLINE_WAYPOINT', 'NAV_TAKEOFF', 'NAV_RETURN_TO_LAUNCH', 'NAV_GUIDED_ENABLE', 'NAV_LAND',
     'NAV_LOITER_TIME', 'NAV_LOITER_TURNS', 'NAV_LOITER_UNLIM', 'NAV_PAYLOAD_PLACE', 'DO_WINCH', 'DO_GRIPPER', 'DO_SET_CAM_TRIGG_DIST',
@@ -54,58 +60,18 @@
     'map/do_engine_control.png', 'map/delay.png', 'map/condition_change_alt.png', 'map/condition_distance.png', 'map/condition_yaw.png'
   ];
   let icons: L.Icon[] = [];
-  let markers: Map<number, L.Marker> = get(markersStore); // Map to keep track of markers
-  let polylines: Map<string, L.Polyline> = get(polylinesStore); // Map to keep track of polylines
-  let markers3D: Map<number, any> = new Map();
+  let markers: Map<number, L.Marker> = $state(get(markersStore)); // Map to keep track of markers
+  let polylines: Map<string, L.Polyline> = $state(get(polylinesStore)); // Map to keep track of polylines
+  let markers3D: Map<number, pkg.Marker> = new Map();
   let polylines3D: string[] = [];
-  let mavHeading: number = 0;
+  let mavHeading: number = $state(0);
   let mavMarker: L.Marker;
-  let isDragging = false;
-  let darkMode = get(darkModeStore);
+  let darkMode = $state(get(darkModeStore));
   
-  $: darkMode = $darkModeStore;
-  $: primaryColor = $primaryColorStore;
-  $: secondaryColor = $secondaryColorStore;
-  $: tertiaryColor = $tertiaryColorStore;
-  $: fontColor = darkMode ? '#ffffff' : '#000000';
-  $: lockView = $lockViewStore;
-  $: zoom = $mapZoomStore;
 
-  $: leafletMap = $mapStore;
-  $: threeDMap = $threeDMapStore;
-  $: mapType = $mapTypeStore;
-  $: currentTileLayer = $mapTileLayerStore;
-  $: {
-    mavHeading = $mavHeadingStore;
-    updateMAVMarker();
-  }
-  $: {
-    mavLocation = $mavLocationStore;
-    updateMAVMarker();
-  }
 
-  $: {
-    actions = $missionPlanActionsStore;
-    removeAllMarkers();
-    updateMAVMarker();
-    Object.keys(actions).forEach((index) => {
-      updateMap(Number(index));
-    });
-  }
 
-  $: {
-    markers = $markersStore;
-    Object.keys(actions).forEach((index) => {
-      updateMap(Number(index));
-    });
-  }
 
-  $: {
-    polylines = $polylinesStore;
-    Object.keys(actions).forEach((index) => {
-      updateMap(Number(index));
-    });
-  }
 
   onMount(async () => {
     try {
@@ -137,16 +103,12 @@
       updateMap(Number(index));
     });
     
-    document.addEventListener('fullscreenchange', (e) => {
+    document.addEventListener('fullscreenchange', () => {
       if (!document.fullscreenElement && window.location.href.includes('dashboard')) hideOverlay = true;
         setTimeout(() => {
           window.dispatchEvent(new Event('resize'));
         }, 1000);
     });
-    document.addEventListener('mousedown', () => { isDragging = true });
-    document.addEventListener('mouseup', () => { isDragging = false });
-    document.addEventListener('touchstart', () => { isDragging = true});
-    document.addEventListener('touchend', () => { isDragging = false });
     let zoomIn = document.querySelector('.leaflet-control-zoom-in');
     let zoomOut = document.querySelector('.leaflet-control-zoom-out');
     if (zoomIn) zoomIn.addEventListener('click', () => { updateZoom(1) });
@@ -188,17 +150,14 @@
     }
     if (darkMode) {
       if (mapType.toLowerCase() !== 'satellite') document.getElementById('map')!.classList.add('dark');
-      // @ts-ignore
-      document.querySelector('.bg')!.style.background = "url('bg-map.webp') no-repeat center center fixed";
+      (document.querySelector('.bg') as HTMLElement).style.background = "url('bg-map.webp') no-repeat center center fixed";
       primaryColorStore.set('#1c1c1e');
     } else {
-      // @ts-ignore
-      document.querySelector('.bg')!.style.background = "url('bg-map-light.webp') no-repeat center center fixed";
+      (document.querySelector('.bg') as HTMLElement).style.background = "url('bg-map-light.webp') no-repeat center center fixed";
       primaryColorStore.set('#ffffff');
     }
 
-    // @ts-ignore
-    if (hideOverlay) Array.from(document.querySelectorAll('.map-btn i')).forEach((element) => element.style.fontSize = "small");
+    if (hideOverlay) document.querySelectorAll('.map-btn i').forEach((element) => { (element as HTMLElement).style.fontSize = 'small'; });
     updateMAVMarker();
 
     const locationDisplay = document.querySelector('#location-display')!;
@@ -227,10 +186,7 @@
       }
     });
 
-    // @ts-ignore
-    if (hideOverlay) document.querySelector('.leaflet-control-attribution')!.style.display = 'none';
-    // @ts-ignore
-    else document.querySelector('.leaflet-control-attribution')!.style.display = 'inline-flex';
+    updateAttributionVisibility();
 
     mapStore.set(leafletMap);
     mavLocationStore.set(mavLocation);
@@ -278,10 +234,7 @@
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(null);
     }
-    // @ts-ignore
-    if (hideOverlay) document.querySelector('.leaflet-control-attribution')!.style.display = 'none';
-    // @ts-ignore
-    else document.querySelector('.leaflet-control-attribution')!.style.display = 'inline-flex';
+    updateAttributionVisibility();
   }
 
   function toggleLockView() {
@@ -293,15 +246,10 @@
     if (window.location.href.includes('dashboard')) hideOverlay = !hideOverlay;
     if (!document.fullscreenElement) {
       element.requestFullscreen().catch(err => {
-        new Modal({
-          target: document.body,
-          props: {
-            title: 'Error',
-            content: `Error attempting to enable full-screen mode: ${err.message} (${err.name})`,
-            isOpen: true,
-            confirmation: false,
-            notification: true,
-          },
+        showModal({
+          title: 'Error',
+          content: `Error attempting to enable full-screen mode: ${err.message} (${err.name})`,
+          notification: true,
         });
       });
       setTimeout(() => {
@@ -313,10 +261,7 @@
         window.dispatchEvent(new Event('resize'));
       }, 1000);
     }
-    // @ts-ignore
-    if (hideOverlay) document.querySelector('.leaflet-control-attribution')!.style.display = 'none';
-    // @ts-ignore
-    else document.querySelector('.leaflet-control-attribution')!.style.display = 'inline-flex';
+    updateAttributionVisibility();
   }
 
   function handleFullScreen() {
@@ -324,6 +269,11 @@
     if (el instanceof HTMLElement) {
       toggleFullScreen(el);
     }
+  }
+
+  function updateAttributionVisibility() {
+    const attribution = document.querySelector('.leaflet-control-attribution') as HTMLElement | null;
+    if (attribution) attribution.style.display = hideOverlay ? 'none' : 'inline-flex';
   }
 
   function removeAllMarkers() {
@@ -335,11 +285,8 @@
     });
     markers.clear();
 
-    markers3D.forEach(marker => {
-      let index = Array.from(markers3D.entries()).find(([index, value]) => value === marker)![0];
-      if (markers3D.has(index)) {
-        marker.remove();
-      }
+    markers3D.forEach((marker) => {
+      marker.remove();
     });
     markers3D.clear();
 
@@ -388,8 +335,8 @@
         leafletMap.removeLayer(polylineToRemove);
       }
       polylines.delete(key);
-      threeDMap.removeLayer(key);
-      threeDMap.removeSource(key);
+      threeDMap?.removeLayer(key);
+      threeDMap?.removeSource(key);
       polylines3D = polylines3D.filter(polyline => polyline !== key);
     }
   }
@@ -415,7 +362,7 @@
       };
       threeDMap.addSource(key, {
         'type': 'geojson',
-        'data': geojson
+        'data': geojson as GeoJSON.Feature
       });
       threeDMap.addLayer({
         'id': key,
@@ -458,7 +405,7 @@
         if (!isNaN(lat) && !isNaN(lon) && iconIndex >= 0) {
           const marker = L.marker([lat, lon], { icon: icons[iconIndex] })
             .bindPopup(`${index} - ${type}`);
-          try { leafletMap.addLayer(marker); } catch (e) { return; }
+          try { leafletMap.addLayer(marker); } catch { return; }
           markers.set(index, marker);
         }
       }
@@ -482,11 +429,9 @@
               canvas.style.height = '50px';
               const marker = new Marker({ element: canvas });
               marker.setLngLat([lon, lat]);
-              if (markers3D.has(index)) {
-                markers3D.get(index).remove();
-              }
+              markers3D.get(index)?.remove();
               markers3D.set(index, marker);
-              marker.addTo(threeDMap);
+              if (threeDMap) marker.addTo(threeDMap);
             }
           }
         }
@@ -531,9 +476,9 @@
 
     for (let i = 0; i < markerEntries.length - 1; i++) {
       const [currentIndex, currentMarker] = markerEntries[i];
-      const [nextIndex, nextMarker] = markerEntries[i + 1];
-      let [prevIndex, prevMarker] = markerEntries[i];
-      if (i > 0) [prevIndex, prevMarker] = markerEntries[i - 1];
+      const [, nextMarker] = markerEntries[i + 1];
+      let [, prevMarker] = markerEntries[i];
+      if (i > 0) [, prevMarker] = markerEntries[i - 1];
       
       if (currentMarker && nextMarker && currentIndex >= get(missionIndexStore)) {
         let currentLatLng = currentMarker.getLatLng();
@@ -560,7 +505,7 @@
     if (leafletMap && mavLocation) {
       let img = new Image();
       img.src = '/map/here.png'; // Use static path directly
-      try { L.icon } catch (e) { return; }
+      if (!L) return;
       img.onload = () => {
         let canvas = document.createElement('canvas');
         canvas.width = img.width;
@@ -579,19 +524,70 @@
             shadowSize: [41, 41]
           });
           if (mavMarker) {
-            leafletMap.removeLayer(mavMarker);
+            leafletMap?.removeLayer(mavMarker);
           }
           mavMarker = L.marker(mavLocation as L.LatLng, { icon: icon })
             .bindPopup('MAV is here: ' + mavLocation.lat + ', ' + mavLocation.lng);
-          leafletMap.addLayer(mavMarker);
+          leafletMap?.addLayer(mavMarker);
           updateMarkersAndPolylines();
           if (lockView) {
-            leafletMap.setView(mavLocation as L.LatLng, get(mapZoomStore));
+            leafletMap?.setView(mavLocation as L.LatLng, get(mapZoomStore));
           }
         }
       };
     }
   }
+  run(() => {
+    darkMode = $darkModeStore;
+  });
+  let primaryColor = $derived($primaryColorStore);
+  let secondaryColor = $derived($secondaryColorStore);
+  let tertiaryColor = $derived($tertiaryColorStore);
+  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
+  let lockView = $derived($lockViewStore);
+  run(() => {
+    zoom = $mapZoomStore;
+  });
+  run(() => {
+    leafletMap = $mapStore;
+  });
+  run(() => {
+    threeDMap = $threeDMapStore;
+  });
+  run(() => {
+    mapType = $mapTypeStore;
+  });
+  run(() => {
+    currentTileLayer = $mapTileLayerStore;
+  });
+  run(() => {
+    mavHeading = $mavHeadingStore;
+    updateMAVMarker();
+  });
+  run(() => {
+    mavLocation = $mavLocationStore;
+    updateMAVMarker();
+  });
+  run(() => {
+    actions = $missionPlanActionsStore;
+    removeAllMarkers();
+    updateMAVMarker();
+    Object.keys(actions).forEach((index) => {
+      updateMap(Number(index));
+    });
+  });
+  run(() => {
+    markers = $markersStore;
+    Object.keys(actions).forEach((index) => {
+      updateMap(Number(index));
+    });
+  });
+  run(() => {
+    polylines = $polylinesStore;
+    Object.keys(actions).forEach((index) => {
+      updateMap(Number(index));
+    });
+  });
 </script>
 
 <style lang="css">
@@ -648,14 +644,14 @@
 <div class="map-container" style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};">
   <div id={id !== null ? id : 'map'} class="relative h-full rounded-2xl z-0"></div>
   <ThreeDMap />
-  <button class="map-btn absolute top-[3.8rem] right-2 text-[#ffffff] bg-opacity-75 p-2 {lockView ? 'px-[15px]' : 'px-[13px]'} rounded-full" on:click={toggleLockView}> 
+  <button class="map-btn absolute top-[3.8rem] right-2 text-[#ffffff] bg-opacity-75 p-2 {lockView ? 'px-[15px]' : 'px-[13px]'} rounded-full" onclick={toggleLockView}> 
     <i class="fas {lockView ? 'fa-lock' : 'fa-lock-open'}"></i>
   </button>
-  <button class="map-btn absolute top-3 right-2 text-[#ffffff] bg-opacity-75 p-2 px-[14px] rounded-full" on:click={handleFullScreen}>
+  <button class="map-btn absolute top-3 right-2 text-[#ffffff] bg-opacity-75 p-2 px-[14px] rounded-full" onclick={handleFullScreen}>
     <i class="fas fa-expand"></i>
   </button>
   <label id="map-toggle" class="flex justify-center cursor-pointer my-2 absolute top-1 right-2 left-2 w-fit m-auto rounded-3xl p-2 pl-3 text-sm items-center" style={!hideOverlay ? 'display: flex;' : 'display: none;'}>
-    <input type="checkbox" value="" class="sr-only peer" on:click={toggleMap}>
+    <input type="checkbox" value="" class="sr-only peer" onclick={toggleMap}>
     <span class="text-white flex items-center gap-2">
       <i class="fas fa-map"></i>
       <span>{mapType == '3D' ? '3D Buildings' : mapType}</span>

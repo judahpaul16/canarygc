@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import { onMount } from 'svelte';
   import { mavHeadingStore, mavLocationStore } from '../stores/mavlinkStore';
   import { mapZoomStore, lockViewStore, threeDMapStore } from '../stores/mapStore';
@@ -6,16 +8,18 @@
   import pkg from 'maplibre-gl';
   const { Map, Marker, NavigationControl } = pkg;
 
-  let map: any;
-  let marker: any;
+  let map: pkg.Map | null = $state(null);
+  let marker: pkg.Marker | undefined;
 
-  $: map = $threeDMapStore;
-  $: mavLocation = $mavLocationStore;
-  $: mavHeading = $mavHeadingStore;
+  run(() => {
+    map = $threeDMapStore;
+  });
+  let mavLocation = $derived($mavLocationStore);
+  let mavHeading = $derived($mavHeadingStore);
 
   onMount(() => {
     const MAPTILER_KEY = 'FzmtxzLwraPRISOg9JeU';
-    map = new Map({
+    const m = new Map({
       container: 'threedmap',
       style: `https://api.maptiler.com/maps/basic-v2/style.json?key=${MAPTILER_KEY}`,
       center: [mavLocation.lng, mavLocation.lat], // starting position [lng, lat]
@@ -23,28 +27,29 @@
       pitch: 45,
       canvasContextAttributes: {antialias: true}
     });
+    map = m;
     
     // The 'building' layer in the streets vector source contains building-height
     // data from OpenStreetMap.
-    map.on('load', () => {
+    m.on('load', () => {
         // Insert the layer beneath any symbol layer.
-        const layers = map.getStyle().layers;
+        const layers = m.getStyle().layers;
 
         let labelLayerId;
         for (let i = 0; i < layers.length; i++) {
-            // @ts-ignore
-            if (layers[i].type === 'symbol' && layers[i].layout['text-field']) {
-                labelLayerId = layers[i].id;
+            const layer = layers[i];
+            if (layer.type === 'symbol' && layer.layout?.['text-field']) {
+                labelLayerId = layer.id;
                 break;
             }
         }
 
-        map.addSource('openmaptiles', {
+        m.addSource('openmaptiles', {
             url: `https://api.maptiler.com/tiles/v3/tiles.json?key=${MAPTILER_KEY}`,
             type: 'vector',
         });
 
-        map.addLayer(
+        m.addLayer(
             {
                 'id': '3d-buildings',
                 'source': 'openmaptiles',
@@ -77,7 +82,7 @@
         );
 
         // Add satellite overlay
-        map.addLayer({
+        m.addLayer({
             'id': 'satellite',
             'type': 'raster',
             'source': {
@@ -92,7 +97,7 @@
             }
         });
 
-        map.addControl(
+        m.addControl(
             new NavigationControl({
                 visualizePitch: true,
                 showZoom: true,
@@ -101,11 +106,11 @@
         );
     });
 
-    map.on('zoom', () => {
-      mapZoomStore.set(map.getZoom() + 1);
+    m.on('zoom', () => {
+      mapZoomStore.set(m.getZoom() + 1);
     });
 
-    threeDMapStore.set(map);
+    threeDMapStore.set(m);
 
     setInterval(() => {
       updateMAVMarker();
@@ -114,7 +119,8 @@
 
   
   function updateMAVMarker() {
-    if (mavLocation) {
+    const m = map;
+    if (mavLocation && m) {
       marker?.remove();
       let img = new Image();
       img.src = '/map/here.png'; // Use static path directly
@@ -132,16 +138,14 @@
           marker = new Marker({ element: canvas });
           marker.setLngLat([mavLocation.lng, mavLocation.lat]);
           // offset camera bearing
-          marker.setRotation(mavHeading - map.getBearing());
-          marker.addTo(map);
+          marker.setRotation(mavHeading - m.getBearing());
+          marker.addTo(m);
         }
       };
-      if (get(lockViewStore) && !map.isMoving()) {
-        map.jumpTo({
+      if (get(lockViewStore) && !m.isMoving()) {
+        m.jumpTo({
           center: [mavLocation.lng, mavLocation.lat],
-          zoom: get(mapZoomStore) - 1,
-          speed: 0.5,
-          curve: 1
+          zoom: get(mapZoomStore) - 1
         });
       }
     }

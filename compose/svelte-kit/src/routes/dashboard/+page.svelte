@@ -7,8 +7,8 @@
   import { mavLocationStore } from '../../stores/mavlinkStore';
   import { secondaryColorStore } from '../../stores/customizationStore';
 
-  $: mavLocation = $mavLocationStore;
-  $: secondaryColor = $secondaryColorStore;
+  let mavLocation = $derived($mavLocationStore);
+  let secondaryColor = $derived($secondaryColorStore);
 
 </script>
 

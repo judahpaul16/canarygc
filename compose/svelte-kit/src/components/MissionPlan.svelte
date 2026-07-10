@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import { onMount } from 'svelte';
   import { mavLocationStore, mavModeStore, mavStateStore, mavlinkParamStore } from '../stores/mavlinkStore';
   import {
@@ -8,9 +10,10 @@
     missionIndexStore,
     type MissionPlanActions
   } from '../stores/missionPlanStore';
-  import Modal from './Modal.svelte';
   import { get } from 'svelte/store';
-  import Notification from './Notification.svelte';
+  import { showModal, notify } from '../lib/overlays';
+  import { sendMavlinkCommand, setFlightMode, armDisarm, writeParameter, encodeParameterValue } from '../lib/mavlink-client';
+  import { isAutoLabel, isGuidedLabel, isPX4 } from '../lib/flight-modes';
   import {
     darkModeStore,
     primaryColorStore,
@@ -18,8 +21,20 @@
     tertiaryColorStore
   } from '../stores/customizationStore';
 
-  export let title: string = '';
-  let actions: MissionPlanActions = {};
+  const GRIPPER_SERVO_CHANNEL = 9;
+  const GRIPPER_OPEN_PWM_US = 1050;
+  const GRIPPER_CLOSE_PWM_US = 1950;
+  const GRIPPER_CYCLE_DELAY_MS = 500;
+  const TAKEOFF_SETTLE_DELAY_MS = 5000;
+  const DEFAULT_TAKEOFF_ALT_M = 10;
+  const RTL_ALT_CM_PER_M = 100;
+
+  interface Props {
+    title?: string;
+  }
+
+  let { title = $bindable('') }: Props = $props();
+  let actions: MissionPlanActions = $state({});
   let action_types = [
     'NAV_WAYPOINT', 'NAV_SPLINE_WAYPOINT', 'NAV_TAKEOFF', 'NAV_RETURN_TO_LAUNCH', 'NAV_GUIDED_ENABLE', 'NAV_LAND',
     'NAV_LOITER_TIME', 'NAV_LOITER_TURNS', 'NAV_LOITER_UNLIM', 'NAV_PAYLOAD_PLACE', 'DO_WINCH', 'DO_GRIPPER', 'DO_SET_CAM_TRIGG_DIST',
@@ -27,17 +42,21 @@
     'DO_ENGINE_CONTROL', 'CONDITION_DELAY', 'CONDITION_CHANGE_ALT', 'CONDITION_DISTANCE', 'CONDITION_YAW'
   ];
   
-  $: darkMode = $darkModeStore;
-  $: primaryColor = $primaryColorStore;
-  $: secondaryColor = darkMode ? $tertiaryColorStore : $secondaryColorStore;
-  $: tertiaryColor = $tertiaryColorStore;
-  $: fontColor = darkMode ? '#ffffff' : '#000000';
-  $: mavLocation = $mavLocationStore;
-  $: mavMode = $mavModeStore;
-  $: systemState = $mavStateStore;
-  $: title = $missionPlanTitleStore;
-  $: actions = $missionPlanActionsStore;
-  $: missionLoaded = $missionPlanTitleStore !== '';
+  let darkMode = $derived($darkModeStore);
+  let primaryColor = $derived($primaryColorStore);
+  let secondaryColor = $derived(darkMode ? $tertiaryColorStore : $secondaryColorStore);
+  let tertiaryColor = $derived($tertiaryColorStore);
+  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
+  let mavLocation = $derived($mavLocationStore);
+  let mavMode = $derived($mavModeStore);
+  let systemState = $derived($mavStateStore);
+  run(() => {
+    title = $missionPlanTitleStore;
+  });
+  run(() => {
+    actions = $missionPlanActionsStore;
+  });
+  let missionLoaded = $derived($missionPlanTitleStore !== '');
 
   onMount(async () => {
     const input = document.querySelector('input[type="text"]') as HTMLInputElement;
@@ -50,196 +69,86 @@
     input.addEventListener('input', resizeInput);
   });
 
-  async function sendMavlinkCommand(command: string, params: string  = '', useCmdLong: string = 'false', useArduPilotMega: string = 'false') {
-    const response = await fetch(`/api/mavlink/send_command`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'command': command,
-        'params': params,
-        'useCmdLong': useCmdLong,
-        'useArduPilotMega': useArduPilotMega
-      },
-    });
-    if (response.ok) {
-      console.log(await response.text());
-    } else {
-      console.error(`Error: ${await response.text()}`);
-    }
-  }
-  
-  function encodeParameterValue(value: number, paramType: number): number {
-    // Ensure the value is within valid range for the type
-    switch (paramType) {
-      case 1: // uint8
-        return Math.min(255, Math.max(0, Math.round(value)));
-      case 2: // int8
-        return Math.min(127, Math.max(-128, Math.round(value)));
-      case 3: // uint16
-        return Math.min(65535, Math.max(0, Math.round(value)));
-      case 4: // int16
-        return Math.min(32767, Math.max(-32768, Math.round(value)));
-      case 5: // uint32
-        return Math.min(4294967295, Math.max(0, Math.round(value)));
-      case 6: // int32
-        return Math.min(2147483647, Math.max(-2147483648, Math.round(value)));
-      case 7: // uint64
-      case 8: // int64
-        console.warn('64-bit integers may not be fully precise in JavaScript');
-        return value;
-      case 9: // float
-        return value;
-      case 10: // double
-        return value;
-      default:
-        console.warn('Unknown parameter type:', paramType);
-        return value;
-    }
-  }
-
-  async function writeParameter(id: string, value: number, type: number) {
-    try {
-      const encodedValue = encodeParameterValue(value, type);
-      
-      // Remove any extra quotes from the parameter ID
-      const cleanId = id.replace(/^"|"$/g, '');
-      
-      console.log('Writing parameter:', {
-        id: cleanId,
-        originalValue: value,
-        encodedValue,
-        type
-      });
-      
-      const response = await fetch('/api/mavlink/write_param', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json; charset=utf-8',
-          'id': cleanId,
-          'value': encodedValue.toString(),
-          'type': type.toString(),
-        },
-      });
-
-      if (!response.ok) throw new Error(await response.text());
-    } catch (err: any) {
-      console.error('Failed to write parameter:', err.message);
-    }
-  }
-
   function stopMission() {
-    let modal = new Modal({
-      target: document.body,
-      props: {
-        title: 'Stop Mission',
-        content: 'Are you sure you want to stop the flight?',
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        onConfirm: async () => {
-          await sendMavlinkCommand('DO_SET_MODE', `${[1, 6]}`, 'true'); // 6 is RTL: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
-          modal.$destroy();
-          const notification = new Notification({
-            target: document.body,
-            props: {
-              title: 'Mission Stopped',
-              content: 'The mission has been stopped.<br>Returning to launch.',
-              type: 'info',
-            }
-          });
-          setTimeout(() => notification.$destroy(), 10000);
-        },
-      }
+    showModal({
+      title: 'Stop Mission',
+      content: 'Are you sure you want to stop the flight?',
+      confirmation: true,
+      onConfirm: async () => {
+        await setFlightMode('RTL');
+        notify({
+          title: 'Mission Stopped',
+          content: 'The mission has been stopped.<br>Returning to launch.',
+        });
+      },
     });
   }
 
   function pauseMission() {
-    let modal = new Modal({
-      target: document.body,
-      props: {
-        title: 'Pause Mission',
-        content: 'Are you sure you want to pause the flight?',
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        onConfirm: async () => {
-          await sendMavlinkCommand('DO_SET_MODE', `${[1, 16]}`, 'true'); // 16 is POSHOLD: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
-          modal.$destroy();
-          const notification = new Notification({
-            target: document.body,
-            props: {
-              title: 'Mission Paused',
-              content: 'The mission has been paused.',
-              type: 'info',
-            }
-          });
-          setTimeout(() => notification.$destroy(), 10000);
-        },
-      }
+    showModal({
+      title: 'Pause Mission',
+      content: 'Are you sure you want to pause the flight?',
+      confirmation: true,
+      onConfirm: async () => {
+        await setFlightMode('LOITER');
+        notify({
+          title: 'Mission Paused',
+          content: 'The mission has been paused.',
+        });
+      },
     });
   }
 
   function startMission() {
-    let encodedValue = encodeParameterValue(get(mavlinkParamStore).RTL_ALT.param_value, get(mavlinkParamStore).RTL_ALT.param_type);
-    let modal = new Modal({
-      target: document.body,
-      props: {
-        title: 'Start / Resume Mission',
-        content: 'Are you sure you want to start the mission? Please specify RTL_ALT (Return to Launch Altitude) in METERS. Make sure to consider any potential obstacles between the RTL waypoint and the launch location.',
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        inputs: [
-          {
-            type: 'number',
-            placeholder: `RTL_ALT: ${encodedValue / 100} m`,
-            required: true,
-          }
-        ],
-        onConfirm: async () => {
-          missionIndexStore.set(1);
-          missionCompleteStore.set(false);
-          await writeParameter('RTL_ALT', parseInt(modal.inputValues![0]) * 100, get(mavlinkParamStore).RTL_ALT.param_type);
-          await writeParameter('RTL_CLIMB_MIN', 0, get(mavlinkParamStore).RTL_CLIMB_MIN.param_type);
-          if (get(mavStateStore) === 'STANDBY') {
-            await sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true'); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
-            await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[1, 0]}`, 'true'); // param2: 21196 bypasses pre-arm checks
-            await sendMavlinkCommand('NAV_TAKEOFF', `${[0, 0, 0, 0, 0, 0, 10]}`, 'true'); // Takeoff to 10m
-            await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds
-          }
-          await sendMavlinkCommand('DO_SET_MODE', `${[1, 3]}`, 'true'); // 3 is AUTO Mode: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
-          modal.$destroy();
-          const notification = new Notification({
-            target: document.body,
-            props: {
-              title: 'Mission Started',
-              content: 'The mission has been started.',
-              type: 'info',
-            }
-          });
-          setTimeout(() => notification.$destroy(), 10000);
-        },
-      }
+    const rtlAltParam = get(mavlinkParamStore).RTL_ALT;
+    const encodedValue = rtlAltParam
+      ? encodeParameterValue(rtlAltParam.param_value, rtlAltParam.param_type)
+      : DEFAULT_TAKEOFF_ALT_M * RTL_ALT_CM_PER_M;
+    showModal({
+      title: 'Start / Resume Mission',
+      content: 'Are you sure you want to start the mission? Please specify RTL_ALT (Return to Launch Altitude) in METERS. Make sure to consider any potential obstacles between the RTL waypoint and the launch location.',
+      confirmation: true,
+      inputs: [
+        {
+          type: 'number',
+          placeholder: `RTL_ALT: ${encodedValue / RTL_ALT_CM_PER_M} m`,
+          required: true,
+        }
+      ],
+      onConfirm: async (values) => {
+        missionIndexStore.set(1);
+        missionCompleteStore.set(false);
+        const params = get(mavlinkParamStore);
+        if (!isPX4() && params.RTL_ALT) {
+          await writeParameter('RTL_ALT', parseInt(values[0]) * RTL_ALT_CM_PER_M, params.RTL_ALT.param_type);
+          if (params.RTL_CLIMB_MIN) await writeParameter('RTL_CLIMB_MIN', 0, params.RTL_CLIMB_MIN.param_type);
+        }
+        if (get(mavStateStore) === 'STANDBY') {
+          await setFlightMode('GUIDED');
+          await armDisarm(true);
+          await sendMavlinkCommand('NAV_TAKEOFF', [0, 0, 0, 0, 0, 0, DEFAULT_TAKEOFF_ALT_M], { cmdLong: true });
+          await new Promise((resolve) => setTimeout(resolve, TAKEOFF_SETTLE_DELAY_MS));
+        }
+        await setFlightMode('AUTO');
+        notify({
+          title: 'Mission Started',
+          content: 'The mission has been started.',
+        });
+      },
     });
   }
 
   function releasePayload() {
-    let modal = new Modal({
-      target: document.body,
-      props: {
-        title: 'Confirm Release Payload',
-        content: 'Are you sure you want to release the payload?\nUse caution and ensure the drop zone is clear.',
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        onConfirm: async () => {
-          if (mavMode !== 'GUIDED') await sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true'); // param2: 4 (GUIDED) see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
-          await sendMavlinkCommand('DO_SET_SERVO' , `${[9, 1050]}`); // param2 - 1900: release, 1100: grip
-          await new Promise((resolve) => setTimeout(resolve, 500)); // Wait 0.5 seconds
-          await sendMavlinkCommand('DO_SET_SERVO' , `${[9, 1950]}`); // param2 - 1900: release, 1100: grip
-          modal.$destroy();
-        },
-      }
+    showModal({
+      title: 'Confirm Release Payload',
+      content: 'Are you sure you want to release the payload?\nUse caution and ensure the drop zone is clear.',
+      confirmation: true,
+      onConfirm: async () => {
+        if (!isGuidedLabel(mavMode)) await setFlightMode('GUIDED');
+        await sendMavlinkCommand('DO_SET_SERVO', [GRIPPER_SERVO_CHANNEL, GRIPPER_OPEN_PWM_US]);
+        await new Promise((resolve) => setTimeout(resolve, GRIPPER_CYCLE_DELAY_MS));
+        await sendMavlinkCommand('DO_SET_SERVO', [GRIPPER_SERVO_CHANNEL, GRIPPER_CLOSE_PWM_US]);
+      },
     });
   }
 
@@ -280,21 +189,12 @@
   }
 
   async function removeAction(id: string) {
-    const modal = new Modal({
-      target: document.body,
-      props: {
-        title: "Delete Action",
-        content: "Are you sure you want to delete this action?",
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        onConfirm: () => {
-          handleRemove(parseInt(id));
-          modal.$destroy();
-        },
-        onCancel: () => {
-          modal.$destroy();
-        },
+    showModal({
+      title: "Delete Action",
+      content: "Are you sure you want to delete this action?",
+      confirmation: true,
+      onConfirm: () => {
+        handleRemove(parseInt(id));
       },
     });
   }
@@ -418,9 +318,6 @@
     missionPlanActionsStore.set(actions);
   }
   
-  function checkMode(target: string, mode: string) {
-    return target.includes(mode);
-  }
 </script>
 
 <div
@@ -428,36 +325,36 @@
   style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
 >
   <div class="container block">
-    <input type="text" class="text-md font-bold mb-2 ml-4 focus:outline-none" placeholder="Untitled Mission" id="mission-plan-title" bind:value={title} on:input={(event) => updateTitle(event)} />
+    <input type="text" class="text-md font-bold mb-2 ml-4 focus:outline-none" placeholder="Untitled Mission" id="mission-plan-title" bind:value={title} oninput={(event) => updateTitle(event)} />
     <div class="mission-btns flex items-center gap-2 float-right text-sm">
       <a href="https://ardupilot.org/planner/docs/common-planning-a-mission-with-waypoints-and-events.html" target="_blank" class="text-[#61cd89] hover:underline mr-2">
         <i class="fas fa-question-circle"></i>
         How do I create a mission plan?
       </a>
-      <button class="px-2 py-1 bg-[#588ae7] rounded-lg hover:bg-[#6f9ff9]" on:click={() => {releasePayload()}}>
+      <button class="px-2 py-1 bg-[#588ae7] rounded-lg hover:bg-[#6f9ff9]" onclick={() => {releasePayload()}}>
           <i class="fas fa-parachute-box"></i>
           <div class="tooltip">Release Payload</div>
       </button>
-      {#if !checkMode('AUTO', mavMode) || systemState === 'STANDBY'}
+      {#if !isAutoLabel(mavMode) || systemState === 'STANDBY'}
         <button class="px-2 py-1 bg-[#55b377] rounded-lg hover:bg-[#61cd89]"
-          disabled={checkMode('AUTO', mavMode) && systemState !== 'STANDBY' || !missionLoaded}
-          on:click={() => {startMission()}}
+          disabled={isAutoLabel(mavMode) && systemState !== 'STANDBY' || !missionLoaded}
+          onclick={() => {startMission()}}
         >
           <i class="fas fa-play"></i>
           <div class="tooltip">Start/Resume Mission</div>
         </button>
       {:else}
         <button class="px-2 py-1 bg-[#da864e] rounded-lg hover:bg-[#ff995e]"
-          disabled={!checkMode('AUTO', mavMode) || !missionLoaded}
-          on:click={() => {pauseMission()}}
+          disabled={!isAutoLabel(mavMode) || !missionLoaded}
+          onclick={() => {pauseMission()}}
         >
           <i class="fas fa-pause"></i>
           <div class="tooltip">Pause Mission (Loiter)</div>
         </button>
       {/if}
       <button class="px-2 py-1 bg-[#f87171] rounded-lg hover:bg-[#ff7e7e]"
-          disabled={!checkMode('AUTO', mavMode) || !missionLoaded}
-          on:click={() => {stopMission()}}
+          disabled={!isAutoLabel(mavMode) || !missionLoaded}
+          onclick={() => {stopMission()}}
         >
         <i class="fas fa-stop"></i>
         <div class="tooltip">Stop Mission (RTL)</div>
@@ -467,8 +364,8 @@
       <div class="overflow-auto">
         <hr>
         {#key actions}
-          {#each Object.keys(actions) as index}
-            {#if Number(index) !== 0 }
+          {#each Object.keys(actions) as index (index)}
+            {#if Number(index) !== 0}
               <div id="action-{index}" class="flex items-center action-container">
                   <div class="form-checkbox">
                       <span>{index}</span>
@@ -479,14 +376,14 @@
                       <a href="https://ardupilot.org/copter/docs/mission-command-list.html" target="_blank" class="text-[#61cd89] ml-1" title="More Information">
                           <i class="fas fa-info-circle text-[9pt]"></i>
                       </a>
-                      <select class="mt-1" name="action" id="action-{index}-type" on:change={updateActionType} value={actions[Number(index)].type}>
-                      {#each action_types as action_type}
+                      <select class="mt-1" name="action" id="action-{index}-type" onchange={updateActionType} value={actions[Number(index)].type}>
+                      {#each action_types as action_type (action_type)}
                           <option value="{action_type}">{action_type}</option>
                       {/each}
                       </select>
                       <div class="text-center flex justify-center items-center gap-2 mt-2">
                         <label for="altitude" class="text-[9pt] mr-1">Altitude</label>
-                        <input type="number" min="0" max="100" name="altitude" id="altitude-{index}" class="altitude" placeholder="0: current alt" value={String(actions[Number(index)].alt ?? '')} on:change={updateAltitude}>
+                        <input type="number" min="0" max="100" name="altitude" id="altitude-{index}" class="altitude" placeholder="0: current alt" value={String(actions[Number(index)].alt ?? '')} onchange={updateAltitude}>
                         <span class="text-xs text-gray-400">m</span>
                       </div>
                   </div>
@@ -500,12 +397,12 @@
                     </h2>
                     <div class="flex justify-between items-center gap-1">
                       <span class="text-[8pt] mr-2">Lat</span>
-                      <input type="number" step="0.00001" id="lat-{index}" placeholder="eg. 33.749" value={actions[Number(index)].lat} on:change={updateLat} />
+                      <input type="number" step="0.00001" id="lat-{index}" placeholder="eg. 33.749" value={actions[Number(index)].lat} onchange={updateLat} />
                       <span class="text-lg text-gray-400">°</span>
                     </div>
                     <div class="flex justify-between items-center gap-1">
                       <span class="text-[8pt] mr-2">Lon</span>
-                      <input type="number" step="0.00001" id="lon-{index}" placeholder="eg. -84.388" value={actions[Number(index)].lon} on:change={updateLon} />
+                      <input type="number" step="0.00001" id="lon-{index}" placeholder="eg. -84.388" value={actions[Number(index)].lon} onchange={updateLon} />
                       <span class="text-lg text-gray-400">°</span>
                     </div>
                   </div>
@@ -520,31 +417,31 @@
                     <div class="flex justify-between items-center gap-3">
                       <div class="flex justify-between items-center gap-3">
                         <span class="text-[8pt]">P1</span>
-                        <input type="number" id="param1-{index}" placeholder="Empty" value={actions[Number(index)].param1} on:change={updateParam} />
+                        <input type="number" id="param1-{index}" placeholder="Empty" value={actions[Number(index)].param1} onchange={updateParam} />
                       </div>
                       <div class="flex justify-between items-center gap-3">
                         <span class="text-[8pt]">P2</span>
-                        <input type="number" id="param2-{index}" placeholder="Empty" value={actions[Number(index)].param2} on:change={updateParam} />
+                        <input type="number" id="param2-{index}" placeholder="Empty" value={actions[Number(index)].param2} onchange={updateParam} />
                       </div>
                     </div>
                     <div class="flex justify-between items-center gap-3">
                       <div class="flex justify-between items-center gap-3">
                         <span class="text-[8pt]">P3</span>
-                        <input type="number" id="param3-{index}" placeholder="Empty" value={actions[Number(index)].param3} on:change={updateParam} />
+                        <input type="number" id="param3-{index}" placeholder="Empty" value={actions[Number(index)].param3} onchange={updateParam} />
                       </div>
                       <div class="flex justify-between items-center gap-3">
                         <span class="text-[8pt]">P4</span>
-                        <input type="number" id="param4-{index}" placeholder="Empty" value={actions[Number(index)].param4} on:change={updateParam} />
+                        <input type="number" id="param4-{index}" placeholder="Empty" value={actions[Number(index)].param4} onchange={updateParam} />
                       </div>
                     </div>
                   </div>
                   <div class="separator"></div>
                   <div class="form-input flex flex-col gap-1 items-center justify-center">
                       <h2 class="text-[9pt]">Additional Notes</h2>
-                      <textarea placeholder="Notes" value={actions[Number(index)].notes} id="notes-{index}" on:change={updateNotes}></textarea>
+                      <textarea placeholder="Notes" value={actions[Number(index)].notes} id="notes-{index}" onchange={updateNotes}></textarea>
                   </div>
                   <div class="separator"></div>
-                  <button class="delete-action relative rounded-lg px-3 py-2 text-sm" on:click={() => removeAction(index)}>
+                  <button class="delete-action relative rounded-lg px-3 py-2 text-sm" onclick={() => removeAction(index)}>
                       <i class="fas fa-trash-alt text-red-400"></i>
                       <span class="tooltip">Delete Action</span>
                   </button>
@@ -555,7 +452,7 @@
         {/key}
       </div>
       <div class="flex justify-center">
-        <button class="add-action rounded-lg px-4 py-2 my-4" on:click={addAction}>
+        <button class="add-action rounded-lg px-4 py-2 my-4" onclick={addAction}>
           <i class="fas fa-plus"></i>&nbsp;&nbsp;Add Action
         </button>
       </div>

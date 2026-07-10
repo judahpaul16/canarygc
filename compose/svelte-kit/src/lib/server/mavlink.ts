@@ -204,7 +204,18 @@ async function setMissionCount(numItems: number) {
     await new Promise((resolve) => setTimeout(resolve, 250)); // Wait for 250 ms
 }
 
-async function loadMissionItem(item: any, index: number) {
+export interface MissionItemInput {
+    type: string;
+    lat: number;
+    lon: number;
+    alt: number | null;
+    param1: number | null;
+    param2: number | null;
+    param3: number | null;
+    param4: number | null;
+}
+
+async function loadMissionItem(item: MissionItemInput, index: number) {
     if (!port || !reader) {
         online = false;
         return;
@@ -252,7 +263,7 @@ async function setPositionLocal(x: number, y: number, z: number) {
     msg.targetSystem = 1;
     msg.targetComponent = 1;
     msg.coordinateFrame = 1; // MAV_FRAME_LOCAL_NED
-    // @ts-ignore
+    // @ts-expect-error typeMask is declared readonly upstream but must be set per message
     msg.typeMask = 0b011111111000; // ignore all but position
     msg.x = x;
     msg.y = y;
@@ -261,7 +272,7 @@ async function setPositionLocal(x: number, y: number, z: number) {
     await send(port!, msg);
   }
 
-function convertBigIntToNumber(obj: any): any {
+function convertBigIntToNumber(obj: unknown): unknown {
     if (typeof obj === 'bigint') {
         return Number(obj);
     } else if (Array.isArray(obj)) {

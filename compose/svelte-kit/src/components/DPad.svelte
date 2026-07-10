@@ -1,74 +1,41 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import { mavModeStore, mavAltitudeStore } from '../stores/mavlinkStore';
   import { get } from 'svelte/store';
   import { tertiaryColorStore } from '../stores/customizationStore';
 
-  let altitude: number = get(mavAltitudeStore);
+  import { setFlightMode, setPositionLocal } from '../lib/mavlink-client';
+  import { isGuidedLabel } from '../lib/flight-modes';
 
-  $: tertiaryColor = $tertiaryColorStore;
-  $: mavMode = $mavModeStore;
-  $: altitude = $mavAltitudeStore;
+  const MOVE_STEP_M = 10;
 
-  async function sendMavlinkCommand(command: string, params: string  = '', useCmdLong: string = 'false', useArduPilotMega: string = 'false') {
-    const response = await fetch(`/api/mavlink/send_command`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'command': command,
-        'params': params,
-        'useCmdLong': useCmdLong,
-        'useArduPilotMega': useArduPilotMega
-      },
-    });
-    if (response.ok) {
-      console.log(await response.text());
-    } else {
-      console.error(`Error: ${await response.text()}`);
-    }
-  }
+  let altitude: number = $state(get(mavAltitudeStore));
 
-  async function setPositionLocal(x: string, y: string, z: string) {
-    const response = await fetch("/api/mavlink/set_position_local", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x": x,
-        "y": y,
-        "z": z,
-      },
-    });
-    if (response.ok) {
-      console.log(`Local position set successfully: x: ${x}, y: ${y}, z: ${z}`);
-    } else {
-      console.error("Failed to set local position");
-    }
+  let tertiaryColor = $derived($tertiaryColorStore);
+  let mavMode = $derived($mavModeStore);
+  run(() => {
+    altitude = $mavAltitudeStore;
+  });
+
+  async function nudge(x: number, y: number) {
+    if (!isGuidedLabel(mavMode)) await setFlightMode('GUIDED');
+    await setPositionLocal(x, y, -altitude);
   }
 </script>
 
 <div class="dpad-container relative flex items-center justify-center w-48 h-48">
   <nav class="d-pad relative" style="--tertiaryColor: {tertiaryColor}">
-    <button class="up" on:click={() => {
-        if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true');
-        setPositionLocal('10', '0', `-${altitude}`);
-      }}>
+    <button class="up" onclick={() => nudge(MOVE_STEP_M, 0)}>
       <i class="fas fa-chevron-up"></i>
     </button>
-    <button class="right" on:click={() => {
-        if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true');
-        setPositionLocal('0', '10', `-${altitude}`);
-      }}>
+    <button class="right" onclick={() => nudge(0, MOVE_STEP_M)}>
       <i class="fas fa-chevron-right"></i>
     </button>
-    <button class="down" on:click={() => {
-        if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true');
-        setPositionLocal('-10', '0', `-${altitude}`);
-      }}>
+    <button class="down" onclick={() => nudge(-MOVE_STEP_M, 0)}>
       <i class="fas fa-chevron-down"></i>
     </button>
-    <button class="left" on:click={() => {
-        if (mavMode !== 'GUIDED') sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true');
-        setPositionLocal('0', '-10', `-${altitude}`);
-      }}>
+    <button class="left" onclick={() => nudge(0, -MOVE_STEP_M)}>
       <i class="fas fa-chevron-left"></i>
     </button>
     <div class="center-circle">

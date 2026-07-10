@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import {
     missionPlanTitleStore,
     missionCountStore,
@@ -21,42 +23,45 @@
   import { markersStore } from '../stores/mapStore';
   import { get } from 'svelte/store';
 
-  import Modal from './Modal.svelte';
-  import Notification from './Notification.svelte';
+  import { showModal, notify } from '../lib/overlays';
+  import { sendMavlinkCommand, setFlightMode, armDisarm, writeParameter, encodeParameterValue } from '../lib/mavlink-client';
+  import { isAutoLabel, isGuidedLabel, isPX4 } from '../lib/flight-modes';
   import type { LatLng } from 'leaflet';
 
-  export let mavModel: string = get(mavModelStore);
-  export let mavType: string = get(mavTypeStore);
-  export let isArmed: boolean = get(mavArmedStateStore)
-  export let speed: number = get(mavSpeedStore);
-  export let altitude: number = get(mavAltitudeStore);
-  export let systemState: string = get(mavStateStore);
-  export let batteryStatus: number | null = get(mavBatteryStore);
-  export let mavMode: string = get(mavModeStore);
+  const GRIPPER_SERVO_CHANNEL = 9;
+  const GRIPPER_OPEN_PWM_US = 1050;
+  const GRIPPER_CLOSE_PWM_US = 1950;
+  const GRIPPER_CYCLE_DELAY_MS = 500;
+  const TAKEOFF_SETTLE_DELAY_MS = 5000;
+  const CALIBRATION_SETTLE_DELAY_MS = 5000;
+  const DEFAULT_TAKEOFF_ALT_M = 10;
+  const RTL_ALT_CM_PER_M = 100;
 
-  let markers = get(markersStore);
+  interface Props {
+    mavModel?: string;
+    mavType?: string;
+    isArmed?: boolean;
+    speed?: number;
+    altitude?: number;
+    systemState?: string;
+    batteryStatus?: number | null;
+    mavMode?: string;
+  }
+
+  let {
+    mavModel = $bindable(get(mavModelStore)),
+    mavType = $bindable(get(mavTypeStore)),
+    isArmed = $bindable(get(mavArmedStateStore)),
+    speed = $bindable(get(mavSpeedStore)),
+    altitude = $bindable(get(mavAltitudeStore)),
+    systemState = $bindable(get(mavStateStore)),
+    batteryStatus = $bindable(get(mavBatteryStore)),
+    mavMode = $bindable(get(mavModeStore))
+  }: Props = $props();
+
+  let markers = $state(get(markersStore));
   let progressSamples: { progress: number, timestamp: number }[] = [];
 
-  $: darkMode = $darkModeStore;
-  $: primaryColor = $primaryColorStore;
-  $: secondaryColor = darkMode ? $tertiaryColorStore : $secondaryColorStore;
-  $: tertiaryColor = $tertiaryColorStore;
-  $: fontColor = darkMode ? '#ffffff' : '#000000';
-  $: mavModel = $mavModelStore;
-  $: mavType = $mavTypeStore;
-  $: isArmed = $mavArmedStateStore;
-  $: systemState = $mavStateStore;
-  $: mavMode = $mavModeStore;
-  $: batteryStatus = $mavBatteryStore;
-  $: altitude = $mavAltitudeStore;
-  $: speed = $mavSpeedStore;
-  $: missionPlanTitle = $missionPlanTitleStore;
-  $: mavLocation = $mavLocationStore;
-  $: missionProgress = getMissionProgress($missionIndexStore, $missionCountStore, $mavLocationStore as L.LatLng);
-  $: missionLoaded = $missionPlanTitleStore !== '';
-  $: markers = $markersStore;
-  $: eta = calculateETA(missionProgress, $mavLocationStore);
-  $: remainingDistance = calculateRemainingDistance($missionIndexStore, $mavLocationStore, $markersStore);
 
   function getMissionProgress(index: number, count: number, mavLocation: L.LatLng): number {
     let progress: number = 0;
@@ -107,7 +112,7 @@
     }
   }
 
-  function calculateETA(currentProgress: number, location: LatLng | { lat: number; lng: number; }): string {
+  function calculateETA(currentProgress: number): string {
     if (progressSamples.length < 2) {
       return "00:00:00"; // Not enough samples
     }
@@ -147,7 +152,7 @@
     return formattedTime;
   }
 
-  function calculateRemainingDistance(index: number, mavLocation: any, markers: Map<number, L.Marker>): number {
+  function calculateRemainingDistance(index: number, mavLocation: LatLng | { lat: number; lng: number }, markers: Map<number, L.Marker>): number {
     let totalDistance = 0;
     
     // Calculate total distance from current position to end through remaining waypoints
@@ -164,270 +169,187 @@
     return parseFloat((totalDistance * 1000).toFixed(2)); // Returns distance in meters
   }
 
-  async function sendMavlinkCommand(command: string, params: string  = '', useCmdLong: string = 'false', useArduPilotMega: string = 'false') {
-    const response = await fetch(`/api/mavlink/send_command`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'command': command,
-        'params': params,
-        'useCmdLong': useCmdLong,
-        'useArduPilotMega': useArduPilotMega
-      },
-    });
-    if (response.ok) {
-      console.log(await response.text());
-    } else {
-      console.error(`Error: ${await response.text()}`);
-    }
-  }
-  
-  function encodeParameterValue(value: number, paramType: number): number {
-    // Ensure the value is within valid range for the type
-    switch (paramType) {
-      case 1: // uint8
-        return Math.min(255, Math.max(0, Math.round(value)));
-      case 2: // int8
-        return Math.min(127, Math.max(-128, Math.round(value)));
-      case 3: // uint16
-        return Math.min(65535, Math.max(0, Math.round(value)));
-      case 4: // int16
-        return Math.min(32767, Math.max(-32768, Math.round(value)));
-      case 5: // uint32
-        return Math.min(4294967295, Math.max(0, Math.round(value)));
-      case 6: // int32
-        return Math.min(2147483647, Math.max(-2147483648, Math.round(value)));
-      case 7: // uint64
-      case 8: // int64
-        console.warn('64-bit integers may not be fully precise in JavaScript');
-        return value;
-      case 9: // float
-        return value;
-      case 10: // double
-        return value;
-      default:
-        console.warn('Unknown parameter type:', paramType);
-        return value;
-      }
-    }
-
-    async function writeParameter(id: string, value: number, type: number) {
-      try {
-        const encodedValue = encodeParameterValue(value, type);
-        
-        // Remove any extra quotes from the parameter ID
-        const cleanId = id.replace(/^"|"$/g, '');
-        
-        console.log('Writing parameter:', {
-          id: cleanId,
-          originalValue: value,
-          encodedValue,
-          type
-        });
-        
-        const response = await fetch('/api/mavlink/write_param', {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/json; charset=utf-8',
-            'id': cleanId,
-            'value': encodedValue.toString(),
-            'type': type.toString(),
-          },
-        });
-
-        if (!response.ok) throw new Error(await response.text());
-      } catch (err: any) {
-        console.error('Failed to write parameter:', err.message);
-      }
-    }
-
   function confirmCalibration() {
-    let modal = new Modal({
-      target: document.body,
-      props: {
-        title: 'Sensor Calibration',
-        content: 'Are you sure you want to calibrate the sensors? If so please manually specify the current heading (direction) of the MAV in degrees.',
-        inputs: [
-          {
-            type: 'number',
-            placeholder: 'Current Heading',
-            required: true,
-          }
-        ],
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        onConfirm: async () => {
-          await sendMavlinkCommand('FIXED_MAG_CAL_YAW', `${[isNaN(parseInt(modal.inputValues![0])) ? 0 : modal.inputValues![0], 0, mavLocation.lat, mavLocation.lng]}`);
-          await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds
-          await sendMavlinkCommand('PREFLIGHT_CALIBRATION', `${[0, 0, 0, 0, 4, 0, 0, 0]}`);
-          modal.$destroy();
+    if (isPX4()) {
+      notify({
+        title: 'Not available on PX4',
+        content: 'Yaw-referenced compass calibration uses an ArduPilot command. Calibrate PX4 sensors from a full setup tool.',
+        type: 'warning'
+      });
+      return;
+    }
+    showModal({
+      title: 'Sensor Calibration',
+      content: 'Are you sure you want to calibrate the sensors? If so please manually specify the current heading (direction) of the MAV in degrees.',
+      confirmation: true,
+      inputs: [
+        {
+          type: 'number',
+          placeholder: 'Current Heading',
+          required: true,
         }
+      ],
+      onConfirm: async (values) => {
+        const heading = isNaN(parseInt(values[0])) ? 0 : values[0];
+        await sendMavlinkCommand('FIXED_MAG_CAL_YAW', [heading, 0, mavLocation.lat, mavLocation.lng], { ardupilotMega: true });
+        await new Promise((resolve) => setTimeout(resolve, CALIBRATION_SETTLE_DELAY_MS));
+        await sendMavlinkCommand('PREFLIGHT_CALIBRATION', [0, 0, 0, 0, 4, 0, 0, 0]);
       }
     });
   }
 
   function stopMission() {
-    let modal = new Modal({
-      target: document.body,
-      props: {
-        title: 'Stop Mission',
-        content: 'Are you sure you want to stop the mission?',
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        onConfirm: async () => {
-          await sendMavlinkCommand('DO_SET_MODE', `${[1, 6]}`, 'true'); // 6 is RTL: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
-          modal.$destroy();
-          const notification = new Notification({
-            target: document.body,
-            props: {
-              title: 'Mission Stopped',
-              content: 'The mission has been stopped.<br>Returning to launch.',
-              type: 'info',
-            }
-          });
-          setTimeout(() => notification.$destroy(), 10000);
-        },
-      }
+    showModal({
+      title: 'Stop Mission',
+      content: 'Are you sure you want to stop the mission?',
+      confirmation: true,
+      onConfirm: async () => {
+        await setFlightMode('RTL');
+        notify({
+          title: 'Mission Stopped',
+          content: 'The mission has been stopped.<br>Returning to launch.',
+        });
+      },
     });
   }
 
   function pauseMission() {
-    let modal = new Modal({
-      target: document.body,
-      props: {
-        title: 'Pause Mission',
-        content: 'Are you sure you want to pause the mission?',
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        onConfirm: async () => {
-          await sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true'); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
-          modal.$destroy();
-          const notification = new Notification({
-            target: document.body,
-            props: {
-              title: 'Mission Paused',
-              content: 'The mission has been paused.',
-              type: 'info',
-            }
-          });
-          setTimeout(() => notification.$destroy(), 10000);
-        },
-      }
+    showModal({
+      title: 'Pause Mission',
+      content: 'Are you sure you want to pause the mission?',
+      confirmation: true,
+      onConfirm: async () => {
+        await setFlightMode('GUIDED');
+        notify({
+          title: 'Mission Paused',
+          content: 'The mission has been paused.',
+        });
+      },
     });
   }
 
   async function startMission() {
-    let encodedValue = encodeParameterValue(get(mavlinkParamStore).RTL_ALT.param_value, get(mavlinkParamStore).RTL_ALT.param_type);
-    let modal = new Modal({
-      target: document.body,
-      props: {
-        title: 'Start / Resume Mission',
-        content: 'Are you sure you want to start the mission? Please specify RTL_ALT (Return to Launch Altitude) in METERS. Make sure to consider any potential obstacles between the RTL waypoint and the launch location.',
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        inputs: [
-          {
-            type: 'number',
-            placeholder: `RTL_ALT: ${encodedValue / 100} m`,
-            required: true,
-          }
-        ],
-        onConfirm: async () => {
-          missionIndexStore.set(1);
-          missionCompleteStore.set(false);
-          await writeParameter('RTL_ALT', parseInt(modal.inputValues![0]) * 100, get(mavlinkParamStore).RTL_ALT.param_type);
-          await writeParameter('RTL_CLIMB_MIN', 0, get(mavlinkParamStore).RTL_CLIMB_MIN.param_type);
-          if (get(mavStateStore) === 'STANDBY') {
-            await sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true'); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
-            await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[1, 0]}`, 'true'); // param2: 21196 bypasses pre-arm checks
-            await sendMavlinkCommand('NAV_TAKEOFF', `${[0, 0, 0, 0, 0, 0, 10]}`, 'true');
-            await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds
-          }
-          await sendMavlinkCommand('DO_SET_MODE', `${[1, 3]}`, 'true'); // 3 is AUTO Mode: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
-          modal.$destroy();
-          const notification = new Notification({
-            target: document.body,
-            props: {
-              title: 'Mission Started',
-              content: 'The mission has been started.',
-              type: 'info',
-            }
-          });
-          setTimeout(() => notification.$destroy(), 10000);
-        },
-      }
+    const rtlAltParam = get(mavlinkParamStore).RTL_ALT;
+    const encodedValue = rtlAltParam
+      ? encodeParameterValue(rtlAltParam.param_value, rtlAltParam.param_type)
+      : DEFAULT_TAKEOFF_ALT_M * RTL_ALT_CM_PER_M;
+    showModal({
+      title: 'Start / Resume Mission',
+      content: 'Are you sure you want to start the mission? Please specify RTL_ALT (Return to Launch Altitude) in METERS. Make sure to consider any potential obstacles between the RTL waypoint and the launch location.',
+      confirmation: true,
+      inputs: [
+        {
+          type: 'number',
+          placeholder: `RTL_ALT: ${encodedValue / RTL_ALT_CM_PER_M} m`,
+          required: true,
+        }
+      ],
+      onConfirm: async (values) => {
+        missionIndexStore.set(1);
+        missionCompleteStore.set(false);
+        const params = get(mavlinkParamStore);
+        if (!isPX4() && params.RTL_ALT) {
+          await writeParameter('RTL_ALT', parseInt(values[0]) * RTL_ALT_CM_PER_M, params.RTL_ALT.param_type);
+          if (params.RTL_CLIMB_MIN) await writeParameter('RTL_CLIMB_MIN', 0, params.RTL_CLIMB_MIN.param_type);
+        }
+        if (get(mavStateStore) === 'STANDBY') {
+          await setFlightMode('GUIDED');
+          await armDisarm(true);
+          await sendMavlinkCommand('NAV_TAKEOFF', [0, 0, 0, 0, 0, 0, DEFAULT_TAKEOFF_ALT_M], { cmdLong: true });
+          await new Promise((resolve) => setTimeout(resolve, TAKEOFF_SETTLE_DELAY_MS));
+        }
+        await setFlightMode('AUTO');
+        notify({
+          title: 'Mission Started',
+          content: 'The mission has been started.',
+        });
+      },
     });
   }
 
   function releasePayload() {
-    let modal = new Modal({
-      target: document.body,
-      props: {
-        title: 'Confirm Release Payload',
-        content: 'Are you sure you want to release the payload?\nUse caution and ensure the drop zone is clear.',
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        onConfirm: async () => {
-          if (mavMode !== 'GUIDED') await sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true'); // param2: 4 (GUIDED) see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
-          await sendMavlinkCommand('DO_SET_SERVO' , `${[9, 1050]}`); // param2 - 1900: release, 1100: grip
-          await new Promise((resolve) => setTimeout(resolve, 500)); // Wait 0.5 seconds
-          await sendMavlinkCommand('DO_SET_SERVO' , `${[9, 1950]}`); // param2 - 1900: release, 1100: grip
-          modal.$destroy();
-        },
-      }
+    showModal({
+      title: 'Confirm Release Payload',
+      content: 'Are you sure you want to release the payload?\nUse caution and ensure the drop zone is clear.',
+      confirmation: true,
+      onConfirm: async () => {
+        if (!isGuidedLabel(mavMode)) await setFlightMode('GUIDED');
+        await sendMavlinkCommand('DO_SET_SERVO', [GRIPPER_SERVO_CHANNEL, GRIPPER_OPEN_PWM_US]);
+        await new Promise((resolve) => setTimeout(resolve, GRIPPER_CYCLE_DELAY_MS));
+        await sendMavlinkCommand('DO_SET_SERVO', [GRIPPER_SERVO_CHANNEL, GRIPPER_CLOSE_PWM_US]);
+      },
     });
   }
 
   function initTakeoff() {
-    let modal = new Modal({
-      target: document.body,
-      props: {
-        title: 'Confirm Takeoff',
-        content: 'Are you sure you want to initiate takeoff? If so please specify the altitude.',
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        inputs: [
-          {
-            type: 'number',
-            placeholder: 'Altitude (m)',
-            required: true,
-          }
-        ],
-        onConfirm: async () => {
-          if (mavMode !== 'GUIDED') await sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true'); // param2: 4 (GUIDED) see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
-          await sendMavlinkCommand('COMPONENT_ARM_DISARM', `${[1, 0]}`, 'true'); // param2: 21196 bypasses pre-arm checks
-          await sendMavlinkCommand('NAV_TAKEOFF', `${[0, 0, 0, 0, 0, 0, parseInt(modal.inputValues![0])]}`, 'true');
-        },
-      }
+    showModal({
+      title: 'Confirm Takeoff',
+      content: 'Are you sure you want to initiate takeoff? If so please specify the altitude.',
+      confirmation: true,
+      inputs: [
+        {
+          type: 'number',
+          placeholder: 'Altitude (m)',
+          required: true,
+        }
+      ],
+      onConfirm: async (values) => {
+        if (!isGuidedLabel(mavMode)) await setFlightMode('GUIDED');
+        await armDisarm(true);
+        await sendMavlinkCommand('NAV_TAKEOFF', [0, 0, 0, 0, 0, 0, parseInt(values[0])], { cmdLong: true });
+      },
     });
   }
-  
+
   function initLanding() {
-    let modal = new Modal({
-      target: document.body,
-      props: {
-        title: 'Confirm Landing',
-        content: 'Are you sure you want to land the MAV?',
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        onConfirm: async () => {
-          await sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true'); // param2: 4 (GUIDED) see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
-          await sendMavlinkCommand('NAV_LAND', `${[0, 0, 0, 0, mavLocation.lat, mavLocation.lng, 0]}`, 'true');
-        },
-      }
+    showModal({
+      title: 'Confirm Landing',
+      content: 'Are you sure you want to land the MAV?',
+      confirmation: true,
+      onConfirm: async () => {
+        await setFlightMode('GUIDED');
+        await sendMavlinkCommand('NAV_LAND', [0, 0, 0, 0, mavLocation.lat, mavLocation.lng, 0], { cmdLong: true });
+      },
     });
   }
-  
-  function checkMode(target: string, mode: string) {
-    return target.includes(mode);
-  }
+  let darkMode = $derived($darkModeStore);
+  let primaryColor = $derived($primaryColorStore);
+  let secondaryColor = $derived(darkMode ? $tertiaryColorStore : $secondaryColorStore);
+  let tertiaryColor = $derived($tertiaryColorStore);
+  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
+  run(() => {
+    mavModel = $mavModelStore;
+  });
+  run(() => {
+    mavType = $mavTypeStore;
+  });
+  run(() => {
+    isArmed = $mavArmedStateStore;
+  });
+  run(() => {
+    systemState = $mavStateStore;
+  });
+  run(() => {
+    mavMode = $mavModeStore;
+  });
+  run(() => {
+    batteryStatus = $mavBatteryStore;
+  });
+  run(() => {
+    altitude = $mavAltitudeStore;
+  });
+  run(() => {
+    speed = $mavSpeedStore;
+  });
+  let missionPlanTitle = $derived($missionPlanTitleStore);
+  let mavLocation = $derived($mavLocationStore);
+  let missionProgress = $derived(getMissionProgress($missionIndexStore, $missionCountStore, $mavLocationStore as L.LatLng));
+  let missionLoaded = $derived($missionPlanTitleStore !== '');
+  run(() => {
+    markers = $markersStore;
+  });
+  let eta = $derived(calculateETA(missionProgress));
+  let remainingDistance = $derived(calculateRemainingDistance($missionIndexStore, $mavLocationStore, $markersStore));
 </script>
 
 <div
@@ -459,46 +381,46 @@
       <div class="flex flex-col items-center justify-end">
         <div class="w-full">
           <span>
-            Mission Progress: {systemState === 'Unknown' ? '--' : mavMode === 'AUTO' ? missionProgress : 0}% (ETA {eta})
-            <span class="text-[#66e1ff]"> {mavMode === 'AUTO' ? (parseFloat(remainingDistance.toFixed(2)) || 0) : 0} m remaining</span>
+            Mission Progress: {systemState === 'Unknown' ? '--' : isAutoLabel(mavMode) ? missionProgress : 0}% (ETA {eta})
+            <span class="text-[#66e1ff]"> {isAutoLabel(mavMode) ? (parseFloat(remainingDistance.toFixed(2)) || 0) : 0} m remaining</span>
           </span>
           <div class="progress-bar rounded-full h-2.5 mt-3">
-            <div class="progress-bar-inner h-2.5 rounded-full" style="width: {mavMode === 'AUTO' ? missionProgress : 0}%;"></div>
+            <div class="progress-bar-inner h-2.5 rounded-full" style="width: {isAutoLabel(mavMode) ? missionProgress : 0}%;"></div>
           </div>
         </div>
         <div class="button-container mt-6">
           <div class="relative group">
-            <button class="circular-button" on:click={confirmCalibration}>
+            <button class="circular-button" onclick={confirmCalibration}>
               <i class="far fa-compass text-[#ffa704] fa-spin"></i>
               <div class="tooltip text-white">Calibrate Sensors</div>
             </button>
           </div>
           <div class="relative group">
-            <button class="circular-button" on:click={releasePayload}>
+            <button class="circular-button" onclick={releasePayload}>
               <i class="fas fa-parachute-box"></i>
               <div class="tooltip text-white">Release Payload</div>
             </button>
           </div>
           {#if systemState === 'STANDBY'}
             <div class="relative group flex flex-col items-center">
-              <button class="circular-button" on:click={initTakeoff} disabled={checkMode('AUTO', mavMode)}>
+              <button class="circular-button" onclick={initTakeoff} disabled={isAutoLabel(mavMode)}>
                 <i class="fas fa-plane-departure"></i>
                 <div class="tooltip text-white">Initiate Takeoff</div>
               </button>
             </div>
           {:else}
             <div class="relative group flex flex-col items-center">
-              <button class="circular-button" on:click={initLanding} disabled={checkMode('AUTO', mavMode) || checkMode('LAND', mavMode)}>
+              <button class="circular-button" onclick={initLanding} disabled={isAutoLabel(mavMode) || mavMode.includes('LAND')}>
                 <i class="fas fa-plane-arrival"></i>
                 <div class="tooltip text-white">Initiate Landing</div>
               </button>
             </div>
           {/if}
-          {#if !checkMode('AUTO', mavMode) || systemState === 'STANDBY'}
+          {#if !isAutoLabel(mavMode) || systemState === 'STANDBY'}
             <div class="relative group">
               <button
-                class="circular-button" on:click={startMission}
-                disabled={checkMode('AUTO', mavMode) && systemState !== 'STANDBY' || !missionLoaded}
+                class="circular-button" onclick={startMission}
+                disabled={isAutoLabel(mavMode) && systemState !== 'STANDBY' || !missionLoaded}
               >
                 <i class="fas fa-play"></i>
                 <div class="tooltip text-white">Start/Resume Mission</div>
@@ -507,8 +429,8 @@
           {:else}
             <div class="relative group">
               <button
-                class="circular-button" on:click={pauseMission}
-                disabled={!checkMode('AUTO', mavMode) || !missionLoaded}
+                class="circular-button" onclick={pauseMission}
+                disabled={!isAutoLabel(mavMode) || !missionLoaded}
               >
                 <i class="fas fa-pause"></i>
                 <div class="tooltip text-white">Pause Mission (Loiter)</div>
@@ -517,8 +439,8 @@
           {/if}
           <div class="relative group">
             <button
-              class="circular-button" on:click={stopMission}
-              disabled={!checkMode('AUTO', mavMode) || !missionLoaded}
+              class="circular-button" onclick={stopMission}
+              disabled={!isAutoLabel(mavMode) || !missionLoaded}
             >
               <i class="fas fa-stop text-red-400"></i>
               <div class="tooltip text-white">Stop Mission (RTL)</div>

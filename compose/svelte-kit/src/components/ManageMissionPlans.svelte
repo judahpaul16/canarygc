@@ -5,7 +5,8 @@
     missionCompleteStore,
     type MissionPlanActions
   } from "../stores/missionPlanStore";
-  import Modal from "./Modal.svelte";
+  import { showModal, notify } from "../lib/overlays";
+  import { setFlightMode } from "../lib/mavlink-client";
   import { onMount } from "svelte";
   import {
     darkModeStore,
@@ -13,43 +14,31 @@
     secondaryColorStore,
     tertiaryColorStore
   } from '../stores/customizationStore';
-  import Notification from "./Notification.svelte";
 
-  export let title: string = "Manage Mission Plans";
-  export let isModal = false;
-  export let isOpen: boolean = true;
-  export let onCancel: () => void = () => {};
-  let missionPlans: Array<{ id: string; title: string }> = [];
-  let actions: MissionPlanActions = {};
+  interface Props {
+    title?: string;
+    isModal?: boolean;
+    isOpen?: boolean;
+    onCancel?: () => void;
+  }
 
-  $: darkMode = $darkModeStore;
-  $: primaryColor = $primaryColorStore;
-  $: secondaryColor = darkMode ? $tertiaryColorStore : $secondaryColorStore;
-  $: fontColor = darkMode ? "#ffffff" : "#000000";
-  $: tertiaryColor = $tertiaryColorStore;
-  $: actions = $missionPlanActionsStore;
+  let {
+    title = "Manage Mission Plans",
+    isModal = false,
+    isOpen = $bindable(true),
+    onCancel = () => {}
+  }: Props = $props();
+  let missionPlans: Array<{ id: string; title: string; actions: MissionPlanActions; isLoaded: number }> = $state([]);
+
+  let darkMode = $derived($darkModeStore);
+  let primaryColor = $derived($primaryColorStore);
+  let secondaryColor = $derived(darkMode ? $tertiaryColorStore : $secondaryColorStore);
+  let fontColor = $derived(darkMode ? "#ffffff" : "#000000");
+  let tertiaryColor = $derived($tertiaryColorStore);
 
   onMount(() => {
     getMissionPlans();
   });
-
-  async function sendMavlinkCommand(command: string, params: string  = '', useCmdLong: string = 'false', useArduPilotMega: string = 'false') {
-    const response = await fetch(`/api/mavlink/send_command`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'command': command,
-        'params': params,
-        'useCmdLong': useCmdLong,
-        'useArduPilotMega': useArduPilotMega
-      },
-    });
-    if (response.ok) {
-      console.log(await response.text());
-    } else {
-      console.error(`Error: ${await response.text()}`);
-    }
-  }
 
   async function getMissionPlans() {
     try {
@@ -61,7 +50,7 @@
       });
       let records = await response.json();
       if (Object.keys(records).length > 0) {
-        missionPlans = records.map((record: any) => ({
+        missionPlans = records.map((record: { id: string; title: string; actions: string; isLoaded: number }) => ({
           id: record.id,
           title: record.title,
           actions: JSON.parse(record.actions),
@@ -73,28 +62,20 @@
     }
   }
   
-  async function loadMissionPlan(plan: any) {
-    const modal = new Modal({
-      target: document.body,
-      props: {
-        title: "Load Mission Plan",
-        content: "Are you sure you want to load this mission plan? This action will overwrite the currently loaded mission plan.",
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        onConfirm: async () => {
-          await handleLoad(plan.title, plan.actions);
-          isOpen = false;
-        },
-        onCancel: () => {
-          modal.$destroy();
-        },
+  async function loadMissionPlan(plan: { title: string; actions: MissionPlanActions }) {
+    showModal({
+      title: "Load Mission Plan",
+      content: "Are you sure you want to load this mission plan? This action will overwrite the currently loaded mission plan.",
+      confirmation: true,
+      onConfirm: async () => {
+        await handleLoad(plan.title, plan.actions);
+        isOpen = false;
       },
     });
   }
 
   async function handleLoad(title: string, actions: MissionPlanActions) {
-    sendMavlinkCommand('DO_SET_MODE', `${[1, 4]}`, 'true'); // 4 is GUIDED: see CopterMode enum in /mavlink-mappings/dist/lib/ardupilotmega.ts
+    setFlightMode('GUIDED');
 
     // Clear the current mission plan
     try {
@@ -182,29 +163,18 @@
               "actions": JSON.stringify(missionPlan.actions),
             },
           }).catch((error) => {
-            new Modal({
-              target: document.body,
-              props: {
-                title: "Error",
-                content: error.message,
-                isOpen: true,
-                confirmation: false,
-                notification: true,
-              },
+            showModal({
+              title: "Error",
+              content: error.message,
+              notification: true,
             });
           });
           if (response) {
-            let notification = new Notification({
-              target: document.body,
-              props: {
-                  title: "Mission Plan Saved",
-                  content: "The mission plan has been saved.",
-                  type: "info",
-              },
+            notify({
+              title: "Mission Plan Saved",
+              content: "The mission plan has been saved.",
+              duration: 3000,
             });
-            setTimeout(() => {
-                notification.$destroy();
-            }, 3000);
           }
       }
   }
@@ -223,48 +193,28 @@
         "actions": JSON.stringify(missionPlan.actions),
       },
     }).catch((error) => {
-      new Modal({
-        target: document.body,
-        props: {
-            title: "Error",
-            content: error.message,
-            isOpen: true,
-            confirmation: false,
-            notification: true,
-        },
+      showModal({
+        title: "Error",
+        content: error.message,
+        notification: true,
       });
     });
     if (response) {
-      let notification = new Notification({
-        target: document.body,
-        props: {
-          title: "Mission Plan Updated",
-          content: "The mission plan has been updated.",
-          type: "info",
-        },
+      notify({
+        title: "Mission Plan Updated",
+        content: "The mission plan has been updated.",
+        duration: 3000,
       });
-      setTimeout(() => {
-        notification.$destroy();
-      }, 3000);
     }
 }
 
   async function deleteMissionPlan(title: string) {
-    const modal = new Modal({
-      target: document.body,
-      props: {
-        title: "Delete Mission Plan",
-        content: "Are you sure you want to delete this mission plan?",
-        isOpen: true,
-        confirmation: true,
-        notification: false,
-        onConfirm: async () => {
-          await handleDelete(title);
-          modal.$destroy();
-        },
-        onCancel: () => {
-          modal.$destroy();
-        },
+    showModal({
+      title: "Delete Mission Plan",
+      content: "Are you sure you want to delete this mission plan?",
+      confirmation: true,
+      onConfirm: async () => {
+        await handleDelete(title);
       },
     });
   }
@@ -322,7 +272,7 @@
           {title}
         </div>
         <button
-          on:click={closeModal}
+          onclick={closeModal}
           class="absolute top-2 right-2 text-gray-400 hover:text-white text-2xl"
         >
           &times;
@@ -336,11 +286,11 @@
                 <span>{plan.title}</span>
                 <div class="flex items-center gap-2">
                   <button
-                    on:click={() => deleteMissionPlan(plan.title)}
+                    onclick={() => deleteMissionPlan(plan.title)}
                     class="text-red-500 hover:text-red-700">Delete</button
                   >
                   <button
-                    on:click={() => loadMissionPlan(plan)}
+                    onclick={() => loadMissionPlan(plan)}
                     class="text-blue-500 hover:text-blue-700">Load</button
                   >
                 </div>
@@ -355,7 +305,7 @@
       </div>
       <div class="flex justify-center px-4 py-2 border-t">
         <button
-            on:click={importPlan}
+            onclick={importPlan}
             class="import-btn bg-transparent px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
           >
           <i class="fas fa-upload mr-1"></i>
@@ -382,14 +332,14 @@
               <span class="mr-2" title={plan.title}>{plan.title.substring(0, 11)}{#if plan.title.length >= 11}...{/if}</span>
               <div class="flex items-center gap-3 float-right relative">
                 <button
-                  on:click={() => deleteMissionPlan(plan.title)}
+                  onclick={() => deleteMissionPlan(plan.title)}
                   class="text-red-400 hover:text-red-600">
                     <i class="fas fa-trash-alt text-sm"></i>
                     <div class="tooltip">Delete</div>
                   </button
                 >
                 <button
-                  on:click={() => loadMissionPlan(plan)}
+                  onclick={() => loadMissionPlan(plan)}
                   class="text-[#62bbff] hover:text-[#377aad]">
                     <i class="fas fa-cloud-arrow-up text-sm"></i>
                     <div class="tooltip">Load</div>
@@ -407,7 +357,7 @@
     </div>
     <div class="absolute left-0 right-0 bottom-0 flex justify-center border-t" style="--tertiaryColor: {tertiaryColor}">
       <button
-          on:click={importPlan}
+          onclick={importPlan}
           class="import-btn hover:bg-[#4b5563] px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
         >
         <i class="fas fa-upload text-xs" title="Import Mission Plan"></i>

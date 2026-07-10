@@ -1,20 +1,21 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
     import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../../stores/customizationStore';
-    import { mavlinkParamStore, type Parameter, type ParameterMeta } from '../../stores/mavlinkStore';
+    import { mavlinkParamStore, type Parameter } from '../../stores/mavlinkStore';
     import { onMount } from 'svelte';
-    import { get, writable, type Writable } from 'svelte/store';
-    import Modal from '../../components/Modal.svelte';
-    import { text } from '@sveltejs/kit';
+    import { writable, type Writable } from 'svelte/store';
+    import { encodeParameterValue } from '../../lib/mavlink-client';
 
     const loading: Writable<boolean> = writable(false);
     const success: Writable<string | null> = writable(null);
     const error: Writable<string | null> = writable(null);
     const modified: Writable<string[]> = writable([]);
 
-    $: primaryColor = $primaryColorStore;
-    $: secondaryColor = $secondaryColorStore;
-    $: tertiaryColor = $tertiaryColorStore;
-    $: textColor = $darkModeStore ? '#ffffff' : '#000000';
+    let primaryColor = $derived($primaryColorStore);
+    let secondaryColor = $derived($secondaryColorStore);
+    let tertiaryColor = $derived($tertiaryColorStore);
+    let textColor = $derived($darkModeStore ? '#ffffff' : '#000000');
     
     // Parameter type mapping with index signature
     // https://mavlink.io/en/messages/common.html#MAV_PARAM_TYPE
@@ -31,16 +32,16 @@
         10: 'double'
     };
 
-    let searchTerm = '';
-    let filteredParams: Parameter[] = [];
+    let searchTerm = $state('');
+    let filteredParams: Parameter[] = $state([]);
 
-    $: {
+    run(() => {
         if ($mavlinkParamStore) {
             filteredParams = Array.from(Object.values($mavlinkParamStore)).filter(param => 
                 param.param_id.toLowerCase().includes(searchTerm.toLowerCase())
             );
         }
-    }
+    });
 
     onMount(() => {
         requestParameters();
@@ -58,39 +59,10 @@
             });
 
             if (!response.ok) throw new Error(await response.text());
-        } catch (err: any) {
-            error.set(err.message);
+        } catch (err) {
+            error.set((err as Error).message);
         } finally {
             loading.set(false);
-        }
-    }
-
-    function encodeParameterValue(value: number, paramType: number): number {
-        // Ensure the value is within valid range for the type
-        switch (paramType) {
-            case 1: // uint8
-                return Math.min(255, Math.max(0, Math.round(value)));
-            case 2: // int8
-                return Math.min(127, Math.max(-128, Math.round(value)));
-            case 3: // uint16
-                return Math.min(65535, Math.max(0, Math.round(value)));
-            case 4: // int16
-                return Math.min(32767, Math.max(-32768, Math.round(value)));
-            case 5: // uint32
-                return Math.min(4294967295, Math.max(0, Math.round(value)));
-            case 6: // int32
-                return Math.min(2147483647, Math.max(-2147483648, Math.round(value)));
-            case 7: // uint64
-            case 8: // int64
-                console.warn('64-bit integers may not be fully precise in JavaScript');
-                return value;
-            case 9: // float
-                return value;
-            case 10: // double
-                return value;
-            default:
-                console.warn('Unknown parameter type:', paramType);
-                return value;
         }
     }
 
@@ -123,14 +95,13 @@
             success.set(`Parameter ${cleanId} written successfully`);
             modified.update(modified => modified.filter(param_id => param_id !== cleanId));
             setTimeout(() => success.set(null), 5000);
-        } catch (err: any) {
-            error.set(`Failed to write parameter ${id}: ${err.message}`);
+        } catch (err) {
+            error.set(`Failed to write parameter ${id}: ${(err as Error).message}`);
             setTimeout(() => error.set(null), 5000);
         }
     }
 
-    function handleParameterChange(event: Event, param_id: string, param_type: number) {
-        const target = event.target as HTMLInputElement;
+    function handleParameterChange(_event: Event, param_id: string, _param_type: number) {
         modified.update(modified => {
             if (!modified.includes(param_id)) {
                 modified.push(param_id);
@@ -166,8 +137,8 @@
                         for (const param of params) {
                             await writeParameter(param.param_id, param.param_value, param.param_type);
                         }
-                    } catch (err: any) {
-                        error.set(`Failed to import parameters: ${err.message}`);
+                    } catch (err) {
+                        error.set(`Failed to import parameters: ${(err as Error).message}`);
                     }
                 };
                 reader.readAsText(file);
@@ -176,36 +147,6 @@
         input.click();
     }
 
-    async function confirmSetDefaults() {
-        let modal = new Modal({
-            target: document.body,
-            props: {
-                title: 'Reset Parameters',
-                content: 'Are you sure you want to reset all parameters to their default values?',
-                isOpen: true,
-                confirmation: true,
-                notification: false,
-                onConfirm: async () => {
-                    await setDefaults();
-                    modal.$destroy();
-                },
-            }
-        });
-    }
-
-    async function setDefaults() {
-        try {
-            loading.set(true);
-            error.set(null);
-            
-            // TODO: Implement set defaults
-
-        } catch (err: any) {
-            error.set(err.message);
-        } finally {
-            loading.set(false);
-        }
-    }
 </script>
 
 <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">
@@ -230,7 +171,7 @@
                     <div class="space-x-2 text-sm">
                         <button 
                             class="relative px-4 py-2 bg-[#6e6e6e] text-white rounded-lg hover:bg-blue-600 transition-colors"
-                            on:click={exportParameters}
+                            onclick={exportParameters}
                             disabled={$loading}
                         >
                             <i class="fa-solid fa-download"></i>
@@ -238,7 +179,7 @@
                         </button>
                         <button 
                             class="relative px-4 py-2 bg-[#f89d47] text-white rounded-lg hover:bg-[#ec9c33] transition-colors"
-                            on:click={importParameters}
+                            onclick={importParameters}
                             disabled={$loading}
                         >
                             <i class="fa-solid fa-upload"></i>
@@ -246,7 +187,7 @@
                         </button>
                         <button 
                             class="relative px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                            on:click={requestParameters}
+                            onclick={requestParameters}
                             disabled={$loading}
                         >
                             <i class="fa-solid fa-sync"></i>
@@ -269,7 +210,7 @@
                 {#if $success}
                     <div class="bg-green-500 text-white p-4 rounded-lg mb-4 relative" id="success">
                         {$success}
-                        <button class="absolute top-0 right-0 p-4" on:click={() => success.set(null)}>
+                        <button class="absolute top-0 right-0 p-4" onclick={() => success.set(null)}>
                             <i class="fas fa-xmark"></i>
                         </button>
                     </div>
@@ -279,7 +220,7 @@
                 {#if $error}
                     <div class="bg-red-500 text-white p-4 rounded-lg mb-4 relative" id="error">
                         {$error}
-                        <button class="absolute top-0 right-0 p-4" on:click={() => error.set(null)}>
+                        <button class="absolute top-0 right-0 p-4" onclick={() => error.set(null)}>
                             <i class="fas fa-xmark"></i>
                         </button>
                     </div>
@@ -307,14 +248,14 @@
                                                 type="number"
                                                 bind:value={param.param_value}
                                                 class="rounded p-1 w-32 param_value"
-                                                on:change={(e) => handleParameterChange(e, param.param_id, param.param_type)}
+                                                onchange={(e) => handleParameterChange(e, param.param_id, param.param_type)}
                                             />
                                         </td>
                                         <td class="p-2 param_type">{PARAM_TYPES[param.param_type] ?? 'unknown'}</td>
                                         <td class="p-2">
                                             <button 
                                                 class="px-2 py-1 bg-[#1aac6e] rounded hover:bg-[#2a7757] transition-colors"
-                                                on:click={() => writeParameter(param.param_id, param.param_value, param.param_type)}
+                                                onclick={() => writeParameter(param.param_id, param.param_value, param.param_type)}
                                             >
                                                 Save
                                             </button>
