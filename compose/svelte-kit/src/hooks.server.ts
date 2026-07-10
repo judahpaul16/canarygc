@@ -2,7 +2,7 @@ import { lucia } from "$lib/server/auth";
 import { redirect } from "@sveltejs/kit";
 import type { Handle } from "@sveltejs/kit";
 
-const PUBLIC_PAGES = new Set(["/", "/login", "/register"]);
+const PUBLIC_PAGES = new Set(["/", "/login", "/register", "/version"]);
 const PUBLIC_API_PREFIX = "/api/auth/";
 
 function isPublic(pathname: string): boolean {
