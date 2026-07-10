@@ -1,0 +1,28 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /compose/svelte-kit
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    groups:
+      all:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directories:
+      - /compose/svelte-kit
+      - /compose/sitl
+    schedule:
+      interval: monthly
+    groups:
+      all:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      all:
+        patterns: ["*"]
