@@ -48,6 +48,8 @@
 	"overrides": {
 		"@lucia-auth/adapter-sqlite": {
 			"@libsql/client": "$@libsql/client"
-		}
+		},
+		"cookie": "^0.7.2",
+		"xml2js": "^0.6.2"
 	}
 }
