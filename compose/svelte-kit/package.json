@@ -50,6 +50,8 @@
 			"@libsql/client": "$@libsql/client"
 		},
 		"cookie": "^0.7.2",
-		"xml2js": "^0.6.2"
+		"xml2js": "^0.6.2",
+		"@emnapi/core": "1.11.1",
+		"@emnapi/runtime": "1.11.1"
 	}
 }
