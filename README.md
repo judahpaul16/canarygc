@@ -6,6 +6,7 @@
 
 # 🚁 Canary Ground Control 📡
 
+[![CI/CD](https://github.com/judahpaul16/canarygc/actions/workflows/ci.yml/badge.svg)](https://github.com/judahpaul16/canarygc/actions/workflows/ci.yml)
 ![Raspberry Pi Version](https://img.shields.io/badge/Raspberry_Pi-Zero%20%2F%204B-red?style=flat-square&logo=raspberry-pi)
 ![Docker Compose Version](https://img.shields.io/badge/Docker%20Compose-v2.27.1-blue?style=flat-square&logo=docker)
 ![Latest Docker Image](https://img.shields.io/docker/v/judahpaul/canarygc)
