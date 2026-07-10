@@ -19,9 +19,29 @@
     import { get } from "svelte/store";
     import { showModal, notify } from '../lib/overlays';
     import { setFlightMode, sendMavlinkCommand } from '../lib/mavlink-client';
+    import { optimizeMissionPath } from '../lib/path-planning';
 
     const SAVE_FEEDBACK_MS = 3000;
     const DEGREES_TO_E7 = 1e7;
+
+    function optimizePath() {
+        const result = optimizeMissionPath(get(missionPlanActionsStore));
+        if (!result.reordered) {
+            notify({
+                title: 'Path already optimal',
+                content: 'The current waypoint order is already the shortest route.',
+                duration: SAVE_FEEDBACK_MS
+            });
+            return;
+        }
+        const savedM = Math.round(result.originalMeters - result.optimizedMeters);
+        missionPlanActionsStore.set(result.actions);
+        notify({
+            title: 'Path optimized',
+            content: `Reordered waypoints for the shortest route, saving about ${savedM} m of travel. Review the plan before flying.`,
+            duration: SAVE_FEEDBACK_MS * 2
+        });
+    }
 
     let actions: MissionPlanActions = $state(get(missionPlanActionsStore));
     let title: string = $state("");
@@ -369,6 +389,10 @@
     <button onclick={toggleMissionPlans}>
         <i class="fas fa-globe text-[#5398e6]"></i>
         Manage Missions
+    </button>
+    <button onclick={optimizePath}>
+        <i class="fas fa-wand-magic-sparkles text-[#c07bff]"></i>
+        Optimize Path
     </button>
     <button onclick={saveMissionPlan}>
         <i class="fas fa-save text-[#61cd89]"></i>

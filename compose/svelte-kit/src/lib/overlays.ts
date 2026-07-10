@@ -18,6 +18,7 @@ export interface ModalOptions {
   inputs?: ModalInput[] | null;
   onConfirm?: (values: string[]) => void | Promise<void>;
   onCancel?: () => void;
+  onClose?: () => void;
 }
 
 export interface NotifyOptions {
@@ -51,7 +52,10 @@ export function showModal(options: ModalOptions): () => void {
       onCancel: () => {
         options.onCancel?.();
       },
-      onClose: close
+      onClose: () => {
+        options.onClose?.();
+        close();
+      }
     }
   });
   return close;

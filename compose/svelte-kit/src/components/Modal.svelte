@@ -90,7 +90,7 @@
         </button>
       </div>
       <form>
-        <div class="px-4 py-2">
+        <div class="px-4 py-2 whitespace-pre-line">
           {content}
           {#if inputs}
             <div class="text-center gap-2 items-center justify-center w-full">

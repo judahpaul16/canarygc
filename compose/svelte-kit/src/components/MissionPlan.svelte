@@ -14,6 +14,7 @@
   import { showModal, notify } from '../lib/overlays';
   import { sendMavlinkCommand, setFlightMode, armDisarm, writeParameter, encodeParameterValue } from '../lib/mavlink-client';
   import { isAutoLabel, isGuidedLabel, isPX4 } from '../lib/flight-modes';
+  import { preflightCheck } from '../lib/preflight';
   import {
     darkModeStore,
     primaryColorStore,
@@ -116,6 +117,7 @@
         }
       ],
       onConfirm: async (values) => {
+        if (!(await preflightCheck(get(missionPlanActionsStore)))) return;
         missionIndexStore.set(1);
         missionCompleteStore.set(false);
         const params = get(mavlinkParamStore);

@@ -21,6 +21,8 @@
   } from '../stores/missionPlanStore';
   import { get } from 'svelte/store';
   import { showModal } from '../lib/overlays';
+  import { airspaceZonesStore, showAirspaceStore } from '../stores/safetyStore';
+  import { refreshAirspace } from '../lib/preflight';
   import ThreeDMap from './3DMap.svelte';
   import pkg from 'maplibre-gl';
   const { Marker } = pkg;
@@ -190,6 +192,39 @@
 
     mapStore.set(leafletMap);
     mavLocationStore.set(mavLocation);
+
+    if (!hideOverlay) {
+      refreshAirspace(get(missionPlanActionsStore));
+      renderAirspace();
+    }
+  }
+
+  let airspaceLayer: L.LayerGroup | null = null;
+
+  // Draws restricted airspace (red) and controlled airspace (amber) as polygon
+  // overlays so operators see no-fly zones while planning.
+  function renderAirspace() {
+    if (!L || !leafletMap) return;
+    airspaceLayer?.remove();
+    if (!get(showAirspaceStore)) {
+      airspaceLayer = null;
+      return;
+    }
+    const group = L.layerGroup();
+    for (const zone of get(airspaceZonesStore)) {
+      for (const ring of zone.polygon) {
+        const latlngs = ring.map(([lon, lat]) => [lat, lon] as [number, number]);
+        L.polygon(latlngs, {
+          color: zone.restricted ? '#f24e4e' : '#e7b908',
+          weight: 1,
+          fillOpacity: 0.12
+        })
+          .bindPopup(`${zone.restricted ? 'Restricted' : 'Controlled'} airspace: ${zone.name}`)
+          .addTo(group);
+      }
+    }
+    group.addTo(leafletMap);
+    airspaceLayer = group;
   }
 
   function toggleMap() {
@@ -240,6 +275,11 @@
   function toggleLockView() {
     lockView = !lockView;
     lockViewStore.set(lockView);
+  }
+
+  function toggleAirspace() {
+    showAirspaceStore.set(!get(showAirspaceStore));
+    if (get(showAirspaceStore)) refreshAirspace(get(missionPlanActionsStore));
   }
 
   function toggleFullScreen(element: HTMLElement) {
@@ -588,6 +628,12 @@
       updateMap(Number(index));
     });
   });
+  run(() => {
+    // Re-render the overlay whenever the airspace data or toggle changes.
+    void $airspaceZonesStore;
+    void $showAirspaceStore;
+    if (!hideOverlay) renderAirspace();
+  });
 </script>
 
 <style lang="css">
@@ -644,9 +690,14 @@
 <div class="map-container" style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};">
   <div id={id !== null ? id : 'map'} class="relative h-full rounded-2xl z-0"></div>
   <ThreeDMap />
-  <button class="map-btn absolute top-[3.8rem] right-2 text-[#ffffff] bg-opacity-75 p-2 {lockView ? 'px-[15px]' : 'px-[13px]'} rounded-full" onclick={toggleLockView}> 
+  <button class="map-btn absolute top-[3.8rem] right-2 text-[#ffffff] bg-opacity-75 p-2 {lockView ? 'px-[15px]' : 'px-[13px]'} rounded-full" onclick={toggleLockView}>
     <i class="fas {lockView ? 'fa-lock' : 'fa-lock-open'}"></i>
   </button>
+  {#if !hideOverlay}
+    <button class="map-btn absolute top-[6.4rem] right-2 text-[#ffffff] bg-opacity-75 p-2 px-[13px] rounded-full" aria-label="Toggle airspace overlay" title="Toggle airspace overlay" onclick={toggleAirspace}>
+      <i class="fas fa-tower-broadcast {$showAirspaceStore ? 'text-[#f24e4e]' : ''}"></i>
+    </button>
+  {/if}
   <button class="map-btn absolute top-3 right-2 text-[#ffffff] bg-opacity-75 p-2 px-[14px] rounded-full" onclick={handleFullScreen}>
     <i class="fas fa-expand"></i>
   </button>
