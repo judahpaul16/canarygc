@@ -32,8 +32,9 @@ Unlike traditional GCS software, Canary Ground Control is a web-based applicatio
 * **ArduPilot and PX4 support.** Flight-mode encoding and decoding is selected per autopilot through a strategy layer, so mode changes and armed-state readouts work on both stacks.
 * **Mission planner** with a 2D map (Leaflet) and a 3D map (MapLibre).
 * **Smart path optimization.** One click reorders mission waypoints for the shortest route (nearest-neighbor seed refined by 2-opt), holding takeoff, RTL, and land commands in place, and reports the distance saved.
-* **Airspace overlays.** The map draws restricted and controlled airspace fetched from [OpenAIP](https://www.openaip.net) for the mission area, toggled from a map control.
+* **Airspace overlays.** The map draws restricted and controlled airspace for the mission area, toggled from a map control. Worldwide coverage comes from [OpenAIP](https://www.openaip.net) with a key; without one it falls back to the FAA's keyless public airspace layers (US).
 * **Pre-flight safety checks.** Before a mission starts, every waypoint is validated against an altitude ceiling and floor, a home-relative geofence radius, and the fetched airspace. Waypoints in restricted airspace or past a limit block the launch; controlled-airspace waypoints prompt for confirmation.
+* **Audible callouts.** Spoken telemetry callouts (arm/disarm, mode changes, battery, GPS, failsafe, link loss) over the browser speech API, with an on/off toggle that defaults on.
 * **WebRTC camera feed** from an on-board Raspberry Pi camera via [MediaMTX](https://github.com/bluenviron/mediamtx).
 * **Weather, compass, and stats** widgets on a customizable dashboard.
 * **Build info** at `/version` (release tag, commit, build time).
