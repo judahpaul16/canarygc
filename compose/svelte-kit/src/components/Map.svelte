@@ -690,7 +690,7 @@
 <div class="map-container" style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};">
   <div id={id !== null ? id : 'map'} class="relative h-full rounded-2xl z-0"></div>
   <ThreeDMap />
-  <button class="map-btn absolute top-[3.8rem] right-2 text-[#ffffff] bg-opacity-75 p-2 {lockView ? 'px-[15px]' : 'px-[13px]'} rounded-full" onclick={toggleLockView}>
+  <button class="map-btn absolute top-[3.8rem] right-2 text-[#ffffff] bg-opacity-75 p-2 {lockView ? 'px-[15px]' : 'px-[13px]'} rounded-full" aria-label="Toggle map lock" title="Toggle map lock" onclick={toggleLockView}>
     <i class="fas {lockView ? 'fa-lock' : 'fa-lock-open'}"></i>
   </button>
   {#if !hideOverlay}
@@ -698,7 +698,7 @@
       <i class="fas fa-tower-broadcast {$showAirspaceStore ? 'text-[#f24e4e]' : ''}"></i>
     </button>
   {/if}
-  <button class="map-btn absolute top-3 right-2 text-[#ffffff] bg-opacity-75 p-2 px-[14px] rounded-full" onclick={handleFullScreen}>
+  <button class="map-btn absolute top-3 right-2 text-[#ffffff] bg-opacity-75 p-2 px-[14px] rounded-full" aria-label="Toggle fullscreen" title="Toggle fullscreen" onclick={handleFullScreen}>
     <i class="fas fa-expand"></i>
   </button>
   <label id="map-toggle" class="flex justify-center cursor-pointer my-2 absolute top-1 right-2 left-2 w-fit m-auto rounded-3xl p-2 pl-3 text-sm items-center" style={!hideOverlay ? 'display: flex;' : 'display: none;'}>

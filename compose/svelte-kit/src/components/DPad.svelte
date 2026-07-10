@@ -26,16 +26,16 @@
 
 <div class="dpad-container relative flex items-center justify-center w-48 h-48">
   <nav class="d-pad relative" style="--tertiaryColor: {tertiaryColor}">
-    <button class="up" onclick={() => nudge(MOVE_STEP_M, 0)}>
+    <button class="up" aria-label="Move forward" onclick={() => nudge(MOVE_STEP_M, 0)}>
       <i class="fas fa-chevron-up"></i>
     </button>
-    <button class="right" onclick={() => nudge(0, MOVE_STEP_M)}>
+    <button class="right" aria-label="Move right" onclick={() => nudge(0, MOVE_STEP_M)}>
       <i class="fas fa-chevron-right"></i>
     </button>
-    <button class="down" onclick={() => nudge(-MOVE_STEP_M, 0)}>
+    <button class="down" aria-label="Move backward" onclick={() => nudge(-MOVE_STEP_M, 0)}>
       <i class="fas fa-chevron-down"></i>
     </button>
-    <button class="left" onclick={() => nudge(0, -MOVE_STEP_M)}>
+    <button class="left" aria-label="Move left" onclick={() => nudge(0, -MOVE_STEP_M)}>
       <i class="fas fa-chevron-left"></i>
     </button>
     <div class="center-circle">

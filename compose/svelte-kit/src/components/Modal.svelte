@@ -5,6 +5,7 @@
     secondaryColorStore,
     tertiaryColorStore
   } from '../stores/customizationStore';
+  import { untrack } from 'svelte';
 
   interface Props {
     title: string;
@@ -30,8 +31,8 @@
     onClose = () => {}
   }: Props = $props();
 
-  let inputValues: string[] = $state(inputs ? inputs.map(() => '') : []);
-  let checkboxValues: boolean[] = $state(inputs ? inputs.map(() => false) : []);
+  let inputValues: string[] = $state(untrack(() => (inputs ? inputs.map(() => '') : [])));
+  let checkboxValues: boolean[] = $state(untrack(() => (inputs ? inputs.map(() => false) : [])));
   let validationError = $state('');
 
   let darkMode = $derived($darkModeStore);

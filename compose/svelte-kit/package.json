@@ -6,7 +6,7 @@
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
-		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"lint": "eslint ."
 	},
@@ -50,8 +50,6 @@
 			"@libsql/client": "$@libsql/client"
 		},
 		"cookie": "^0.7.2",
-		"xml2js": "^0.6.2",
-		"@emnapi/core": "1.11.1",
-		"@emnapi/runtime": "1.11.1"
+		"xml2js": "^0.6.2"
 	}
 }

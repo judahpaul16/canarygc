@@ -95,10 +95,10 @@
     <iframe allowfullscreen id="live-feed" title="Live Feed" src={ typeof window !== 'undefined' ? `http://${window.location.hostname}:8889/cam`  : ''}></iframe>
     <div class="tab absolute top-2 left-2 bg-[#f24e4eb9] text-[#ffffff] text-md px-2 py-1 rounded-full z-20">Live Feed</div>
     <div class="caution-text opacity-[50%] text-md absolute bottom-2 left-2 bg-[#252525cf] px-2 py-1 mr-[0.5em] rounded-full z-20">Use Caution: The feed may be slightly delayed.</div>
-    <button class="absolute top-2 right-14 p-2 px-[14px] rounded-full z-20 opacity-[60%]" onclick={rotateVideo}>
+    <button class="absolute top-2 right-14 p-2 px-[14px] rounded-full z-20 opacity-[60%]" aria-label="Rotate video" onclick={rotateVideo}>
       <i class="fas fa-sync-alt"></i>
     </button>
-    <button class="absolute top-2 right-2 p-2 px-[14px] rounded-full z-20 opacity-[60%]" onclick={handleFullScreen}>
+    <button class="absolute top-2 right-2 p-2 px-[14px] rounded-full z-20 opacity-[60%]" aria-label="Toggle fullscreen" onclick={handleFullScreen}>
       <i class="fas fa-expand"></i>
     </button>
   </div>

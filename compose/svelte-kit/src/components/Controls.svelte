@@ -102,7 +102,7 @@
     <div class="alt-btns column flex flex-col items-center justify-center text-center space-y-4">
       <div class="flex flex-col items-center">
         <div class="label text-sm mb-1" title="Altitude Up">Altitude Up</div>
-        <button class="alt-button rounded-full" onclick={async () => {
+        <button class="alt-button rounded-full" aria-label="Altitude up" onclick={async () => {
           await ensureGuided();
           setPositionLocal(0, 0, -(altitude + ALTITUDE_STEP_M));
         }}>
@@ -111,7 +111,7 @@
       </div>
       <div class="flex flex-col items-center justify-center">
         <div class="label text-sm mb-1" title="Altitude Down">Altitude Down</div>
-        <button class="alt-button rounded-full" onclick={async () => {
+        <button class="alt-button rounded-full" aria-label="Altitude down" onclick={async () => {
             await ensureGuided();
             setPositionLocal(0, 0, -(altitude - ALTITUDE_STEP_M));
           }}>
@@ -123,7 +123,7 @@
     <div class="rotate-btns column flex flex-col items-center justify-center text-center space-y-4">
       <div id="rotate-left-button" class="flex flex-col items-center">
         <div class="label text-sm mb-1">Rotate Left</div>
-        <button class="rotate-button rotate-left rounded-full"
+        <button class="rotate-button rotate-left rounded-full" aria-label="Rotate left"
           onclick={async () => {
               await ensureGuided();
               sendMavlinkCommand('CONDITION_YAW', [YAW_STEP_DEG, YAW_RATE_DEG_PER_S, -1, YAW_RELATIVE_OFFSET]);
@@ -133,7 +133,7 @@
       </div>
       <div class="flex flex-col items-center">
         <div class="label text-sm mb-1">Rotate Right</div>
-        <button class="rotate-button rotate-right rounded-full"
+        <button class="rotate-button rotate-right rounded-full" aria-label="Rotate right"
           onclick={async () => {
               await ensureGuided();
               sendMavlinkCommand('CONDITION_YAW', [YAW_STEP_DEG, YAW_RATE_DEG_PER_S, 1, YAW_RELATIVE_OFFSET]);

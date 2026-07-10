@@ -210,7 +210,7 @@
                 {#if $success}
                     <div class="bg-green-500 text-white p-4 rounded-lg mb-4 relative" id="success">
                         {$success}
-                        <button class="absolute top-0 right-0 p-4" onclick={() => success.set(null)}>
+                        <button class="absolute top-0 right-0 p-4" aria-label="Dismiss" onclick={() => success.set(null)}>
                             <i class="fas fa-xmark"></i>
                         </button>
                     </div>
@@ -220,7 +220,7 @@
                 {#if $error}
                     <div class="bg-red-500 text-white p-4 rounded-lg mb-4 relative" id="error">
                         {$error}
-                        <button class="absolute top-0 right-0 p-4" onclick={() => error.set(null)}>
+                        <button class="absolute top-0 right-0 p-4" aria-label="Dismiss" onclick={() => error.set(null)}>
                             <i class="fas fa-xmark"></i>
                         </button>
                     </div>
