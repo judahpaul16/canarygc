@@ -1,64 +1,132 @@
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
 import type { AirspaceZone } from '$lib/safety';
 
-// Fetches nearby airspace from OpenAIP (https://www.openaip.net, a free
-// worldwide aeronautical database) and returns simplified zones the map overlay
-// and safety checks consume. The API key is server-side only. Without a key or
-// on any upstream failure this returns an empty list so the app degrades to
-// "no airspace data" rather than blocking flight planning.
+// Airspace for the map overlay and safety checks. OpenAIP is worldwide but
+// needs a key; when the key is unset or OpenAIP returns nothing, this falls back
+// to the FAA's public airspace layers, which are keyless and cover the US. The
+// bounding box is minLon,minLat,maxLon,maxLat, which serves both providers.
 
 const OPENAIP_URL = 'https://api.core.openaip.net/api/airspaces';
 const RESTRICTED_KEYWORDS = ['PROHIBITED', 'RESTRICTED', 'DANGER', 'NO_FLY', 'NOFLY', 'TRA', 'TSA'];
 
-interface OpenAipFeature {
-  name?: string;
-  type?: number | string;
-  icaoClass?: number | string;
-  geometry?: { type?: string; coordinates?: number[][][] };
+const FAA_BASE = 'https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services';
+
+interface FaaProps {
+  NAME?: string;
+  TYPE_CODE?: string;
 }
 
-function isRestricted(feature: OpenAipFeature): boolean {
+// Prohibited and Restricted areas are hard no-fly; MOAs, warning and alert
+// areas, and class airspace are advisory (they warn, they do not block).
+const FAA_LAYERS: { service: string; outFields: string; restricted: (props: FaaProps) => boolean }[] = [
+  { service: 'Prohibited_Areas', outFields: 'NAME', restricted: () => true },
+  {
+    service: 'Special_Use_Airspace',
+    outFields: 'NAME,TYPE_CODE',
+    restricted: (p) => p.TYPE_CODE === 'P' || p.TYPE_CODE === 'R'
+  },
+  { service: 'Class_Airspace', outFields: 'NAME', restricted: () => false }
+];
+
+interface GeoFeature {
+  properties?: Record<string, unknown>;
+  geometry?: { type?: string; coordinates?: unknown } | null;
+}
+
+function isRestricted(feature: { name?: string; type?: number | string; icaoClass?: number | string }): boolean {
   const label = `${feature.type ?? ''} ${feature.icaoClass ?? ''} ${feature.name ?? ''}`.toUpperCase();
   return RESTRICTED_KEYWORDS.some((kw) => label.includes(kw));
 }
 
+// A GeoJSON Polygon maps to one zone; a MultiPolygon maps to one zone per
+// polygon so the point-in-polygon check stays a simple ring test.
+function polygonZones(feature: GeoFeature, name: string, restricted: boolean): AirspaceZone[] {
+  const g = feature.geometry;
+  if (!g || !g.coordinates) return [];
+  if (g.type === 'Polygon') return [{ name, restricted, polygon: g.coordinates as number[][][] }];
+  if (g.type === 'MultiPolygon') {
+    return (g.coordinates as number[][][][]).map((polygon) => ({ name, restricted, polygon }));
+  }
+  return [];
+}
+
+async function fetchOpenAip(bbox: string, apiKey: string): Promise<AirspaceZone[]> {
+  const query = new URLSearchParams({ bbox, limit: '500' });
+  const response = await fetch(`${OPENAIP_URL}?${query}`, {
+    headers: { 'x-openaip-api-key': apiKey }
+  });
+  if (!response.ok) throw new Error(`OpenAIP responded ${response.status}`);
+  const data = await response.json();
+  const features = Array.isArray(data?.items) ? data.items : [];
+  return features
+    .filter(
+      (f: { geometry?: { type?: string; coordinates?: unknown } }) =>
+        f.geometry?.type === 'Polygon' && Array.isArray(f.geometry.coordinates)
+    )
+    .map((f: { name?: string; type?: number; icaoClass?: number; geometry: { coordinates: number[][][] } }) => ({
+      name: f.name ?? 'Airspace',
+      restricted: isRestricted(f),
+      polygon: f.geometry.coordinates
+    }));
+}
+
+async function fetchFaaLayer(bbox: string, layer: (typeof FAA_LAYERS)[number]): Promise<AirspaceZone[]> {
+  const params = new URLSearchParams({
+    where: '1=1',
+    geometry: bbox,
+    geometryType: 'esriGeometryEnvelope',
+    inSR: '4326',
+    outSR: '4326',
+    spatialRel: 'esriSpatialRelIntersects',
+    outFields: layer.outFields,
+    returnGeometry: 'true',
+    geometryPrecision: '5',
+    resultRecordCount: '200',
+    f: 'geojson'
+  });
+  const res = await fetch(`${FAA_BASE}/${layer.service}/FeatureServer/0/query?${params}`);
+  if (!res.ok) throw new Error(`FAA ${layer.service} responded ${res.status}`);
+  const data = await res.json();
+  const features: GeoFeature[] = Array.isArray(data?.features) ? data.features : [];
+  return features.flatMap((f) => {
+    const props = (f.properties ?? {}) as FaaProps;
+    return polygonZones(f, props.NAME || 'Airspace', layer.restricted(props));
+  });
+}
+
+async function fetchFaa(bbox: string): Promise<AirspaceZone[]> {
+  const results = await Promise.allSettled(FAA_LAYERS.map((layer) => fetchFaaLayer(bbox, layer)));
+  return results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
+}
+
 export const GET: RequestHandler = async ({ url }) => {
   const apiKey = process.env.OPENAIP_API_KEY;
-  const bbox = url.searchParams.get('bbox'); // minLon,minLat,maxLon,maxLat
+  const bbox = url.searchParams.get('bbox');
 
-  if (!apiKey || !bbox) {
-    return new Response(JSON.stringify({ zones: [] as AirspaceZone[], configured: Boolean(apiKey) }), {
-      status: 200,
-      headers: { 'content-type': 'application/json' }
-    });
+  if (!bbox) {
+    return json({ zones: [] as AirspaceZone[], source: 'none', configured: Boolean(apiKey) });
+  }
+
+  if (apiKey) {
+    try {
+      const zones = await fetchOpenAip(bbox, apiKey);
+      if (zones.length > 0) return json({ zones, source: 'openaip', configured: true });
+    } catch (error) {
+      console.error('OpenAIP fetch failed:', error);
+    }
   }
 
   try {
-    const query = new URLSearchParams({ bbox, limit: '500' });
-    const response = await fetch(`${OPENAIP_URL}?${query}`, {
-      headers: { 'x-openaip-api-key': apiKey }
-    });
-    if (!response.ok) throw new Error(`OpenAIP responded ${response.status}`);
-    const data = await response.json();
-    const features: OpenAipFeature[] = Array.isArray(data?.items) ? data.items : [];
-
-    const zones: AirspaceZone[] = features
-      .filter((f) => f.geometry?.type === 'Polygon' && Array.isArray(f.geometry.coordinates))
-      .map((f) => ({
-        name: f.name ?? 'Airspace',
-        restricted: isRestricted(f),
-        polygon: f.geometry!.coordinates as number[][][]
-      }));
-
-    return new Response(JSON.stringify({ zones, configured: true }), {
-      status: 200,
-      headers: { 'content-type': 'application/json' }
-    });
+    const zones = await fetchFaa(bbox);
+    return json({ zones, source: 'faa', configured: Boolean(apiKey) });
   } catch (error) {
-    console.error('Airspace fetch failed:', error);
-    return new Response(JSON.stringify({ zones: [] as AirspaceZone[], configured: true, error: (error as Error).message }), {
-      status: 200,
-      headers: { 'content-type': 'application/json' }
+    console.error('FAA airspace fetch failed:', error);
+    return json({
+      zones: [] as AirspaceZone[],
+      source: 'none',
+      configured: Boolean(apiKey),
+      error: (error as Error).message
     });
   }
 };
