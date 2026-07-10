@@ -1,0 +1,124 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: compose/svelte-kit
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: compose/svelte-kit/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run check
+      - run: npm run build
+      - run: npm audit --audit-level=moderate
+
+  release:
+    needs: [check]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - id: version
+        name: Tag each commit at its cumulative version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          LATEST_TAG=$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || echo "v0.0.0")
+          ACCUM=${LATEST_TAG#v}
+          MAJOR=$(echo "$ACCUM" | cut -d. -f1)
+          MINOR=$(echo "$ACCUM" | cut -d. -f2)
+          PATCH=$(echo "$ACCUM" | cut -d. -f3)
+
+          if [ "$LATEST_TAG" = "v0.0.0" ]; then
+            RANGE="HEAD~1..HEAD"
+          else
+            RANGE="${LATEST_TAG}..HEAD"
+          fi
+
+          FINAL=""
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            SHA=${line%% *}
+            SUBJECT=${line#* }
+
+            if echo "$SUBJECT" | grep -qi "\[major update\]"; then
+              MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0
+            elif echo "$SUBJECT" | grep -qi "\[minor update\]"; then
+              MINOR=$((MINOR + 1)); PATCH=0
+            else
+              PATCH=$((PATCH + 1))
+            fi
+
+            V="v${MAJOR}.${MINOR}.${PATCH}"
+
+            if git rev-parse -q --verify "refs/tags/$V" >/dev/null; then
+              echo "tag $V already exists, skipping"
+            else
+              git tag "$V" "$SHA"
+              git push origin "$V"
+              gh release create "$V" --target "$SHA" --title "$V" --notes "- ${SHA:0:7} ${SUBJECT}"
+            fi
+
+            FINAL="$V"
+          done < <(git log "$RANGE" --reverse --pretty=tformat:"%H %s")
+
+          if [ -z "$FINAL" ]; then FINAL="$LATEST_TAG"; fi
+          echo "version=$FINAL" >> "$GITHUB_OUTPUT"
+
+  # Deploy of the images is automatic here: every release builds and pushes the
+  # multi-arch image to Docker Hub and GHCR so the Pi can pull the new tag.
+  image:
+    needs: [release]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.release.outputs.version }}
+      - id: repo
+        run: echo "lower=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v7
+        with:
+          context: ./compose/svelte-kit
+          file: ./compose/svelte-kit/Dockerfile.prod
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/canarygc:${{ needs.release.outputs.version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/canarygc:latest
+            ghcr.io/${{ steps.repo.outputs.lower }}:${{ needs.release.outputs.version }}
+            ghcr.io/${{ steps.repo.outputs.lower }}:latest

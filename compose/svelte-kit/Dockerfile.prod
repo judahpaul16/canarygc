@@ -1,30 +1,28 @@
-FROM node:21-alpine AS build
+FROM node:24-alpine AS build
 
 WORKDIR /app
 
-# Install python3 and sqlite3 to run the setup script
-RUN apk add --no-cache python3 py3-pip sqlite
-
 COPY package*.json ./
 
-RUN npm install
-
-# Copy and run the Python script to initialize the SQLite database
-COPY setup_db.py ./setup_db.py
-RUN python3 ./setup_db.py
+RUN npm ci
 
 COPY . .
 
 RUN npm run build
 
-FROM node:21-alpine
+FROM node:24-alpine
 
 WORKDIR /app
+
+# The server creates its SQLite schema on first boot (src/lib/server/db.ts),
+# so the runtime only needs a writable directory for the database file.
+RUN mkdir -p /app/src
 
 COPY --from=build /app/build ./build
 COPY --from=build /app/package*.json ./
 COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/src/data.db ./src/data.db
+
+ENV DATABASE_PATH=/app/src/data.db
 
 EXPOSE 3000
 

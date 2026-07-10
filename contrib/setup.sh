@@ -156,15 +156,15 @@ if [[ "$1" != "--setup-only" ]]; then
     sudo chmod +x contrib/setup.sh
     
     if [[ "$1" == "--simulation" ]]; then
-        docker compose down && docker system prune -f && docker compose up -d
+        docker compose --profile development down && docker system prune -f && docker compose --profile development up -d
     else
-        docker compose -f docker-compose.prod.yml down
+        docker compose --profile production down
         docker system prune -af
         if libcamera-hello --list-cameras | grep -q "No cameras available!"; then
             echo "No cameras found."
-            docker compose -f docker-compose.prod.yml up app -d
+            docker compose --profile production up app -d
         else
-            docker compose -f docker-compose.prod.yml up app webrtc -d
+            docker compose --profile production up app webrtc -d
         fi
     fi
     sleep 5

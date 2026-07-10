@@ -1,5 +1,7 @@
 services:
-  app:
+  # Development: Vite dev server with hot reload, talks to the SITL container.
+  app-dev:
+    profiles: ["development"]
     build:
       context: ./compose/svelte-kit
       dockerfile: Dockerfile.dev
@@ -18,8 +20,29 @@ services:
           memory: 700m
     restart: always
 
-  # Ardupilot SITL
+  # Production: built Node server on the Pi, talks to the autopilot over UART.
+  app:
+    profiles: ["production"]
+    image: ${CANARYGC_IMAGE:-canarygc-app}
+    build:
+      context: ./compose/svelte-kit
+      dockerfile: Dockerfile.prod
+    devices:
+      - "/dev/ttyACM0:/dev/ttyACM0"
+    ports:
+      - "3000:3000"
+    container_name: canarygc_app
+    environment:
+      - NODE_ENV=production
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    restart: always
+
+  # ArduPilot SITL for local testing (development profile).
   sitl:
+    profiles: ["development"]
     image: radarku/ardupilot-sitl:latest
     environment:
       - INSTANCE=0
@@ -37,19 +60,32 @@ services:
     healthcheck:
       timeout: 10s
 
-  # PX4 SITL
-  # sitl:
-  #   build:
-  #     context: ./compose/sitl
-  #     dockerfile: Dockerfile.px4
-  #   container_name: canarygc_sitl
-  #   ports:
-  #     - "5760:5760"
-  #   environment:
-  #     - PX4_HOME_LAT=33.79105092934356
-  #     - PX4_HOME_LON=-84.37130870603511
-  #     - PX4_HOME_ALT=0
-  #     - PX4_SIM_SPEED_FACTOR=1
-  #     - PX4_VEHICLE=quad
-  #   healthcheck:
-  #     timeout: 10s
+  # On-board WebRTC camera bridge (production profile).
+  webrtc:
+    profiles: ["production"]
+    image: bluenviron/mediamtx:latest-rpi
+    container_name: canarygc_webrtc
+    environment:
+      - MTX_PATHS_CAM_SOURCE=rpiCamera
+      - MTX_WEBRTCICESERVERS=stun:stun.l.google.com:19302
+      - MTX_READTIMEOUT=10s
+      - MTX_WRITETIMEOUT=10s
+      - MTX_API=yes
+      - MTX_METRICS=yes
+      - MTX_PPROF=yes
+      - MTX_PROTOCOLS=tcp
+      - MTX_RTSPADDRESS=:8554
+      - MTX_RTMPADDRESS=:1935
+      - MTX_HLSADDRESS=:8888
+      - MTX_WEBRTCADDRESS=:8889
+      - MTX_APIADDRESS=:9997
+      - MTX_METRICSADDRESS=:9998
+      - MTX_PPROFFADDRESS=:9999
+      - MTX_READBUFFERCOUNT=512
+    volumes:
+      - /run/udev:/run/udev:ro
+    tmpfs:
+      - /dev/shm:exec
+    network_mode: host
+    privileged: true
+    restart: always
