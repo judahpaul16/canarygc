@@ -109,8 +109,6 @@
   // the desktop nav is hidden on the public routes.
   $effect(() => {
     void currentPath;
-    const nav = document.querySelector('.desktop-nav') as HTMLElement | null;
-    if (nav) nav.style.display = isNavHidden ? 'none' : 'grid';
     resizeObserver?.disconnect();
     const dashboard = document.querySelector('.dashboard');
     if (dashboard) {
@@ -503,7 +501,7 @@
   </div>
   <div class="bg-[#0000001f] flex w-full h-full z-10">
     <!-- Desktop Navigation -->
-    <nav class="desktop-nav w-min h-full p-4 grid opacity-0 z-20" class:opacity={isNavHidden ? 0 : 1}>
+    <nav class="desktop-nav w-min h-full p-4 grid opacity-0 z-20" style:display={isNavHidden ? 'none' : 'grid'}>
       <div class="flex-grow flex flex-col items-center">
         <div class="mb-5">
           <button onclick={(e) => { e.preventDefault(); handleNavigation('/'); }}>
