@@ -35,12 +35,13 @@
     primaryColorStore,
     secondaryColorStore,
     tertiaryColorStore,
-    audoNotificationStore
+    audioCalloutsStore
   } from '../stores/customizationStore';
   import { loggedInStore } from '../stores/authStore';
   import { get } from 'svelte/store';
   import Offline from '../components/Offline.svelte';
   import { notify, type NotificationType } from '../lib/overlays';
+  import { callout, initCallouts, stopCallouts } from '../lib/callouts';
   import { decodeMode, isArmed } from '../lib/flight-modes';
   import { decodeParameterValue, requestParameters } from '../lib/mavlink-client';
   import { mapTypeStore } from '../stores/mapStore';
@@ -233,10 +234,6 @@
 
   const showNotification = (config: NotificationConfig) => {
     notify(config);
-    if (get(audoNotificationStore) && (config.type === 'warning' || config.type === 'error')) {
-      const utterance = new SpeechSynthesisUtterance(config.content);
-      speechSynthesis.speak(utterance);
-    }
   };
 
   const toProperCase = (str: string): string =>
@@ -361,6 +358,8 @@
         content: statusText,
         type
       });
+
+      if (severityLevel <= 4) callout(statusText, severityLevel <= 3);
     },
 
     PARAM_VALUE: (text: string) => {
@@ -429,6 +428,8 @@
 
     const statusCheckInterval = setInterval(checkOnlineStatus, HEARTBEAT_POLL_MS);
 
+    const teardownCallouts = initCallouts();
+
     return () => {
       clearTimeout(startupTimer);
       clearInterval(checkCookieInterval);
@@ -438,6 +439,8 @@
       window.removeEventListener('click', refreshCookie);
       window.removeEventListener('scroll', refreshCookie);
       resizeObserver?.disconnect();
+      teardownCallouts();
+      stopCallouts();
     };
   });
 
@@ -482,8 +485,10 @@
     }
   }
 
-  function toggleAudioNotifications() {
-    audoNotificationStore.set(!get(audoNotificationStore));
+  function toggleAudioCallouts() {
+    const next = !get(audioCalloutsStore);
+    audioCalloutsStore.set(next);
+    if (!next) stopCallouts();
   }
 </script>
 
@@ -535,9 +540,9 @@
         {/if}
       </div>
       <div class="flex flex-col justify-self-end gap-3">
-        <button class="nav-button" onclick={toggleAudioNotifications}>
-          <i class="nav-icon fas {$audoNotificationStore ? 'fa-volume-up' : 'fa-volume-mute'}"></i>
-          <div class="tooltip text-white">Toggle Audio Notifications</div>
+        <button class="nav-button" onclick={toggleAudioCallouts}>
+          <i class="nav-icon fas {$audioCalloutsStore ? 'fa-volume-up' : 'fa-volume-mute'}"></i>
+          <div class="tooltip text-white">Toggle Audio Callouts</div>
         </button>
         <div class="separator h-[2px] w-[80%] mx-auto mb-2 rounded-2xl"></div>
         <button class="nav-button" aria-label="Dark Mode" onclick={toggleDarkMode}>
@@ -575,6 +580,9 @@
           <a href="/parameters" onclick={(e) => { e.preventDefault(); handleNavigation('/parameters'); }} class="nav-button mb-4 {currentPath === '/parameters' ? 'active' : ''}">
             <i class="nav-icon fas fa-cog"></i>&nbsp;&nbsp;Vehicle Parameters
           </a>
+          <button onclick={toggleAudioCallouts} class="nav-button mb-4" type="button">
+            <i class="nav-icon fas {$audioCalloutsStore ? 'fa-volume-up' : 'fa-volume-mute'}"></i>&nbsp;&nbsp;Audio Callouts {$audioCalloutsStore ? 'On' : 'Off'}
+          </button>
           <button onclick={(e) => { e.preventDefault(); handleLogout(); }} class="nav-button mb-4" type="button">
             <i class="nav-icon fas fa-sign-out-alt"></i>&nbsp;&nbsp;Logout
           </button>
