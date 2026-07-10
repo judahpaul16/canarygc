@@ -5,6 +5,18 @@ import type { RequestHandler } from '@sveltejs/kit';
 
 import type { DatabaseUser } from "$lib/server/db";
 
+const ARGON2_OPTIONS = {
+    memoryCost: 19456,
+    timeCost: 2,
+    outputLen: 32,
+    parallelism: 1
+};
+
+const USERNAME_MIN = 3;
+const USERNAME_MAX = 31;
+const PASSWORD_MIN = 6;
+const PASSWORD_MAX = 255;
+
 export const POST: RequestHandler = async (event): Promise<Response> => {
     try {
         const headers = event.request.headers;
@@ -13,8 +25,8 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
 
         if (
             typeof username !== "string" ||
-            username.length < 3 ||
-            username.length > 31
+            username.length < USERNAME_MIN ||
+            username.length > USERNAME_MAX
         ) {
             return new Response(JSON.stringify({ message: "Invalid username" }), {
                 status: 400,
@@ -23,7 +35,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
                 }
             });
         }
-        if (typeof password !== "string" || password.length < 6 || password.length > 255) {
+        if (typeof password !== "string" || password.length < PASSWORD_MIN || password.length > PASSWORD_MAX) {
             return new Response(JSON.stringify({ message: "Invalid password" }), {
                 status: 400,
                 headers: {
@@ -32,9 +44,8 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
             });
         }
 
-        const existingUser = db.prepare("SELECT * FROM user WHERE username = ?").get(username) as
-            | DatabaseUser
-            | undefined;
+        const result = await db.execute({ sql: "SELECT * FROM user WHERE username = ?", args: [username] });
+        const existingUser = result.rows[0] as unknown as DatabaseUser | undefined;
         if (!existingUser) {
             return new Response(JSON.stringify({ message: "Incorrect username or password" }), {
                 status: 400,
@@ -44,22 +55,8 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
             });
         }
 
-        const validPassword = await verify(existingUser.password_hash, password, {
-            memoryCost: 19456,
-            timeCost: 2,
-            outputLen: 32,
-            parallelism: 1
-        });
+        const validPassword = await verify(existingUser.password_hash, password, ARGON2_OPTIONS);
         if (!validPassword) {
-            // NOTE:
-        // Returning immediately allows malicious actors to figure out valid usernames from response times,
-        // allowing them to only focus on guessing passwords in brute-force attacks.
-        // As a preventive measure, you may want to hash passwords even for invalid usernames.
-        // However, valid usernames can be already be revealed with the signup page among other methods.
-        // It will also be much more resource intensive.
-        // Since protecting against this is non-trivial,
-        // it is crucial your implementation is protected against brute-force attacks with login throttling, 2FA, etc.
-        // If usernames are public, you can outright tell the user that the username is invalid.
             return new Response(JSON.stringify({ message: "Incorrect username or password" }), {
                 status: 400,
                 headers: {
@@ -68,14 +65,12 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
             });
         }
 
-        const session = event.locals.session;
-        if (session) {
-            const sessionCookie = lucia.createSessionCookie(session.id);
-            event.cookies.set(sessionCookie.name, sessionCookie.value, {
-                path: ".",
-                ...sessionCookie.attributes
-            });
-        }
+        const session = await lucia.createSession(existingUser.id, {});
+        const sessionCookie = lucia.createSessionCookie(session.id);
+        event.cookies.set(sessionCookie.name, sessionCookie.value, {
+            path: "/",
+            ...sessionCookie.attributes
+        });
     } catch (e) {
         return new Response(JSON.stringify({ message: (e as Error).message }), {
             status: 500,

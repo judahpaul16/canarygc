@@ -5,14 +5,10 @@ import { db } from "./db";
 
 import type { DatabaseUser } from "./db";
 
-const adapter = new LibSQLAdapter(
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- libsql Database bridges to the adapter's @libsql/client Client type
-	db as any,
-	{
-		user: "user",
-		session: "session"
-	}
-);
+const adapter = new LibSQLAdapter(db, {
+	user: "user",
+	session: "session"
+});
 
 export const lucia = new Lucia(adapter, {
 	sessionCookie: {

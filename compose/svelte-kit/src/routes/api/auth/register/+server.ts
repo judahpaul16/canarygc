@@ -1,9 +1,21 @@
 import { lucia } from "$lib/server/auth";
 import { generateId } from "lucia";
 import { hash } from "@node-rs/argon2";
-import { SqliteError } from "libsql";
 import { db } from "$lib/server/db";
 import type { RequestHandler } from '@sveltejs/kit';
+
+const ARGON2_OPTIONS = {
+    memoryCost: 19456,
+    timeCost: 2,
+    outputLen: 32,
+    parallelism: 1
+};
+
+const USERNAME_MIN = 3;
+const USERNAME_MAX = 31;
+const PASSWORD_MIN = 6;
+const PASSWORD_MAX = 255;
+const USER_ID_LENGTH = 15;
 
 export const POST: RequestHandler = async (event): Promise<Response> => {
     const headers = event.request.headers;
@@ -11,8 +23,8 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
     const password = headers.get("password");
     if (
         typeof username !== "string" ||
-        username.length < 3 ||
-        username.length > 31
+        username.length < USERNAME_MIN ||
+        username.length > USERNAME_MAX
     ) {
         return new Response(JSON.stringify({ message: "Invalid username" }), {
             status: 400,
@@ -21,7 +33,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
             }
         });
     }
-    if (typeof password !== "string" || password.length < 6 || password.length > 255) {
+    if (typeof password !== "string" || password.length < PASSWORD_MIN || password.length > PASSWORD_MAX) {
         return new Response(JSON.stringify({ message: "Invalid password" }), {
             status: 400,
             headers: {
@@ -30,38 +42,33 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
         });
     }
 
-    const passwordHash = await hash(password, {
-        // recommended minimum parameters
-        memoryCost: 19456,
-        timeCost: 2,
-        outputLen: 32,
-        parallelism: 1
-    });
-    const userId = generateId(15);
+    // Registration provisions the single operator account on first run;
+    // once any account exists, new signups are refused.
+    const existing = await db.execute("SELECT id FROM user LIMIT 1");
+    if (existing.rows.length > 0) {
+        return new Response(JSON.stringify({ message: "Registration is closed: an operator account already exists" }), {
+            status: 403,
+            headers: {
+                "content-type": "application/json"
+            }
+        });
+    }
+
+    const passwordHash = await hash(password, ARGON2_OPTIONS);
+    const userId = generateId(USER_ID_LENGTH);
 
     try {
-        db.prepare("INSERT INTO user (id, username, password_hash) VALUES(?, ?, ?)").run(
-            userId,
-            username,
-            passwordHash
-        );
-        const session = event.locals.session;
-        if (session) {
-            const sessionCookie = lucia.createSessionCookie(session.id);
-            event.cookies.set(sessionCookie.name, sessionCookie.value, {
-                path: ".",
-                ...sessionCookie.attributes
-            });
-        }
+        await db.execute({
+            sql: "INSERT INTO user (id, username, password_hash) VALUES(?, ?, ?)",
+            args: [userId, username, passwordHash]
+        });
+        const session = await lucia.createSession(userId, {});
+        const sessionCookie = lucia.createSessionCookie(session.id);
+        event.cookies.set(sessionCookie.name, sessionCookie.value, {
+            path: "/",
+            ...sessionCookie.attributes
+        });
     } catch (e) {
-        if (e instanceof SqliteError && e.code === "SQLITE_CONSTRAINT_UNIQUE") {
-            return new Response(JSON.stringify({ message: "Username already taken" }), {
-                status: 400,
-                headers: {
-                    "content-type": "application/json"
-                }
-            });
-        }
         return new Response(JSON.stringify({ message: (e as Error).stack }), {
             status: 500,
             headers: {

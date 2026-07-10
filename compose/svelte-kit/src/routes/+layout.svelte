@@ -448,6 +448,7 @@
   function handleLogout() {
     loggedInStore.set(false);
     document.cookie = 'lastActivity=' + Date.UTC(1970);
+    fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
     if (!window.location.pathname.includes('register')) goto('/login');
   }
 

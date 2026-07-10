@@ -1,14 +1,13 @@
 import type { RequestHandler } from '@sveltejs/kit';
-import { createClient } from "@libsql/client";
+import { db } from "$lib/server/db";
 
 export const POST: RequestHandler = async (event): Promise<Response> => {
-    const client = createClient({ url: 'file:/app/src/data.db' });
     switch (event.params.type) {
         case 'save':
             try {
                 const title = event.request.headers.get('title');
                 const actions = event.request.headers.get('actions');
-                await client.execute({sql: "INSERT INTO mission (id, title, actions, isLoaded) VALUES (?, ?, ?, ?)", args: [Math.random().toString(36).replace('0.', ''), title, actions, false]});
+                await db.execute({sql: "INSERT INTO mission (id, title, actions, isLoaded) VALUES (?, ?, ?, ?)", args: [Math.random().toString(36).replace('0.', ''), title, actions, false]});
                 return new Response("Success", {
                     status: 200,
                     headers: {
@@ -22,7 +21,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
         case 'load':
             try {
                 const title = event.request.headers.get('title');
-                await client.execute({sql: "UPDATE mission SET isLoaded = true WHERE title = ?", args: [title]});
+                await db.execute({sql: "UPDATE mission SET isLoaded = true WHERE title = ?", args: [title]});
 
                 return new Response(JSON.stringify({}), {
                     status: 200,
@@ -37,7 +36,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
             }
         case 'unload':
             try {
-                await client.execute({sql: "UPDATE mission SET isLoaded = false", args: []});
+                await db.execute({sql: "UPDATE mission SET isLoaded = false", args: []});
 
                 return new Response(JSON.stringify({}), {
                     status: 200,
@@ -52,7 +51,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
         case 'checkExists':
             try {
                 const title = event.request.headers.get('title');
-                const result = await client.execute({sql: "SELECT * FROM mission WHERE title = ?", args: [title]});
+                const result = await db.execute({sql: "SELECT * FROM mission WHERE title = ?", args: [title]});
 
                 return new Response(JSON.stringify(result.rows.length > 0 ? result.rows : {}), {
                     status: 200,
@@ -68,7 +67,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
             try {
                 const title = event.request.headers.get('title');
                 const actions = event.request.headers.get('actions');
-                await client.execute({sql: "UPDATE mission SET actions = ? WHERE title = ?", args: [actions, title]});
+                await db.execute({sql: "UPDATE mission SET actions = ? WHERE title = ?", args: [actions, title]});
 
                 return new Response(JSON.stringify({}), {
                     status: 200,
@@ -82,7 +81,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
             }
         case 'list':
             try {
-                const result = await client.execute("SELECT * FROM mission");
+                const result = await db.execute("SELECT * FROM mission");
 
                 return new Response(JSON.stringify(result.rows.length > 0 ? result.rows : {}), {
                     status: 200,
@@ -97,7 +96,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
         case 'delete':
             try {
                 const title = event.request.headers.get('title');
-                await client.execute({sql: "DELETE FROM mission WHERE title = ?", args: [title]});
+                await db.execute({sql: "DELETE FROM mission WHERE title = ?", args: [title]});
 
                 return new Response(JSON.stringify({}), {
                     status: 200,
