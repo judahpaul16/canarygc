@@ -183,11 +183,11 @@
           </div>
         </div>
         <div class="field">
-          <label for="openaip">OpenAIP API key {#if openaipSet}<span class="badge">configured</span>{/if}</label>
+          <label for="openaip">OpenAIP API key {#if openaipSet}<span class="badge">configured</span>{/if}<a class="key-link" href="https://www.openaip.net/" target="_blank" rel="noopener">Get key <i class="fa-solid fa-square-arrow-up-right"></i></a></label>
           <input id="openaip" bind:value={openaip} autocomplete="off" placeholder={openaipSet ? '•••••••• (saved)' : 'OpenAIP key'} />
         </div>
         <div class="field">
-          <label for="altitude-angel">Altitude Angel API key {#if altitudeAngelSet}<span class="badge">configured</span>{/if}</label>
+          <label for="altitude-angel">Altitude Angel API key {#if altitudeAngelSet}<span class="badge">configured</span>{/if}<a class="key-link" href="https://developers.altitudeangel.com" target="_blank" rel="noopener">Get key <i class="fa-solid fa-square-arrow-up-right"></i></a></label>
           <input id="altitude-angel" bind:value={altitudeAngel} autocomplete="off" placeholder={altitudeAngelSet ? '•••••••• (saved)' : 'Altitude Angel key'} />
         </div>
       </section>
@@ -201,7 +201,7 @@
           </div>
         </div>
         <div class="field">
-          <label for="maptiler">MapTiler API key</label>
+          <label for="maptiler">MapTiler API key<a class="key-link" href="https://cloud.maptiler.com/account/keys/" target="_blank" rel="noopener">Get key <i class="fa-solid fa-square-arrow-up-right"></i></a></label>
           <input id="maptiler" bind:value={maptiler} autocomplete="off" placeholder="MapTiler key (optional)" />
         </div>
         <div class="field">
@@ -354,6 +354,22 @@
     display: flex;
     align-items: center;
     gap: 0.4rem;
+  }
+  .key-link {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: #f5c518;
+    text-decoration: none;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+  }
+  .key-link:hover {
+    opacity: 1;
+    text-decoration: underline;
   }
 
   input,
