@@ -110,7 +110,7 @@
         if (get(mavStateStore) === 'STANDBY') {
           await setFlightMode('GUIDED');
           await armDisarm(true);
-          await sendMavlinkCommand('NAV_TAKEOFF', [0, 0, 0, 0, 0, 0, DEFAULT_TAKEOFF_ALT_M], { cmdLong: true });
+          await sendMavlinkCommand('NAV_TAKEOFF', [0, 0, 0, NaN, NaN, NaN, DEFAULT_TAKEOFF_ALT_M], { cmdLong: true });
           await new Promise((resolve) => setTimeout(resolve, TAKEOFF_SETTLE_DELAY_MS));
         }
         await setFlightMode('AUTO');

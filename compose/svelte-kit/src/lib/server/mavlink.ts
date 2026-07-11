@@ -291,13 +291,17 @@ async function sendMavlinkCommand(command: string, params: number[], useCmdLong 
     if (useArduPilotMega) commandMsg.command = parseInt(`${ardupilotmega.MavCmd[command as keyof typeof ardupilotmega.MavCmd]}`);
     else commandMsg.command = common.MavCmd[command as keyof typeof common.MavCmd];
 
-    if (params[0]) commandMsg._param1 = params[0];
-    if (params[1]) commandMsg._param2 = params[1];
-    if (params[2]) commandMsg._param3 = params[2];
-    if (params[3]) commandMsg._param4 = params[3];
-    if (params[4]) commandMsg._param5 = params[4];
-    if (params[5]) commandMsg._param6 = params[5];
-    if (params[6]) commandMsg._param7 = params[6];
+    // Assign every param the caller supplied, including 0 and NaN. A truthy
+    // guard would drop them, and NAV_TAKEOFF needs NaN lat/lon to mean "take
+    // off in place" rather than the CommandLong's 0 default (which sends the
+    // vehicle toward coordinate 0,0).
+    if (params[0] !== undefined) commandMsg._param1 = params[0];
+    if (params[1] !== undefined) commandMsg._param2 = params[1];
+    if (params[2] !== undefined) commandMsg._param3 = params[2];
+    if (params[3] !== undefined) commandMsg._param4 = params[3];
+    if (params[4] !== undefined) commandMsg._param5 = params[4];
+    if (params[5] !== undefined) commandMsg._param6 = params[5];
+    if (params[6] !== undefined) commandMsg._param7 = params[6];
     await send(state.port, commandMsg);
 }
 
