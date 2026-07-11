@@ -36,6 +36,7 @@ Unlike traditional GCS software, Canary Ground Control is a web-based applicatio
 * **Mission import.** Load QGroundControl `.plan` and Mission Planner `.waypoints` (QGC WPL) files, or the app's own JSON, straight into the planner.
 * **Smart path optimization.** One click reorders mission waypoints for the shortest route (nearest-neighbor seed refined by 2-opt), holding takeoff, RTL, and land commands in place. It steers legs clear of restricted airspace where a waypoint order allows, and reports the distance saved or the crossings avoided.
 * **Airspace overlays.** Both the 2D and 3D maps draw restricted and controlled airspace for the mission area, toggled from a map control, with a popup for each zone's class, altitude band, and operating implication. Worldwide coverage comes from [OpenAIP](https://www.openaip.net) with a key; without one it falls back to the FAA's keyless public airspace layers (US).
+* **LAANC ceilings and obstacles.** Two more toggleable overlays from the FAA's keyless layers: the UAS Facility Map grid colored by each square's pre-approved ceiling, and Digital Obstacle File towers and structures colored by height, each with plain-language popups.
 * **Pre-flight safety checks.** Before a mission starts, every waypoint is validated against an altitude ceiling and floor, a home-relative geofence radius, and the fetched airspace, and each leg is checked for passing through a zone. Restricted airspace, or a waypoint past a limit, blocks the launch; controlled airspace prompts for confirmation.
 * **Audible callouts.** Spoken telemetry callouts (arm/disarm, mode changes, battery, GPS, failsafe, link loss) over the browser speech API, with an on/off toggle that defaults on.
 * **Email alerts.** Enable per-event alerts (arm/disarm, mode change, failsafe, low battery, GPS or link loss, and more); each fires an email with the live coordinates and telemetry.
@@ -133,7 +134,7 @@ The stack is a single `docker-compose.yml` with two profiles.
 docker compose --profile development up
 ```
 
-The app is served at `http://localhost:5173`; SITL exposes MAVLink on TCP `5760`. Set a different host port with `APP_DEV_PORT` in a root `.env` if 5173 collides.
+The app is served at `http://localhost:5173`; SITL exposes MAVLink on TCP `5760`. Set a different host port with `APP_DEV_PORT` in a root `.env` if 5173 collides. The first bring-up builds the ArduPilot SITL image from source (Copter 4.5.7), which takes a while; later runs reuse it, and the simulator streams telemetry about a minute after it starts.
 
 On first run the database is empty, so open `/register` to create the operator account. To reset it later, wipe the dev database and restart:
 
