@@ -14,6 +14,12 @@ export interface Obstacle {
   amslFt: number;
 }
 
+export interface Building {
+  // GeoJSON Polygon coordinates, [lon, lat] rings.
+  polygon: number[][][];
+  heightM: number;
+}
+
 export const FT_TO_M = 0.3048;
 
 export function feetToMeters(feet: number): number {

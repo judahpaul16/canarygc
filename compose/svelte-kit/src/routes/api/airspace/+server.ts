@@ -2,6 +2,9 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
 import type { AirspaceZone } from '$lib/safety';
 import { getSetting } from '$lib/server/settings';
+import { cached, bboxKey } from '$lib/server/geocache';
+
+const AIRSPACE_TTL_MS = 10 * 60 * 1000;
 
 // Airspace for the map overlay and safety checks. OpenAIP is worldwide but
 // needs a key; when the key is unset or OpenAIP returns nothing, this falls back
@@ -176,7 +179,9 @@ export const GET: RequestHandler = async ({ url }) => {
 
   if (apiKey) {
     try {
-      const zones = await fetchOpenAip(bbox, apiKey);
+      const zones = await cached(bboxKey('airspace-openaip', bbox), AIRSPACE_TTL_MS, () =>
+        fetchOpenAip(bbox, apiKey)
+      );
       if (zones.length > 0) return json({ zones, source: 'openaip', configured: true });
     } catch (error) {
       console.error('OpenAIP fetch failed:', error);
@@ -184,7 +189,7 @@ export const GET: RequestHandler = async ({ url }) => {
   }
 
   try {
-    const zones = await fetchFaa(bbox);
+    const zones = await cached(bboxKey('airspace-faa', bbox), AIRSPACE_TTL_MS, () => fetchFaa(bbox));
     return json({ zones, source: 'faa', configured: Boolean(apiKey) });
   } catch (error) {
     console.error('FAA airspace fetch failed:', error);

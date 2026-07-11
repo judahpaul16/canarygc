@@ -1,6 +1,9 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
 import type { CeilingCell, Obstacle } from '$lib/hazards';
+import { cached, bboxKey } from '$lib/server/geocache';
+
+const HAZARDS_TTL_MS = 10 * 60 * 1000;
 
 // Flight hazards for the map overlays and safety checks, from the FAA's keyless
 // public layers (US): the UAS Facility Map LAANC ceiling grid and the Digital
@@ -91,7 +94,10 @@ export const GET: RequestHandler = async ({ url }) => {
     return json({ ceilings: [] as CeilingCell[], obstacles: [] as Obstacle[], obstaclesTruncated: false });
   }
 
-  const [ceilings, obstacleResult] = await Promise.allSettled([fetchCeilings(bbox), fetchObstacles(bbox)]);
+  const [ceilings, obstacleResult] = await Promise.allSettled([
+    cached(bboxKey('ceilings', bbox), HAZARDS_TTL_MS, () => fetchCeilings(bbox)),
+    cached(bboxKey('obstacles', bbox), HAZARDS_TTL_MS, () => fetchObstacles(bbox))
+  ]);
   if (ceilings.status === 'rejected') console.error('FAA UASFM fetch failed:', ceilings.reason);
   if (obstacleResult.status === 'rejected') console.error('FAA DOF fetch failed:', obstacleResult.reason);
 

@@ -1,5 +1,5 @@
 import { haversineMeters, pointInRing, type LatLon } from './geo';
-import { feetToMeters, type Obstacle } from './hazards';
+import { feetToMeters, type Obstacle, type Building } from './hazards';
 import type { MissionPlanActions, MissionPlanItem } from '../stores/missionPlanStore';
 import type { AirspaceZone } from './safety';
 
@@ -16,6 +16,7 @@ const EARTH_M_PER_DEG_LAT = 111_320;
 const AIRSPACE_MARGIN_M = 60;
 const OBSTACLE_KEEPOUT_M = 100;
 const OBSTACLE_CLEARANCE_M = 10;
+const BUILDING_MARGIN_M = 12;
 const CIRCLE_SIDES = 10;
 // Bounds the visibility graph so a dense hazard field cannot stall the click.
 const MAX_GRAPH_VERTICES = 160;
@@ -193,29 +194,48 @@ export interface OptimizeResult {
   actions: MissionPlanActions;
   addedWaypoints: number;
   movedWaypoints: number;
+  raisedWaypoints: number;
   clearedLegs: number;
   changed: boolean;
 }
 
-// Rings that block a leg: restricted airspace always, plus obstacles tall enough
-// to matter at the leg's altitude floor.
-function legHazardRings(
-  floorM: number,
-  restrictedRings: Ring[],
-  obstacles: Obstacle[]
-): Ring[] {
-  const rings = [...restrictedRings];
-  for (const obstacle of obstacles) {
-    if (feetToMeters(obstacle.aglFt) + OBSTACLE_CLEARANCE_M <= floorM) continue;
-    rings.push(circleRing({ lat: obstacle.lat, lon: obstacle.lon }, OBSTACLE_KEEPOUT_M));
+const LANDING_TYPES = new Set(['NAV_RETURN_TO_LAUNCH', 'NAV_LAND', 'NAV_VTOL_LAND']);
+
+interface VerticalHazard {
+  ring: Ring;
+  topM: number;
+}
+
+// Obstacles and buildings a leg could strike: each is a footprint plus the
+// height of its top. Restricted airspace is kept separate since climbing cannot
+// clear it.
+function verticalHazards(obstacles: Obstacle[], buildings: Building[]): VerticalHazard[] {
+  const hazards: VerticalHazard[] = [];
+  for (const o of obstacles) {
+    hazards.push({ ring: circleRing({ lat: o.lat, lon: o.lon }, OBSTACLE_KEEPOUT_M), topM: feetToMeters(o.aglFt) });
   }
-  return rings;
+  for (const b of buildings) {
+    if (!b.polygon?.[0] || b.polygon[0].length < 3) continue;
+    hazards.push({ ring: bufferRing(b.polygon[0], BUILDING_MARGIN_M), topM: b.heightM });
+  }
+  return hazards;
+}
+
+function crossesAny(a: LatLon, b: LatLon, rings: Ring[]): boolean {
+  return rings.some((ring) => segmentEntersRing(a, b, ring));
+}
+
+// Landing commands descend by design, so their altitude is left alone.
+function canRaise(item: MissionPlanItem): boolean {
+  return !LANDING_TYPES.has(item.type);
 }
 
 export function optimizeMissionPath(
   actions: MissionPlanActions,
   airspace: AirspaceZone[] = [],
-  obstacles: Obstacle[] = []
+  obstacles: Obstacle[] = [],
+  buildings: Building[] = [],
+  maxAltitudeM = 120
 ): OptimizeResult {
   const indices = Object.keys(actions)
     .map(Number)
@@ -225,6 +245,8 @@ export function optimizeMissionPath(
   const restrictedRings: Ring[] = airspace
     .filter((zone) => zone.restricted)
     .map((zone) => bufferRing(zone.polygon[0], AIRSPACE_MARGIN_M));
+  const vHazards = verticalHazards(obstacles, buildings);
+  const raised = new Set<MissionPlanItem>();
 
   let movedWaypoints = 0;
   let addedWaypoints = 0;
@@ -244,9 +266,12 @@ export function optimizeMissionPath(
 
   const rebuilt: MissionPlanItem[] = [];
   let prev: LatLon | null = null;
+  let prevItem: MissionPlanItem | null = null;
 
   // Legs run between consecutive positioned items (takeoff, waypoints, land);
-  // non-positioned commands (servo, delay, yaw) pass through untouched.
+  // non-positioned commands (servo, delay, yaw) pass through untouched. A hazard
+  // taller than the ceiling allows, or restricted airspace, forces a horizontal
+  // detour; a hazard the vehicle can climb over raises the leg altitude instead.
   for (const item of items) {
     if (!hasPosition(item)) {
       rebuilt.push(item);
@@ -254,30 +279,63 @@ export function optimizeMissionPath(
     }
     const target = toLatLon(item);
     if (prev) {
-      const rings = legHazardRings(item.alt ?? 0, restrictedRings, obstacles);
-      if (!segmentClear(prev, target, rings)) {
-        const detour = routeAround(prev, target, rings);
+      const legAlt = item.alt ?? 0;
+      const unclearable = vHazards.filter((h) => h.topM + OBSTACLE_CLEARANCE_M > maxAltitudeM);
+      const mustAvoid: Ring[] = [...restrictedRings, ...unclearable.map((h) => h.ring)];
+
+      const detourPoints: LatLon[] = [];
+      if (crossesAny(prev, target, mustAvoid)) {
+        const detour = routeAround(prev, target, mustAvoid);
         if (detour && detour.length > 0) {
-          for (const point of detour) {
-            rebuilt.push({
-              type: 'NAV_WAYPOINT',
-              lat: point.lat,
-              lon: point.lon,
-              alt: item.alt,
-              notes: 'Auto-routed to avoid a hazard',
-              param1: null,
-              param2: null,
-              param3: null,
-              param4: null
-            });
-            addedWaypoints++;
-          }
+          detourPoints.push(...detour);
           clearedLegs++;
+        }
+      }
+
+      // Raise the leg to clear any climbable hazard the (possibly detoured) path
+      // still crosses, but never above the ceiling.
+      const poly = [prev, ...detourPoints, target];
+      let neededAlt = legAlt;
+      for (const h of vHazards) {
+        const clearAlt = h.topM + OBSTACLE_CLEARANCE_M;
+        if (clearAlt > maxAltitudeM || clearAlt <= legAlt) continue;
+        for (let i = 0; i < poly.length - 1; i++) {
+          if (segmentEntersRing(poly[i], poly[i + 1], h.ring)) {
+            neededAlt = Math.max(neededAlt, clearAlt);
+            break;
+          }
+        }
+      }
+
+      for (const point of detourPoints) {
+        rebuilt.push({
+          type: 'NAV_WAYPOINT',
+          lat: point.lat,
+          lon: point.lon,
+          alt: neededAlt,
+          notes: 'Auto-routed to avoid a hazard',
+          param1: null,
+          param2: null,
+          param3: null,
+          param4: null
+        });
+        addedWaypoints++;
+      }
+
+      if (neededAlt > legAlt) {
+        if (canRaise(item)) {
+          item.alt = neededAlt;
+          raised.add(item);
+        }
+        if (prevItem && canRaise(prevItem) && neededAlt > (prevItem.alt ?? 0)) {
+          prevItem.alt = neededAlt;
+          raised.add(prevItem);
         }
       }
     }
     rebuilt.push(item);
     prev = target;
+    prevItem = item;
   }
 
   const result: MissionPlanActions = {};
@@ -289,7 +347,8 @@ export function optimizeMissionPath(
     actions: result,
     addedWaypoints,
     movedWaypoints,
+    raisedWaypoints: raised.size,
     clearedLegs,
-    changed: addedWaypoints > 0 || movedWaypoints > 0
+    changed: addedWaypoints > 0 || movedWaypoints > 0 || raised.size > 0
   };
 }

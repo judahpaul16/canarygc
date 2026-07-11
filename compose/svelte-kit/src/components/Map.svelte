@@ -34,7 +34,7 @@
   import { airspaceColor, airspacePopupHtml } from '../lib/airspace';
   import { ceilingColor, ceilingPopupHtml, obstacleColor, obstaclePopupHtml } from '../lib/hazards';
   import { pointInPolygon } from '../lib/geo';
-  import { refreshAirspace, refreshHazards } from '../lib/preflight';
+  import { refreshAirspace, refreshHazards, fetchAirspaceForBbox, fetchHazardsForBbox } from '../lib/preflight';
   import ThreeDMap from './3DMap.svelte';
   import pkg from 'maplibre-gl';
   const { Marker } = pkg;
@@ -257,6 +257,10 @@
       if (hideOverlay) return;
       addWaypoint(e.latlng);
     });
+    leafletMap.on('moveend', () => {
+      if (viewportTimer) clearTimeout(viewportTimer);
+      viewportTimer = setTimeout(refreshViewportOverlays, VIEWPORT_REFRESH_DELAY_MS);
+    });
 
     updateAttributionVisibility();
 
@@ -304,6 +308,20 @@
       next[i] = item;
     });
     missionPlanActionsStore.set(next);
+  }
+
+  // Refetch overlays for the visible area as the operator pans; debounced, and
+  // skipped when zoomed too far out for the overlays to be useful.
+  const VIEWPORT_REFRESH_DELAY_MS = 500;
+  const MIN_OVERLAY_ZOOM = 9;
+  let viewportTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function refreshViewportOverlays() {
+    if (!leafletMap || hideOverlay || leafletMap.getZoom() < MIN_OVERLAY_ZOOM) return;
+    const b = leafletMap.getBounds();
+    const bbox = `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`;
+    if (get(showAirspaceStore)) fetchAirspaceForBbox(bbox);
+    if (get(showCeilingsStore) || get(showObstaclesStore)) fetchHazardsForBbox(bbox);
   }
 
   const FEATURE_HIT_PX = 16;

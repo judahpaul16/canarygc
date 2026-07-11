@@ -14,6 +14,7 @@ import {
   type Hazards
 } from './safety';
 import { showModal } from './overlays';
+import type { Building } from './hazards';
 import type { MissionPlanActions } from '../stores/missionPlanStore';
 
 const BBOX_PAD_DEG = 0.1;
@@ -34,12 +35,9 @@ function missionBbox(actions: MissionPlanActions): string | null {
   ].join(',');
 }
 
-// Pull airspace covering the mission's bounding box and cache it for overlays
-// and validation.
-export async function refreshAirspace(actions: MissionPlanActions): Promise<AirspaceZone[]> {
-  const bbox = missionBbox(actions);
-  if (!bbox) return [];
-
+// Pull airspace for a bounding box and cache it in the store for overlays and
+// validation.
+export async function fetchAirspaceForBbox(bbox: string): Promise<AirspaceZone[]> {
   try {
     const res = await fetch(`/api/airspace?bbox=${encodeURIComponent(bbox)}`);
     const data = await res.json();
@@ -51,12 +49,7 @@ export async function refreshAirspace(actions: MissionPlanActions): Promise<Airs
   }
 }
 
-// Pull the LAANC ceiling grid and obstacles for the same area and cache them
-// for overlays and validation.
-export async function refreshHazards(actions: MissionPlanActions): Promise<Hazards> {
-  const bbox = missionBbox(actions);
-  if (!bbox) return { ceilings: [], obstacles: [] };
-
+export async function fetchHazardsForBbox(bbox: string): Promise<Hazards> {
   try {
     const res = await fetch(`/api/hazards?bbox=${encodeURIComponent(bbox)}`);
     const data = await res.json();
@@ -67,6 +60,32 @@ export async function refreshHazards(actions: MissionPlanActions): Promise<Hazar
   } catch {
     return { ceilings: get(ceilingCellsStore), obstacles: get(obstaclesStore) };
   }
+}
+
+export async function fetchBuildingsForBbox(bbox: string): Promise<Building[]> {
+  try {
+    const res = await fetch(`/api/buildings?bbox=${encodeURIComponent(bbox)}`);
+    const data = await res.json();
+    return data.buildings ?? [];
+  } catch {
+    return [];
+  }
+}
+
+// Mission-area convenience wrappers for the overlays and Optimize Path.
+export async function refreshAirspace(actions: MissionPlanActions): Promise<AirspaceZone[]> {
+  const bbox = missionBbox(actions);
+  return bbox ? fetchAirspaceForBbox(bbox) : [];
+}
+
+export async function refreshHazards(actions: MissionPlanActions): Promise<Hazards> {
+  const bbox = missionBbox(actions);
+  return bbox ? fetchHazardsForBbox(bbox) : { ceilings: [], obstacles: [] };
+}
+
+export async function refreshBuildings(actions: MissionPlanActions): Promise<Building[]> {
+  const bbox = missionBbox(actions);
+  return bbox ? fetchBuildingsForBbox(bbox) : [];
 }
 
 // Runs the pre-flight safety validation. Resolves true when it is safe to

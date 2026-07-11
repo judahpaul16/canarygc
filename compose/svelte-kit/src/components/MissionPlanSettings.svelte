@@ -23,37 +23,52 @@
     import { parseMissionFile } from '../lib/mission-import';
     import { isPX4 } from '../lib/flight-modes';
     import { mavModelStore } from '../stores/mavlinkStore';
-    import { airspaceZonesStore, obstaclesStore } from '../stores/safetyStore';
-    import { refreshAirspace, refreshHazards } from '../lib/preflight';
+    import { airspaceZonesStore, obstaclesStore, safetyLimitsStore } from '../stores/safetyStore';
+    import { refreshAirspace, refreshHazards, refreshBuildings } from '../lib/preflight';
 
     const SAVE_FEEDBACK_MS = 3000;
     const DEGREES_TO_E7 = 1e7;
 
     async function optimizePath() {
         const actions = get(missionPlanActionsStore);
-        // Pull current hazards for the mission area so avoidance has data even
-        // if the overlays were never opened.
-        await Promise.all([refreshAirspace(actions), refreshHazards(actions)]);
-        const result = optimizeMissionPath(actions, get(airspaceZonesStore), get(obstaclesStore));
+        // Pull current hazards, buildings, and airspace for the mission area so
+        // avoidance has data even if the overlays were never opened.
+        const [, , buildings] = await Promise.all([
+            refreshAirspace(actions),
+            refreshHazards(actions),
+            refreshBuildings(actions)
+        ]);
+        const limits = get(safetyLimitsStore);
+        const result = optimizeMissionPath(
+            actions,
+            get(airspaceZonesStore),
+            get(obstaclesStore),
+            buildings,
+            limits.maxAltitudeM
+        );
         if (!result.changed) {
             notify({
                 title: 'Path already clear',
-                content: 'No waypoint crosses restricted airspace or a mapped obstacle.',
+                content: 'No leg crosses restricted airspace, an obstacle, or a building at its altitude.',
                 duration: SAVE_FEEDBACK_MS
             });
             return;
         }
         missionPlanActionsStore.set(result.actions);
+        const n = (count: number) => (count > 1 ? 's' : '');
         const parts: string[] = [];
         if (result.clearedLegs > 0) {
-            parts.push(`added ${result.addedWaypoints} waypoint${result.addedWaypoints > 1 ? 's' : ''} to route around ${result.clearedLegs} hazard${result.clearedLegs > 1 ? 's' : ''}`);
+            parts.push(`added ${result.addedWaypoints} waypoint${n(result.addedWaypoints)} to route around ${result.clearedLegs} hazard${n(result.clearedLegs)}`);
+        }
+        if (result.raisedWaypoints > 0) {
+            parts.push(`raised ${result.raisedWaypoints} waypoint${n(result.raisedWaypoints)} to clear obstacles or buildings`);
         }
         if (result.movedWaypoints > 0) {
-            parts.push(`moved ${result.movedWaypoints} waypoint${result.movedWaypoints > 1 ? 's' : ''} clear of restricted airspace`);
+            parts.push(`moved ${result.movedWaypoints} waypoint${n(result.movedWaypoints)} clear of restricted airspace`);
         }
         notify({
             title: 'Path adjusted for hazards',
-            content: `Path ${parts.join(' and ')}. Review the plan before flying.`,
+            content: `Path ${parts.join(', ')}. Review the plan before flying.`,
             duration: SAVE_FEEDBACK_MS * 2
         });
     }
