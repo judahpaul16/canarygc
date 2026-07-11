@@ -43,7 +43,10 @@ services:
   # ArduPilot SITL for local testing (development profile).
   sitl:
     profiles: ["development"]
-    image: radarku/ardupilot-sitl:latest
+    image: canarygc-sitl
+    build:
+      context: ./compose/sitl
+      dockerfile: Dockerfile.apm
     environment:
       - INSTANCE=0
       - LAT=33.79105092934356
