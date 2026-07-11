@@ -13,5 +13,5 @@ export const GET: RequestHandler = async () => {
     darkUrl: (await getSetting('tiles.dark')) || undefined,
     satelliteUrl: (await getSetting('tiles.satellite')) || undefined
   };
-  return json(resolveTiles(config));
+  return json({ ...resolveTiles(config), maptilerKey: config.maptilerKey ?? '' });
 };

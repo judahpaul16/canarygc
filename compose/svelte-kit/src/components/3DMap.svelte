@@ -49,10 +49,23 @@
   }
 
   onMount(() => {
-    const MAPTILER_KEY = 'FzmtxzLwraPRISOg9JeU';
+    void (async () => {
+    let maptilerKey = '';
+    try {
+      const res = await fetch('/api/map-config');
+      if (res.ok) maptilerKey = (await res.json()).maptilerKey || '';
+    } catch {
+      // fall through to the keyless vector style
+    }
+    // MapTiler's vector style when a key is set, otherwise OpenFreeMap's keyless
+    // Liberty style. Both carry the OpenMapTiles building schema the 3D
+    // extrusion layer reads.
+    const style = maptilerKey
+      ? `https://api.maptiler.com/maps/basic-v2/style.json?key=${maptilerKey}`
+      : 'https://tiles.openfreemap.org/styles/liberty';
     const m = new Map({
       container: 'threedmap',
-      style: `https://api.maptiler.com/maps/basic-v2/style.json?key=${MAPTILER_KEY}`,
+      style,
       center: [mavLocation.lng, mavLocation.lat], // starting position [lng, lat]
       zoom: get(mapZoomStore) - 1, // starting zoom
       pitch: 45,
@@ -75,47 +88,53 @@
             }
         }
 
-        m.addSource('openmaptiles', {
-            url: `https://api.maptiler.com/tiles/v3/tiles.json?key=${MAPTILER_KEY}`,
-            type: 'vector',
-        });
+        // With a key, add MapTiler's vector source; the keyless OpenFreeMap
+        // style already ships an openmaptiles source, so only add when absent.
+        if (maptilerKey && !m.getSource('openmaptiles')) {
+            m.addSource('openmaptiles', {
+                url: `https://api.maptiler.com/tiles/v3/tiles.json?key=${maptilerKey}`,
+                type: 'vector',
+            });
+        }
 
-        m.addLayer(
-            {
-                'id': '3d-buildings',
-                'source': 'openmaptiles',
-                'source-layer': 'building',
-                'type': 'fill-extrusion',
-                'minzoom': 1,
-                'filter': ['!=', ['get', 'hide_3d'], true],
-                'paint': {
-                    'fill-extrusion-color': [
-                        'interpolate',
-                        ['linear'],
-                        ['coalesce', ['get', 'render_height'], 0], 0, 'gray', 200, 'royalblue', 400, 'lightblue'
-                    ],
-                    'fill-extrusion-height': [
-                        'interpolate',
-                        ['linear'],
-                        ['zoom'],
-                        15,
-                        0,
-                        16,
-                        ['coalesce', ['get', 'render_height'], 0]
-                    ],
-                    'fill-extrusion-base': [
-                        'interpolate',
-                        ['linear'],
-                        ['zoom'],
-                        15,
-                        0,
-                        16,
-                        ['coalesce', ['get', 'render_min_height'], 0]
-                    ]
-                }
-            },
-            labelLayerId
-        );
+        if (m.getSource('openmaptiles')) {
+            m.addLayer(
+                {
+                    'id': '3d-buildings',
+                    'source': 'openmaptiles',
+                    'source-layer': 'building',
+                    'type': 'fill-extrusion',
+                    'minzoom': 1,
+                    'filter': ['!=', ['get', 'hide_3d'], true],
+                    'paint': {
+                        'fill-extrusion-color': [
+                            'interpolate',
+                            ['linear'],
+                            ['coalesce', ['get', 'render_height'], 0], 0, 'gray', 200, 'royalblue', 400, 'lightblue'
+                        ],
+                        'fill-extrusion-height': [
+                            'interpolate',
+                            ['linear'],
+                            ['zoom'],
+                            15,
+                            0,
+                            16,
+                            ['coalesce', ['get', 'render_height'], 0]
+                        ],
+                        'fill-extrusion-base': [
+                            'interpolate',
+                            ['linear'],
+                            ['zoom'],
+                            15,
+                            0,
+                            16,
+                            ['coalesce', ['get', 'render_min_height'], 0]
+                        ]
+                    }
+                },
+                labelLayerId
+            );
+        }
 
         // Add satellite overlay
         m.addLayer({
@@ -174,6 +193,7 @@
     markerInterval = setInterval(() => {
       updateMAVMarker();
     }, 1000);
+    })();
   });
 
   onDestroy(() => {

@@ -3,10 +3,6 @@
 // satellite); without one it falls back to keyless sources. Any mode can be
 // overridden with a custom XYZ tile URL from the Integrations settings.
 
-// The station ships with a MapTiler key so the richer styles work out of the
-// box; operators can replace it in Integrations.
-export const DEFAULT_MAPTILER_KEY = 'FzmtxzLwraPRISOg9JeU';
-
 const OSM_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 const CARTO_DARK_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
 // Google hybrid: satellite imagery with roads and labels, no key required.
@@ -55,7 +51,7 @@ export interface TileSources {
 }
 
 export function resolveTiles(config: TileConfig = {}): TileSources {
-  const key = config.maptilerKey?.trim() || DEFAULT_MAPTILER_KEY;
+  const key = config.maptilerKey?.trim() || '';
   const mt = (style: string, ext = 'png') =>
     `https://api.maptiler.com/maps/${style}/256/{z}/{x}/{y}.${ext}?key=${key}`;
 
