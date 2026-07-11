@@ -23,9 +23,7 @@ export async function sendMavlinkCommand(
       useArduPilotMega: `${options.ardupilotMega ?? false}`
     }
   });
-  const text = await response.text();
-  if (response.ok) console.log(text);
-  else console.error(`Error: ${text}`);
+  if (!response.ok) console.error(`Error: ${await response.text()}`);
   return response.ok;
 }
 
@@ -59,8 +57,7 @@ export async function setPositionLocal(x: number | string, y: number | string, z
       z: `${z}`
     }
   });
-  if (response.ok) console.log(`Local position set: x: ${x}, y: ${y}, z: ${z}`);
-  else console.error('Failed to set local position');
+  if (!response.ok) console.error('Failed to set local position');
   return response.ok;
 }
 

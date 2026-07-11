@@ -23,6 +23,16 @@ let lastPacketAt = 0;
 // re-establish it.
 const STALE_LINK_MS = 4000;
 const CONNECT_TIMEOUT_MS = 5000;
+// Telemetry logs are capped so a long-running station cannot grow them without
+// bound; the cap covers several minutes of backlog for the event-log view.
+const MAX_LOG_ENTRIES = 5000;
+
+function pushLog(entry: string): void {
+    logs.push(entry);
+    newLogs.push(entry);
+    if (logs.length > MAX_LOG_ENTRIES) logs.splice(0, logs.length - MAX_LOG_ENTRIES);
+    if (newLogs.length > MAX_LOG_ENTRIES) newLogs.splice(0, newLogs.length - MAX_LOG_ENTRIES);
+}
 
 function linkAlive(): boolean {
     return Boolean(port && reader && lastPacketAt > 0 && Date.now() - lastPacketAt < STALE_LINK_MS);
@@ -83,7 +93,7 @@ async function openNewConnection(): Promise<void> {
         port!.once('data', () => {
             clearTimeout(timeout);
             lastPacketAt = Date.now();
-            logs.push('MAVLink connection initialized');
+            pushLog('MAVLink connection initialized');
             resolve();
         });
     });
@@ -103,8 +113,7 @@ function setupPacketReader(): void {
             const sanitizedData = convertBigIntToNumber(data);
             const timestamp = new Date().toISOString();
             const logEntry = `${clazz.MSG_NAME}(${clazz.MAGIC_NUMBER})::${timestamp}::${JSON.stringify(sanitizedData)}`;
-            logs.push(logEntry);
-            newLogs.push(logEntry);
+            pushLog(logEntry);
             if (logEntry.includes('_ACK') && !logEntry.includes('"command":512')) console.log(logEntry);
         }
     });
@@ -121,12 +130,12 @@ function handlePortClose(): void {
     port = null;
     reader = null;
     online = false;
-    logs.push('MAVLink connection closed');
+    pushLog('MAVLink connection closed');
 }
 
 function handlePortError(err: Error): void {
     online = false;
-    logs.push(`MAVLink connection error: ${err.message}`);
+    pushLog(`MAVLink connection error: ${err.message}`);
 }
 
 async function requestStatus() {
