@@ -92,7 +92,7 @@
                     'fill-extrusion-color': [
                         'interpolate',
                         ['linear'],
-                        ['get', 'render_height'], 0, 'gray', 200, 'royalblue', 400, 'lightblue'
+                        ['coalesce', ['get', 'render_height'], 0], 0, 'gray', 200, 'royalblue', 400, 'lightblue'
                     ],
                     'fill-extrusion-height': [
                         'interpolate',
@@ -101,11 +101,16 @@
                         15,
                         0,
                         16,
-                        ['get', 'render_height']
+                        ['coalesce', ['get', 'render_height'], 0]
                     ],
-                    'fill-extrusion-base': ['case',
-                        ['>=', ['get', 'zoom'], 16],
-                        ['get', 'render_min_height'], 0
+                    'fill-extrusion-base': [
+                        'interpolate',
+                        ['linear'],
+                        ['zoom'],
+                        15,
+                        0,
+                        16,
+                        ['coalesce', ['get', 'render_min_height'], 0]
                     ]
                 }
             },
