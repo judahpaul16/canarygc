@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { run } from 'svelte/legacy';
-
     import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../../stores/customizationStore';
     import { mavlinkParamStore, type Parameter } from '../../stores/mavlinkStore';
     import { onMount } from 'svelte';
@@ -33,15 +31,13 @@
     };
 
     let searchTerm = $state('');
-    let filteredParams: Parameter[] = $state([]);
-
-    run(() => {
-        if ($mavlinkParamStore) {
-            filteredParams = Array.from(Object.values($mavlinkParamStore)).filter(param => 
+    let filteredParams: Parameter[] = $derived(
+        $mavlinkParamStore
+            ? Array.from(Object.values($mavlinkParamStore)).filter((param) =>
                 param.param_id.toLowerCase().includes(searchTerm.toLowerCase())
-            );
-        }
-    });
+              )
+            : []
+    );
 
     onMount(() => {
         requestParameters();

@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { run } from 'svelte/legacy';
     import { mount, unmount } from 'svelte';
 
     import { mapStore} from "../stores/mapStore";
@@ -43,15 +42,8 @@
         });
     }
 
-    let actions: MissionPlanActions = $state(get(missionPlanActionsStore));
-    let title: string = $state("");
-
-    run(() => {
-        title = $missionPlanTitleStore
-    });
-    run(() => {
-        actions = $missionPlanActionsStore;
-    });
+    let actions: MissionPlanActions = $derived($missionPlanActionsStore);
+    let title: string = $derived($missionPlanTitleStore);
     let map = $derived($mapStore);
 
     let darkMode = $derived($darkModeStore);

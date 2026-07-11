@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { run } from 'svelte/legacy';
-
   import { onMount } from 'svelte';
   import { mavLocationStore, mavModeStore, mavStateStore, mavlinkParamStore } from '../stores/mavlinkStore';
   import {
@@ -35,7 +33,7 @@
   }
 
   let { title = $bindable('') }: Props = $props();
-  let actions: MissionPlanActions = $state({});
+  let actions: MissionPlanActions = $derived($missionPlanActionsStore);
   let action_types = [
     'NAV_WAYPOINT', 'NAV_SPLINE_WAYPOINT', 'NAV_TAKEOFF', 'NAV_RETURN_TO_LAUNCH', 'NAV_GUIDED_ENABLE', 'NAV_LAND',
     'NAV_LOITER_TIME', 'NAV_LOITER_TURNS', 'NAV_LOITER_UNLIM', 'NAV_PAYLOAD_PLACE', 'DO_WINCH', 'DO_GRIPPER', 'DO_SET_CAM_TRIGG_DIST',
@@ -51,11 +49,8 @@
   let mavLocation = $derived($mavLocationStore);
   let mavMode = $derived($mavModeStore);
   let systemState = $derived($mavStateStore);
-  run(() => {
+  $effect(() => {
     title = $missionPlanTitleStore;
-  });
-  run(() => {
-    actions = $missionPlanActionsStore;
   });
   let missionLoaded = $derived($missionPlanTitleStore !== '');
 

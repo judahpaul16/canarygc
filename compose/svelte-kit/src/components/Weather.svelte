@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { run } from 'svelte/legacy';
-
   import { onMount } from 'svelte';
   import weatherCodes from '../lib/weathercodes.json';
   import { mavLocationStore } from '../stores/mavlinkStore';
@@ -40,7 +38,7 @@
   let secondaryColor = $derived($secondaryColorStore);
   let tertiaryColor = $derived($tertiaryColorStore);
   let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
-  run(() => {
+  $effect(() => {
     mavLocation = $mavLocationStore;
   });
 

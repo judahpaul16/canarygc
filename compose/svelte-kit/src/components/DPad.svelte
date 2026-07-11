@@ -1,8 +1,5 @@
 <script lang="ts">
-  import { run } from 'svelte/legacy';
-
   import { mavModeStore, mavAltitudeStore } from '../stores/mavlinkStore';
-  import { get } from 'svelte/store';
   import { tertiaryColorStore } from '../stores/customizationStore';
 
   import { setFlightMode, setPositionLocal } from '../lib/mavlink-client';
@@ -10,13 +7,10 @@
 
   const MOVE_STEP_M = 10;
 
-  let altitude: number = $state(get(mavAltitudeStore));
+  let altitude: number = $derived($mavAltitudeStore);
 
   let tertiaryColor = $derived($tertiaryColorStore);
   let mavMode = $derived($mavModeStore);
-  run(() => {
-    altitude = $mavAltitudeStore;
-  });
 
   async function nudge(x: number, y: number) {
     if (!isGuidedLabel(mavMode)) await setFlightMode('GUIDED');

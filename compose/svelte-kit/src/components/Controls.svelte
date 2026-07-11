@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { run, preventDefault } from 'svelte/legacy';
-
   import Map from './Map.svelte';
   import DPad from './DPad.svelte';
   import Weather from './Weather.svelte';
@@ -11,7 +9,6 @@
     secondaryColorStore,
     tertiaryColorStore
   } from '../stores/customizationStore';
-  import { get } from 'svelte/store';
   import { sendMavlinkCommand, setFlightMode, setPositionLocal } from '../lib/mavlink-client';
   import { isGuidedLabel } from '../lib/flight-modes';
 
@@ -21,7 +18,7 @@
   const YAW_RELATIVE_OFFSET = 1;
   const ALTITUDE_STEP_M = 10;
 
-  let altitude = $state(get(mavAltitudeStore));
+  let altitude = $derived($mavAltitudeStore);
   let maxSpeed: string = $state('');
   let altitudeSetPoint: string = $state('');
 
@@ -36,9 +33,6 @@
   let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
   let mavMode = $derived($mavModeStore);
   let mavLocation = $derived($mavLocationStore);
-  run(() => {
-    altitude = $mavAltitudeStore;
-  });
   let mavSatellite = $derived($mavSatelliteStore);
 
 
@@ -90,10 +84,11 @@
           <input type="number" min="0" max="100" class="form-input" placeholder="100 m" bind:value={altitudeSetPoint} />
         </div>
         <button class="set-btn text-[8pt] rounded-full py-1 px-3 mt-2"
-          onclick={preventDefault(() => {
+          onclick={(e) => {
+            e.preventDefault();
             if (!isNaN(parseInt(maxSpeed))) sendMavlinkCommand('DO_CHANGE_SPEED', [SPEED_TYPE_GROUNDSPEED, maxSpeed]);
             if (!isNaN(parseInt(altitudeSetPoint))) setPositionLocal(0, 0, -parseInt(altitudeSetPoint));
-          })}>
+          }}>
           Set
         </button>
       </form>
