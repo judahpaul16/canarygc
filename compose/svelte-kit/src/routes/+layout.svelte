@@ -418,8 +418,6 @@
   }
 
   onMount(() => {
-    if (localStorage.getItem('darkMode') === 'false') darkModeStore.set(false);
-
     const startupTimer = setTimeout(() => {
       if (isNavHidden) return;
       checkLoadedMission();
@@ -482,14 +480,13 @@
     isNavOpen = !isNavOpen;
   }
 
+  // The tile-inverting `.dark` class lives on the app root reactively, so every
+  // map on the page follows the theme on load and on toggle; satellite imagery
+  // stays uninverted.
+  let invertMapTiles = $derived(darkMode && $mapTypeStore !== 'Satellite');
+
   function toggleDarkMode() {
-    const next = !get(darkModeStore);
-    darkModeStore.set(next);
-    localStorage.setItem('darkMode', String(next));
-    const map = document.getElementById('map');
-    if (map && get(mapTypeStore) !== 'Satellite') {
-      map.classList.toggle('dark', next);
-    }
+    darkModeStore.set(!get(darkModeStore));
   }
 
   function toggleAudioCallouts() {
@@ -499,7 +496,7 @@
   }
 </script>
 
-<main class="bg-black flex overflow-auto"
+<main class="bg-black flex overflow-auto" class:dark={invertMapTiles}
   style="--heightOfDashboard: {heightOfDashboard}px; --primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
 >
   <div class="bg fixed w-full h-full" style="background-image: url('{darkMode ? 'bg-map.webp' : 'bg-map-light.webp'}');"></div>

@@ -10,7 +10,7 @@ function persistedBool(key: string, fallback: boolean) {
 }
 
 export const audioCalloutsStore = persistedBool('audioCallouts', true);
-export const darkModeStore = writable(true);
+export const darkModeStore = persistedBool('darkMode', true);
 
 export const primaryColorStore = derived(darkModeStore, ($dark) => ($dark ? '#1c1c1e' : '#ffffff'));
 export const secondaryColorStore = derived(darkModeStore, ($dark) => ($dark ? '#121212' : '#e7e9ef'));
