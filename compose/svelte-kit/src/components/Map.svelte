@@ -11,7 +11,11 @@
     lockViewStore,
     threeDMapStore
   } from '../stores/mapStore';
-  import { mavLocationStore, mavHeadingStore, mavAltitudeStore } from '../stores/mavlinkStore';
+  import { mavLocationStore, mavHeadingStore, mavAltitudeStore, mavModeStore } from '../stores/mavlinkStore';
+  import { sendMavlinkCommand, setFlightMode, setPositionLocal } from '../lib/mavlink-client';
+  import { isGuidedLabel } from '../lib/flight-modes';
+  import DPad from './DPad.svelte';
+  import LiveFeed from './LiveFeed.svelte';
   import {
     missionPlanActionsStore,
     type MissionPlanActions,
@@ -76,7 +80,39 @@
   let mavHeading: number = $state(0);
   let mavMarker: L.Marker;
   let darkMode = $derived($darkModeStore);
-  
+
+  const YAW_STEP_DEG = 10;
+  const YAW_RATE_DEG_PER_S = 10;
+  const YAW_RELATIVE_OFFSET = 1;
+  const ALTITUDE_STEP_M = 10;
+
+  let isFullscreen = $state(false);
+  let feedDockOpen = $state(true);
+  let controlDockOpen = $state(true);
+
+  function handleFullscreenChange() {
+    isFullscreen = Boolean(document.fullscreenElement);
+    if (!isFullscreen && window.location.href.includes('dashboard')) hideOverlay = true;
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+      leafletMap?.invalidateSize();
+    }, 300);
+  }
+
+  async function ensureGuided() {
+    if (!isGuidedLabel(get(mavModeStore))) await setFlightMode('GUIDED');
+  }
+
+  async function nudgeAltitude(direction: 1 | -1) {
+    await ensureGuided();
+    await setPositionLocal(0, 0, -(get(mavAltitudeStore) + direction * ALTITUDE_STEP_M));
+  }
+
+  async function rotate(direction: 1 | -1) {
+    await ensureGuided();
+    await sendMavlinkCommand('CONDITION_YAW', [YAW_STEP_DEG, YAW_RATE_DEG_PER_S, direction, YAW_RELATIVE_OFFSET]);
+  }
+
 
 
 
@@ -92,11 +128,12 @@
       console.error('Script loading failed', error);
     }
 
-    document.addEventListener('fullscreenchange', () => {
-      setTimeout(() => {
-        window.dispatchEvent(new Event('resize'));
-      }, 1000);
-    });
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+    if (window.matchMedia('(max-width: 990px)').matches) {
+      feedDockOpen = false;
+      controlDockOpen = false;
+    }
 
     icons = action_markers.map((marker) => {
       return L.icon({
@@ -111,13 +148,7 @@
     Object.keys(actions).forEach((index) => {
       updateMap(Number(index));
     });
-    
-    document.addEventListener('fullscreenchange', () => {
-      if (!document.fullscreenElement && window.location.href.includes('dashboard')) hideOverlay = true;
-        setTimeout(() => {
-          window.dispatchEvent(new Event('resize'));
-        }, 1000);
-    });
+
     let zoomIn = document.querySelector('.leaflet-control-zoom-in');
     let zoomOut = document.querySelector('.leaflet-control-zoom-out');
     if (zoomIn) zoomIn.addEventListener('click', () => { updateZoom(1) });
@@ -691,6 +722,17 @@
     void $showObstaclesStore;
     if (!hideOverlay) untrack(() => renderObstacles());
   });
+  // Overlay chrome follows hideOverlay wherever it changes, including an Esc
+  // exit from fullscreen, so the dashboard mini-map reverts cleanly.
+  $effect.pre(() => {
+    const mini = hideOverlay;
+    untrack(() => {
+      updateAttributionVisibility();
+      document.querySelectorAll('.map-btn i').forEach((element) => {
+        (element as HTMLElement).style.fontSize = mini ? 'small' : '';
+      });
+    });
+  });
 </script>
 
 <style lang="css">
@@ -750,6 +792,115 @@
     border-radius: 4px;
     z-index: 1000;
   }
+
+  .dock {
+    position: absolute;
+    bottom: 3rem;
+    z-index: 1001;
+    color: var(--fontColor);
+  }
+
+  .dock-left {
+    left: 0.75rem;
+  }
+
+  .dock-right {
+    right: 0.75rem;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .dock-panel {
+    background-color: rgb(from var(--primaryColor) r g b / 0.88);
+    border: 1px solid rgb(from var(--secondaryColor) r g b / 0.9);
+    border-radius: 1rem;
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .dock-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.45rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-bottom: 1px solid rgb(from var(--secondaryColor) r g b / 0.8);
+  }
+
+  .dock-head span i {
+    color: #f5c518;
+    margin-right: 0.45rem;
+  }
+
+  .dock-min {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.4rem;
+    color: var(--fontColor);
+    opacity: 0.7;
+  }
+
+  .dock-min:hover {
+    opacity: 1;
+    background-color: rgb(from var(--secondaryColor) r g b / 0.8);
+  }
+
+  .feed-body {
+    width: 340px;
+    height: 200px;
+    position: relative;
+  }
+
+  .control-body {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 0.75rem;
+  }
+
+  .control-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .ctl-btn {
+    width: 2.25rem;
+    height: 2.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background-color: rgb(from var(--secondaryColor) r g b / 0.9);
+    color: var(--fontColor);
+    transition: background-color 0.15s ease;
+  }
+
+  .ctl-btn:hover {
+    background-color: var(--tertiaryColor);
+  }
+
+  @media (max-width: 990px) {
+    .dock {
+      bottom: 4.25rem;
+    }
+
+    .feed-body {
+      width: 240px;
+      height: 140px;
+    }
+
+    .control-body {
+      gap: 0.4rem;
+      padding: 0.5rem;
+    }
+  }
 </style>
 
 <div class="map-container" style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};">
@@ -785,4 +936,60 @@
     </div>
   </label>
   <div id="location-display" class="text-black text-sm" style={!hideOverlay ? 'display: block;' : 'display: none;'}></div>
+
+  {#if isFullscreen}
+    <div class="dock dock-left">
+      {#if feedDockOpen}
+        <div class="dock-panel">
+          <div class="dock-head">
+            <span><i class="fas fa-video"></i>Live feed</span>
+            <button class="dock-min" aria-label="Minimize live feed" title="Minimize" onclick={() => (feedDockOpen = false)}>
+              <i class="fas fa-chevron-down"></i>
+            </button>
+          </div>
+          <div class="feed-body"><LiveFeed compact /></div>
+        </div>
+      {:else}
+        <button class="map-btn" aria-label="Show live feed" title="Show live feed" onclick={() => (feedDockOpen = true)}>
+          <i class="fas fa-video"></i>
+        </button>
+      {/if}
+    </div>
+
+    <div class="dock dock-right">
+      {#if controlDockOpen}
+        <div class="dock-panel">
+          <div class="dock-head">
+            <span><i class="fas fa-gamepad"></i>Manual control</span>
+            <button class="dock-min" aria-label="Minimize manual control" title="Minimize" onclick={() => (controlDockOpen = false)}>
+              <i class="fas fa-chevron-down"></i>
+            </button>
+          </div>
+          <div class="control-body">
+            <div class="control-col">
+              <button class="ctl-btn" aria-label="Altitude up" title="Altitude up {ALTITUDE_STEP_M} m" onclick={() => nudgeAltitude(1)}>
+                <i class="fas fa-arrow-up"></i>
+              </button>
+              <button class="ctl-btn" aria-label="Altitude down" title="Altitude down {ALTITUDE_STEP_M} m" onclick={() => nudgeAltitude(-1)}>
+                <i class="fas fa-arrow-down"></i>
+              </button>
+            </div>
+            <DPad />
+            <div class="control-col">
+              <button class="ctl-btn" aria-label="Rotate left" title="Rotate left {YAW_STEP_DEG} degrees" onclick={() => rotate(-1)}>
+                <i class="fas fa-rotate-left"></i>
+              </button>
+              <button class="ctl-btn" aria-label="Rotate right" title="Rotate right {YAW_STEP_DEG} degrees" onclick={() => rotate(1)}>
+                <i class="fas fa-rotate-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      {:else}
+        <button class="map-btn" aria-label="Show manual control" title="Show manual control" onclick={() => (controlDockOpen = true)}>
+          <i class="fas fa-gamepad"></i>
+        </button>
+      {/if}
+    </div>
+  {/if}
 </div>
