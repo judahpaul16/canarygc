@@ -815,16 +815,33 @@
     transform: scale(1.05);
   }
 
+  /* The ring pairs white with a dark halo and the button flashes solid yellow
+     with a dark icon, so the snap signal reads over the yellow overlays too. */
   .map-btn.lock-pulse {
     animation: lock-pulse 1.2s ease-out;
   }
 
+  .map-btn.lock-pulse i {
+    animation: lock-pulse-icon 1.2s ease-out;
+  }
+
   @keyframes lock-pulse {
     0% {
-      box-shadow: 0 0 0 0 rgba(245, 197, 24, 0.75);
+      background-color: #f5c518;
+      box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.95), 0 0 0 0 rgba(0, 0, 0, 0.5);
+    }
+    55% {
+      background-color: #f5c518;
     }
     100% {
-      box-shadow: 0 0 0 14px rgba(245, 197, 24, 0);
+      background-color: var(--secondaryColor);
+      box-shadow: 0 0 0 12px rgba(255, 255, 255, 0), 0 0 0 20px rgba(0, 0, 0, 0);
+    }
+  }
+
+  @keyframes lock-pulse-icon {
+    0%, 55% {
+      color: #1c1c1e;
     }
   }
   #location-display {
