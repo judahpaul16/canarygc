@@ -10,14 +10,6 @@ import {
 
 import { REGISTRY } from '$lib/mavlink-registry'
 
-let port: SerialPort | Socket | null = null;
-let reader: MavLinkPacketParser | null = null;
-let online = false;
-const logs: string[] = [];
-const newLogs: string[] = [];
-let connecting = false;
-let lastPacketAt = 0;
-
 // Treat the link as down when no packet has arrived within this window, even if
 // the socket never fires 'close' (a silent stall), so the next heartbeat can
 // re-establish it.
@@ -27,6 +19,34 @@ const CONNECT_TIMEOUT_MS = 5000;
 // bound; the cap covers several minutes of backlog for the event-log view.
 const MAX_LOG_ENTRIES = 5000;
 
+interface MavlinkState {
+    port: SerialPort | Socket | null;
+    reader: MavLinkPacketParser | null;
+    online: boolean;
+    lastPacketAt: number;
+    connectPromise: Promise<void> | null;
+    logs: string[];
+    newLogs: string[];
+}
+
+// The link state lives on globalThis so a dev-server module reload reuses the
+// open connection. Module-local state orphans the previous socket on every
+// reload, and an orphan holds SITL's single serial-over-TCP slot, leaving every
+// later connection byte-less until timeout.
+const g = globalThis as typeof globalThis & { __canarygcMavlink?: MavlinkState };
+const state: MavlinkState = (g.__canarygcMavlink ??= {
+    port: null,
+    reader: null,
+    online: false,
+    lastPacketAt: 0,
+    connectPromise: null,
+    logs: [],
+    newLogs: []
+});
+
+const logs = state.logs;
+const newLogs = state.newLogs;
+
 function pushLog(entry: string): void {
     logs.push(entry);
     newLogs.push(entry);
@@ -35,78 +55,71 @@ function pushLog(entry: string): void {
 }
 
 function linkAlive(): boolean {
-    return Boolean(port && reader && lastPacketAt > 0 && Date.now() - lastPacketAt < STALE_LINK_MS);
+    return Boolean(
+        state.port && state.reader && state.lastPacketAt > 0 && Date.now() - state.lastPacketAt < STALE_LINK_MS
+    );
 }
 
-async function initializePort(): Promise<void> {
-    if (connecting) return;
-    connecting = true;
+// Concurrent heartbeats share one connect attempt instead of dialing over each
+// other while the previous attempt is still waiting for its first packet.
+function initializePort(): Promise<void> {
+    state.connectPromise ??= doInitialize().finally(() => {
+        state.connectPromise = null;
+    });
+    return state.connectPromise;
+}
+
+async function doInitialize(): Promise<void> {
     try {
-        await closeExistingConnection();
-        await openNewConnection();
+        teardownConnection();
+        openConnection();
         setupPacketReader();
         setupPortListeners();
+        await waitForFirstPacket();
+        pushLog('MAVLink connection initialized');
     } catch (error) {
+        // A half-open socket left behind would hold the autopilot's single TCP
+        // slot and starve every later attempt.
+        teardownConnection();
         console.error('Failed to initialize port:', error);
         throw error;
-    } finally {
-        connecting = false;
     }
 }
 
-async function closeExistingConnection(): Promise<void> {
-    if (port !== null) {
-        port.removeAllListeners();
-        await new Promise<void>((resolve, reject) => {
-            try {
-                port!.destroy(null as unknown as Error);
-                resolve();
-            } catch (err) {
-                reject(err);
-            }
-        });
-        reader?.removeAllListeners();
-        reader = null;
+function teardownConnection(): void {
+    state.reader?.removeAllListeners();
+    state.reader = null;
+    if (state.port) {
+        state.port.removeAllListeners();
+        state.port.destroy();
+        state.port = null;
     }
+    state.online = false;
+    state.lastPacketAt = 0;
 }
 
-async function openNewConnection(): Promise<void> {
+function openConnection(): void {
     const isProduction = process.env.NODE_ENV === 'production';
     if (isProduction === true) {
         // Use UART serial port in production
-        port = new SerialPort({ path: '/dev/ttyACM0', baudRate: 115200, lock: false });
+        state.port = new SerialPort({ path: '/dev/ttyACM0', baudRate: 115200, lock: false });
     } else {
         // Use TCP socket in development
         const socket = connect({ host: 'sitl', port: 5760 });
         socket.setKeepAlive(true, 1000);
         socket.setNoDelay(true);
-        port = socket;
+        state.port = socket;
     }
-    await new Promise<void>((resolve, reject) => {
-        const timeout = setTimeout(() => {
-            reject(new Error('Timed out waiting for MAVLink data'));
-        }, CONNECT_TIMEOUT_MS);
-        port!.once('error', (err) => {
-            clearTimeout(timeout);
-            reject(new Error(`Error connecting to the MAVLink server: ${err.message}`));
-        });
-        port!.once('data', () => {
-            clearTimeout(timeout);
-            lastPacketAt = Date.now();
-            pushLog('MAVLink connection initialized');
-            resolve();
-        });
-    });
 }
 
 function setupPacketReader(): void {
-    reader = port!
+    state.reader = state.port!
         .pipe(new MavLinkPacketSplitter())
         .pipe(new MavLinkPacketParser());
 
-    reader.on('data', (packet) => {
-        online = true;
-        lastPacketAt = Date.now();
+    state.reader.on('data', (packet) => {
+        state.online = true;
+        state.lastPacketAt = Date.now();
         const clazz = REGISTRY[packet.header.msgid];
         if (clazz) {
             const data = packet.protocol.data(packet.payload, clazz);
@@ -120,27 +133,51 @@ function setupPacketReader(): void {
 }
 
 function setupPortListeners(): void {
-    port!.on('close', handlePortClose);
+    state.port!.on('close', handlePortClose);
     // A stream 'error' with no listener would crash the process; handle it so a
     // mid-flight read error drops the link cleanly instead.
-    port!.on('error', handlePortError);
+    state.port!.on('error', handlePortError);
 }
 
 function handlePortClose(): void {
-    port = null;
-    reader = null;
-    online = false;
+    state.port = null;
+    state.reader = null;
+    state.online = false;
     pushLog('MAVLink connection closed');
 }
 
 function handlePortError(err: Error): void {
-    online = false;
+    state.online = false;
     pushLog(`MAVLink connection error: ${err.message}`);
 }
 
+function waitForFirstPacket(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+        const cleanup = () => {
+            clearTimeout(timeout);
+            state.reader?.off('data', onData);
+            state.port?.off('error', onError);
+        };
+        const timeout = setTimeout(() => {
+            cleanup();
+            reject(new Error('Timed out waiting for MAVLink data'));
+        }, CONNECT_TIMEOUT_MS);
+        const onData = () => {
+            cleanup();
+            resolve();
+        };
+        const onError = (err: Error) => {
+            cleanup();
+            reject(new Error(`Error connecting to the MAVLink server: ${err.message}`));
+        };
+        state.reader!.once('data', onData);
+        (state.port as Socket).once('error', onError);
+    });
+}
+
 async function requestStatus() {
-    if (!port || !reader) {
-        online = false;
+    if (!state.port || !state.reader) {
+        state.online = false;
         return;
     }
 
@@ -149,45 +186,45 @@ async function requestStatus() {
     request.targetComponent = 1;
     request.messageId = common.GlobalPositionInt.MSG_ID;
     request.responseTarget = 1;
-    await send(port!, request);
+    await send(state.port, request);
 
     request = new common.RequestMessageCommand();
     request.targetSystem = 1;
     request.targetComponent = 1;
     request.messageId = common.GpsRawInt.MSG_ID;
     request.responseTarget = 1;
-    await send(port!, request);
+    await send(state.port, request);
 
-    request = new common.RequestMessageCommand();;
+    request = new common.RequestMessageCommand();
     request.targetSystem = 1;
     request.targetComponent = 1;
     request.messageId = common.MissionCurrent.MSG_ID;
     request.responseTarget = 1;
-    await send(port!, request);
+    await send(state.port, request);
 
     request = new common.RequestMessageCommand();
     request.targetSystem = 1;
     request.targetComponent = 1;
     request.messageId = common.BatteryStatus.MSG_ID;
     request.responseTarget = 1;
-    await send(port!, request);
+    await send(state.port, request);
 }
 
 async function requestParameters() {
-    if (!port || !reader) {
-        online = false;
+    if (!state.port || !state.reader) {
+        state.online = false;
         return;
     }
 
     const request = new common.ParamRequestList();
     request.targetSystem = 1;
     request.targetComponent = 1;
-    await send(port!, request);
+    await send(state.port, request);
 }
 
 async function writeParameter(id: string, value: number, type: number) {
-    if (!port || !reader) {
-        online = false;
+    if (!state.port || !state.reader) {
+        state.online = false;
         return;
     }
 
@@ -197,12 +234,12 @@ async function writeParameter(id: string, value: number, type: number) {
     request.paramId = id;
     request.paramValue = value;
     request.paramType = type;
-    await send(port!, request);
+    await send(state.port, request);
 }
 
 async function sendMavlinkCommand(command: string, params: number[], useCmdLong = false, useArduPilotMega = false) {
-    if (!port || !reader) {
-        online = false;
+    if (!state.port || !state.reader) {
+        state.online = false;
         return;
     }
 
@@ -212,7 +249,7 @@ async function sendMavlinkCommand(command: string, params: number[], useCmdLong 
         commandMsg = new common.CommandInt();
         commandMsg.frame = 0; // MAV_FRAME_GLOBAL;
     };
-    
+
     commandMsg.targetSystem = 1;
     commandMsg.targetComponent = 1;
 
@@ -226,12 +263,12 @@ async function sendMavlinkCommand(command: string, params: number[], useCmdLong 
     if (params[4]) commandMsg._param5 = params[4];
     if (params[5]) commandMsg._param6 = params[5];
     if (params[6]) commandMsg._param7 = params[6];
-    await send(port!, commandMsg);
+    await send(state.port, commandMsg);
 }
 
 async function setMissionCount(numItems: number) {
-    if (!port || !reader) {
-        online = false;
+    if (!state.port || !state.reader) {
+        state.online = false;
         return;
     }
 
@@ -240,7 +277,7 @@ async function setMissionCount(numItems: number) {
     count.targetComponent = 1;
     count.count = numItems;
     count.opaqueId = 0;
-    await send(port!, count);
+    await send(state.port, count);
     await new Promise((resolve) => setTimeout(resolve, 250)); // Wait for 250 ms
 }
 
@@ -257,8 +294,8 @@ export interface MissionItemInput {
 }
 
 async function loadMissionItem(item: MissionItemInput, index: number) {
-    if (!port || !reader) {
-        online = false;
+    if (!state.port || !state.reader) {
+        state.online = false;
         return;
     }
 
@@ -278,28 +315,28 @@ async function loadMissionItem(item: MissionItemInput, index: number) {
     msg.y = Number((item.lon * 1e7).toFixed(0));
     msg.z = item.alt;
     msg.missionType = 0;
-    await send(port!, msg);
+    await send(state.port, msg);
 }
 
 async function clearAllMissionItems() {
-    if (!port || !reader) {
-        online = false;
+    if (!state.port || !state.reader) {
+        state.online = false;
         return;
     }
 
     const msg = new common.MissionClearAll();
     msg.targetSystem = 1;
     msg.targetComponent = 1;
-    await send(port!, msg);
+    await send(state.port, msg);
 }
 
 async function setPositionLocal(x: number, y: number, z: number) {
-    if (!port || !reader) {
-        online = false;
+    if (!state.port || !state.reader) {
+        state.online = false;
         return;
     }
     const msg = new common.SetPositionTargetLocalNed();
-    
+
     msg.timeBootMs = 0;
     msg.targetSystem = 1;
     msg.targetComponent = 1;
@@ -310,7 +347,7 @@ async function setPositionLocal(x: number, y: number, z: number) {
     msg.y = y;
     msg.z = z;
     msg.yawRate = 0;
-    await send(port!, msg);
+    await send(state.port, msg);
   }
 
 function convertBigIntToNumber(obj: unknown): unknown {
@@ -338,11 +375,6 @@ export {
     clearAllMissionItems,
     setPositionLocal,
     linkAlive,
-    port,
-    reader,
-    online,
-    connecting,
     logs,
     newLogs,
-    common,
 };
