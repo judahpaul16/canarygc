@@ -19,10 +19,10 @@ const USER_ID_LENGTH = 15;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const POST: RequestHandler = async (event): Promise<Response> => {
-    const headers = event.request.headers;
-    const username = headers.get("username");
-    const password = headers.get("password");
-    const email = headers.get("email");
+    const body = await event.request.json().catch(() => ({}));
+    const username = body.username;
+    const password = body.password;
+    const email = body.email;
     if (
         typeof username !== "string" ||
         username.length < USERNAME_MIN ||

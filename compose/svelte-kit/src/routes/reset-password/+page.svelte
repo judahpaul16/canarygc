@@ -42,7 +42,8 @@
     try {
       const response = await fetch('/api/auth/reset', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', token, password }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, password })
       });
       if (response.ok) {
         done = true;

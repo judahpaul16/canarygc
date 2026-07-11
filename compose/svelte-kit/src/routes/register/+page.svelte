@@ -42,12 +42,8 @@
     }
     const response = await fetch('/api/auth/register', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        username: email,
-        password: password,
-        email: email
-      }
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: email, password, email })
     });
     if (response.status === 200) {
       loggedInStore.set(true);

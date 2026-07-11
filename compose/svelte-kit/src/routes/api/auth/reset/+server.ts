@@ -22,8 +22,9 @@ function json(message: string, status: number): Response {
 }
 
 export const POST: RequestHandler = async (event): Promise<Response> => {
-    const token = event.request.headers.get("token");
-    const password = event.request.headers.get("password");
+    const body = await event.request.json().catch(() => ({}));
+    const token = body.token;
+    const password = body.password;
 
     if (typeof password !== "string" || password.length < PASSWORD_MIN || password.length > PASSWORD_MAX) {
         return json("Password must be between 6 and 255 characters.", 400);

@@ -15,7 +15,8 @@ function json(message: string, status: number): Response {
 }
 
 export const POST: RequestHandler = async (event): Promise<Response> => {
-    const email = event.request.headers.get("email");
+    const body = await event.request.json().catch(() => ({}));
+    const email = body.email;
     const generic = json("If that email is on file, a reset link is on its way.", 200);
     if (typeof email !== "string" || !EMAIL_RE.test(email)) return generic;
 

@@ -19,9 +19,11 @@ const PASSWORD_MAX = 255;
 
 export const POST: RequestHandler = async (event): Promise<Response> => {
     try {
-        const headers = event.request.headers;
-        const username = headers.get("username");
-        const password = headers.get("password");
+        // Credentials travel in the JSON body: header values reject non-Latin-1
+        // characters and are far more likely to land in proxy logs.
+        const body = await event.request.json().catch(() => ({}));
+        const username = body.username;
+        const password = body.password;
 
         if (
             typeof username !== "string" ||
