@@ -90,6 +90,21 @@
   let feedDockOpen = $state(true);
   let controlDockOpen = $state(true);
 
+  function isSmallScreen(): boolean {
+    return window.matchMedia('(max-width: 990px)').matches;
+  }
+
+  // Small screens fit one open dock at a time.
+  function openFeedDock() {
+    feedDockOpen = true;
+    if (isSmallScreen()) controlDockOpen = false;
+  }
+
+  function openControlDock() {
+    controlDockOpen = true;
+    if (isSmallScreen()) feedDockOpen = false;
+  }
+
   function handleFullscreenChange() {
     isFullscreen = Boolean(document.fullscreenElement);
     if (!isFullscreen && window.location.href.includes('dashboard')) hideOverlay = true;
@@ -793,30 +808,56 @@
     z-index: 1000;
   }
 
-  .dock {
+  .docks {
     position: absolute;
+    left: 0.75rem;
     bottom: 3rem;
     z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
     color: var(--fontColor);
   }
 
-  .dock-left {
-    left: 0.75rem;
-  }
-
-  .dock-right {
-    right: 0.75rem;
-    display: flex;
-    justify-content: flex-end;
-  }
-
   .dock-panel {
+    width: 320px;
     background-color: rgb(from var(--primaryColor) r g b / 0.88);
     border: 1px solid rgb(from var(--secondaryColor) r g b / 0.9);
     border-radius: 1rem;
     overflow: hidden;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
+  }
+
+  .dock-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.9rem;
+    border-radius: 9999px;
+    background-color: rgb(from var(--primaryColor) r g b / 0.88);
+    border: 1px solid rgb(from var(--secondaryColor) r g b / 0.9);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: var(--fontColor);
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+
+  .dock-pill:hover {
+    border-color: rgb(from var(--fontColor) r g b / 0.35);
+    transform: translateY(-1px);
+  }
+
+  .dock-pill > i:first-child {
+    color: #f5c518;
+  }
+
+  .dock-pill .chev {
+    opacity: 0.55;
+    font-size: 0.65rem;
   }
 
   .dock-head {
@@ -852,16 +893,17 @@
   }
 
   .feed-body {
-    width: 340px;
-    height: 200px;
+    width: 100%;
+    aspect-ratio: 16 / 9;
     position: relative;
   }
 
   .control-body {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 0.6rem;
-    padding: 0.6rem 0.75rem;
+    padding: 0.6rem 0.9rem;
   }
 
   .control-col {
@@ -887,18 +929,18 @@
   }
 
   @media (max-width: 990px) {
-    .dock {
-      bottom: 4.25rem;
+    .docks {
+      bottom: 4.5rem;
+      right: 0.75rem;
     }
 
-    .feed-body {
-      width: 240px;
-      height: 140px;
+    .dock-panel {
+      width: min(300px, calc(100vw - 1.5rem));
     }
 
     .control-body {
       gap: 0.4rem;
-      padding: 0.5rem;
+      padding: 0.5rem 0.6rem;
     }
   }
 </style>
@@ -938,7 +980,7 @@
   <div id="location-display" class="text-black text-sm" style={!hideOverlay ? 'display: block;' : 'display: none;'}></div>
 
   {#if isFullscreen}
-    <div class="dock dock-left">
+    <div class="docks">
       {#if feedDockOpen}
         <div class="dock-panel">
           <div class="dock-head">
@@ -950,13 +992,11 @@
           <div class="feed-body"><LiveFeed compact /></div>
         </div>
       {:else}
-        <button class="map-btn" aria-label="Show live feed" title="Show live feed" onclick={() => (feedDockOpen = true)}>
-          <i class="fas fa-video"></i>
+        <button class="dock-pill" aria-label="Show live feed" onclick={openFeedDock}>
+          <i class="fas fa-video"></i><span>Live feed</span><i class="fas fa-chevron-up chev"></i>
         </button>
       {/if}
-    </div>
 
-    <div class="dock dock-right">
       {#if controlDockOpen}
         <div class="dock-panel">
           <div class="dock-head">
@@ -986,8 +1026,8 @@
           </div>
         </div>
       {:else}
-        <button class="map-btn" aria-label="Show manual control" title="Show manual control" onclick={() => (controlDockOpen = true)}>
-          <i class="fas fa-gamepad"></i>
+        <button class="dock-pill" aria-label="Show manual control" onclick={openControlDock}>
+          <i class="fas fa-gamepad"></i><span>Manual control</span><i class="fas fa-chevron-up chev"></i>
         </button>
       {/if}
     </div>
