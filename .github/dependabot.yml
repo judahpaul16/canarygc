@@ -8,6 +8,11 @@ updates:
     groups:
       all:
         patterns: ["*"]
+    ignore:
+      # typescript-eslint peer-caps TypeScript below the next major, so a
+      # TypeScript major bump breaks npm ci until typescript-eslint catches up.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: docker
     directories:
