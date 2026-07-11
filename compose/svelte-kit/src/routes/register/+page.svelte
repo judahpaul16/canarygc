@@ -45,7 +45,8 @@
       headers: {
         'Content-Type': 'application/json',
         username: email,
-        password: password
+        password: password,
+        email: email
       }
     });
     if (response.status === 200) {

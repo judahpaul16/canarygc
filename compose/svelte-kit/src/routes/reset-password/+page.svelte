@@ -1,12 +1,11 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import {
     darkModeStore,
     primaryColorStore,
     secondaryColorStore,
     tertiaryColorStore
   } from '../../stores/customizationStore';
-  import { onMount } from 'svelte';
-  import { loggedInStore } from '../../stores/authStore';
 
   let darkMode = $derived($darkModeStore);
   let primaryColor = $derived($primaryColorStore);
@@ -14,46 +13,54 @@
   let tertiaryColor = $derived($tertiaryColorStore);
   let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
 
-  let email = $state('');
+  let token = $state('');
   let password = $state('');
+  let confirm = $state('');
   let error = $state('');
+  let done = $state(false);
+  let submitting = $state(false);
 
-  onMount(async () => {
-    if ($loggedInStore) window.location.href = '/dashboard';
-    const response = await fetch('/api/auth/checkAdmin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-    const result = await response.json();
-    if (!result.adminExists) window.location.href = '/register';
+  onMount(() => {
+    token = new URLSearchParams(window.location.search).get('token') ?? '';
   });
 
   async function handleSubmit() {
-    if (!email || !password) {
-      error = 'Please fill in all fields';
+    if (!password || password.length < 6) {
+      error = 'Password must be at least 6 characters';
       return;
     }
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        username: email,
-        password: password
+    if (password !== confirm) {
+      error = 'Passwords do not match';
+      return;
+    }
+    if (!token) {
+      error = 'This reset link is invalid or has expired.';
+      return;
+    }
+    error = '';
+    submitting = true;
+    try {
+      const response = await fetch('/api/auth/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', token, password }
+      });
+      if (response.ok) {
+        done = true;
+        setTimeout(() => (window.location.href = '/login'), 2500);
+      } else {
+        const data = await response.json();
+        error = data.message ?? 'Something went wrong.';
       }
-    });
-    if (response.status === 200) {
-      loggedInStore.set(true);
-      document.cookie = 'lastActivity=' + Date.now();
-      window.location.href = '/dashboard';
-    } else {
-      const responseText = await response.json();
-      error = `Error: ${responseText.message}`;
+    } catch {
+      error = 'Network error. Please try again.';
+    } finally {
+      submitting = false;
     }
   }
 </script>
 
 <svelte:head>
-  <title>Canary Ground Control - Login</title>
+  <title>Canary Ground Control - Set a new password</title>
 </svelte:head>
 
 <div
@@ -63,24 +70,33 @@
   <div class="card glass">
     <div class="brand">
       <img src="logo.png" alt="Canary Ground Control" class="logo" />
-      <h1>Log in to Canary</h1>
-      <p class="sub">Ground control for autonomous flight.</p>
+      <h1>Set a new password</h1>
+      <p class="sub">Choose a new password for your operator account.</p>
     </div>
 
     {#if error}
       <div class="error"><i class="fas fa-triangle-exclamation"></i> {error}</div>
     {/if}
 
-    <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
-      <label for="email">Email</label>
-      <input type="email" id="email" bind:value={email} autocomplete="username" required />
+    {#if done}
+      <div class="notice">
+        <i class="fas fa-circle-check"></i> Password updated. Redirecting you to log in...
+      </div>
+    {:else}
+      <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+        <label for="password">New password</label>
+        <input type="password" id="password" bind:value={password} autocomplete="new-password" required />
 
-      <label for="password">Password</label>
-      <input type="password" id="password" bind:value={password} autocomplete="current-password" required />
+        <label for="confirm">Confirm password</label>
+        <input type="password" id="confirm" bind:value={confirm} autocomplete="new-password" required />
 
-      <button type="submit" class="cta">Log in <i class="fas fa-arrow-right"></i></button>
-    </form>
-    <a class="forgot" href="/forgot-password">Forgot your password?</a>
+        <button type="submit" class="cta" disabled={submitting}>
+          {submitting ? 'Saving...' : 'Update password'} <i class="fas fa-arrow-right"></i>
+        </button>
+      </form>
+    {/if}
+
+    <a class="back" href="/login">Back to log in</a>
   </div>
 </div>
 
@@ -161,6 +177,16 @@
     font-size: 0.85rem;
   }
 
+  .notice {
+    padding: 0.7rem 0.9rem;
+    border-radius: 0.6rem;
+    background: rgba(97, 205, 137, 0.15);
+    border: 1px solid rgba(97, 205, 137, 0.4);
+    color: #8ee0ac;
+    font-size: 0.88rem;
+    line-height: 1.4;
+  }
+
   form {
     display: flex;
     flex-direction: column;
@@ -211,7 +237,14 @@
     background: #ffd23f;
   }
 
-  .forgot {
+  .cta:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .back {
     display: block;
     text-align: center;
     margin-top: 1rem;
@@ -221,7 +254,7 @@
     text-decoration: none;
   }
 
-  .forgot:hover {
+  .back:hover {
     opacity: 1;
     text-decoration: underline;
   }

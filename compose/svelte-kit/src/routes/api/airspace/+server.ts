@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
 import type { AirspaceZone } from '$lib/safety';
+import { getSetting } from '$lib/server/settings';
 
 // Airspace for the map overlay and safety checks. OpenAIP is worldwide but
 // needs a key; when the key is unset or OpenAIP returns nothing, this falls back
@@ -139,7 +140,7 @@ async function fetchFaa(bbox: string): Promise<AirspaceZone[]> {
 }
 
 export const GET: RequestHandler = async ({ url }) => {
-  const apiKey = process.env.OPENAIP_API_KEY;
+  const apiKey = (await getSetting('integration.openaip')) || process.env.OPENAIP_API_KEY;
   const bbox = url.searchParams.get('bbox');
 
   if (!bbox) {

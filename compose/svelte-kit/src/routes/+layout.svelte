@@ -42,6 +42,7 @@
   import Offline from '../components/Offline.svelte';
   import { notify, type NotificationType } from '../lib/overlays';
   import { callout, initCallouts, stopCallouts } from '../lib/callouts';
+  import { initAlerts } from '../lib/alerts';
   import { decodeMode, isArmed } from '../lib/flight-modes';
   import { decodeParameterValue, requestParameters } from '../lib/mavlink-client';
   import { mapTypeStore } from '../stores/mapStore';
@@ -428,6 +429,7 @@
     const statusCheckInterval = setInterval(checkOnlineStatus, HEARTBEAT_POLL_MS);
 
     const teardownCallouts = initCallouts();
+    const teardownAlerts = initAlerts();
 
     return () => {
       clearTimeout(startupTimer);
@@ -439,6 +441,7 @@
       window.removeEventListener('scroll', refreshCookie);
       resizeObserver?.disconnect();
       teardownCallouts();
+      teardownAlerts();
       stopCallouts();
     };
   });
@@ -515,6 +518,14 @@
           <i class="nav-icon fas fa-cog"></i>
           <div class="tooltip text-white">Vehicle Parameters</div>
         </a>
+        <a href="/integrations" class="nav-button mb-4 {currentPath === '/integrations' ? 'active' : ''}">
+          <i class="nav-icon fas fa-plug"></i>
+          <div class="tooltip text-white">Integrations</div>
+        </a>
+        <a href="/alerts" class="nav-button mb-4 {currentPath === '/alerts' ? 'active' : ''}">
+          <i class="nav-icon fas fa-bell"></i>
+          <div class="tooltip text-white">Alerts</div>
+        </a>
         <div class="separator h-[2px] w-[80%] rounded-2xl mb-4"></div>
         <a href="/login" onclick={(e) => { e.preventDefault(); handleLogout(); }} class="nav-button mb-4">
           <i class="nav-icon fas fa-sign-out-alt"></i>
@@ -567,6 +578,12 @@
           </a>
           <a href="/parameters" onclick={(e) => { e.preventDefault(); handleNavigation('/parameters'); }} class="nav-button mb-4 {currentPath === '/parameters' ? 'active' : ''}">
             <i class="nav-icon fas fa-cog"></i>&nbsp;&nbsp;Vehicle Parameters
+          </a>
+          <a href="/integrations" onclick={(e) => { e.preventDefault(); handleNavigation('/integrations'); }} class="nav-button mb-4 {currentPath === '/integrations' ? 'active' : ''}">
+            <i class="nav-icon fas fa-plug"></i>&nbsp;&nbsp;Integrations
+          </a>
+          <a href="/alerts" onclick={(e) => { e.preventDefault(); handleNavigation('/alerts'); }} class="nav-button mb-4 {currentPath === '/alerts' ? 'active' : ''}">
+            <i class="nav-icon fas fa-bell"></i>&nbsp;&nbsp;Alerts
           </a>
           <button onclick={toggleAudioCallouts} class="nav-button mb-4" type="button">
             <i class="nav-icon fas {$audioCalloutsStore ? 'fa-volume-up' : 'fa-volume-mute'}"></i>&nbsp;&nbsp;Audio Callouts {$audioCalloutsStore ? 'On' : 'Off'}

@@ -5,8 +5,6 @@
     secondaryColorStore,
     tertiaryColorStore
   } from '../../stores/customizationStore';
-  import { onMount } from 'svelte';
-  import { loggedInStore } from '../../stores/authStore';
 
   let darkMode = $derived($darkModeStore);
   let primaryColor = $derived($primaryColorStore);
@@ -15,45 +13,38 @@
   let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
 
   let email = $state('');
-  let password = $state('');
   let error = $state('');
-
-  onMount(async () => {
-    if ($loggedInStore) window.location.href = '/dashboard';
-    const response = await fetch('/api/auth/checkAdmin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-    const result = await response.json();
-    if (!result.adminExists) window.location.href = '/register';
-  });
+  let sent = $state(false);
+  let submitting = $state(false);
 
   async function handleSubmit() {
-    if (!email || !password) {
-      error = 'Please fill in all fields';
+    if (!email) {
+      error = 'Please enter your email';
       return;
     }
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        username: email,
-        password: password
+    error = '';
+    submitting = true;
+    try {
+      const response = await fetch('/api/auth/forgot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', email }
+      });
+      if (response.ok) {
+        sent = true;
+      } else {
+        const data = await response.json();
+        error = data.message ?? 'Something went wrong.';
       }
-    });
-    if (response.status === 200) {
-      loggedInStore.set(true);
-      document.cookie = 'lastActivity=' + Date.now();
-      window.location.href = '/dashboard';
-    } else {
-      const responseText = await response.json();
-      error = `Error: ${responseText.message}`;
+    } catch {
+      error = 'Network error. Please try again.';
+    } finally {
+      submitting = false;
     }
   }
 </script>
 
 <svelte:head>
-  <title>Canary Ground Control - Login</title>
+  <title>Canary Ground Control - Reset password</title>
 </svelte:head>
 
 <div
@@ -63,24 +54,30 @@
   <div class="card glass">
     <div class="brand">
       <img src="logo.png" alt="Canary Ground Control" class="logo" />
-      <h1>Log in to Canary</h1>
-      <p class="sub">Ground control for autonomous flight.</p>
+      <h1>Reset your password</h1>
+      <p class="sub">We will email you a secure reset link.</p>
     </div>
 
     {#if error}
       <div class="error"><i class="fas fa-triangle-exclamation"></i> {error}</div>
     {/if}
 
-    <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
-      <label for="email">Email</label>
-      <input type="email" id="email" bind:value={email} autocomplete="username" required />
+    {#if sent}
+      <div class="notice">
+        <i class="fas fa-envelope-circle-check"></i> If that email is on file, a reset link is on its way. Check your inbox.
+      </div>
+    {:else}
+      <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+        <label for="email">Email</label>
+        <input type="email" id="email" bind:value={email} autocomplete="email" required />
 
-      <label for="password">Password</label>
-      <input type="password" id="password" bind:value={password} autocomplete="current-password" required />
+        <button type="submit" class="cta" disabled={submitting}>
+          {submitting ? 'Sending...' : 'Send reset link'} <i class="fas fa-paper-plane"></i>
+        </button>
+      </form>
+    {/if}
 
-      <button type="submit" class="cta">Log in <i class="fas fa-arrow-right"></i></button>
-    </form>
-    <a class="forgot" href="/forgot-password">Forgot your password?</a>
+    <a class="back" href="/login">Back to log in</a>
   </div>
 </div>
 
@@ -161,6 +158,16 @@
     font-size: 0.85rem;
   }
 
+  .notice {
+    padding: 0.7rem 0.9rem;
+    border-radius: 0.6rem;
+    background: rgba(97, 205, 137, 0.15);
+    border: 1px solid rgba(97, 205, 137, 0.4);
+    color: #8ee0ac;
+    font-size: 0.88rem;
+    line-height: 1.4;
+  }
+
   form {
     display: flex;
     flex-direction: column;
@@ -211,7 +218,14 @@
     background: #ffd23f;
   }
 
-  .forgot {
+  .cta:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .back {
     display: block;
     text-align: center;
     margin-top: 1rem;
@@ -221,7 +235,7 @@
     text-decoration: none;
   }
 
-  .forgot:hover {
+  .back:hover {
     opacity: 1;
     text-decoration: underline;
   }

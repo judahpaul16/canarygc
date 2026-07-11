@@ -16,11 +16,13 @@ const USERNAME_MAX = 31;
 const PASSWORD_MIN = 6;
 const PASSWORD_MAX = 255;
 const USER_ID_LENGTH = 15;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const POST: RequestHandler = async (event): Promise<Response> => {
     const headers = event.request.headers;
     const username = headers.get("username");
     const password = headers.get("password");
+    const email = headers.get("email");
     if (
         typeof username !== "string" ||
         username.length < USERNAME_MIN ||
@@ -35,6 +37,14 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
     }
     if (typeof password !== "string" || password.length < PASSWORD_MIN || password.length > PASSWORD_MAX) {
         return new Response(JSON.stringify({ message: "Invalid password" }), {
+            status: 400,
+            headers: {
+                "content-type": "application/json"
+            }
+        });
+    }
+    if (typeof email !== "string" || !EMAIL_RE.test(email)) {
+        return new Response(JSON.stringify({ message: "Invalid email" }), {
             status: 400,
             headers: {
                 "content-type": "application/json"
@@ -59,8 +69,8 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
 
     try {
         await db.execute({
-            sql: "INSERT INTO user (id, username, password_hash) VALUES(?, ?, ?)",
-            args: [userId, username, passwordHash]
+            sql: "INSERT INTO user (id, username, password_hash, email) VALUES(?, ?, ?, ?)",
+            args: [userId, username, passwordHash, email]
         });
         const session = await lucia.createSession(userId, {});
         const sessionCookie = lucia.createSessionCookie(session.id);
