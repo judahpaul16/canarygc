@@ -13,6 +13,7 @@ export type NotificationType = 'success' | 'warning' | 'error' | 'info';
 export interface ModalOptions {
   title: string;
   content: string;
+  html?: boolean;
   confirmation?: boolean;
   notification?: boolean;
   inputs?: ModalInput[] | null;
@@ -42,6 +43,7 @@ export function showModal(options: ModalOptions): () => void {
     props: {
       title: options.title,
       content: options.content,
+      html: options.html ?? false,
       isOpen: true,
       confirmation: options.confirmation ?? false,
       notification: options.notification ?? false,

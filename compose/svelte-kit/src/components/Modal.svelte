@@ -10,6 +10,7 @@
   interface Props {
     title: string;
     content: string;
+    html?: boolean;
     isOpen?: boolean;
     confirmation?: boolean;
     notification?: boolean;
@@ -22,6 +23,7 @@
   let {
     title,
     content,
+    html = false,
     isOpen = $bindable(false),
     confirmation = false,
     notification = false,
@@ -55,6 +57,10 @@
     onClose();
   };
 
+  const handleKeydown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape' && isOpen) closeModal();
+  };
+
   const handleConfirm = async (event: Event) => {
     event.preventDefault();
 
@@ -77,22 +83,27 @@
   };
 </script>
 
+<svelte:window onkeydown={handleKeydown} />
 {#if isOpen}
-  <div class="fixed inset-0 flex items-center justify-center z-50 bg-[#00000080]"
+  <div class="fixed inset-0 flex items-center justify-center z-50 bg-[#00000090] p-4 backdrop-blur-sm"
     style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
   >
-    <div class="container rounded-2xl shadow-lg max-w-sm w-full">
-      <div class="relative border-b">
-        <div class="px-4 py-2 text-lg font-semibold">
+    <button type="button" aria-label="Close dialog" class="absolute inset-0 h-full w-full cursor-default" onclick={closeModal}></button>
+    <div class="container relative z-10 rounded-2xl shadow-2xl w-full {html ? 'max-w-md' : 'max-w-sm'}" role="dialog" aria-modal="true">
+      <div class="relative border-b" style="border-color: rgb(from var(--fontColor) r g b / 0.12);">
+        <div class="px-5 py-3 text-lg font-semibold">
           {title}
         </div>
-        <button onclick={closeModal} class="absolute top-2 right-2 text-gray-400 hover:text-white text-2xl">
+        <button onclick={closeModal} aria-label="Close" class="absolute top-2.5 right-3 opacity-60 hover:opacity-100 text-2xl leading-none">
           &times;
         </button>
       </div>
       <form>
-        <div class="px-4 py-2 whitespace-pre-line">
-          {content}
+        <div class="modal-body px-5 py-4 whitespace-pre-line max-h-[70vh] overflow-y-auto">
+          {#if html}
+            <!-- eslint-disable-next-line svelte/no-at-html-tags -- html is an opt-in flag; callers pass app-built markup with FAA values escaped -->
+            {@html content}
+          {:else}{content}{/if}
           {#if inputs}
             <div class="text-center gap-2 items-center justify-center w-full">
               {#each inputs as input, i (i)}

@@ -12,6 +12,83 @@
   --radius-shell: 1.5rem;
 }
 
+/* The airspace-and-hazards modal renders its stacked sections, coordinates, and
+   LAANC quick actions as injected HTML, so its styling is global and uses
+   neutral colors that read on the modal's own background. */
+.airspace-modal {
+  font-size: 0.9rem;
+  line-height: 1.45;
+  text-align: left;
+}
+.airspace-modal .am-section {
+  background: rgb(from var(--tertiaryColor) r g b / 0.3);
+  border: 1px solid rgb(from var(--fontColor) r g b / 0.1);
+  border-left: 3px solid #f5c518;
+  border-radius: var(--radius-control);
+  padding: 0.6rem 0.8rem;
+  margin-bottom: 0.55rem;
+}
+.airspace-modal .am-section strong {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.airspace-modal .am-section em {
+  display: block;
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px dashed rgb(from var(--fontColor) r g b / 0.12);
+  font-style: normal;
+  opacity: 0.7;
+  font-size: 0.8rem;
+}
+.airspace-modal .am-coords {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid rgba(127, 127, 127, 0.35);
+  font-family: ui-monospace, monospace;
+}
+.airspace-modal .am-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-control);
+  background: rgba(127, 127, 127, 0.25);
+  color: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.airspace-modal .am-copy:hover {
+  background: rgba(127, 127, 127, 0.4);
+}
+.airspace-modal .am-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.airspace-modal .am-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.8rem;
+  border-radius: var(--radius-control);
+  background: #f5c518;
+  color: #1c1c1e !important;
+  font-weight: 600;
+  font-size: 0.82rem;
+}
+.airspace-modal .am-action:hover {
+  background: #ffd23f;
+  color: #1c1c1e !important;
+}
+
 a {
   text-decoration: none !important;
   color: #3182ce;

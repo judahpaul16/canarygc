@@ -240,10 +240,20 @@
     // so the two intents never fight. Leaflet's double-click zoom is off here
     // because that gesture now places waypoints.
     leafletMap.doubleClickZoom.disable();
+    // A single click on the map opens the info modal, but only after a short
+    // delay so a double-click (which places a waypoint) can cancel it first.
     leafletMap.on('click', (e: L.LeafletMouseEvent) => {
-      openCombinedPopup(e.latlng);
+      if (mapClickTimer) clearTimeout(mapClickTimer);
+      mapClickTimer = setTimeout(() => {
+        mapClickTimer = null;
+        openCombinedPopup(e.latlng);
+      }, MAP_CLICK_DELAY_MS);
     });
     leafletMap.on('dblclick', (e: L.LeafletMouseEvent) => {
+      if (mapClickTimer) {
+        clearTimeout(mapClickTimer);
+        mapClickTimer = null;
+      }
       if (hideOverlay) return;
       addWaypoint(e.latlng);
     });
@@ -259,6 +269,11 @@
       renderAirspace();
     }
   }
+
+  // Long enough to tell a single click (open the info modal) from a double
+  // click (place a waypoint).
+  const MAP_CLICK_DELAY_MS = 250;
+  let mapClickTimer: ReturnType<typeof setTimeout> | null = null;
 
   // A modest climb so the takeoff actually leaves the ground; 0 would read as
   // "current altitude" and never climb.
@@ -295,7 +310,9 @@
 
   // Everything under a click, so overlapping airspace, ceilings, obstacles, and
   // mission markers collapse into one popup instead of fighting over the map.
-  function popupSectionsAt(latlng: L.LatLng): string[] {
+  // Each section carries the accent color of its map layer so the modal cards
+  // match the overlays.
+  function popupSectionsAt(latlng: L.LatLng): { html: string; accent: string }[] {
     if (!leafletMap) return [];
     const point = { lat: latlng.lat, lon: latlng.lng };
     const clickPx = leafletMap.latLngToContainerPoint(latlng);
@@ -304,7 +321,7 @@
       return Math.hypot(px.x - clickPx.x, px.y - clickPx.y) <= FEATURE_HIT_PX;
     };
 
-    const sections: string[] = [];
+    const sections: { html: string; accent: string }[] = [];
     if (get(showAirspaceStore)) {
       // Order by enforcement: hard no-fly first, then whichever controlled
       // airspace reaches lowest, so the layer that actually governs a drone at
@@ -315,16 +332,16 @@
           if (a.restricted !== b.restricted) return a.restricted ? -1 : 1;
           return (a.lowerM ?? 0) - (b.lowerM ?? 0);
         });
-      for (const zone of zones) sections.push(airspacePopupHtml(zone));
+      for (const zone of zones) sections.push({ html: airspacePopupHtml(zone), accent: airspaceColor(zone) });
     }
     if (get(showCeilingsStore)) {
       for (const cell of get(ceilingCellsStore)) {
-        if (pointInPolygon(point, cell.polygon)) sections.push(ceilingPopupHtml(cell));
+        if (pointInPolygon(point, cell.polygon)) sections.push({ html: ceilingPopupHtml(cell), accent: ceilingColor(cell.ceilingFt) });
       }
     }
     if (get(showObstaclesStore)) {
       for (const obstacle of get(obstaclesStore)) {
-        if (withinHit(obstacle.lat, obstacle.lon)) sections.push(obstaclePopupHtml(obstacle));
+        if (withinHit(obstacle.lat, obstacle.lon)) sections.push({ html: obstaclePopupHtml(obstacle), accent: obstacleColor(obstacle.aglFt) });
       }
     }
 
@@ -337,17 +354,27 @@
       const ll = marker.getLatLng();
       if (withinHit(ll.lat, ll.lng)) missionHits.push(`Waypoint ${index}: ${actions[index]?.type ?? ''}`);
     });
-    if (missionHits.length) sections.push(`<strong>Mission</strong><br>${missionHits.join('<br>')}`);
+    if (missionHits.length) sections.push({ html: `<strong>Mission</strong><br>${missionHits.join('<br>')}`, accent: '#61cd89' });
 
     return sections;
   }
 
   function openCombinedPopup(latlng: L.LatLng): boolean {
-    if (!L || !leafletMap) return false;
     const sections = popupSectionsAt(latlng);
     if (!sections.length) return false;
-    const html = `<div class="combined-popup">${sections.join('<hr class="popup-sep" />')}</div>`;
-    L.popup({ maxHeight: 300, autoPan: true }).setLatLng(latlng).setContent(html).openOn(leafletMap);
+    const lat = latlng.lat.toFixed(6);
+    const lon = latlng.lng.toFixed(6);
+    const coords = `${lat}, ${lon}`;
+    const content =
+      `<div class="airspace-modal">${sections.map((s) => `<div class="am-section" style="border-left-color:${s.accent}">${s.html}</div>`).join('')}` +
+      `<div class="am-coords"><span><i class="fas fa-location-dot"></i> ${coords}</span>` +
+      `<button type="button" class="am-copy" onclick="navigator.clipboard&&navigator.clipboard.writeText('${coords}')"><i class="fas fa-copy"></i> Copy</button></div>` +
+      `<div class="am-actions">` +
+      `<a class="am-action" href="https://www.aloft.ai/feature/laanc/" target="_blank" rel="noopener"><i class="fas fa-tower-broadcast"></i> Request LAANC</a>` +
+      `<a class="am-action" href="https://www.faa.gov/uas/recreational_fliers/where_can_i_fly/b4ufly/" target="_blank" rel="noopener"><i class="fas fa-plane-up"></i> FAA B4UFLY</a>` +
+      `<a class="am-action" href="https://www.google.com/maps?q=${lat},${lon}" target="_blank" rel="noopener"><i class="fas fa-map-location-dot"></i> Open in Maps</a>` +
+      `</div></div>`;
+    showModal({ title: 'Airspace & hazards', content, html: true, notification: true });
     return true;
   }
 
@@ -876,14 +903,6 @@
 
 <style lang="css">
   @import url('https://unpkg.com/leaflet@1.7.1/dist/leaflet.css');
-
-  /* Leaflet renders popups outside this component, so the combined-popup
-     separator between stacked features needs a global rule. */
-  :global(.combined-popup .popup-sep) {
-    border: none;
-    border-top: 1px solid rgba(127, 127, 127, 0.35);
-    margin: 0.5rem 0;
-  }
 
   .map-container {
     position: relative;

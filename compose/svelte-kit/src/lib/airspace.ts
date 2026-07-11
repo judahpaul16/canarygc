@@ -3,8 +3,24 @@ import type { AirspaceZone } from './safety';
 export const AIRSPACE_RESTRICTED_COLOR = '#f24e4e';
 export const AIRSPACE_CONTROLLED_COLOR = '#e7b908';
 
+// Distinct hues per class so overlapping controlled airspace stays legible;
+// restricted and prohibited areas are always red, special-use is orange.
+const CLASS_COLORS: [RegExp, string][] = [
+  [/CLASS B\b/, '#2f6fed'],
+  [/CLASS C\b/, '#d64bd6'],
+  [/CLASS D\b/, '#17b6c4'],
+  [/CLASS E\b/, '#e7b908'],
+  [/CLASS A\b/, '#9b6ef5']
+];
+
 export function airspaceColor(zone: AirspaceZone): string {
-  return zone.restricted ? AIRSPACE_RESTRICTED_COLOR : AIRSPACE_CONTROLLED_COLOR;
+  if (zone.restricted) return AIRSPACE_RESTRICTED_COLOR;
+  const type = (zone.type ?? '').toUpperCase();
+  if (/MOA|MILITARY|WARNING|ALERT/.test(type)) return '#f97316';
+  for (const [pattern, color] of CLASS_COLORS) {
+    if (pattern.test(type)) return color;
+  }
+  return AIRSPACE_CONTROLLED_COLOR;
 }
 
 function airspaceKind(zone: AirspaceZone): string {
