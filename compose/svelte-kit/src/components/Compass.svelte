@@ -1,7 +1,4 @@
 <script lang="ts">
-  import { run } from 'svelte/legacy';
-
-  import { onMount } from 'svelte';
   import { mavLocationStore, mavHeadingStore } from '../stores/mavlinkStore';
   import {
     darkModeStore,
@@ -9,24 +6,12 @@
     secondaryColorStore,
     tertiaryColorStore
   } from '../stores/customizationStore';
-  
+
   interface Props {
-    mavLocation: L.LatLng | { lat: number; lng: number };
+    mavLocation?: L.LatLng | { lat: number; lng: number };
   }
 
   let { mavLocation = $bindable() }: Props = $props();
-  let heading: string = $state('');
-
-
-
-
-  onMount(() => {
-    const updateHeading = (newHeading: number) => {
-      updateCompass(newHeading);
-    };
-
-    mavHeadingStore.subscribe(updateHeading);
-  });
 
   function formatCoordinates(decimalDegree: number, isLatitude: boolean) {
     const absDegree = Math.abs(decimalDegree);
@@ -34,49 +19,28 @@
     const minutes = Math.floor((absDegree - degrees) * 60);
     const seconds = ((absDegree - degrees - minutes / 60) * 3600).toFixed(2);
     const direction = isLatitude
-      ? (decimalDegree < 0 ? 'S' : 'N')
-      : (decimalDegree < 0 ? 'W' : 'E');
-    
+      ? decimalDegree < 0 ? 'S' : 'N'
+      : decimalDegree < 0 ? 'W' : 'E';
     return `${degrees}°${minutes}'${seconds}"${direction}`;
   }
 
-  function formatHeading(heading: number) {
+  function formatHeading(deg: number) {
     const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-    const index = Math.round(((heading % 360) / 45) % 8);
-    return `${heading}° ${directions[index] === undefined ? 'N' : directions[index]}`;
+    const index = Math.round(((deg % 360) / 45) % 8);
+    return `${deg}° ${directions[index] ?? 'N'}`;
   }
 
-  function updateCompass(newHeading: number) {
-    if (typeof document !== 'undefined') {
-      const compassArrow = document.querySelector('.compass-arrow');
-      const directionDegree = document.getElementById('heading');
-      const latLongElement = document.getElementById('lat-long');
-
-      if (compassArrow instanceof HTMLElement && directionDegree instanceof HTMLElement) {
-        compassArrow.style.transform = `translate(-50%, -50%) rotate(${newHeading}deg)`;
-        directionDegree.textContent = formatHeading(newHeading);
-        heading = formatHeading(newHeading);
-      }
-
-      if (latLongElement instanceof HTMLElement) {
-        latLongElement.textContent = `${currentLat} ${currentLong}`;
-      }
-    }
-  }
   let darkMode = $derived($darkModeStore);
   let primaryColor = $derived($primaryColorStore);
   let secondaryColor = $derived($secondaryColorStore);
   let tertiaryColor = $derived($tertiaryColorStore);
   let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
-  run(() => {
-    mavLocation = $mavLocationStore;
-    updateCompass($mavHeadingStore);
-  });
-  run(() => {
-    heading = formatHeading($mavHeadingStore);
-  });
-  let currentLat = $derived(formatCoordinates(mavLocation.lat, true));
-  let currentLong = $derived(formatCoordinates(mavLocation.lng, false));
+
+  let location = $derived(mavLocation ?? $mavLocationStore);
+  let headingDeg = $derived($mavHeadingStore);
+  let heading = $derived(formatHeading(headingDeg));
+  let currentLat = $derived(formatCoordinates(location.lat, true));
+  let currentLong = $derived(formatCoordinates(location.lng, false));
 </script>
 
 <div class="compass rounded-2xl flex flex-col items-center justify-center h-full w-full overflow-auto p-4"
@@ -85,7 +49,7 @@
   <div id="heading" class="bg-[#62bbff] p-2 text-[#000000] text-xs rounded-full">{heading}</div>
     <div class="compass-container">
       <div class="compass-circle">
-        <i class="fas fa-arrow-up compass-arrow"></i>
+        <i class="fas fa-arrow-up compass-arrow" style="transform: translate(-50%, -50%) rotate({headingDeg}deg)"></i>
       </div>
       <div class="north">N</div>
       <div class="east">E</div>

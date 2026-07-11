@@ -3,7 +3,7 @@
   import { MavCmd, MavResult } from 'mavlink-mappings/dist/lib/common';
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import { page } from '$app/stores';
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { goto } from '$app/navigation';
   import '../app.css';
   import {
@@ -109,13 +109,15 @@
   // the desktop nav is hidden on the public routes.
   $effect(() => {
     void currentPath;
-    resizeObserver?.disconnect();
-    const dashboard = document.querySelector('.dashboard');
-    if (dashboard) {
-      resizeObserver = new ResizeObserver(updateDashboardHeight);
-      resizeObserver.observe(dashboard);
-    }
-    updateDashboardHeight();
+    untrack(() => {
+      resizeObserver?.disconnect();
+      const dashboard = document.querySelector('.dashboard');
+      if (dashboard) {
+        resizeObserver = new ResizeObserver(updateDashboardHeight);
+        resizeObserver.observe(dashboard);
+      }
+      updateDashboardHeight();
+    });
   });
 
   async function checkOnlineStatus() {
