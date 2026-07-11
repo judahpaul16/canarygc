@@ -100,15 +100,39 @@
         });
     }
 
+    const SKIP_OPTIMIZE_PROMPT_KEY = 'skipOptimizePrompt';
+
+    async function commitMissionPlan() {
+        let title = get(missionPlanTitleStore);
+        if (title === "") title = "Untitled Mission Plan";
+        await handleSave(title, actions);
+    }
+
+    function rememberSkip(values: string[]) {
+        if (values[0] === 'true') localStorage.setItem(SKIP_OPTIMIZE_PROMPT_KEY, 'true');
+    }
+
     async function saveMissionPlan() {
+        if (localStorage.getItem(SKIP_OPTIMIZE_PROMPT_KEY) === 'true') {
+            await commitMissionPlan();
+            return;
+        }
         showModal({
-            title: "Save & Load Mission Plan",
-            content: "Are you sure you want to save and load this mission plan? This action will overwrite the currently loaded mission plan.",
+            title: "Optimize path before saving?",
+            content:
+                "Optimize Path checks the route against airspace, obstacles, and buildings, and adjusts waypoints and heights to clear them. Saving also loads the plan, overwriting the one currently loaded.",
             confirmation: true,
-            onConfirm: async () => {
-                let title = get(missionPlanTitleStore);
-                if (title === "") title = "Untitled Mission Plan";
-                await handleSave(title, actions);
+            confirmLabel: "Optimize, then save",
+            cancelLabel: "Save without optimizing",
+            inputs: [{ type: 'checkbox', placeholder: "Don't show this again", required: false }],
+            onConfirm: async (values) => {
+                rememberSkip(values);
+                await optimizePath();
+                await commitMissionPlan();
+            },
+            onCancel: (values) => {
+                rememberSkip(values);
+                commitMissionPlan();
             },
         });
     }

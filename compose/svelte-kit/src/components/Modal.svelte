@@ -14,9 +14,11 @@
     isOpen?: boolean;
     confirmation?: boolean;
     notification?: boolean;
+    confirmLabel?: string;
+    cancelLabel?: string;
     inputs?: { type: string; placeholder: string; required: boolean }[] | null;
     onConfirm?: (values: string[]) => void | Promise<void>;
-    onCancel?: () => void;
+    onCancel?: (values: string[]) => void;
     onClose?: () => void;
   }
 
@@ -27,6 +29,8 @@
     isOpen = $bindable(false),
     confirmation = false,
     notification = false,
+    confirmLabel = 'Confirm',
+    cancelLabel = 'Cancel',
     inputs = null,
     onConfirm = () => {},
     onCancel = () => {},
@@ -46,13 +50,13 @@
   const closeModal = () => {
     isOpen = false;
     if (!confirmation && !notification) {
-      onCancel();
+      onCancel([...inputValues]);
     }
     onClose();
   };
 
   const cancel = () => {
-    onCancel();
+    onCancel([...inputValues]);
     isOpen = false;
     onClose();
   };
@@ -138,8 +142,8 @@
         </div>
         {#if confirmation}
           <div class="flex justify-end px-4 py-2 border-t">
-            <button type="submit" onclick={handleConfirm} class="bg-blue-500 px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 mr-2">Confirm</button>
-            <button type="button" onclick={cancel} class="bg-gray-500 px-4 py-2 rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400">Cancel</button>
+            <button type="submit" onclick={handleConfirm} class="bg-blue-500 px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 mr-2">{confirmLabel}</button>
+            <button type="button" onclick={cancel} class="bg-gray-500 px-4 py-2 rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400">{cancelLabel}</button>
           </div>
         {/if}
         {#if notification}

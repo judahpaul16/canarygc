@@ -16,9 +16,11 @@ export interface ModalOptions {
   html?: boolean;
   confirmation?: boolean;
   notification?: boolean;
+  confirmLabel?: string;
+  cancelLabel?: string;
   inputs?: ModalInput[] | null;
   onConfirm?: (values: string[]) => void | Promise<void>;
-  onCancel?: () => void;
+  onCancel?: (values: string[]) => void;
   onClose?: () => void;
 }
 
@@ -47,12 +49,14 @@ export function showModal(options: ModalOptions): () => void {
       isOpen: true,
       confirmation: options.confirmation ?? false,
       notification: options.notification ?? false,
+      confirmLabel: options.confirmLabel ?? 'Confirm',
+      cancelLabel: options.cancelLabel ?? 'Cancel',
       inputs: options.inputs ?? null,
       onConfirm: async (values: string[]) => {
         await options.onConfirm?.(values);
       },
-      onCancel: () => {
-        options.onCancel?.();
+      onCancel: (values: string[]) => {
+        options.onCancel?.(values);
       },
       onClose: () => {
         options.onClose?.();
