@@ -61,6 +61,74 @@
             .map((part) => ({ text: part, hit: part.toLowerCase() === searchTerm.toLowerCase() }));
     }
 
+    // High-rate state messages that carry no event value are muted; anything
+    // actionable (arming, modes, commands, missions, warnings) gets a color.
+    const TELEMETRY = new Set([
+        'ATTITUDE', 'ATTITUDE_QUATERNION', 'GLOBAL_POSITION_INT', 'LOCAL_POSITION_NED',
+        'GPS_RAW_INT', 'GPS2_RAW', 'VFR_HUD', 'SYS_STATUS', 'BATTERY_STATUS', 'TIMESYNC',
+        'RAW_IMU', 'SCALED_IMU', 'SCALED_IMU2', 'SCALED_IMU3', 'SCALED_PRESSURE', 'ALTITUDE',
+        'ESTIMATOR_STATUS', 'VIBRATION', 'HIGHRES_IMU', 'SERVO_OUTPUT_RAW', 'RC_CHANNELS',
+        'RC_CHANNELS_RAW', 'SYSTEM_TIME', 'PING', 'ODOMETRY', 'EXTENDED_SYS_STATE',
+        'ACTUATOR_OUTPUT_STATUS', 'POSITION_TARGET_GLOBAL_INT', 'NAV_CONTROLLER_OUTPUT'
+    ]);
+
+    interface ParsedLog {
+        name: string;
+        time: string;
+        body: string;
+        color: string;
+        plain: boolean;
+    }
+
+    function logColor(name: string, body: string): string {
+        if (name === 'STATUSTEXT') {
+            const sev = Number((body.match(/"severity":\s*(\d+)/) ?? [])[1]);
+            if (sev <= 3) return '#ff6b6b';
+            if (sev === 4) return '#f59e0b';
+            if (sev === 5) return '#fbbf24';
+            return '#4ade80';
+        }
+        if (name.startsWith('MAVLink connection')) return name.includes('error') ? '#ff6b6b' : '#4ade80';
+        if (name === 'HEARTBEAT') return '#4ade80';
+        if (name.endsWith('ACK')) return '#c084fc';
+        if (name.startsWith('COMMAND')) return '#a78bfa';
+        if (name === 'SET_MODE') return '#22d3ee';
+        if (name.startsWith('MISSION')) return '#60a5fa';
+        if (name.startsWith('PARAM')) return '#c084fc';
+        if (name.startsWith('HOME') || name.includes('ORIGIN')) return '#2dd4bf';
+        if (TELEMETRY.has(name)) return '#8b98a5';
+        return '#cbd5e1';
+    }
+
+    // Splits `NAME(magic)::timestamp::json` into fields; connection notices and
+    // other bare strings render as a single colored line.
+    function parseLog(line: string): ParsedLog {
+        const first = line.indexOf('::');
+        const second = first >= 0 ? line.indexOf('::', first + 2) : -1;
+        if (first < 0 || second < 0) {
+            return { name: line, time: '', body: '', color: logColor(line, ''), plain: true };
+        }
+        const name = line.slice(0, first).replace(/\(\d+\)$/, '');
+        const time = line.slice(first + 2, second);
+        const body = line.slice(second + 2);
+        return { name, time, body, color: logColor(name, body), plain: false };
+    }
+
+    const ALWAYS_HIDDEN = ['HEARTBEAT', 'MISSION_CURRENT', '"command":512', 'GPS_RAW_INT'];
+
+    let visibleLogs = $derived(
+        logs
+            .filter((log) => {
+                if (ALWAYS_HIDDEN.some((h) => log.includes(h))) return false;
+                if (log.includes('TIMESYNC') && !showTimeSync) return false;
+                if (log.includes('PARAM_VALUE') && !showParamValue) return false;
+                if (log.includes('GLOBAL_POSITION_INT') && !showGPSRawInt) return false;
+                if (log.includes('BATTERY_STATUS') && !showSysStatus) return false;
+                return true;
+            })
+            .map((raw) => ({ raw, parsed: parseLog(raw) }))
+    );
+
     function clearLogs() {
         mavlinkLogStore.set([]);
     }
@@ -131,23 +199,17 @@
                     </div>
                 </div>
             </div>
-            <pre class="text-gray-300 flex flex-col" bind:this={logContainer}>
-                {#each logs as log (log)}
-                    {#if log.indexOf('HEARTBEAT') === -1 && log.indexOf('MISSION_CURRENT') === -1 && log.indexOf('"command":512') === -1 && log.indexOf('GPS_RAW_INT') === -1}
-                        {#if log.indexOf('TIMESYNC') !== -1}
-                            <span style="display: {showTimeSync ? 'block' : 'none'}">{#each segments(log) as seg, i (i)}{#if seg.hit}<mark>{seg.text}</mark>{:else}{seg.text}{/if}{/each}</span>
-                        {:else if log.indexOf('PARAM_VALUE') !== -1}
-                            <span style="display: {showParamValue ? 'block' : 'none'}">{#each segments(log) as seg, i (i)}{#if seg.hit}<mark>{seg.text}</mark>{:else}{seg.text}{/if}{/each}</span>
-                        {:else if log.indexOf('GLOBAL_POSITION_INT') !== -1}
-                            <span style="display: {showGPSRawInt ? 'block' : 'none'}">{#each segments(log) as seg, i (i)}{#if seg.hit}<mark>{seg.text}</mark>{:else}{seg.text}{/if}{/each}</span>
-                        {:else if log.indexOf('BATTERY_STATUS') !== -1}
-                            <span style="display: {showSysStatus ? 'block' : 'none'}">{#each segments(log) as seg, i (i)}{#if seg.hit}<mark>{seg.text}</mark>{:else}{seg.text}{/if}{/each}</span>
-                        {:else}
-                            <span>{#each segments(log) as seg, i (i)}{#if seg.hit}<mark>{seg.text}</mark>{:else}{seg.text}{/if}{/each}</span>
-                        {/if}
-                    {/if}
+            {#snippet hl(text: string)}{#each segments(text) as seg, i (i)}{#if seg.hit}<mark>{seg.text}</mark>{:else}{seg.text}{/if}{/each}{/snippet}
+            <div class="log-view" bind:this={logContainer}>
+                {#each visibleLogs as item (item.raw)}
+                    <div class="log-line" style="--accent: {item.parsed.color}">
+                        <span class="log-name" style="color: {item.parsed.color}">{@render hl(item.parsed.name)}</span>{#if !item.parsed.plain}<span class="log-time">{item.parsed.time}</span><span class="log-body">{@render hl(item.parsed.body)}</span>{/if}
+                    </div>
                 {/each}
-            </pre>
+                {#if visibleLogs.length === 0}
+                    <div class="log-empty">No events yet.</div>
+                {/if}
+            </div>
         </div>
     </div>
 </div>
@@ -162,15 +224,52 @@
         color: var(--fontColor);
     }
 
-    pre {
-        white-space: pre-wrap;
-        word-wrap: break-word;
+    .log-view {
+        font-family: ui-monospace, 'SFMono-Regular', 'Menlo', 'Consolas', monospace;
+        font-size: 0.8rem;
+        line-height: 1.5;
         background-color: var(--secondaryColor);
         border-radius: var(--radius-control);
-        padding: 10px;
+        padding: 0.4rem 0;
         max-height: 95%;
-        overflow-y: auto;
         height: 100%;
+        overflow-y: auto;
+    }
+
+    .log-line {
+        padding: 0.05rem 0.75rem 0.05rem 0.6rem;
+        border-left: 3px solid var(--accent);
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    .log-line:hover {
+        background-color: rgb(from var(--accent) r g b / 0.08);
+    }
+
+    .log-name {
+        font-weight: 600;
+    }
+
+    .log-time {
+        color: rgb(from var(--fontColor) r g b / 0.4);
+        margin: 0 0.6rem;
+    }
+
+    .log-body {
+        color: rgb(from var(--fontColor) r g b / 0.75);
+    }
+
+    .log-empty {
+        padding: 1rem 0.75rem;
+        color: rgb(from var(--fontColor) r g b / 0.5);
+    }
+
+    mark {
+        background-color: #f5c518;
+        color: #000000;
+        border-radius: 3px;
+        padding: 0 2px;
     }
 
     .tooltip {
