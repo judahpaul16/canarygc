@@ -72,8 +72,10 @@
   let secondaryColor = $derived($secondaryColorStore);
   let tertiaryColor = $derived($tertiaryColorStore);
   let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
+  const AUTH_PAGES = new Set(['/', '/login', '/register', '/forgot-password', '/reset-password']);
+
   let currentPath = $derived($page.url.pathname);
-  let isNavHidden = $derived(currentPath === '/' || currentPath === '/login' || currentPath === '/register');
+  let isNavHidden = $derived(AUTH_PAGES.has(currentPath));
 
   $effect(() => {
     missionCountStore.set(Object.keys($missionPlanActionsStore).length - 1);
@@ -121,7 +123,12 @@
     });
   });
 
+  function setOnline(value: boolean) {
+    if (online !== value) onlineStore.set(value);
+  }
+
   async function checkOnlineStatus() {
+    if (isNavHidden) return;
     try {
       const response = await fetch('/api/mavlink/heartbeat', {
         method: 'POST',
@@ -135,18 +142,15 @@
           data.forEach((log: string) => {
             getLogs(log.replace(/\\"/g, '"') + '\n');
           });
-          onlineStore.set(true);
+          setOnline(true);
         } else {
-          onlineStore.set(false);
+          setOnline(false);
         }
       } else {
-        onlineStore.set(false);
+        setOnline(false);
       }
-    } catch (error) {
-      const err = error as Error;
-      console.error('Error:', err.message || err);
-      console.error('Stack Trace:', err.stack || 'No stack trace available');
-      onlineStore.set(false);
+    } catch {
+      setOnline(false);
     }
   }
 
@@ -406,6 +410,7 @@
     if (localStorage.getItem('darkMode') === 'false') darkModeStore.set(false);
 
     const startupTimer = setTimeout(() => {
+      if (isNavHidden) return;
       checkLoadedMission();
       requestParameters();
     }, STARTUP_SYNC_DELAY_MS);
@@ -599,15 +604,13 @@
       </div>
     </nav>
 
-    <div class="slot-container flex-grow { currentPath !== '/login' && currentPath !== '/' ? 'pr-8' : '' } justify-center items-center overflow-auto z-10">
+    <div class="slot-container flex-grow { !isNavHidden ? 'pr-8' : '' } justify-center items-center overflow-auto z-10">
       {@render children?.()}
     </div>
 
-    {#key online}
-      {#if !online && currentPath !== '/login' && currentPath !== '/' && currentPath !== '/register'}
-        <Offline />
-      {/if}
-    {/key}
+    {#if !online && !isNavHidden}
+      <Offline />
+    {/if}
   </div>
 </main>
 
