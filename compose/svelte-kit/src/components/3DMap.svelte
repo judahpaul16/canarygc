@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, untrack } from 'svelte';
+  import { onMount, onDestroy, untrack } from 'svelte';
   import { mavHeadingStore, mavLocationStore } from '../stores/mavlinkStore';
   import { mapZoomStore, lockViewStore, threeDMapStore } from '../stores/mapStore';
   import { airspaceZonesStore, showAirspaceStore } from '../stores/safetyStore';
@@ -14,9 +14,9 @@
 
   let map: pkg.Map | null = $derived($threeDMapStore);
   let marker: pkg.Marker | undefined;
+  let markerInterval: ReturnType<typeof setInterval>;
 
   let mavLocation = $derived($mavLocationStore);
-  let mavHeading = $derived($mavHeadingStore);
 
   const airspaceColorExpr: ExpressionSpecification = [
     'case',
@@ -171,15 +171,23 @@
 
     threeDMapStore.set(m);
 
-    setInterval(() => {
+    markerInterval = setInterval(() => {
       updateMAVMarker();
     }, 1000);
   });
 
+  onDestroy(() => {
+    if (markerInterval) clearInterval(markerInterval);
+  });
+
   
+  // Runs on an interval, so it reads the stores directly rather than the
+  // component's derived runes, which would be stale once the effect is torn
+  // down (Svelte's derived_inert warning).
   function updateMAVMarker() {
-    const m = map;
-    if (mavLocation && m) {
+    const m = get(threeDMapStore);
+    const location = get(mavLocationStore);
+    if (location && m) {
       marker?.remove();
       let img = new Image();
       img.src = '/map/here.png'; // Use static path directly
@@ -195,15 +203,15 @@
           canvas.style.width = '50px';
           canvas.style.height = '50px';
           marker = new Marker({ element: canvas });
-          marker.setLngLat([mavLocation.lng, mavLocation.lat]);
+          marker.setLngLat([location.lng, location.lat]);
           // offset camera bearing
-          marker.setRotation(mavHeading - m.getBearing());
+          marker.setRotation(get(mavHeadingStore) - m.getBearing());
           marker.addTo(m);
         }
       };
       if (get(lockViewStore) && !m.isMoving()) {
         m.jumpTo({
-          center: [mavLocation.lng, mavLocation.lat],
+          center: [location.lng, location.lat],
           zoom: get(mapZoomStore) - 1
         });
       }
