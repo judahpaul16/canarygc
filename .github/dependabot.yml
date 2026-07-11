@@ -8,6 +8,9 @@ updates:
     groups:
       all:
         patterns: ["*"]
+        update-types:
+          - "minor"
+          - "patch"
     ignore:
       # typescript-eslint peer-caps TypeScript below the next major, so a
       # TypeScript major bump breaks npm ci until typescript-eslint catches up.
