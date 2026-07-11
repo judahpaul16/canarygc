@@ -5,6 +5,7 @@ import {
     MavLinkPacketParser,
     common,
     ardupilotmega,
+    minimal,
     send
 } from 'node-mavlink';
 
@@ -25,6 +26,7 @@ const CONNECT_TIMEOUT_MS = 60_000;
 const MAX_LOG_ENTRIES = 5000;
 
 const SUPERVISOR_INTERVAL_MS = 2000;
+const GCS_HEARTBEAT_MS = 1000;
 
 interface MavlinkState {
     port: SerialPort | Socket | null;
@@ -35,6 +37,7 @@ interface MavlinkState {
     logs: string[];
     newLogs: string[];
     supervisor: ReturnType<typeof setInterval> | null;
+    gcsBeat: ReturnType<typeof setInterval> | null;
     lastErrorMessage: string;
 }
 
@@ -52,6 +55,7 @@ const state: MavlinkState = (g.__canarygcMavlink ??= {
     logs: [],
     newLogs: [],
     supervisor: null,
+    gcsBeat: null,
     lastErrorMessage: ''
 });
 
@@ -59,11 +63,27 @@ const state: MavlinkState = (g.__canarygcMavlink ??= {
 // heartbeats read the state this loop maintains rather than driving dialing.
 // This also guarantees the first client an autopilot sees after boot is one
 // stable connection, since SITL binds serial0 to its first client. Prerendering
-// during the build loads this module too, so the loop stays off there.
+// during the build loads this module too, so the loops stay off there.
 if (!building && !state.supervisor) {
     state.supervisor = setInterval(() => {
         if (!linkAlive()) initializePort().catch(() => {});
     }, SUPERVISOR_INTERVAL_MS);
+}
+
+// A 1 Hz station heartbeat so autopilot GCS-failsafe configurations see the
+// ground station while the link is up.
+if (!building && !state.gcsBeat) {
+    state.gcsBeat = setInterval(() => {
+        if (!linkAlive() || !state.port) return;
+        const heartbeat = new minimal.Heartbeat();
+        heartbeat.type = minimal.MavType.GCS;
+        heartbeat.autopilot = minimal.MavAutopilot.INVALID;
+        heartbeat.baseMode = 0 as minimal.MavModeFlag;
+        heartbeat.customMode = 0;
+        heartbeat.systemStatus = minimal.MavState.ACTIVE;
+        heartbeat.mavlinkVersion = 3;
+        send(state.port, heartbeat).catch(() => {});
+    }, GCS_HEARTBEAT_MS);
 }
 
 const logs = state.logs;
