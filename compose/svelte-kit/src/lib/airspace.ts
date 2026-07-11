@@ -16,11 +16,14 @@ function airspaceImplication(zone: AirspaceZone): string {
   if (/moa|military|warning|alert/i.test(zone.type ?? '')) {
     return 'Special-use airspace. Check activity and use caution.';
   }
+  if (/class\s*a/i.test(zone.type ?? '')) {
+    return `High-altitude airspace from ${zone.lower ?? '18,000 ft MSL'} up; far above UAS operating altitudes, so it is not a factor for low-altitude flight.`;
+  }
   if (zone.lower === 'Surface') {
     return 'Controlled airspace down to the surface, so a UAS needs authorization (e.g. LAANC) here even at low altitude.';
   }
   if (zone.lower) {
-    return `Controlled airspace above ${zone.lower}; below that is uncontrolled (Class G). A UAS needs authorization (e.g. LAANC) only within it.`;
+    return `Controlled airspace above ${zone.lower}; below that a UAS is in uncontrolled Class G. Authorization (e.g. LAANC) is needed only at or above the floor.`;
   }
   return 'Controlled airspace. UAS operations need authorization (e.g. LAANC).';
 }

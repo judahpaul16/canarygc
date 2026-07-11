@@ -35,6 +35,16 @@ function formatAltitude(val?: number, uom?: string, code?: string): string | und
   return `${measure}${reference}`;
 }
 
+const FT_TO_M = 0.3048;
+
+// The numeric limit in meters for altitude comparisons. Flight levels come in
+// hundreds of feet; a negative value is the unspecified-limit sentinel.
+function altitudeMeters(val?: number, uom?: string): number | undefined {
+  if (val === undefined || val === null || val < 0) return undefined;
+  const feet = uom === 'FL' ? val * 100 : val;
+  return feet * FT_TO_M;
+}
+
 const SUA_TYPE_NAMES: Record<string, string> = {
   P: 'Prohibited area',
   R: 'Restricted area',
@@ -144,7 +154,9 @@ async function fetchFaaLayer(bbox: string, layer: (typeof FAA_LAYERS)[number]): 
       restricted: layer.restricted(props),
       type: layer.type(props),
       lower: formatAltitude(props.LOWER_VAL, props.LOWER_UOM, props.LOWER_CODE),
-      upper: formatAltitude(props.UPPER_VAL, props.UPPER_UOM, props.UPPER_CODE)
+      upper: formatAltitude(props.UPPER_VAL, props.UPPER_UOM, props.UPPER_CODE),
+      lowerM: altitudeMeters(props.LOWER_VAL, props.LOWER_UOM),
+      upperM: altitudeMeters(props.UPPER_VAL, props.UPPER_UOM)
     });
   });
 }

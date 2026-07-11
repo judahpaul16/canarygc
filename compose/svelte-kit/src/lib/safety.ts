@@ -24,6 +24,8 @@ export interface AirspaceZone {
   type?: string; // class or category label, e.g. "Class E", "Restricted area", "MOA"
   lower?: string; // lower limit description, e.g. "SFC", "700 ft AGL"
   upper?: string; // upper limit description, e.g. "10000 ft MSL"
+  lowerM?: number; // lower limit in meters (0 = surface); the zone starts here
+  upperM?: number; // upper limit in meters; undefined = no defined ceiling
 }
 
 export interface SafetyLimits {
@@ -101,13 +103,18 @@ export function validateMission(
     }
 
     for (const zone of airspace) {
-      if (pointInPolygon(point, zone.polygon)) {
-        violations.push({
-          severity: zone.restricted ? 'error' : 'warning',
-          index: i,
-          message: `Waypoint ${i} is inside ${zone.restricted ? 'restricted' : 'controlled'} airspace: ${zone.name}.`
-        });
-      }
+      if (!pointInPolygon(point, zone.polygon)) continue;
+      // A zone only applies within its vertical band, so a waypoint below its
+      // floor or above its ceiling is not inside it. This keeps a low-altitude
+      // waypoint from being flagged for high-floor airspace like Class A
+      // (18,000 ft) or a Class E shelf (700 ft) that it passes beneath.
+      if (zone.lowerM !== undefined && alt < zone.lowerM) continue;
+      if (zone.upperM !== undefined && alt > zone.upperM) continue;
+      violations.push({
+        severity: zone.restricted ? 'error' : 'warning',
+        index: i,
+        message: `Waypoint ${i} is inside ${zone.restricted ? 'restricted' : 'controlled'} airspace: ${zone.name}.`
+      });
     }
 
     for (const cell of hazards.ceilings) {

@@ -32,31 +32,35 @@ main {
     background-color 0.1s ease,
     opacity 0.5s ease,
     height 0s ease !important;
-  --sb-track-color: var(--primaryColor);
-  --sb-thumb-color: var(--tertiaryColor);
-  --sb-size: 12px;
+  /* A neutral translucent gray reads against both the dark app chrome and the
+     light popups, so one thumb color works everywhere. */
+  --sb-thumb-color: rgba(136, 136, 136, 0.55);
+  --sb-thumb-hover: rgba(136, 136, 136, 0.85);
+  --sb-size: 8px;
 }
 
 ::-webkit-scrollbar {
-  width: var(--sb-size)
+  width: var(--sb-size);
+  height: var(--sb-size);
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--sb-track-color);
-  border: 2px solid var(--sb-thumb-color);
-  border-radius: var(--radius-control);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
   background: var(--sb-thumb-color);
-  border-radius: var(--radius-control);
-  
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--sb-thumb-hover);
 }
 
 @supports not selector(::-webkit-scrollbar) {
   * {
-    scrollbar-color: var(--sb-thumb-color)
-                     var(--sb-track-color);
+    scrollbar-width: thin;
+    scrollbar-color: var(--sb-thumb-color) transparent;
   }
 }
 

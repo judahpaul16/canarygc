@@ -407,6 +407,21 @@
 
   let ceilingLayer: L.LayerGroup | null = null;
   let obstacleLayer: L.LayerGroup | null = null;
+  let obstacleRenderer: L.Renderer | null = null;
+
+  // A pane above the polygon fills (overlayPane is 400) but below the mission
+  // markers (markerPane is 600), so obstacle dots keep their true color instead
+  // of being tinted by the translucent airspace and ceiling overlays.
+  function obstaclePaneRenderer(): L.Renderer | null {
+    if (!L || !leafletMap) return null;
+    if (!leafletMap.getPane('obstacles')) {
+      leafletMap.createPane('obstacles');
+      const pane = leafletMap.getPane('obstacles');
+      if (pane) pane.style.zIndex = '450';
+    }
+    obstacleRenderer ??= L.svg({ pane: 'obstacles' });
+    return obstacleRenderer;
+  }
 
   function renderCeilings() {
     if (!L || !leafletMap) return;
@@ -437,13 +452,15 @@
       obstacleLayer = null;
       return;
     }
+    const renderer = obstaclePaneRenderer() ?? undefined;
     const group = L.layerGroup();
     for (const obstacle of get(obstaclesStore)) {
       L.circleMarker([obstacle.lat, obstacle.lon], {
         radius: 5,
         color: obstacleColor(obstacle.aglFt),
         weight: 2,
-        fillOpacity: 0.7
+        fillOpacity: 0.9,
+        renderer
       })
         .on('click', (ev) => openCombinedPopup((ev as L.LeafletMouseEvent).latlng))
         .addTo(group);
