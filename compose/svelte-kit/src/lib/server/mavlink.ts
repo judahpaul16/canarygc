@@ -205,14 +205,15 @@ async function setMissionCount(numItems: number) {
 }
 
 export interface MissionItemInput {
-    type: string;
+    command: number;
+    frame: number;
     lat: number;
     lon: number;
-    alt: number | null;
-    param1: number | null;
-    param2: number | null;
-    param3: number | null;
-    param4: number | null;
+    alt: number;
+    param1: number;
+    param2: number;
+    param3: number;
+    param4: number;
 }
 
 async function loadMissionItem(item: MissionItemInput, index: number) {
@@ -225,17 +226,17 @@ async function loadMissionItem(item: MissionItemInput, index: number) {
     msg.targetSystem = 1;
     msg.targetComponent = 1;
     msg.seq = index;
-    msg.frame = 3 // MAV_FRAME_GLOBAL_RELATIVE_ALT;
-    msg.command = common.MavCmd[`${item.type}` as keyof typeof common.MavCmd];
+    msg.frame = item.frame;
+    msg.command = item.command;
     msg.current = index === 0 ? 1 : 0;
     msg.autocontinue = 1;
-    if (item.param1 !== null) msg.param1 = item.param1;
-    if (item.param2 !== null) msg.param2 = item.param2;
-    if (item.param3 !== null) msg.param3 = item.param3;
-    if (item.param4 !== null) msg.param4 = item.param4;
+    msg.param1 = item.param1;
+    msg.param2 = item.param2;
+    msg.param3 = item.param3;
+    msg.param4 = item.param4;
     msg.x = Number((item.lat * 1e7).toFixed(0));
     msg.y = Number((item.lon * 1e7).toFixed(0));
-    msg.z = item.alt === null ? 0 : item.alt;
+    msg.z = item.alt;
     msg.missionType = 0;
     await send(port!, msg);
 }

@@ -19,6 +19,10 @@
     import { showModal, notify } from '../lib/overlays';
     import { setFlightMode, sendMavlinkCommand } from '../lib/mavlink-client';
     import { optimizeMissionPath } from '../lib/path-planning';
+    import { normalizeMission } from '../lib/mission-commands';
+    import { parseMissionFile } from '../lib/mission-import';
+    import { isPX4 } from '../lib/flight-modes';
+    import { mavModelStore } from '../stores/mavlinkStore';
 
     const SAVE_FEEDBACK_MS = 3000;
     const DEGREES_TO_E7 = 1e7;
@@ -122,12 +126,22 @@
         missionPlanTitleStore.set(title);
         missionPlanActionsStore.set(actions);
         missionCompleteStore.set(false);
+
+        const { items, warnings } = normalizeMission(actions, isPX4(get(mavModelStore)));
+        if (warnings.length > 0) {
+            notify({
+                title: "Mission adjusted for PX4",
+                content: warnings.join("<br>"),
+                duration: SAVE_FEEDBACK_MS * 2,
+            });
+        }
+
         try {
             let response = await fetch("/api/mavlink/load_mission", {
                 method: "POST",
                 headers: {
                     "content-type": "application/json",
-                    "actions": JSON.stringify(actions),
+                    "actions": JSON.stringify(items),
                 },
             });
             if (response.ok) {
@@ -237,19 +251,29 @@
     async function importPlan() {
         const input = document.createElement("input");
         input.type = "file";
-        input.accept = ".json";
+        input.accept = ".json,.plan,.waypoints,.txt,.mission";
         input.onchange = async (e) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        if (file) {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (!file) return;
             const reader = new FileReader();
-            reader.onload = async (e) => {
-                const data = e.target?.result;
-                const plan = JSON.parse(data as string);
-                const title = file.name.replace(".json", "").replace(/_/g, " ");
-                await handleSave(title, plan);
+            reader.onload = async (ev) => {
+                try {
+                    const { title, actions: imported } = parseMissionFile(file.name, ev.target?.result as string);
+                    await handleSave(title, imported);
+                    notify({
+                        title: "Mission Imported",
+                        content: `Loaded ${Object.keys(imported).length} items from ${file.name}.`,
+                        duration: SAVE_FEEDBACK_MS,
+                    });
+                } catch (err) {
+                    showModal({
+                        title: "Import Failed",
+                        content: (err as Error).message,
+                        notification: true,
+                    });
+                }
             };
             reader.readAsText(file);
-        }
         };
         input.click();
     }
