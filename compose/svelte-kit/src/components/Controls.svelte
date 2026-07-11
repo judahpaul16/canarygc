@@ -177,7 +177,7 @@
     width: 100%;
     padding: 0.5rem;
     border: 1px solid var(--tertiaryColor);
-    border-radius: 1em;
+    border-radius: var(--radius-surface);
     background-color: var(--secondaryColor);
     color: white;
     font-size: 10pt;
@@ -233,7 +233,7 @@
     display: flex;
     margin-bottom: 0.5rem;
     padding: 0.5rem;
-    border-radius: 0.25rem;
+    border-radius: var(--radius-control);
     white-space: nowrap;
     opacity: 0;
     visibility: hidden;
@@ -282,7 +282,7 @@
   .map-container {
     padding: 4px;
     background: var(--secondaryColor);
-    border-radius: 1rem;
+    border-radius: var(--radius-surface);
   }
 
   .controls {

@@ -512,7 +512,7 @@
     transform: translateX(-50%);
     margin-bottom: 0.5rem;
     padding: 0.5rem;
-    border-radius: 0.25rem;
+    border-radius: var(--radius-control);
     white-space: nowrap;
     opacity: 0;
     visibility: hidden;

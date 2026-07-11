@@ -141,7 +141,7 @@
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     border: 1px solid rgb(from var(--secondaryColor) r g b / 70%);
-    border-radius: 1.25rem;
+    border-radius: var(--radius-shell);
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.28);
   }
 
@@ -195,7 +195,7 @@
   .error {
     margin-bottom: 1rem;
     padding: 0.6rem 0.8rem;
-    border-radius: 0.6rem;
+    border-radius: var(--radius-control);
     background: rgba(220, 68, 68, 0.15);
     border: 1px solid rgba(220, 68, 68, 0.4);
     color: #ff8f8f;
@@ -218,7 +218,7 @@
     background-color: rgb(from var(--tertiaryColor) r g b / 85%);
     border: 1px solid rgb(from var(--secondaryColor) r g b / 80%);
     color: var(--fontColor);
-    border-radius: 0.65rem;
+    border-radius: var(--radius-control);
     padding: 0.6rem 0.8rem;
     margin-bottom: 0.9rem;
     outline: none;
@@ -246,14 +246,14 @@
   .strength-track {
     flex: 1;
     height: 6px;
-    border-radius: 999px;
+    border-radius: 9999px;
     background: rgb(from var(--secondaryColor) r g b / 60%);
     overflow: hidden;
   }
 
   .strength-fill {
     height: 100%;
-    border-radius: 999px;
+    border-radius: 9999px;
     transition: width 0.3s ease, background-color 0.3s ease;
   }
 
@@ -274,7 +274,7 @@
     font-weight: 700;
     padding: 0.7rem 1.4rem;
     border: none;
-    border-radius: 0.75rem;
+    border-radius: var(--radius-control);
     cursor: pointer;
     transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
   }

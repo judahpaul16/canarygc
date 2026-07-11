@@ -46,7 +46,7 @@
       {#each rows as row, i (row.label)}
         <div class="flex items-center justify-between gap-4 py-3 {i < rows.length - 1 ? 'border-b' : ''}" style="border-color: var(--secondaryColor);">
           <dt class="font-semibold opacity-80">{row.label}</dt>
-          <dd class="rounded-md px-2 py-1 font-mono" style="background-color: var(--secondaryColor);">{row.value}</dd>
+          <dd class="rounded-lg px-2 py-1 font-mono" style="background-color: var(--secondaryColor);">{row.value}</dd>
         </div>
       {/each}
     </dl>

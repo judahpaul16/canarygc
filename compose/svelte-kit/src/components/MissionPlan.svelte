@@ -468,7 +468,7 @@
     background-color: var(--secondaryColor);
     margin: 0 1em;
     padding: 1px;
-    border-radius: 0.5rem;
+    border-radius: var(--radius-control);
   }
 
   hr {
@@ -492,7 +492,7 @@
 
   input, select {
     border: none;
-    border-radius: 0.5rem;
+    border-radius: var(--radius-control);
     padding-inline: 0.5em;
     padding-block: 0.25em;
     background-color: var(--secondaryColor);
@@ -520,7 +520,7 @@
   textarea {
     width: 120px;
     background-color: var(--secondaryColor);
-    border-radius: 1em;
+    border-radius: var(--radius-surface);
     padding: 0.5rem;
   }
 
@@ -531,7 +531,7 @@
     transform: translateX(-50%);
     margin-bottom: 0.5rem;
     padding: 0.5rem;
-    border-radius: 0.25rem;
+    border-radius: var(--radius-control);
     white-space: nowrap;
     opacity: 0;
     visibility: hidden;

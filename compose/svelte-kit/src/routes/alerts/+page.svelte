@@ -70,7 +70,7 @@
   class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0"
   style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
 >
-  <div class="dashboard w-full p-5 rounded-[30px] rounded-l-none overflow-auto overflow-x-hidden h-[90vh] max-h-[90vh]">
+  <div class="dashboard w-full p-5 rounded-3xl rounded-l-none overflow-auto overflow-x-hidden h-[90vh] max-h-[90vh]">
     <div class="settings rounded-2xl h-full p-6 overflow-y-auto">
       <div class="content">
   <header class="head">
@@ -172,7 +172,7 @@
   .panel {
     background-color: rgb(from var(--tertiaryColor) r g b / 0.32);
     border: 1px solid rgb(from var(--fontColor) r g b / 0.08);
-    border-radius: 1rem;
+    border-radius: var(--radius-surface);
     padding: 1.35rem 1.5rem;
     margin-bottom: 1.2rem;
   }
@@ -193,7 +193,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 0.65rem;
+    border-radius: var(--radius-control);
     background: rgba(245, 197, 24, 0.12);
     border: 1px solid rgba(245, 197, 24, 0.28);
     color: #f5c518;
@@ -225,7 +225,7 @@
     text-align: left;
     background-color: rgb(from var(--tertiaryColor) r g b / 0.7);
     border: 1px solid rgb(from var(--fontColor) r g b / 0.12);
-    border-radius: 0.7rem;
+    border-radius: var(--radius-control);
     padding: 0.7rem 0.85rem;
     color: var(--fontColor);
     cursor: pointer;
@@ -280,7 +280,7 @@
     position: absolute;
     inset: 0;
     background: rgb(from var(--secondaryColor) r g b / 90%);
-    border-radius: 999px;
+    border-radius: 9999px;
     transition: background 0.2s ease;
   }
 
@@ -320,7 +320,7 @@
     font-weight: 700;
     padding: 0.7rem 1.4rem;
     border: none;
-    border-radius: 0.75rem;
+    border-radius: var(--radius-control);
     cursor: pointer;
     transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
   }

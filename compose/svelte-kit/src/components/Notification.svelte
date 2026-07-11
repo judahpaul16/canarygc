@@ -61,16 +61,16 @@
 
 <div class="notification notification-{type} fixed top-4 right-4 z-50 rounded-lg" id="notification-{id}">
     <div class="shadow-lg max-w-sm w-full rounded-lg">
-        <div class="relative rounded-[1.5em]">
-            <div class="px-4 py-2 text-lg font-semibold rounded-[1.5em] text-center">
+        <div class="relative rounded-2xl">
+            <div class="px-4 py-2 text-lg font-semibold rounded-2xl text-center">
                 {title}
             </div>
             <button onclick={close} class="absolute top-2 right-2 text-gray-400 hover:text-white text-2xl">
                 &times;
             </button>
         </div>
-        <hr class="border-[#ffffff7c] w-[80%] m-auto rounded" />
-        <div class="px-4 py-2 rounded-[1.5em] text-center">
+        <hr class="border-[#ffffff7c] w-[80%] m-auto rounded-lg" />
+        <div class="px-4 py-2 rounded-2xl text-center">
             <!-- eslint-disable-next-line svelte/no-at-html-tags -- safeContent is escaped above; only <br> survives -->
             {@html safeContent}
         </div>

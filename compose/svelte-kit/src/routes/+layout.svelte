@@ -656,7 +656,7 @@
     background-color: var(--primaryColor);
     border: 5px solid rgb(from var(--secondaryColor) r g b / 0.85);
     border-right: none;
-    border-radius: 30px 0 0 30px;
+    border-radius: var(--radius-shell) 0 0 var(--radius-shell);
     margin-left: 2em;
     max-height: 90vh;
     height: var(--heightOfDashboard);
@@ -677,7 +677,7 @@
     justify-content: center;
     align-items: center;
     background-color: transparent;
-    border-radius: 5px;
+    border-radius: var(--radius-control);
     color: #8d8d8e;
   }
 
@@ -703,7 +703,7 @@
     left: 0;
     margin-bottom: 0.5rem;
     padding: 0.5rem;
-    border-radius: 0.25rem;
+    border-radius: var(--radius-control);
     white-space: nowrap;
     opacity: 0;
     visibility: hidden;

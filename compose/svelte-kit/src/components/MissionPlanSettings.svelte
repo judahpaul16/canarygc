@@ -450,7 +450,7 @@
         padding: 0.5rem 1rem;
         background-color: var(--secondaryColor);
         border: none;
-        border-radius: 0.5rem;
+        border-radius: var(--radius-control);
         color: var(--fontColor);
         font-size: 9pt;
         cursor: pointer;

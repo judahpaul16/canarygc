@@ -146,7 +146,7 @@
 </script>
 
 <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">
-    <div class="dashboard w-full grid grid-cols-12 grid-rows-6 gap-4 p-5 rounded-[30px] rounded-l-none overflow-auto overflow-x-hidden h-[90vh] max-h-[90vh]"
+    <div class="dashboard w-full grid grid-cols-12 grid-rows-6 gap-4 p-5 rounded-3xl rounded-l-none overflow-auto overflow-x-hidden h-[90vh] max-h-[90vh]"
         style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --textColor: {textColor}"
     >
         <div class="user-settings col-span-12 row-span-6 rounded-2xl h-full p-6" style="--primaryColor: {primaryColor}">
@@ -243,14 +243,14 @@
                                             <input 
                                                 type="number"
                                                 bind:value={param.param_value}
-                                                class="rounded p-1 w-32 param_value"
+                                                class="rounded-lg p-1 w-32 param_value"
                                                 onchange={(e) => handleParameterChange(e, param.param_id, param.param_type)}
                                             />
                                         </td>
                                         <td class="p-2 param_type">{PARAM_TYPES[param.param_type] ?? 'unknown'}</td>
                                         <td class="p-2">
                                             <button 
-                                                class="px-2 py-1 bg-[#1aac6e] rounded hover:bg-[#2a7757] transition-colors"
+                                                class="px-2 py-1 bg-[#1aac6e] rounded-lg hover:bg-[#2a7757] transition-colors"
                                                 onclick={() => writeParameter(param.param_id, param.param_value, param.param_type)}
                                             >
                                                 Save
@@ -314,7 +314,7 @@
 
     ::-webkit-scrollbar-thumb {
         background: rgba(255, 255, 255, 0.2);
-        border-radius: 4px;
+        border-radius: var(--radius-control);
     }
 
     ::-webkit-scrollbar-thumb:hover {
@@ -329,7 +329,7 @@
         font-size: medium;
         padding-block: 0;
         padding-inline: 0.5em;
-        border-radius: 0.25rem;
+        border-radius: var(--radius-control);
         white-space: nowrap;
         opacity: 0;
         visibility: hidden;

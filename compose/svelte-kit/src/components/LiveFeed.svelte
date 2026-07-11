@@ -146,7 +146,7 @@
     left: 50%;
     transform: translate(-50%, -50%);
     object-fit: cover;
-    border-radius: 0.5rem;
+    border-radius: var(--radius-control);
     z-index: 0;
   }
 

@@ -99,7 +99,7 @@
 </script>
 
 <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">
-    <div class="dashboard w-full gap-4 p-5 rounded-[30px] rounded-l-none overflow-hidden h-[90vh] max-h-[90vh]"
+    <div class="dashboard w-full gap-4 p-5 rounded-3xl rounded-l-none overflow-hidden h-[90vh] max-h-[90vh]"
         style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
     >
         <div class="event-log rounded-2xl h-full flex flex-col p-5">
@@ -174,7 +174,7 @@
         white-space: pre-wrap;
         word-wrap: break-word;
         background-color: var(--secondaryColor);
-        border-radius: 10px;
+        border-radius: var(--radius-control);
         padding: 10px;
         max-height: 95%;
         overflow-y: auto;
@@ -187,7 +187,7 @@
         right: 0;
         margin-bottom: 0.5rem;
         padding: 0.3rem;
-        border-radius: 0.25rem;
+        border-radius: var(--radius-control);
         white-space: nowrap;
         opacity: 0;
         visibility: hidden;
@@ -229,7 +229,7 @@
 
     input {
         border: none;
-        border-radius: 0.5rem;
+        border-radius: var(--radius-control);
         padding-inline: 0.5em;
         padding-block: 0.25em;
         background-color: var(--secondaryColor);
@@ -249,7 +249,7 @@
         appearance: none;
         width: 1rem;
         height: 1rem;
-        border-radius: 0.25rem;
+        border-radius: var(--radius-control);
         background-color: var(--tertiaryColor);
         cursor: pointer;
     }
@@ -261,7 +261,7 @@
     button {
         font-size: small;
         padding: 4px 8px;
-        border-radius: 0.5rem;
+        border-radius: var(--radius-control);
         color: #ffffff;
         cursor: pointer;
     }

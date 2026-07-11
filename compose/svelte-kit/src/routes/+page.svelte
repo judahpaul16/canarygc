@@ -163,7 +163,7 @@
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     border: 1px solid rgb(from var(--secondaryColor) r g b / 70%);
-    border-radius: 1.25rem;
+    border-radius: var(--radius-shell);
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.28);
   }
 
@@ -230,7 +230,7 @@
     color: #1c1c1e;
     font-weight: 700;
     padding: 0.7rem 1.4rem;
-    border-radius: 0.75rem;
+    border-radius: var(--radius-control);
     text-decoration: none;
     transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
   }

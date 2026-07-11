@@ -282,7 +282,7 @@
         <ul class="overflow-auto">
           {#if missionPlans.length != 0}
             {#each missionPlans as plan (plan.id)}
-              <li class="flex justify-between items-center px-2 py-1 rounded mb-2">
+              <li class="flex justify-between items-center px-2 py-1 rounded-lg mb-2">
                 <span>{plan.title}</span>
                 <div class="flex items-center gap-2">
                   <button
@@ -297,7 +297,7 @@
               </li>
             {/each}
           {:else}
-            <li class="px-2 py-1 rounded mb-2">
+            <li class="px-2 py-1 rounded-lg mb-2">
               <span>No mission plans found.</span>
             </li>
           {/if}
@@ -306,7 +306,7 @@
       <div class="flex justify-center px-4 py-2 border-t">
         <button
             onclick={importPlan}
-            class="import-btn bg-transparent px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
+            class="import-btn bg-transparent px-2 py-1 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
           >
           <i class="fas fa-upload mr-1"></i>
           Import Plan
@@ -328,7 +328,7 @@
       <ul class="overflow-auto h-full p-2 text-sm">
         {#if missionPlans.length != 0}
           {#each missionPlans as plan (plan.id)}
-            <li class="inline-block justify-between items-center px-2 py-1 rounded mb-2 w-full text-white">
+            <li class="inline-block justify-between items-center px-2 py-1 rounded-lg mb-2 w-full text-white">
               <span class="mr-2" title={plan.title}>{plan.title.substring(0, 11)}{#if plan.title.length >= 11}...{/if}</span>
               <div class="flex items-center gap-3 float-right relative">
                 <button
@@ -349,7 +349,7 @@
             </li>
           {/each}
         {:else}
-          <li class="px-2 py-1 rounded mb-2">
+          <li class="px-2 py-1 rounded-lg mb-2">
             <span>No mission plans found.</span>
           </li>
         {/if}
@@ -358,7 +358,7 @@
     <div class="absolute left-0 right-0 bottom-0 flex justify-center border-t" style="--tertiaryColor: {tertiaryColor}">
       <button
           onclick={importPlan}
-          class="import-btn hover:bg-[#4b5563] px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
+          class="import-btn hover:bg-[#4b5563] px-2 py-1 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
         >
         <i class="fas fa-upload text-xs" title="Import Mission Plan"></i>
         <span class="import-btn-span text-xs ml-1">Import</span>
@@ -402,7 +402,7 @@
     left: -110%;
     margin-bottom: 0.5rem;
     padding: 0.5rem;
-    border-radius: 0.25rem;
+    border-radius: var(--radius-control);
     white-space: nowrap;
     opacity: 0;
     visibility: hidden;

@@ -127,13 +127,13 @@
         </div>
         {#if confirmation}
           <div class="flex justify-end px-4 py-2 border-t">
-            <button type="submit" onclick={handleConfirm} class="bg-blue-500 px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 mr-2">Confirm</button>
-            <button type="button" onclick={cancel} class="bg-gray-500 px-4 py-2 rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400">Cancel</button>
+            <button type="submit" onclick={handleConfirm} class="bg-blue-500 px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 mr-2">Confirm</button>
+            <button type="button" onclick={cancel} class="bg-gray-500 px-4 py-2 rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400">Cancel</button>
           </div>
         {/if}
         {#if notification}
           <div class="flex justify-end px-4 py-2 border-t">
-            <button type="button" onclick={closeModal} class="bg-blue-500 px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400">Okay</button>
+            <button type="button" onclick={closeModal} class="bg-blue-500 px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400">Okay</button>
           </div>
         {/if}
       </form>
@@ -163,7 +163,7 @@
     margin: 0.5em;
     padding: 0.5rem;
     border: 2px solid var(--secondaryColor);
-    border-radius: 1em;
+    border-radius: var(--radius-surface);
     background-color: var(--tertiaryColor);
     color: var(--fontColor);
     font-size: 10pt;
@@ -180,7 +180,7 @@
       appearance: none;
       width: 1rem;
       height: 1rem;
-      border-radius: 0.25rem;
+      border-radius: var(--radius-control);
       background-color: var(--secondaryColor);
       cursor: pointer;
   }

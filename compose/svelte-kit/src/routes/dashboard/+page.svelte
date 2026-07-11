@@ -18,7 +18,7 @@
 
 <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">
   <div
-    class="dashboard w-full grid grid-cols-12 grid-rows-7 gap-5 p-5 rounded-[30px] rounded-l-none overflow-auto h-[90vh] max-h-[720px]"
+    class="dashboard w-full grid grid-cols-12 grid-rows-7 gap-5 p-5 rounded-3xl rounded-l-none overflow-auto h-[90vh] max-h-[720px]"
     style="--secondaryColor: {secondaryColor}"
   >
       <div class="cell live-feed col-span-6 row-span-4">
@@ -43,7 +43,7 @@
 
 <style>
   .cell {
-    border-radius: 1.1rem;
+    border-radius: var(--radius-surface);
     box-shadow: 0 14px 38px rgba(0, 0, 0, 0.3);
   }
 

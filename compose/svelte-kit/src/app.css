@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* A three-step corner scale plus pill and circle, assigned by hierarchy: shells
+   nest surfaces nest controls, each step down roughly matching the padding
+   between them so concentric corners stay parallel. Tailwind equivalents:
+   control = rounded-lg, surface = rounded-2xl, shell = rounded-3xl. */
+:root {
+  --radius-control: 0.5rem;
+  --radius-surface: 1rem;
+  --radius-shell: 1.5rem;
+}
 
 a {
   text-decoration: none !important;
@@ -35,12 +44,12 @@ main {
 ::-webkit-scrollbar-track {
   background: var(--sb-track-color);
   border: 2px solid var(--sb-thumb-color);
-  border-radius: 10px;
+  border-radius: var(--radius-control);
 }
 
 ::-webkit-scrollbar-thumb {
   background: var(--sb-thumb-color);
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   
 }
 
@@ -56,7 +65,7 @@ html {
 }
 
 iframe {
-  border-radius: 1rem;
+  border-radius: var(--radius-surface);
 }
 
 .dark .leaflet-layer,
@@ -71,7 +80,7 @@ iframe {
   align-items: center;
   padding: 0.5em !important;
   margin: 10px !important;
-  border-radius: 15px;
+  border-radius: var(--radius-control);
 }
 .leaflet-control-attribution a {
   display: flex;

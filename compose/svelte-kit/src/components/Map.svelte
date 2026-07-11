@@ -850,7 +850,7 @@
     left: 10px;
     background: rgba(255,255,255,0.8);
     padding: 5px;
-    border-radius: 4px;
+    border-radius: var(--radius-control);
     z-index: 1000;
   }
 
@@ -870,7 +870,7 @@
     width: 320px;
     background-color: rgb(from var(--primaryColor) r g b / 0.88);
     border: 1px solid rgb(from var(--secondaryColor) r g b / 0.9);
-    border-radius: 1rem;
+    border-radius: var(--radius-surface);
     overflow: hidden;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
@@ -928,7 +928,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 0.4rem;
+    border-radius: var(--radius-control);
     color: var(--fontColor);
     opacity: 0.7;
   }
