@@ -8,16 +8,23 @@ import {
     send
 } from 'node-mavlink';
 
+import { building } from '$app/environment';
 import { REGISTRY } from '$lib/mavlink-registry'
 
 // Treat the link as down when no packet has arrived within this window, even if
 // the socket never fires 'close' (a silent stall), so the next heartbeat can
 // re-establish it.
 const STALE_LINK_MS = 4000;
-const CONNECT_TIMEOUT_MS = 5000;
+// ArduPilot holds its boot on serial0's tcp:wait until a client connects and
+// can take tens of seconds after an EEPROM wipe before the first bytes flow, so
+// the connect wait is generous. A short timeout churns connect/destroy cycles
+// that keep stealing the autopilot's single TCP slot mid-boot.
+const CONNECT_TIMEOUT_MS = 60_000;
 // Telemetry logs are capped so a long-running station cannot grow them without
 // bound; the cap covers several minutes of backlog for the event-log view.
 const MAX_LOG_ENTRIES = 5000;
+
+const SUPERVISOR_INTERVAL_MS = 2000;
 
 interface MavlinkState {
     port: SerialPort | Socket | null;
@@ -27,6 +34,8 @@ interface MavlinkState {
     connectPromise: Promise<void> | null;
     logs: string[];
     newLogs: string[];
+    supervisor: ReturnType<typeof setInterval> | null;
+    lastErrorMessage: string;
 }
 
 // The link state lives on globalThis so a dev-server module reload reuses the
@@ -41,8 +50,21 @@ const state: MavlinkState = (g.__canarygcMavlink ??= {
     lastPacketAt: 0,
     connectPromise: null,
     logs: [],
-    newLogs: []
+    newLogs: [],
+    supervisor: null,
+    lastErrorMessage: ''
 });
+
+// The server owns the autopilot link and keeps it alive on its own; browser
+// heartbeats read the state this loop maintains rather than driving dialing.
+// This also guarantees the first client an autopilot sees after boot is one
+// stable connection, since SITL binds serial0 to its first client. Prerendering
+// during the build loads this module too, so the loop stays off there.
+if (!building && !state.supervisor) {
+    state.supervisor = setInterval(() => {
+        if (!linkAlive()) initializePort().catch(() => {});
+    }, SUPERVISOR_INTERVAL_MS);
+}
 
 const logs = state.logs;
 const newLogs = state.newLogs;
@@ -76,12 +98,17 @@ async function doInitialize(): Promise<void> {
         setupPacketReader();
         setupPortListeners();
         await waitForFirstPacket();
+        state.lastErrorMessage = '';
         pushLog('MAVLink connection initialized');
     } catch (error) {
         // A half-open socket left behind would hold the autopilot's single TCP
         // slot and starve every later attempt.
         teardownConnection();
-        console.error('Failed to initialize port:', error);
+        const message = (error as Error).message;
+        if (message !== state.lastErrorMessage) {
+            state.lastErrorMessage = message;
+            console.error('Failed to initialize port:', message);
+        }
         throw error;
     }
 }

@@ -1,6 +1,9 @@
 import { lucia } from "$lib/server/auth";
 import { redirect } from "@sveltejs/kit";
 import type { Handle } from "@sveltejs/kit";
+// Booting the MAVLink module starts its link supervisor with the server, so
+// the station holds the autopilot connection without a browser session open.
+import "$lib/server/mavlink";
 
 const PUBLIC_PAGES = new Set(["/", "/login", "/register", "/version", "/forgot-password", "/reset-password"]);
 const PUBLIC_API_PREFIX = "/api/auth/";
