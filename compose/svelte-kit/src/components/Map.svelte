@@ -34,7 +34,7 @@
   import { airspaceColor, airspacePopupHtml } from '../lib/airspace';
   import { ceilingColor, ceilingPopupHtml, obstacleColor, obstaclePopupHtml } from '../lib/hazards';
   import { pointInPolygon } from '../lib/geo';
-  import { resolveTiles, type TileSources } from '../lib/tiles';
+  import { resolveTiles, nativeMaxZoom, type TileSources } from '../lib/tiles';
   import { refreshAirspace, refreshHazards, fetchAirspaceForBbox, fetchHazardsForBbox } from '../lib/preflight';
   import ThreeDMap from './3DMap.svelte';
   import pkg from 'maplibre-gl';
@@ -200,6 +200,21 @@
     return darkMode ? tileSources.dark : tileSources.light;
   }
 
+  // The map zooms past any source's native depth; Leaflet upscales beyond each
+  // layer's maxNativeZoom so deep zooms stay usable instead of going blank.
+  const MAP_MAX_ZOOM = 22;
+
+  function tileLayerFor(url: string, satellite: boolean): L.TileLayer {
+    const options: L.TileLayerOptions = {
+      minZoom: 0,
+      maxZoom: MAP_MAX_ZOOM,
+      maxNativeZoom: nativeMaxZoom(url),
+      attribution: satellite ? tileSources.satelliteAttribution : tileSources.osmAttribution
+    };
+    if (satellite) options.subdomains = ['mt0', 'mt1', 'mt2', 'mt3'];
+    return L.tileLayer(url, options);
+  }
+
   async function loadTileConfig() {
     try {
       const res = await fetch('/api/map-config');
@@ -214,21 +229,12 @@
     if (threedmap) threedmap.style.display = 'none';
     leafletMap = L.map(id).setView(mavLocation, zoom);
     if (mapType.toLowerCase() === 'openstreetmap') {
-      currentTileLayer = L.tileLayer(osmTileUrl(), {
-          minZoom: 0,
-          maxZoom: 20,
-          attribution: tileSources.osmAttribution
-        }).addTo(leafletMap);
+      currentTileLayer = tileLayerFor(osmTileUrl(), false).addTo(leafletMap);
       mapType = 'OpenStreetMap';
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
     } else {
-      currentTileLayer = L.tileLayer(tileSources.satellite, {
-          minZoom: 0,
-          maxZoom: 20,
-          subdomains:['mt0','mt1','mt2','mt3'],
-          attribution: tileSources.satelliteAttribution
-        }).addTo(leafletMap);
+      currentTileLayer = tileLayerFor(tileSources.satellite, true).addTo(leafletMap);
       mapType = 'Satellite';
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
@@ -445,11 +451,7 @@
       threedmap.style.display = 'none';
       mapType = 'OpenStreetMap';
       map.classList.remove('satellite');
-      currentTileLayer = L.tileLayer(osmTileUrl(), {
-        minZoom: 0,
-        maxZoom: 20,
-        attribution: tileSources.osmAttribution
-      }).addTo(leafletMap);
+      currentTileLayer = tileLayerFor(osmTileUrl(), false).addTo(leafletMap);
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
     } else if (leafletMap && mapType.toLowerCase() === 'openstreetmap') {
@@ -457,12 +459,7 @@
       threedmap.style.display = 'none';
       mapType = 'Satellite';
       map.classList.add('satellite');
-      currentTileLayer = L.tileLayer(tileSources.satellite, {
-        minZoom: 0,
-        maxZoom: 20,
-        subdomains:['mt0','mt1','mt2','mt3'],
-        attribution: tileSources.satelliteAttribution
-      }).addTo(leafletMap);
+      currentTileLayer = tileLayerFor(tileSources.satellite, true).addTo(leafletMap);
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
     } else if (leafletMap && mapType.toLowerCase() === 'satellite') {
@@ -871,9 +868,11 @@
     const dark = $darkModeStore;
     const sources = tileSources;
     untrack(() => {
-      const layer = get(mapTileLayerStore);
+      const layer = get(mapTileLayerStore) as L.TileLayer | null;
       if (!layer || get(mapTypeStore) === 'Satellite') return;
-      (layer as L.TileLayer).setUrl(dark ? sources.dark : sources.light);
+      const url = dark ? sources.dark : sources.light;
+      layer.options.maxNativeZoom = nativeMaxZoom(url);
+      layer.setUrl(url);
     });
   });
 

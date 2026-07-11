@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { notify } from '../../lib/overlays';
-  import { resolveTiles, TILE_PRESETS } from '../../lib/tiles';
+  import { resolveTiles, TILE_PRESETS, MAPTILER_PRESETS, maptilerTileUrl } from '../../lib/tiles';
   let loading = $state(true);
   let saving = $state(false);
 
@@ -209,7 +209,14 @@
           <div class="tile-row">
             <select class="preset" aria-label="Light basemap preset" onchange={(e) => pickPreset(e, 'light')}>
               <option value="">Preset...</option>
-              {#each TILE_PRESETS.light as p (p.url)}<option value={p.url}>{p.label}</option>{/each}
+              {#if maptiler.trim()}
+                <optgroup label="MapTiler (your key)">
+                  {#each MAPTILER_PRESETS.light as p (p.style)}<option value={maptilerTileUrl(p.style, maptiler.trim(), p.ext)}>{p.label}</option>{/each}
+                </optgroup>
+              {/if}
+              <optgroup label="Keyless">
+                {#each TILE_PRESETS.light as p (p.url)}<option value={p.url}>{p.label}</option>{/each}
+              </optgroup>
             </select>
             <input id="tiles-light" bind:value={tiles.light} autocomplete="off" placeholder={TILE_PLACEHOLDER.light} />
           </div>
@@ -219,7 +226,14 @@
           <div class="tile-row">
             <select class="preset" aria-label="Dark basemap preset" onchange={(e) => pickPreset(e, 'dark')}>
               <option value="">Preset...</option>
-              {#each TILE_PRESETS.dark as p (p.url)}<option value={p.url}>{p.label}</option>{/each}
+              {#if maptiler.trim()}
+                <optgroup label="MapTiler (your key)">
+                  {#each MAPTILER_PRESETS.dark as p (p.style)}<option value={maptilerTileUrl(p.style, maptiler.trim(), p.ext)}>{p.label}</option>{/each}
+                </optgroup>
+              {/if}
+              <optgroup label="Keyless">
+                {#each TILE_PRESETS.dark as p (p.url)}<option value={p.url}>{p.label}</option>{/each}
+              </optgroup>
             </select>
             <input id="tiles-dark" bind:value={tiles.dark} autocomplete="off" placeholder={TILE_PLACEHOLDER.dark} />
           </div>
@@ -229,7 +243,14 @@
           <div class="tile-row">
             <select class="preset" aria-label="Satellite basemap preset" onchange={(e) => pickPreset(e, 'satellite')}>
               <option value="">Preset...</option>
-              {#each TILE_PRESETS.satellite as p (p.url)}<option value={p.url}>{p.label}</option>{/each}
+              {#if maptiler.trim()}
+                <optgroup label="MapTiler (your key)">
+                  {#each MAPTILER_PRESETS.satellite as p (p.style)}<option value={maptilerTileUrl(p.style, maptiler.trim(), p.ext)}>{p.label}</option>{/each}
+                </optgroup>
+              {/if}
+              <optgroup label="Keyless">
+                {#each TILE_PRESETS.satellite as p (p.url)}<option value={p.url}>{p.label}</option>{/each}
+              </optgroup>
             </select>
             <input id="tiles-satellite" bind:value={tiles.satellite} autocomplete="off" placeholder={TILE_PLACEHOLDER.satellite} />
           </div>
