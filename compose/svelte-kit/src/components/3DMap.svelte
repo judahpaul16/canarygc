@@ -1,16 +1,52 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { mavHeadingStore, mavLocationStore } from '../stores/mavlinkStore';
   import { mapZoomStore, lockViewStore, threeDMapStore } from '../stores/mapStore';
+  import { airspaceZonesStore, showAirspaceStore } from '../stores/safetyStore';
+  import {
+    AIRSPACE_CONTROLLED_COLOR,
+    AIRSPACE_RESTRICTED_COLOR,
+    airspacePopupHtml
+  } from '../lib/airspace';
   import { get } from 'svelte/store';
-  import pkg from 'maplibre-gl';
-  const { Map, Marker, NavigationControl } = pkg;
+  import pkg, { type GeoJSONSource, type ExpressionSpecification } from 'maplibre-gl';
+  const { Map, Marker, NavigationControl, Popup } = pkg;
 
   let map: pkg.Map | null = $derived($threeDMapStore);
   let marker: pkg.Marker | undefined;
 
   let mavLocation = $derived($mavLocationStore);
   let mavHeading = $derived($mavHeadingStore);
+
+  const airspaceColorExpr: ExpressionSpecification = [
+    'case',
+    ['get', 'restricted'],
+    AIRSPACE_RESTRICTED_COLOR,
+    AIRSPACE_CONTROLLED_COLOR
+  ];
+
+  function airspaceFeatureCollection(): GeoJSON.FeatureCollection {
+    return {
+      type: 'FeatureCollection',
+      features: get(airspaceZonesStore).map((zone) => ({
+        type: 'Feature',
+        properties: { restricted: zone.restricted, popupHtml: airspacePopupHtml(zone) },
+        geometry: { type: 'Polygon', coordinates: zone.polygon }
+      }))
+    };
+  }
+
+  function renderAirspace3D() {
+    const m = map;
+    if (!m || !m.isStyleLoaded()) return;
+    const source = m.getSource('airspace') as GeoJSONSource | undefined;
+    if (!source) return;
+    source.setData(airspaceFeatureCollection());
+    const visibility: 'visible' | 'none' = get(showAirspaceStore) ? 'visible' : 'none';
+    if (m.getLayer('airspace-fill')) m.setLayoutProperty('airspace-fill', 'visibility', visibility);
+    if (m.getLayer('airspace-outline'))
+      m.setLayoutProperty('airspace-outline', 'visibility', visibility);
+  }
 
   onMount(() => {
     const MAPTILER_KEY = 'FzmtxzLwraPRISOg9JeU';
@@ -92,6 +128,29 @@
             }
         });
 
+        const airspaceVisibility: 'visible' | 'none' = get(showAirspaceStore) ? 'visible' : 'none';
+        m.addSource('airspace', { type: 'geojson', data: airspaceFeatureCollection() });
+        m.addLayer({
+            'id': 'airspace-fill',
+            'type': 'fill',
+            'source': 'airspace',
+            'layout': { 'visibility': airspaceVisibility },
+            'paint': { 'fill-color': airspaceColorExpr, 'fill-opacity': 0.12 }
+        });
+        m.addLayer({
+            'id': 'airspace-outline',
+            'type': 'line',
+            'source': 'airspace',
+            'layout': { 'visibility': airspaceVisibility },
+            'paint': { 'line-color': airspaceColorExpr, 'line-width': 1 }
+        });
+        m.on('click', 'airspace-fill', (e) => {
+            const html = e.features?.[0]?.properties?.popupHtml;
+            if (html) new Popup().setLngLat(e.lngLat).setHTML(String(html)).addTo(m);
+        });
+        m.on('mouseenter', 'airspace-fill', () => { m.getCanvas().style.cursor = 'pointer'; });
+        m.on('mouseleave', 'airspace-fill', () => { m.getCanvas().style.cursor = ''; });
+
         m.addControl(
             new NavigationControl({
                 visualizePitch: true,
@@ -145,6 +204,12 @@
       }
     }
   }
+
+  $effect(() => {
+    void $airspaceZonesStore;
+    void $showAirspaceStore;
+    untrack(() => renderAirspace3D());
+  });
 </script>
 
 <div id='threedmap' class="relative h-full rounded-2xl z-0"></div>

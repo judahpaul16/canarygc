@@ -20,6 +20,7 @@
   import { get } from 'svelte/store';
   import { showModal } from '../lib/overlays';
   import { airspaceZonesStore, showAirspaceStore } from '../stores/safetyStore';
+  import { airspaceColor, airspacePopupHtml } from '../lib/airspace';
   import { refreshAirspace } from '../lib/preflight';
   import ThreeDMap from './3DMap.svelte';
   import pkg from 'maplibre-gl';
@@ -194,8 +195,6 @@
 
   let airspaceLayer: L.LayerGroup | null = null;
 
-  // Draws restricted airspace (red) and controlled airspace (amber) as polygon
-  // overlays so operators see no-fly zones while planning.
   function renderAirspace() {
     if (!L || !leafletMap) return;
     airspaceLayer?.remove();
@@ -205,21 +204,11 @@
     }
     const group = L.layerGroup();
     for (const zone of get(airspaceZonesStore)) {
-      const kind = zone.type ?? (zone.restricted ? 'Restricted airspace' : 'Controlled airspace');
-      const band = [zone.lower, zone.upper].filter(Boolean).join(' to ');
-      const implication = zone.restricted
-        ? 'No-fly. Entry requires prior authorization.'
-        : /moa|military|warning|alert/i.test(zone.type ?? '')
-          ? 'Special-use airspace. Check activity and use caution.'
-          : 'Controlled airspace. UAS operations need ATC authorization (e.g. LAANC).';
-      const popupHtml =
-        `<strong>${zone.name}</strong><br>${kind}` +
-        (band ? `<br>Altitude: ${band}` : '') +
-        `<br><em>${implication}</em>`;
+      const popupHtml = airspacePopupHtml(zone);
       for (const ring of zone.polygon) {
         const latlngs = ring.map(([lon, lat]) => [lat, lon] as [number, number]);
         L.polygon(latlngs, {
-          color: zone.restricted ? '#f24e4e' : '#e7b908',
+          color: airspaceColor(zone),
           weight: 1,
           fillOpacity: 0.12
         })
