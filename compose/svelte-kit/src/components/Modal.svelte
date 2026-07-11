@@ -1,10 +1,4 @@
 <script lang="ts">
-  import {
-    darkModeStore,
-    primaryColorStore,
-    secondaryColorStore,
-    tertiaryColorStore
-  } from '../stores/customizationStore';
   import { untrack } from 'svelte';
 
   interface Props {
@@ -40,13 +34,6 @@
   let inputValues: string[] = $state(untrack(() => (inputs ? inputs.map(() => '') : [])));
   let checkboxValues: boolean[] = $state(untrack(() => (inputs ? inputs.map(() => false) : [])));
   let validationError = $state('');
-
-  let darkMode = $derived($darkModeStore);
-  let primaryColor = $derived($primaryColorStore);
-  let secondaryColor = $derived(darkMode ? $tertiaryColorStore : $secondaryColorStore);
-  let tertiaryColor = $derived($tertiaryColorStore);
-  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
-
   const closeModal = () => {
     isOpen = false;
     if (!confirmation && !notification) {
@@ -89,8 +76,7 @@
 
 <svelte:window onkeydown={handleKeydown} />
 {#if isOpen}
-  <div class="fixed inset-0 flex items-center justify-center z-50 bg-[#00000090] p-4 backdrop-blur-sm"
-    style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
+  <div class="elevated-surface fixed inset-0 flex items-center justify-center z-50 bg-[#00000090] p-4 backdrop-blur-sm"
   >
     <button type="button" aria-label="Close dialog" class="absolute inset-0 h-full w-full cursor-default" onclick={closeModal}></button>
     <div class="container relative z-10 rounded-2xl shadow-2xl w-full {html ? 'max-w-md' : 'max-w-sm'}" role="dialog" aria-modal="true">

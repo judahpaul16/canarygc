@@ -1,21 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import {
-    darkModeStore,
-    primaryColorStore,
-    secondaryColorStore,
-    tertiaryColorStore
-  } from '../../stores/customizationStore';
   import { notify } from '../../lib/overlays';
   import { refreshAlertConfig } from '../../lib/alerts';
   import { ALERT_TYPES } from '../../lib/alert-types';
-
-  let darkMode = $derived($darkModeStore);
-  let primaryColor = $derived($primaryColorStore);
-  let secondaryColor = $derived($secondaryColorStore);
-  let tertiaryColor = $derived($tertiaryColorStore);
-  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
-
   let loading = $state(true);
   let saving = $state(false);
   let enabled = $state<Set<string>>(new Set());
@@ -68,7 +55,6 @@
 
 <div
   class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0"
-  style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
 >
   <div class="dashboard w-full p-5 rounded-3xl rounded-l-none overflow-auto overflow-x-hidden h-[90vh] max-h-[90vh]">
     <div class="settings rounded-2xl h-full p-6 overflow-y-auto">

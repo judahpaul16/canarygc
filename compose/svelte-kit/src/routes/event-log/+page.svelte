@@ -1,6 +1,5 @@
 <script lang="ts">
     import { mavlinkLogStore, mavStateStore } from '../../stores/mavlinkStore';
-    import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../../stores/customizationStore';
     import { showModal } from '../../lib/overlays';
 
     const HEARTBEAT_FLASH_MS = 2000;
@@ -14,12 +13,6 @@
 
     let logs = $derived($mavlinkLogStore);
     let systemState = $derived($mavStateStore);
-    let darkMode = $derived($darkModeStore);
-    let primaryColor = $derived($primaryColorStore);
-    let secondaryColor = $derived($secondaryColorStore);
-    let tertiaryColor = $derived($tertiaryColorStore);
-    let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
-
     const heartbeatInfo = 'HEARTBEAT is a message sent by the autopilot to communicate its presence and status to the GCS.';
 
     $effect(() => {
@@ -100,7 +93,6 @@
 
 <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">
     <div class="dashboard w-full gap-4 p-5 rounded-3xl rounded-l-none overflow-hidden h-[90vh] max-h-[90vh]"
-        style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
     >
         <div class="event-log rounded-2xl h-full flex flex-col p-5">
             <div class="flex items-center justify-between gap-4 mb-4">

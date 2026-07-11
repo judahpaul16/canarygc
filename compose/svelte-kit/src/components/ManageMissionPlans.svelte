@@ -8,12 +8,6 @@
   import { showModal, notify } from "../lib/overlays";
   import { setFlightMode } from "../lib/mavlink-client";
   import { onMount } from "svelte";
-  import {
-    darkModeStore,
-    primaryColorStore,
-    secondaryColorStore,
-    tertiaryColorStore
-  } from '../stores/customizationStore';
 
   interface Props {
     title?: string;
@@ -29,13 +23,6 @@
     onCancel = () => {}
   }: Props = $props();
   let missionPlans: Array<{ id: string; title: string; actions: MissionPlanActions; isLoaded: number }> = $state([]);
-
-  let darkMode = $derived($darkModeStore);
-  let primaryColor = $derived($primaryColorStore);
-  let secondaryColor = $derived(darkMode ? $tertiaryColorStore : $secondaryColorStore);
-  let fontColor = $derived(darkMode ? "#ffffff" : "#000000");
-  let tertiaryColor = $derived($tertiaryColorStore);
-
   onMount(() => {
     getMissionPlans();
   });
@@ -262,10 +249,9 @@
 </script>
 
 {#if isOpen && isModal}
-  <div class="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50 p-8">
+  <div class="elevated-surface fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50 p-8">
     <div
       class="container rounded-2xl shadow-lg max-w-lg w-full"
-      style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor}"
     >
       <div class="relative border-b">
         <div class="title-container p-4 text-lg font-semibold">
@@ -317,7 +303,6 @@
 {:else}
   <div
       class="container rounded-2xl w-full h-full overflow-auto relative"
-      style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor}"
     >
     <div class="relative border-b">
       <div class="title-container p-4 pb-2 font-semibold">
@@ -355,7 +340,7 @@
         {/if}
       </ul>
     </div>
-    <div class="absolute left-0 right-0 bottom-0 flex justify-center border-t" style="--tertiaryColor: {tertiaryColor}">
+    <div class="absolute left-0 right-0 bottom-0 flex justify-center border-t">
       <button
           onclick={importPlan}
           class="import-btn hover:bg-[#4b5563] px-2 py-1 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"

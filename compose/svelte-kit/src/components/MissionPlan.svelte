@@ -13,12 +13,6 @@
   import { sendMavlinkCommand, setFlightMode, armDisarm, writeParameter, encodeParameterValue } from '../lib/mavlink-client';
   import { isAutoLabel, isGuidedLabel, isPX4 } from '../lib/flight-modes';
   import { preflightCheck } from '../lib/preflight';
-  import {
-    darkModeStore,
-    primaryColorStore,
-    secondaryColorStore,
-    tertiaryColorStore
-  } from '../stores/customizationStore';
 
   const GRIPPER_SERVO_CHANNEL = 9;
   const GRIPPER_OPEN_PWM_US = 1050;
@@ -39,14 +33,7 @@
     'NAV_LOITER_TIME', 'NAV_LOITER_TURNS', 'NAV_LOITER_UNLIM', 'NAV_PAYLOAD_PLACE', 'DO_WINCH', 'DO_GRIPPER', 'DO_SET_CAM_TRIGG_DIST',
     'DO_SET_SERVO', 'DO_REPEAT_SERVO', 'DO_DIGICAM_CONFIGURE', 'DO_DIGICAM_CONTROL', 'DO_FENCE_ENABLE',
     'DO_ENGINE_CONTROL', 'CONDITION_DELAY', 'CONDITION_CHANGE_ALT', 'CONDITION_DISTANCE', 'CONDITION_YAW'
-  ];
-  
-  let darkMode = $derived($darkModeStore);
-  let primaryColor = $derived($primaryColorStore);
-  let secondaryColor = $derived(darkMode ? $tertiaryColorStore : $secondaryColorStore);
-  let tertiaryColor = $derived($tertiaryColorStore);
-  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
-  let mavLocation = $derived($mavLocationStore);
+  ];  let mavLocation = $derived($mavLocationStore);
   let mavMode = $derived($mavModeStore);
   let systemState = $derived($mavStateStore);
   $effect(() => {
@@ -318,8 +305,7 @@
 </script>
 
 <div
-  class="missionPlan p-4 rounded-2xl space-x-4 items-center h-full"
-  style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
+  class="elevated-surface missionPlan p-4 rounded-2xl space-x-4 items-center h-full"
 >
   <div class="container block">
     <input type="text" class="text-md font-bold mb-2 ml-4 focus:outline-none" placeholder="Untitled Mission" id="mission-plan-title" bind:value={title} oninput={(event) => updateTitle(event)} />

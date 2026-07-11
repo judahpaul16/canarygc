@@ -10,6 +10,32 @@
   --radius-control: 0.5rem;
   --radius-surface: 1rem;
   --radius-shell: 1.5rem;
+
+  --primaryColor: #ffffff;
+  --secondaryColor: #e7e9ef;
+  --tertiaryColor: #d7d7d7;
+  --fontColor: #000000;
+  color-scheme: light;
+}
+
+html.dark {
+  --primaryColor: #1c1c1e;
+  --secondaryColor: #121212;
+  --tertiaryColor: #2d2d2d;
+  --fontColor: #ffffff;
+  color-scheme: dark;
+}
+
+/* Modals and mission cards sit above the panels, so in dark mode they take the
+   lighter tertiary shade as their surface for separation from the background. */
+html.dark .elevated-surface {
+  --secondaryColor: var(--tertiaryColor);
+}
+
+body {
+  transition:
+    background-color 0.2s ease-in-out,
+    color 0.2s ease-in-out;
 }
 
 /* The airspace-and-hazards modal renders its stacked sections, coordinates, and

@@ -1,6 +1,5 @@
 <script lang="ts">
   import { mavModeStore, mavAltitudeStore } from '../stores/mavlinkStore';
-  import { tertiaryColorStore } from '../stores/customizationStore';
 
   import { setFlightMode, setPositionLocal } from '../lib/mavlink-client';
   import { isGuidedLabel } from '../lib/flight-modes';
@@ -9,7 +8,6 @@
 
   let altitude: number = $derived($mavAltitudeStore);
 
-  let tertiaryColor = $derived($tertiaryColorStore);
   let mavMode = $derived($mavModeStore);
 
   async function nudge(x: number, y: number) {
@@ -19,7 +17,7 @@
 </script>
 
 <div class="dpad-container relative flex items-center justify-center w-48 h-48">
-  <nav class="d-pad relative" style="--tertiaryColor: {tertiaryColor}">
+  <nav class="d-pad relative">
     <button class="up" aria-label="Move north" title="Move north {MOVE_STEP_M} m (world frame)" onclick={() => nudge(MOVE_STEP_M, 0)}>
       <i class="fas fa-chevron-up"></i>
     </button>

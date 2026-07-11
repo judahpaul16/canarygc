@@ -6,12 +6,8 @@
     import MissionPlan from '../../components/MissionPlan.svelte';
     import MissionPlanSettings from '../../components/MissionPlanSettings.svelte';
     import { mavLocationStore } from '../../stores/mavlinkStore';
-    import { primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../../stores/customizationStore';
   
     let mavLocation = $derived($mavLocationStore)
-    let primaryColor = $derived($primaryColorStore);
-    let secondaryColor = $derived($secondaryColorStore);
-    let tertiaryColor = $derived($tertiaryColorStore);
   
     onMount(() => {
       setTimeout(() => {
@@ -26,7 +22,6 @@
 
   <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">
     <div class="dashboard w-full grid grid-cols-12 grid-rows-7 gap-4 p-5 rounded-3xl rounded-l-none overflow-auto max-h-[90vh]"
-       style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor};"
     >
       <div class="map col-span-10 row-span-4 p-2 rounded-2xl">
         <Map {mavLocation} />

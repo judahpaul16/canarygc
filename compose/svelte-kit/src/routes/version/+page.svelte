@@ -1,20 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import {
-    darkModeStore,
-    primaryColorStore,
-    secondaryColorStore,
-    tertiaryColorStore
-  } from '../../stores/customizationStore';
 
   let { data } = $props();
-
-  let darkMode = $derived($darkModeStore);
-  let primaryColor = $derived($primaryColorStore);
-  let secondaryColor = $derived($secondaryColorStore);
-  let tertiaryColor = $derived($tertiaryColorStore);
-  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
-
   onMount(() => {
     const prevTitle = document.title;
     document.title = 'Build info - Canary Ground Control';
@@ -38,7 +25,7 @@
 <div class="mx-auto w-full max-w-md px-4 py-16">
   <div
     class="rounded-2xl border p-6 shadow-md"
-    style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor}; background-color: var(--primaryColor); color: var(--fontColor); border-color: var(--secondaryColor);"
+    style="background-color: var(--primaryColor); color: var(--fontColor); border-color: var(--secondaryColor);"
   >
     <h1 class="text-xl font-bold">Build info</h1>
     <p class="mt-1 text-sm opacity-60">Canary Ground Control</p>

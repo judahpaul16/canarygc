@@ -5,10 +5,8 @@
   import Compass from '../../components/Compass.svelte';
   import ManageMissionPlans from '../../components/ManageMissionPlans.svelte';
   import { mavLocationStore } from '../../stores/mavlinkStore';
-  import { secondaryColorStore } from '../../stores/customizationStore';
 
   let mavLocation = $derived($mavLocationStore);
-  let secondaryColor = $derived($secondaryColorStore);
 
 </script>
 
@@ -19,7 +17,6 @@
 <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">
   <div
     class="dashboard w-full grid grid-cols-12 grid-rows-7 gap-5 p-5 rounded-3xl rounded-l-none overflow-auto h-[90vh] max-h-[720px]"
-    style="--secondaryColor: {secondaryColor}"
   >
       <div class="cell live-feed col-span-6 row-span-4">
         <LiveFeed />

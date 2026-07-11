@@ -2,12 +2,6 @@
   import { onMount } from 'svelte';
   import weatherCodes from '../lib/weathercodes.json';
   import { mavLocationStore } from '../stores/mavlinkStore';
-  import {
-    darkModeStore,
-    primaryColorStore,
-    secondaryColorStore,
-    tertiaryColorStore,
-  } from '../stores/customizationStore';
 
   type WeatherCode = {
     day: {
@@ -31,14 +25,7 @@
     mavLocation: L.LatLng | { lat: number; lng: number };
   }
 
-  let { isDashboard = false, mavLocation = $bindable() }: Props = $props();
-
-  let darkMode = $derived($darkModeStore);
-  let primaryColor = $derived($primaryColorStore);
-  let secondaryColor = $derived($secondaryColorStore);
-  let tertiaryColor = $derived($tertiaryColorStore);
-  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
-  $effect(() => {
+  let { isDashboard = false, mavLocation = $bindable() }: Props = $props();  $effect(() => {
     mavLocation = $mavLocationStore;
   });
 
@@ -135,7 +122,6 @@
 {:else}
   <div
     class="weather rounded-2xl h-full overflow-y-auto p-4"
-    style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
   >
   <div class="weather-header">Weather Advisory</div>
     {#if error}

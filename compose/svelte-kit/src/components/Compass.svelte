@@ -1,11 +1,5 @@
 <script lang="ts">
   import { mavLocationStore, mavHeadingStore } from '../stores/mavlinkStore';
-  import {
-    darkModeStore,
-    primaryColorStore,
-    secondaryColorStore,
-    tertiaryColorStore
-  } from '../stores/customizationStore';
 
   interface Props {
     mavLocation?: L.LatLng | { lat: number; lng: number };
@@ -29,13 +23,6 @@
     const index = Math.round(((deg % 360) / 45) % 8);
     return `${deg}° ${directions[index] ?? 'N'}`;
   }
-
-  let darkMode = $derived($darkModeStore);
-  let primaryColor = $derived($primaryColorStore);
-  let secondaryColor = $derived($secondaryColorStore);
-  let tertiaryColor = $derived($tertiaryColorStore);
-  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
-
   let location = $derived(mavLocation ?? $mavLocationStore);
   let headingDeg = $derived($mavHeadingStore);
   let heading = $derived(formatHeading(headingDeg));
@@ -44,7 +31,6 @@
 </script>
 
 <div class="compass rounded-2xl flex flex-col items-center justify-center h-full w-full overflow-auto p-4"
-  style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
 >
   <div id="heading" class="bg-[#62bbff] p-2 text-[#000000] text-xs rounded-full">{heading}</div>
     <div class="compass-container">

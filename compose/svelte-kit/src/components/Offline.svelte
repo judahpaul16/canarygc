@@ -1,32 +1,19 @@
 <script lang="ts">
-  import {
-    darkModeStore,
-    primaryColorStore,
-    secondaryColorStore,
-    tertiaryColorStore
-  } from '../stores/customizationStore';
 
   let isMinimized = $state(false);
-
-  let darkMode = $derived($darkModeStore);
-  let primaryColor = $derived($primaryColorStore);
-  let secondaryColor = $derived(darkMode ? $tertiaryColorStore : $secondaryColorStore);
-  let tertiaryColor = $derived($tertiaryColorStore);
-  let fontColor = $derived(darkMode ? "#ffffff" : "#000000");
-
   function toggleMinimize() {
     isMinimized = !isMinimized;
   }
 </script>
 
-<div class="fixed z-50 transition-all duration-300"
+<div class="elevated-surface fixed z-50 transition-all duration-300"
   class:inset-0={!isMinimized}
   class:bottom-4={isMinimized}
   class:left-4={isMinimized}
   class:flex={!isMinimized}
   class:items-center={!isMinimized}
   class:justify-center={!isMinimized}
-  style="background-color: {isMinimized ? 'transparent' : '#00000080'}; --primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
+  style="background-color: {isMinimized ? 'transparent' : '#00000080'};"
 >
     <div class="container rounded-2xl shadow-lg transition-all duration-300"
       class:max-w-sm={!isMinimized}

@@ -42,9 +42,6 @@
 
   import {
     darkModeStore,
-    primaryColorStore,
-    secondaryColorStore,
-    tertiaryColorStore
   } from '../stores/customizationStore';
   interface Props {
     hideOverlay?: boolean;
@@ -867,10 +864,6 @@
       };
     }
   }
-  let primaryColor = $derived($primaryColorStore);
-  let secondaryColor = $derived($secondaryColorStore);
-  let tertiaryColor = $derived($tertiaryColorStore);
-  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
   let lockView = $derived($lockViewStore);
   // Swap the basemap tiles live when the theme toggles (OpenStreetMap only;
   // satellite has no dark variant).
@@ -1172,7 +1165,7 @@
   }
 </style>
 
-<div class="map-container" style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};">
+<div class="map-container">
   <div id={id !== null ? id : 'map'} class="relative h-full rounded-2xl z-0"></div>
   <ThreeDMap />
   <div class="map-controls absolute top-3 right-2 z-[1] flex flex-col gap-2">

@@ -2,19 +2,8 @@
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import { onMount } from 'svelte';
   import { showModal } from '../lib/overlays';
-  import {
-    darkModeStore,
-    primaryColorStore,
-    secondaryColorStore
-  } from '../stores/customizationStore';
 
   let { compact = false }: { compact?: boolean } = $props();
-
-  let darkMode = $derived($darkModeStore);
-  let primaryColor = $derived($primaryColorStore);
-  let secondaryColor = $derived($secondaryColorStore);
-  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
-
   let containerAspect = 16 / 9;
   let videoAspect = 16 / 9;
   let feedSrc = $state('');
@@ -93,7 +82,6 @@
 </script>
 
 <div id="live-feed-container" class="text-[#ffffff] rounded-2xl h-full relative overflow-hidden"
-  style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --fontColor: {fontColor};"
 >
   <div class="container w-full h-full relative">
     <img id="no-signal" src="no-signal.gif" alt="No Signal" class="absolute top-0 w-full h-full object-cover z-10" />

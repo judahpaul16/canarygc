@@ -1,18 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import {
-    darkModeStore,
-    primaryColorStore,
-    secondaryColorStore,
-    tertiaryColorStore
-  } from '../../stores/customizationStore';
-
-  let darkMode = $derived($darkModeStore);
-  let primaryColor = $derived($primaryColorStore);
-  let secondaryColor = $derived($secondaryColorStore);
-  let tertiaryColor = $derived($tertiaryColorStore);
-  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
-
   let token = $state('');
   let password = $state('');
   let confirm = $state('');
@@ -66,7 +53,6 @@
 
 <div
   class="auth"
-  style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
 >
   <div class="card glass">
     <div class="brand">

@@ -30,13 +30,7 @@
     missionIndexStore,
     missionCompleteStore
   } from '../stores/missionPlanStore';
-  import {
-    darkModeStore,
-    primaryColorStore,
-    secondaryColorStore,
-    tertiaryColorStore,
-    audioCalloutsStore
-  } from '../stores/customizationStore';
+  import { darkModeStore, audioCalloutsStore } from '../stores/customizationStore';
   import { loggedInStore } from '../stores/authStore';
   import { get } from 'svelte/store';
   import Offline from '../components/Offline.svelte';
@@ -67,11 +61,13 @@
   let battery = $derived($mavBatteryStore);
   let online = $derived($onlineStore);
   let darkMode = $derived($darkModeStore);
-  let primaryColor = $derived($primaryColorStore);
-  let secondaryColor = $derived($secondaryColorStore);
-  let tertiaryColor = $derived($tertiaryColorStore);
-  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
   const AUTH_PAGES = new Set(['/', '/login', '/register', '/forgot-password', '/reset-password']);
+
+  // The theme is a single class on <html>; every --primaryColor/--fontColor
+  // resolves from :root or html.dark in app.css, so the whole app follows here.
+  $effect(() => {
+    document.documentElement.classList.toggle('dark', $darkModeStore);
+  });
 
   let currentPath = $derived($page.url.pathname);
   let isNavHidden = $derived(AUTH_PAGES.has(currentPath));
@@ -488,10 +484,25 @@
     audioCalloutsStore.set(next);
     if (!next) stopCallouts();
   }
+
+  // The nav column scrolls, so its tooltips are fixed-positioned to escape the
+  // scroll container's clip and placed beside their button on hover.
+  function navTooltips(container: HTMLElement) {
+    function place(e: Event) {
+      const btn = (e.target as HTMLElement).closest('.nav-button') as HTMLElement | null;
+      const tip = btn?.querySelector('.tooltip') as HTMLElement | null;
+      if (!btn || !tip) return;
+      const r = btn.getBoundingClientRect();
+      tip.style.top = `${r.top + r.height / 2}px`;
+      tip.style.left = `${r.right + 12}px`;
+    }
+    container.addEventListener('mouseover', place);
+    return { destroy: () => container.removeEventListener('mouseover', place) };
+  }
 </script>
 
 <main class="bg-black flex overflow-auto"
-  style="--heightOfDashboard: {heightOfDashboard}px; --primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
+  style="--heightOfDashboard: {heightOfDashboard}px;"
 >
   <div class="bg fixed w-full h-full" style="background-image: url('{darkMode ? 'bg-map.webp' : 'bg-map-light.webp'}');"></div>
   <div class="dark-mode-btn absolute top-2 left-2 z-20">
@@ -501,13 +512,13 @@
   </div>
   <div class="bg-[#0000001f] flex w-full h-full z-10">
     <!-- Desktop Navigation -->
-    <nav class="desktop-nav w-min h-full p-4 grid opacity-0 z-20" style:display={isNavHidden ? 'none' : 'grid'}>
-      <div class="flex-grow flex flex-col items-center">
-        <div class="mb-5">
-          <button onclick={(e) => { e.preventDefault(); handleNavigation('/'); }}>
-            <img src="/logo.png" alt="Logo" class="w-12 h-12 min-w-[3rem] object-contain">
-          </button>
-        </div>
+    <nav class="desktop-nav w-min h-full p-4 flex flex-col opacity-0 z-20" style:display={isNavHidden ? 'none' : 'flex'}>
+      <div class="shrink-0 mb-5 flex justify-center">
+        <button onclick={(e) => { e.preventDefault(); handleNavigation('/'); }}>
+          <img src="/logo.png" alt="Logo" class="w-12 h-12 min-w-[3rem] object-contain">
+        </button>
+      </div>
+      <div class="nav-scroll flex-1 min-h-0 overflow-y-auto flex flex-col items-center" use:navTooltips>
         {#if loggedIn}
         <a href="/dashboard" class="nav-button mb-4 {currentPath === '/dashboard' ? 'active' : ''}">
           <i class="nav-icon fas fa-tachometer-alt"></i>
@@ -544,25 +555,22 @@
           <div class="tooltip text-white">Login</div>
         </a>
         {/if}
-      </div>
-      <div class="flex flex-col justify-self-end gap-3">
-        <button class="nav-button" onclick={toggleAudioCallouts}>
-          <i class="nav-icon fas {$audioCalloutsStore ? 'fa-volume-up' : 'fa-volume-mute'}"></i>
-          <div class="tooltip text-white">Toggle Audio Callouts</div>
-        </button>
-        <div class="separator h-[2px] w-[80%] mx-auto mb-2 rounded-2xl"></div>
-        <button class="nav-button" aria-label="Dark Mode" onclick={toggleDarkMode}>
-          <i class="nav-icon fas {darkMode ? 'fa-sun' : 'fa-moon'}"></i>
-          <div class="tooltip text-white">Toggle Dark Mode</div>
-        </button>
+        <div class="flex flex-col items-center gap-3 mt-auto pt-4">
+          <button class="nav-button" onclick={toggleAudioCallouts}>
+            <i class="nav-icon fas {$audioCalloutsStore ? 'fa-volume-up' : 'fa-volume-mute'}"></i>
+            <div class="tooltip text-white">Toggle Audio Callouts</div>
+          </button>
+          <div class="separator h-[2px] w-[80%] mx-auto mb-2 rounded-2xl"></div>
+          <button class="nav-button" aria-label="Dark Mode" onclick={toggleDarkMode}>
+            <i class="nav-icon fas {darkMode ? 'fa-sun' : 'fa-moon'}"></i>
+            <div class="tooltip text-white">Toggle Dark Mode</div>
+          </button>
+        </div>
       </div>
     </nav>
 
     <!-- Mobile Navigation -->
-    <nav
-      class="mobile-nav p-4 md:hidden flex flex-col z-20"
-      style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
-    >
+    <nav class="mobile-nav p-4 md:hidden flex flex-col z-20">
       <div class="flex justify-between items-center">
         <button class="nav-button" aria-label="Toggle Navigation" onclick={toggleNav}>
           <i class="nav-icon fas fa-bars"></i>
@@ -641,7 +649,6 @@
   }
 
   .desktop-nav {
-    align-content: space-between;
     align-self: center;
     color: var(--fontColor);
     background-color: var(--primaryColor);
@@ -689,17 +696,17 @@
   }
 
   .tooltip {
-    position: absolute;
-    top: 0;
-    left: 0;
-    margin-bottom: 0.5rem;
+    position: fixed;
+    transform: translateY(-50%);
     padding: 0.5rem;
     border-radius: var(--radius-control);
     white-space: nowrap;
+    background-color: rgba(20, 20, 22, 0.92);
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
-    z-index: 1;
+    transition: opacity 0.3s, visibility 0.3s;
+    z-index: 50;
+    pointer-events: none;
   }
 
   .nav-button:hover .tooltip {

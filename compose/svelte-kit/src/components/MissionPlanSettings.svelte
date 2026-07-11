@@ -9,12 +9,6 @@
         type MissionPlanActions
         } from "../stores/missionPlanStore";
     import ManageMissionPlans from "./ManageMissionPlans.svelte";
-    import {
-        darkModeStore,
-        primaryColorStore,
-        secondaryColorStore,
-        tertiaryColorStore
-    } from '../stores/customizationStore';
     import { get } from "svelte/store";
     import { showModal, notify } from '../lib/overlays';
     import { setFlightMode, sendMavlinkCommand } from '../lib/mavlink-client';
@@ -76,13 +70,6 @@
     let actions: MissionPlanActions = $derived($missionPlanActionsStore);
     let title: string = $derived($missionPlanTitleStore);
     let map = $derived($mapStore);
-
-    let darkMode = $derived($darkModeStore);
-    let primaryColor = $derived($primaryColorStore);
-    let secondaryColor = $derived($secondaryColorStore);
-    let tertiaryColor = $derived($tertiaryColorStore);
-    let fontColor = $derived(darkMode ? "#ffffff" : "#000000");
-
     function toggleMissionPlans() {
         let closed = false;
         const close = () => {
@@ -447,7 +434,6 @@
 
 <section
     class="flight-plan-settings rounded-2xl p-4 h-full"
-    style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
 >
     <button onclick={setHomeLocation}>
         <i class="fas fa-home text-[#ffc64a]"></i>

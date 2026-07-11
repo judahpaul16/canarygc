@@ -3,12 +3,6 @@
   import DPad from './DPad.svelte';
   import Weather from './Weather.svelte';
   import { mavModeStore, mavAltitudeStore, mavLocationStore, mavSatelliteStore } from '../stores/mavlinkStore';
-  import {
-    darkModeStore,
-    primaryColorStore,
-    secondaryColorStore,
-    tertiaryColorStore
-  } from '../stores/customizationStore';
   import { sendMavlinkCommand, setFlightMode, setPositionLocal } from '../lib/mavlink-client';
   import { isGuidedLabel } from '../lib/flight-modes';
 
@@ -24,14 +18,7 @@
 
   async function ensureGuided() {
     if (!isGuidedLabel(mavMode)) await setFlightMode('GUIDED');
-  }
-
-  let darkMode = $derived($darkModeStore);
-  let primaryColor = $derived($primaryColorStore);
-  let secondaryColor = $derived($secondaryColorStore);
-  let tertiaryColor = $derived($tertiaryColorStore);
-  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
-  let mavMode = $derived($mavModeStore);
+  }  let mavMode = $derived($mavModeStore);
   let mavLocation = $derived($mavLocationStore);
   let mavSatellite = $derived($mavSatelliteStore);
 
@@ -39,7 +26,6 @@
 </script>
 
 <div class="controls px-10 rounded-2xl h-full flex items-center overflow-x-auto overflow-y-hidden gap-4"
-  style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
   >
   <div class="flex flex-col">
     <div class="map-container flex-shrink-0 h-48 w-48">

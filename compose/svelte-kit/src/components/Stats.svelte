@@ -17,7 +17,7 @@
     mavLocationStore,
     mavlinkParamStore
   } from '../stores/mavlinkStore';
-  import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../stores/customizationStore';
+  import { darkModeStore } from '../stores/customizationStore';
   import { markersStore } from '../stores/mapStore';
   import { get } from 'svelte/store';
 
@@ -314,10 +314,6 @@
     });
   }
   let darkMode = $derived($darkModeStore);
-  let primaryColor = $derived($primaryColorStore);
-  let secondaryColor = $derived(darkMode ? $tertiaryColorStore : $secondaryColorStore);
-  let tertiaryColor = $derived($tertiaryColorStore);
-  let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
   $effect(() => {
     mavModel = $mavModelStore;
     mavType = $mavTypeStore;
@@ -337,8 +333,7 @@
 </script>
 
 <div
-  class="stats p-4 rounded-2xl flex flex-col space-y-2 h-full overflow-y-auto overflow-x-hidden text-sm"
-  style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
+  class="elevated-surface stats p-4 rounded-2xl flex flex-col space-y-2 h-full overflow-y-auto overflow-x-hidden text-sm"
 >
   <h2 class="text-lg font-bold">
     <a href="https://mavlink.io/en/messages/common.html#MAV_AUTOPILOT" target="_blank" title="More Information">

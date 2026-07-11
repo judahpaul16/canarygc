@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { darkModeStore, primaryColorStore, secondaryColorStore, tertiaryColorStore } from '../../stores/customizationStore';
+    import { darkModeStore } from '../../stores/customizationStore';
     import { mavlinkParamStore, type Parameter } from '../../stores/mavlinkStore';
     import { onMount } from 'svelte';
     import { writable, type Writable } from 'svelte/store';
@@ -10,10 +10,6 @@
     const error: Writable<string | null> = writable(null);
     const modified: Writable<string[]> = writable([]);
 
-    let primaryColor = $derived($primaryColorStore);
-    let secondaryColor = $derived($secondaryColorStore);
-    let tertiaryColor = $derived($tertiaryColorStore);
-    let textColor = $derived($darkModeStore ? '#ffffff' : '#000000');
     
     // Parameter type mapping with index signature
     // https://mavlink.io/en/messages/common.html#MAV_PARAM_TYPE
@@ -147,13 +143,12 @@
 
 <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">
     <div class="dashboard w-full grid grid-cols-12 grid-rows-6 gap-4 p-5 rounded-3xl rounded-l-none overflow-auto overflow-x-hidden h-[90vh] max-h-[90vh]"
-        style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --textColor: {textColor}"
     >
-        <div class="user-settings col-span-12 row-span-6 rounded-2xl h-full p-6" style="--primaryColor: {primaryColor}">
+        <div class="user-settings col-span-12 row-span-6 rounded-2xl h-full p-6">
             <div class="flex flex-col h-full">
                 <!-- Header -->
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold" style="color: var(--textColor)">
+                    <h2 class="text-2xl font-bold" style="color: var(--fontColor)">
                         Vehicle Parameters
                         <a target="_blank" href="https://ardupilot.org/dev/docs/mavlink-get-set-params.html" class="relative text-blue-500">
                             <i class="fa-solid fa-square-arrow-up-right"></i>
@@ -238,7 +233,7 @@
                             {#key mavlinkParamStore}
                                 {#each filteredParams as param (param.param_id)}
                                     <tr class="border-b">
-                                        <td class="p-2 param_id" style="color: var(--textColor)">{param.param_id}</td>
+                                        <td class="p-2 param_id" style="color: var(--fontColor)">{param.param_id}</td>
                                         <td class="p-2">
                                             <input 
                                                 type="number"
@@ -285,17 +280,17 @@
     }
 
     .param_id, .param_type {
-        color: var(--textColor);
+        color: var(--fontColor);
     }
 
     .param_value {
         background-color: var(--tertiaryColor);
-        color: var(--textColor);
+        color: var(--fontColor);
     }
 
     .search {
         background-color: var(--tertiaryColor);
-        color: var(--textColor);
+        color: var(--fontColor);
         border: 1px solid var(--tertiaryColor);
     }
 
