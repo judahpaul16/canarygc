@@ -19,10 +19,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
         case 'heartbeat':
             try {
                 const connected = linkAlive();
-                // Connecting can take tens of seconds on a fresh autopilot
-                // boot; the shared attempt runs in the background so the
-                // heartbeat answers immediately with the current state.
-                if (!connected) void initializePort().catch(() => {});
+                if (!connected) initializePort();
                 else await requestStatus();
 
                 if (logs.length > 0) {

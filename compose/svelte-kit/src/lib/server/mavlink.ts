@@ -12,15 +12,15 @@ import {
 import { building } from '$app/environment';
 import { REGISTRY } from '$lib/mavlink-registry'
 
-// Treat the link as down when no packet has arrived within this window, even if
-// the socket never fires 'close' (a silent stall), so the next heartbeat can
-// re-establish it.
+// Once telemetry has flowed, silence beyond this window means a stalled link
+// and the connection recycles. Before the first packet the connection just
+// listens: an autopilot pauses its boot on serial0 until a client connects and
+// can take a minute before the first bytes, and disconnecting mid-boot resets
+// it, so a young quiet connection is left alone.
 const STALE_LINK_MS = 4000;
-// ArduPilot holds its boot on serial0's tcp:wait until a client connects and
-// can take tens of seconds after an EEPROM wipe before the first bytes flow, so
-// the connect wait is generous. A short timeout churns connect/destroy cycles
-// that keep stealing the autopilot's single TCP slot mid-boot.
-const CONNECT_TIMEOUT_MS = 60_000;
+// A connection that never produces a packet recycles eventually, so a dead
+// peer cannot hold the link forever.
+const FIRST_PACKET_RECYCLE_MS = 300_000;
 // Telemetry logs are capped so a long-running station cannot grow them without
 // bound; the cap covers several minutes of backlog for the event-log view.
 const MAX_LOG_ENTRIES = 5000;
@@ -33,46 +33,63 @@ interface MavlinkState {
     reader: MavLinkPacketParser | null;
     online: boolean;
     lastPacketAt: number;
-    connectPromise: Promise<void> | null;
+    connectedAt: number;
     logs: string[];
     newLogs: string[];
     supervisor: ReturnType<typeof setInterval> | null;
     gcsBeat: ReturnType<typeof setInterval> | null;
     lastErrorMessage: string;
+    wasAlive: boolean;
 }
 
 // The link state lives on globalThis so a dev-server module reload reuses the
 // open connection. Module-local state orphans the previous socket on every
 // reload, and an orphan holds SITL's single serial-over-TCP slot, leaving every
-// later connection byte-less until timeout.
+// later connection byte-less.
 const g = globalThis as typeof globalThis & { __canarygcMavlink?: MavlinkState };
 const state: MavlinkState = (g.__canarygcMavlink ??= {
     port: null,
     reader: null,
     online: false,
     lastPacketAt: 0,
-    connectPromise: null,
+    connectedAt: 0,
     logs: [],
     newLogs: [],
     supervisor: null,
     gcsBeat: null,
-    lastErrorMessage: ''
+    lastErrorMessage: '',
+    wasAlive: false
 });
 
-// The server owns the autopilot link and keeps it alive on its own; browser
-// heartbeats read the state this loop maintains rather than driving dialing.
-// This also guarantees the first client an autopilot sees after boot is one
-// stable connection, since SITL binds serial0 to its first client. Prerendering
-// during the build loads this module too, so the loops stay off there.
-if (!building && !state.supervisor) {
-    state.supervisor = setInterval(() => {
-        if (!linkAlive()) initializePort().catch(() => {});
-    }, SUPERVISOR_INTERVAL_MS);
+function superviseLink(): void {
+    const alive = linkAlive();
+    if (alive !== state.wasAlive) {
+        state.wasAlive = alive;
+        console.log(alive ? 'MAVLink link up' : 'MAVLink link down');
+    }
+    if (!state.port) {
+        initializePort();
+        return;
+    }
+    const now = Date.now();
+    const streamedThenStalled = state.lastPacketAt > 0 && now - state.lastPacketAt > STALE_LINK_MS;
+    const neverStreamed = state.lastPacketAt === 0 && now - state.connectedAt > FIRST_PACKET_RECYCLE_MS;
+    if (streamedThenStalled || neverStreamed) teardownConnection();
 }
 
-// A 1 Hz station heartbeat so autopilot GCS-failsafe configurations see the
-// ground station while the link is up.
-if (!building && !state.gcsBeat) {
+// The server owns the autopilot link and keeps it alive on its own; browser
+// heartbeats read the state these loops maintain rather than driving dialing.
+// This also guarantees the first client an autopilot sees after boot is one
+// stable connection, since SITL binds serial0 to its first client. The loops
+// are recreated on module load so a dev reload runs the current logic, and
+// prerendering during the build loads this module too, so they stay off there.
+if (!building) {
+    if (state.supervisor) clearInterval(state.supervisor);
+    state.supervisor = setInterval(superviseLink, SUPERVISOR_INTERVAL_MS);
+
+    // A 1 Hz station heartbeat so autopilot GCS-failsafe configurations see the
+    // ground station while the link is up.
+    if (state.gcsBeat) clearInterval(state.gcsBeat);
     state.gcsBeat = setInterval(() => {
         if (!linkAlive() || !state.port) return;
         const heartbeat = new minimal.Heartbeat();
@@ -102,34 +119,23 @@ function linkAlive(): boolean {
     );
 }
 
-// Concurrent heartbeats share one connect attempt instead of dialing over each
-// other while the previous attempt is still waiting for its first packet.
-function initializePort(): Promise<void> {
-    state.connectPromise ??= doInitialize().finally(() => {
-        state.connectPromise = null;
-    });
-    return state.connectPromise;
-}
-
-async function doInitialize(): Promise<void> {
+// Opens the connection and starts listening; the link counts as alive once the
+// first packet arrives. Safe to call repeatedly, it only dials when no
+// connection exists.
+function initializePort(): void {
+    if (state.port) return;
     try {
-        teardownConnection();
         openConnection();
         setupPacketReader();
         setupPortListeners();
-        await waitForFirstPacket();
-        state.lastErrorMessage = '';
-        pushLog('MAVLink connection initialized');
+        state.connectedAt = Date.now();
     } catch (error) {
-        // A half-open socket left behind would hold the autopilot's single TCP
-        // slot and starve every later attempt.
         teardownConnection();
         const message = (error as Error).message;
         if (message !== state.lastErrorMessage) {
             state.lastErrorMessage = message;
             console.error('Failed to initialize port:', message);
         }
-        throw error;
     }
 }
 
@@ -143,6 +149,7 @@ function teardownConnection(): void {
     }
     state.online = false;
     state.lastPacketAt = 0;
+    state.connectedAt = 0;
 }
 
 function openConnection(): void {
@@ -165,6 +172,10 @@ function setupPacketReader(): void {
         .pipe(new MavLinkPacketParser());
 
     state.reader.on('data', (packet) => {
+        if (state.lastPacketAt === 0) {
+            state.lastErrorMessage = '';
+            pushLog('MAVLink connection initialized');
+        }
         state.online = true;
         state.lastPacketAt = Date.now();
         const clazz = REGISTRY[packet.header.msgid];
@@ -187,39 +198,16 @@ function setupPortListeners(): void {
 }
 
 function handlePortClose(): void {
-    state.port = null;
-    state.reader = null;
-    state.online = false;
+    teardownConnection();
     pushLog('MAVLink connection closed');
 }
 
 function handlePortError(err: Error): void {
-    state.online = false;
-    pushLog(`MAVLink connection error: ${err.message}`);
-}
-
-function waitForFirstPacket(): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-        const cleanup = () => {
-            clearTimeout(timeout);
-            state.reader?.off('data', onData);
-            state.port?.off('error', onError);
-        };
-        const timeout = setTimeout(() => {
-            cleanup();
-            reject(new Error('Timed out waiting for MAVLink data'));
-        }, CONNECT_TIMEOUT_MS);
-        const onData = () => {
-            cleanup();
-            resolve();
-        };
-        const onError = (err: Error) => {
-            cleanup();
-            reject(new Error(`Error connecting to the MAVLink server: ${err.message}`));
-        };
-        state.reader!.once('data', onData);
-        (state.port as Socket).once('error', onError);
-    });
+    teardownConnection();
+    if (err.message !== state.lastErrorMessage) {
+        state.lastErrorMessage = err.message;
+        pushLog(`MAVLink connection error: ${err.message}`);
+    }
 }
 
 async function requestStatus() {
