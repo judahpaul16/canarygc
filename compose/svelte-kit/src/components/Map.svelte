@@ -236,19 +236,19 @@
         updateLocationDisplay();
     });
 
+    // A single click inspects (combined popup); a double-click adds a waypoint,
+    // so the two intents never fight. Leaflet's double-click zoom is off here
+    // because that gesture now places waypoints.
+    leafletMap.doubleClickZoom.disable();
     leafletMap.on('click', (e: L.LeafletMouseEvent) => {
-      // A click on any overlay or marker opens the combined popup instead of
-      // dropping a waypoint.
-      if (openCombinedPopup(e.latlng)) return;
-      if (Object.keys(actions).length > 1) {
-        const lat = e.latlng.lat;
-        const lon = e.latlng.lng;
-        const index = Object.keys(actions).length;
-        const action = { type: 'NAV_WAYPOINT', lat, lon, alt: null, notes: '', param1: null, param2: null, param3: null, param4: null };
-        actions[index] = action;
-        missionPlanActionsStore.set(actions);
-        updateMap(index);
-      }
+      openCombinedPopup(e.latlng);
+    });
+    leafletMap.on('dblclick', (e: L.LeafletMouseEvent) => {
+      if (hideOverlay) return;
+      const index = Object.keys(actions).length;
+      actions[index] = { type: 'NAV_WAYPOINT', lat: e.latlng.lat, lon: e.latlng.lng, alt: null, notes: '', param1: null, param2: null, param3: null, param4: null };
+      missionPlanActionsStore.set(actions);
+      updateMap(index);
     });
 
     updateAttributionVisibility();
@@ -278,9 +278,16 @@
 
     const sections: string[] = [];
     if (get(showAirspaceStore)) {
-      for (const zone of get(airspaceZonesStore)) {
-        if (pointInPolygon(point, zone.polygon)) sections.push(airspacePopupHtml(zone));
-      }
+      // Order by enforcement: hard no-fly first, then whichever controlled
+      // airspace reaches lowest, so the layer that actually governs a drone at
+      // this spot sits at the top and high-floor airspace (e.g. Class A) last.
+      const zones = get(airspaceZonesStore)
+        .filter((zone) => pointInPolygon(point, zone.polygon))
+        .sort((a, b) => {
+          if (a.restricted !== b.restricted) return a.restricted ? -1 : 1;
+          return (a.lowerM ?? 0) - (b.lowerM ?? 0);
+        });
+      for (const zone of zones) sections.push(airspacePopupHtml(zone));
     }
     if (get(showCeilingsStore)) {
       for (const cell of get(ceilingCellsStore)) {
@@ -630,8 +637,17 @@
         const iconIndex = action_types.indexOf(type);
         
         if (!isNaN(lat) && !isNaN(lon) && iconIndex >= 0) {
-          const marker = L.marker([lat, lon], { icon: icons[iconIndex] })
-            .on('click', (ev) => openCombinedPopup((ev as L.LeafletMouseEvent).latlng));
+          const numericIndex = Number(index);
+          const marker = L.marker([lat, lon], { icon: icons[iconIndex], draggable: !hideOverlay })
+            .on('click', (ev) => openCombinedPopup((ev as L.LeafletMouseEvent).latlng))
+            .on('dragend', () => {
+              const ll = marker.getLatLng();
+              const current = get(missionPlanActionsStore);
+              if (!current[numericIndex]) return;
+              current[numericIndex] = { ...current[numericIndex], lat: ll.lat, lon: ll.lng };
+              missionPlanActionsStore.set(current);
+              updateMarkersAndPolylines();
+            });
           try { leafletMap.addLayer(marker); } catch { return; }
           markers.set(index, marker);
         }
