@@ -402,8 +402,7 @@
   }
 
   onMount(() => {
-    const bg = document.querySelector('.bg') as HTMLElement | null;
-    if (bg) bg.style.background = "url('bg-map.webp') no-repeat center center fixed";
+    if (localStorage.getItem('darkMode') === 'false') darkModeStore.set(false);
 
     const startupTimer = setTimeout(() => {
       checkLoadedMission();
@@ -465,23 +464,12 @@
   }
 
   function toggleDarkMode() {
-    const map = document.getElementById('map');
     const next = !get(darkModeStore);
     darkModeStore.set(next);
+    localStorage.setItem('darkMode', String(next));
+    const map = document.getElementById('map');
     if (map && get(mapTypeStore) !== 'Satellite') {
       map.classList.toggle('dark', next);
-    }
-    const bg = document.querySelector('.bg') as HTMLElement | null;
-    if (next) {
-      if (bg) bg.style.background = "url('bg-map.webp') no-repeat center center fixed";
-      primaryColorStore.set('#1c1c1e');
-      secondaryColorStore.set('#121212');
-      tertiaryColorStore.set('#2d2d2d');
-    } else {
-      if (bg) bg.style.background = "url('bg-map-light.webp') no-repeat center center fixed";
-      primaryColorStore.set('#ffffff');
-      secondaryColorStore.set('#e7e9ef');
-      tertiaryColorStore.set('#d7d7d7');
     }
   }
 
@@ -495,7 +483,7 @@
 <main class="bg-black flex overflow-auto"
   style="--heightOfDashboard: {heightOfDashboard}px; --primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
 >
-  <div class="bg fixed w-full h-full "></div>
+  <div class="bg fixed w-full h-full" style="background-image: url('{darkMode ? 'bg-map.webp' : 'bg-map-light.webp'}');"></div>
   <div class="dark-mode-btn absolute top-2 left-2 z-20">
     <button class="nav-button" aria-label="Toggle Dark Mode" onclick={toggleDarkMode}>
       <i class="nav-icon fas {darkMode ? 'fa-sun' : 'fa-moon'}"></i>

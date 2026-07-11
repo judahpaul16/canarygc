@@ -150,13 +150,8 @@
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
     }
-    if (darkMode) {
-      if (mapType.toLowerCase() !== 'satellite') document.getElementById('map')!.classList.add('dark');
-      (document.querySelector('.bg') as HTMLElement).style.background = "url('bg-map.webp') no-repeat center center fixed";
-      primaryColorStore.set('#1c1c1e');
-    } else {
-      (document.querySelector('.bg') as HTMLElement).style.background = "url('bg-map-light.webp') no-repeat center center fixed";
-      primaryColorStore.set('#ffffff');
+    if (darkMode && mapType.toLowerCase() !== 'satellite') {
+      document.getElementById('map')!.classList.add('dark');
     }
 
     if (hideOverlay) document.querySelectorAll('.map-btn i').forEach((element) => { (element as HTMLElement).style.fontSize = 'small'; });
