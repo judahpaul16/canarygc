@@ -123,8 +123,19 @@
     });
   });
 
+  // One missed poll (a dev-server reload, a momentary hiccup) must not flash
+  // the offline modal; the link counts as down after several misses in a row.
+  const OFFLINE_AFTER_MISSES = 3;
+  let consecutiveMisses = 0;
+
   function setOnline(value: boolean) {
-    if (online !== value) onlineStore.set(value);
+    if (value) {
+      consecutiveMisses = 0;
+      if (!online) onlineStore.set(true);
+      return;
+    }
+    consecutiveMisses += 1;
+    if (consecutiveMisses >= OFFLINE_AFTER_MISSES && online) onlineStore.set(false);
   }
 
   async function checkOnlineStatus() {
