@@ -23,25 +23,30 @@
     import { parseMissionFile } from '../lib/mission-import';
     import { isPX4 } from '../lib/flight-modes';
     import { mavModelStore } from '../stores/mavlinkStore';
+    import { airspaceZonesStore } from '../stores/safetyStore';
 
     const SAVE_FEEDBACK_MS = 3000;
     const DEGREES_TO_E7 = 1e7;
 
     function optimizePath() {
-        const result = optimizeMissionPath(get(missionPlanActionsStore));
+        const result = optimizeMissionPath(get(missionPlanActionsStore), get(airspaceZonesStore));
         if (!result.reordered) {
             notify({
                 title: 'Path already optimal',
-                content: 'The current waypoint order is already the shortest route.',
+                content: 'The current waypoint order is already the shortest clear route.',
                 duration: SAVE_FEEDBACK_MS
             });
             return;
         }
-        const savedM = Math.round(result.originalMeters - result.optimizedMeters);
         missionPlanActionsStore.set(result.actions);
+        const savedM = Math.round(result.originalMeters - result.optimizedMeters);
+        const detail =
+            result.avoidedCrossings > 0
+                ? `Rerouted to clear ${result.avoidedCrossings} restricted-airspace crossing${result.avoidedCrossings > 1 ? 's' : ''}.`
+                : `Reordered waypoints for the shortest route, saving about ${savedM} m of travel.`;
         notify({
             title: 'Path optimized',
-            content: `Reordered waypoints for the shortest route, saving about ${savedM} m of travel. Review the plan before flying.`,
+            content: `${detail} Review the plan before flying.`,
             duration: SAVE_FEEDBACK_MS * 2
         });
     }

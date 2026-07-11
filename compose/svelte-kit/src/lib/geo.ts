@@ -69,3 +69,46 @@ export function pointInPolygon(point: LatLon, polygon: number[][][]): boolean {
   }
   return true;
 }
+
+// Coordinates are treated as planar (x = lon, y = lat), which is accurate over
+// the local scale of a single mission leg.
+function cross(a: LatLon, b: LatLon, c: LatLon): number {
+  return (b.lon - a.lon) * (c.lat - a.lat) - (b.lat - a.lat) * (c.lon - a.lon);
+}
+
+function onSegment(a: LatLon, b: LatLon, c: LatLon): boolean {
+  return (
+    Math.min(a.lon, b.lon) <= c.lon &&
+    c.lon <= Math.max(a.lon, b.lon) &&
+    Math.min(a.lat, b.lat) <= c.lat &&
+    c.lat <= Math.max(a.lat, b.lat)
+  );
+}
+
+// True when segment a-b crosses segment c-d, including collinear overlap.
+export function segmentsIntersect(a: LatLon, b: LatLon, c: LatLon, d: LatLon): boolean {
+  const d1 = cross(a, b, c);
+  const d2 = cross(a, b, d);
+  const d3 = cross(c, d, a);
+  const d4 = cross(c, d, b);
+  if (d1 > 0 !== d2 > 0 && d3 > 0 !== d4 > 0) return true;
+  if (d1 === 0 && onSegment(a, b, c)) return true;
+  if (d2 === 0 && onSegment(a, b, d)) return true;
+  if (d3 === 0 && onSegment(c, d, a)) return true;
+  if (d4 === 0 && onSegment(c, d, b)) return true;
+  return false;
+}
+
+// True when the leg a-b enters a GeoJSON polygon: either endpoint inside, or the
+// leg crossing the outer ring.
+export function segmentIntersectsPolygon(a: LatLon, b: LatLon, polygon: number[][][]): boolean {
+  if (polygon.length === 0) return false;
+  if (pointInPolygon(a, polygon) || pointInPolygon(b, polygon)) return true;
+  const outer = polygon[0];
+  for (let i = 0, j = outer.length - 1; i < outer.length; j = i++) {
+    const c: LatLon = { lon: outer[j][0], lat: outer[j][1] };
+    const d: LatLon = { lon: outer[i][0], lat: outer[i][1] };
+    if (segmentsIntersect(a, b, c, d)) return true;
+  }
+  return false;
+}

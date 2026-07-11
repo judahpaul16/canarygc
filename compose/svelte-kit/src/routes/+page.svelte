@@ -24,7 +24,7 @@
     {
       icon: 'fa-route',
       title: 'Mission planner',
-      desc: 'Plot waypoints on 2D and 3D maps and optimize the route in one click.'
+      desc: 'Plot and edit waypoints on synced 2D and 3D maps.'
     },
     {
       icon: 'fa-shield-halved',
@@ -45,6 +45,16 @@
       icon: 'fa-video',
       title: 'On-board camera',
       desc: 'Live video from the aircraft, streamed to the browser over WebRTC.'
+    },
+    {
+      icon: 'fa-wand-magic-sparkles',
+      title: 'Smart path optimization',
+      desc: 'One-click routing that shortens the flight and steers legs clear of restricted airspace.'
+    },
+    {
+      icon: 'fa-file-import',
+      title: 'Mission import',
+      desc: 'Load QGroundControl .plan and Mission Planner .waypoints files straight into the planner.'
     }
   ];
 

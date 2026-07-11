@@ -1,4 +1,4 @@
-import { haversineMeters, pointInPolygon, type LatLon } from './geo';
+import { haversineMeters, pointInPolygon, segmentIntersectsPolygon, type LatLon } from './geo';
 import type { MissionPlanActions, MissionPlanItem } from '../stores/missionPlanStore';
 
 // Pre-flight validation for a mission. These checks are advisory guards that
@@ -96,6 +96,25 @@ export function validateMission(
           severity: zone.restricted ? 'error' : 'warning',
           index: i,
           message: `Waypoint ${i} is inside ${zone.restricted ? 'restricted' : 'controlled'} airspace: ${zone.name}.`
+        });
+      }
+    }
+  }
+
+  // Flag legs that pass through airspace even when both endpoints sit outside it.
+  const positional = indices.map((i) => ({ i, item: actions[i] })).filter((e) => isPositional(e.item));
+  for (let n = 0; n < positional.length - 1; n++) {
+    const from = positional[n];
+    const to = positional[n + 1];
+    const a: LatLon = { lat: from.item.lat, lon: from.item.lon };
+    const b: LatLon = { lat: to.item.lat, lon: to.item.lon };
+    for (const zone of airspace) {
+      if (pointInPolygon(a, zone.polygon) || pointInPolygon(b, zone.polygon)) continue;
+      if (segmentIntersectsPolygon(a, b, zone.polygon)) {
+        violations.push({
+          severity: zone.restricted ? 'error' : 'warning',
+          index: to.i,
+          message: `The leg from waypoint ${from.i} to ${to.i} crosses ${zone.restricted ? 'restricted' : 'controlled'} airspace: ${zone.name}.`
         });
       }
     }
