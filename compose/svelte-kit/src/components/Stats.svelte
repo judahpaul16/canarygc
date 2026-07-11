@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { run } from 'svelte/legacy';
-
   import {
     missionPlanTitleStore,
     missionCountStore,
@@ -61,7 +59,7 @@
     mavMode = $bindable(get(mavModeStore))
   }: Props = $props();
 
-  let markers = $state(get(markersStore));
+  let markers = $derived($markersStore);
   let progressSamples: { progress: number, timestamp: number }[] = [];
 
 
@@ -320,37 +318,20 @@
   let secondaryColor = $derived(darkMode ? $tertiaryColorStore : $secondaryColorStore);
   let tertiaryColor = $derived($tertiaryColorStore);
   let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
-  run(() => {
+  $effect(() => {
     mavModel = $mavModelStore;
-  });
-  run(() => {
     mavType = $mavTypeStore;
-  });
-  run(() => {
     isArmed = $mavArmedStateStore;
-  });
-  run(() => {
     systemState = $mavStateStore;
-  });
-  run(() => {
     mavMode = $mavModeStore;
-  });
-  run(() => {
     batteryStatus = $mavBatteryStore;
-  });
-  run(() => {
     altitude = $mavAltitudeStore;
-  });
-  run(() => {
     speed = $mavSpeedStore;
   });
   let missionPlanTitle = $derived($missionPlanTitleStore);
   let mavLocation = $derived($mavLocationStore);
   let missionProgress = $derived(getMissionProgress($missionIndexStore, $missionCountStore, $mavLocationStore as L.LatLng));
   let missionLoaded = $derived($missionPlanTitleStore !== '');
-  run(() => {
-    markers = $markersStore;
-  });
   let eta = $derived(calculateETA(missionProgress));
   let remainingDistance = $derived(calculateRemainingDistance($missionIndexStore, $mavLocationStore, $markersStore));
 </script>

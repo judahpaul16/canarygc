@@ -1,7 +1,5 @@
 <script lang="ts">
-  import { run } from 'svelte/legacy';
-
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import {
     mapStore,
@@ -42,11 +40,11 @@
   let { hideOverlay = $bindable(false), mavLocation = $bindable(), id = null }: Props = $props();
 
   let L: typeof import('leaflet');
-  let leafletMap: L.Map | null = $state(get(mapStore));
-  let threeDMap: pkg.Map | null = $state(get(threeDMapStore));
-  let mapType: string = $state(get(mapTypeStore));
-  let currentTileLayer = $state(get(mapTileLayerStore));
-  let zoom = $state(get(mapZoomStore));
+  let leafletMap: L.Map | null = $derived($mapStore);
+  let threeDMap: pkg.Map | null = $derived($threeDMapStore);
+  let mapType: string = $derived($mapTypeStore);
+  let currentTileLayer = $derived($mapTileLayerStore);
+  let zoom = $derived($mapZoomStore);
 
   let actions: MissionPlanActions = $state({});
   let action_types = [
@@ -68,7 +66,7 @@
   let polylines3D: string[] = [];
   let mavHeading: number = $state(0);
   let mavMarker: L.Marker;
-  let darkMode = $state(get(darkModeStore));
+  let darkMode = $derived($darkModeStore);
   
 
 
@@ -583,62 +581,49 @@
       };
     }
   }
-  run(() => {
-    darkMode = $darkModeStore;
-  });
   let primaryColor = $derived($primaryColorStore);
   let secondaryColor = $derived($secondaryColorStore);
   let tertiaryColor = $derived($tertiaryColorStore);
   let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
   let lockView = $derived($lockViewStore);
-  run(() => {
-    zoom = $mapZoomStore;
-  });
-  run(() => {
-    leafletMap = $mapStore;
-  });
-  run(() => {
-    threeDMap = $threeDMapStore;
-  });
-  run(() => {
-    mapType = $mapTypeStore;
-  });
-  run(() => {
-    currentTileLayer = $mapTileLayerStore;
-  });
-  run(() => {
+  $effect.pre(() => {
     mavHeading = $mavHeadingStore;
-    updateMAVMarker();
+    untrack(() => updateMAVMarker());
   });
-  run(() => {
+  $effect.pre(() => {
     mavLocation = $mavLocationStore;
-    updateMAVMarker();
+    untrack(() => updateMAVMarker());
   });
-  run(() => {
+  $effect.pre(() => {
     actions = $missionPlanActionsStore;
-    removeAllMarkers();
-    updateMAVMarker();
-    Object.keys(actions).forEach((index) => {
-      updateMap(Number(index));
+    untrack(() => {
+      removeAllMarkers();
+      updateMAVMarker();
+      Object.keys(actions).forEach((index) => {
+        updateMap(Number(index));
+      });
     });
   });
-  run(() => {
+  $effect.pre(() => {
     markers = $markersStore;
-    Object.keys(actions).forEach((index) => {
-      updateMap(Number(index));
+    untrack(() => {
+      Object.keys(actions).forEach((index) => {
+        updateMap(Number(index));
+      });
     });
   });
-  run(() => {
+  $effect.pre(() => {
     polylines = $polylinesStore;
-    Object.keys(actions).forEach((index) => {
-      updateMap(Number(index));
+    untrack(() => {
+      Object.keys(actions).forEach((index) => {
+        updateMap(Number(index));
+      });
     });
   });
-  run(() => {
-    // Re-render the overlay whenever the airspace data or toggle changes.
+  $effect.pre(() => {
     void $airspaceZonesStore;
     void $showAirspaceStore;
-    if (!hideOverlay) renderAirspace();
+    if (!hideOverlay) untrack(() => renderAirspace());
   });
 </script>
 
