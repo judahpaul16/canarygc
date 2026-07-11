@@ -495,7 +495,7 @@
       <div class="flex-grow flex flex-col items-center">
         <div class="mb-5">
           <button onclick={(e) => { e.preventDefault(); handleNavigation('/'); }}>
-            <img src="/logo.png" alt="Logo" class="w-12 h-12">
+            <img src="/logo.png" alt="Logo" class="w-12 h-12 min-w-[3rem] object-contain">
           </button>
         </div>
         {#if loggedIn}
@@ -551,7 +551,7 @@
         </button>
         <span class="text-xl font-semibold">Canary Ground Control</span>
         <a href="/" onclick={(e) => { e.preventDefault(); handleNavigation('/'); }}>
-          <img src="/logo.png" alt="Logo" class="w-8 h-8">
+          <img src="/logo.png" alt="Logo" class="w-8 h-8 min-w-[2rem] object-contain">
         </a>
       </div>
       <div class={`mobile-nav-links ${isNavOpen ? 'block' : 'hidden'} flex flex-col items-center mt-4`}>
