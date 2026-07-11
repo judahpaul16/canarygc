@@ -1,4 +1,5 @@
-import { haversineMeters, pointInPolygon, segmentIntersectsPolygon, type LatLon } from './geo';
+import { haversineMeters, pointInPolygon, pointToSegmentMeters, segmentIntersectsPolygon, type LatLon } from './geo';
+import { feetToMeters, type CeilingCell, type Obstacle } from './hazards';
 import type { MissionPlanActions, MissionPlanItem } from '../stores/missionPlanStore';
 
 // Pre-flight validation for a mission. These checks are advisory guards that
@@ -39,6 +40,14 @@ export const DEFAULT_SAFETY_LIMITS: SafetyLimits = {
   home: null
 };
 
+export interface Hazards {
+  ceilings: CeilingCell[];
+  obstacles: Obstacle[];
+}
+
+const OBSTACLE_WARN_RADIUS_M = 100;
+const OBSTACLE_CLEARANCE_M = 10;
+
 function isPositional(item: MissionPlanItem): boolean {
   return item.type.startsWith('NAV_') && item.lat !== 0 && item.lon !== 0;
 }
@@ -46,7 +55,8 @@ function isPositional(item: MissionPlanItem): boolean {
 export function validateMission(
   actions: MissionPlanActions,
   limits: SafetyLimits,
-  airspace: AirspaceZone[] = []
+  airspace: AirspaceZone[] = [],
+  hazards: Hazards = { ceilings: [], obstacles: [] }
 ): SafetyViolation[] {
   const violations: SafetyViolation[] = [];
   const indices = Object.keys(actions)
@@ -99,6 +109,25 @@ export function validateMission(
         });
       }
     }
+
+    for (const cell of hazards.ceilings) {
+      if (!pointInPolygon(point, cell.polygon)) continue;
+      const ceilingM = feetToMeters(cell.ceilingFt);
+      if (cell.ceilingFt === 0) {
+        violations.push({
+          severity: 'warning',
+          index: i,
+          message: `Waypoint ${i} sits in a 0 ft LAANC grid square${cell.airport ? ` (${cell.airport})` : ''}; flying here needs manual FAA authorization.`
+        });
+      } else if (alt > ceilingM) {
+        violations.push({
+          severity: 'warning',
+          index: i,
+          message: `Waypoint ${i} altitude ${alt} m is above the ${cell.ceilingFt} ft (${Math.round(ceilingM)} m) LAANC ceiling here${cell.airport ? ` (${cell.airport})` : ''}.`
+        });
+      }
+      break;
+    }
   }
 
   // Flag legs that pass through airspace even when both endpoints sit outside it.
@@ -115,6 +144,22 @@ export function validateMission(
           severity: zone.restricted ? 'error' : 'warning',
           index: to.i,
           message: `The leg from waypoint ${from.i} to ${to.i} crosses ${zone.restricted ? 'restricted' : 'controlled'} airspace: ${zone.name}.`
+        });
+      }
+    }
+
+    // The leg's guaranteed floor is the lower endpoint altitude; an obstacle
+    // taller than that minus the clearance margin near the leg gets flagged.
+    const legFloorM = Math.min(from.item.alt ?? 0, to.item.alt ?? 0);
+    for (const obstacle of hazards.obstacles) {
+      const obstacleM = feetToMeters(obstacle.aglFt);
+      if (legFloorM > obstacleM + OBSTACLE_CLEARANCE_M) continue;
+      const distance = pointToSegmentMeters({ lat: obstacle.lat, lon: obstacle.lon }, a, b);
+      if (distance <= OBSTACLE_WARN_RADIUS_M) {
+        violations.push({
+          severity: 'warning',
+          index: to.i,
+          message: `The leg from waypoint ${from.i} to ${to.i} passes ${Math.round(distance)} m from a ${Math.round(obstacleM)} m ${obstacle.type.toLowerCase()}; plan at least ${Math.round(obstacleM + OBSTACLE_CLEARANCE_M)} m there or route around it.`
         });
       }
     }

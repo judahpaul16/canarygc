@@ -99,6 +99,24 @@ export function segmentsIntersect(a: LatLon, b: LatLon, c: LatLon, d: LatLon): b
   return false;
 }
 
+// Shortest distance in meters from a point to the segment a-b, on a local
+// equirectangular projection, which is accurate at mission-leg scale.
+export function pointToSegmentMeters(p: LatLon, a: LatLon, b: LatLon): number {
+  const metersPerDegLat = (Math.PI / 180) * EARTH_RADIUS_M;
+  const metersPerDegLon = metersPerDegLat * Math.cos(p.lat * DEG_TO_RAD);
+  const ax = (a.lon - p.lon) * metersPerDegLon;
+  const ay = (a.lat - p.lat) * metersPerDegLat;
+  const bx = (b.lon - p.lon) * metersPerDegLon;
+  const by = (b.lat - p.lat) * metersPerDegLat;
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lengthSq = dx * dx + dy * dy;
+  const t = lengthSq === 0 ? 0 : Math.max(0, Math.min(1, -(ax * dx + ay * dy) / lengthSq));
+  const cx = ax + t * dx;
+  const cy = ay + t * dy;
+  return Math.sqrt(cx * cx + cy * cy);
+}
+
 // True when the leg a-b enters a GeoJSON polygon: either endpoint inside, or the
 // leg crossing the outer ring.
 export function segmentIntersectsPolygon(a: LatLon, b: LatLon, polygon: number[][][]): boolean {

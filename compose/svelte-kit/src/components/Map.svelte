@@ -19,9 +19,17 @@
   } from '../stores/missionPlanStore';
   import { get } from 'svelte/store';
   import { showModal } from '../lib/overlays';
-  import { airspaceZonesStore, showAirspaceStore } from '../stores/safetyStore';
+  import {
+    airspaceZonesStore,
+    showAirspaceStore,
+    ceilingCellsStore,
+    showCeilingsStore,
+    obstaclesStore,
+    showObstaclesStore
+  } from '../stores/safetyStore';
   import { airspaceColor, airspacePopupHtml } from '../lib/airspace';
-  import { refreshAirspace } from '../lib/preflight';
+  import { ceilingColor, ceilingPopupHtml, obstacleColor, obstaclePopupHtml } from '../lib/hazards';
+  import { refreshAirspace, refreshHazards } from '../lib/preflight';
   import ThreeDMap from './3DMap.svelte';
   import pkg from 'maplibre-gl';
   const { Marker } = pkg;
@@ -273,6 +281,65 @@
   function toggleAirspace() {
     showAirspaceStore.set(!get(showAirspaceStore));
     if (get(showAirspaceStore)) refreshAirspace(get(missionPlanActionsStore));
+  }
+
+  function toggleCeilings() {
+    showCeilingsStore.set(!get(showCeilingsStore));
+    if (get(showCeilingsStore)) refreshHazards(get(missionPlanActionsStore));
+  }
+
+  function toggleObstacles() {
+    showObstaclesStore.set(!get(showObstaclesStore));
+    if (get(showObstaclesStore)) refreshHazards(get(missionPlanActionsStore));
+  }
+
+  let ceilingLayer: L.LayerGroup | null = null;
+  let obstacleLayer: L.LayerGroup | null = null;
+
+  function renderCeilings() {
+    if (!L || !leafletMap) return;
+    ceilingLayer?.remove();
+    if (!get(showCeilingsStore)) {
+      ceilingLayer = null;
+      return;
+    }
+    const group = L.layerGroup();
+    for (const cell of get(ceilingCellsStore)) {
+      for (const ring of cell.polygon) {
+        const latlngs = ring.map(([lon, lat]) => [lat, lon] as [number, number]);
+        L.polygon(latlngs, {
+          color: ceilingColor(cell.ceilingFt),
+          weight: 0.5,
+          fillOpacity: 0.22
+        })
+          .bindPopup(ceilingPopupHtml(cell))
+          .addTo(group);
+      }
+    }
+    group.addTo(leafletMap);
+    ceilingLayer = group;
+  }
+
+  function renderObstacles() {
+    if (!L || !leafletMap) return;
+    obstacleLayer?.remove();
+    if (!get(showObstaclesStore)) {
+      obstacleLayer = null;
+      return;
+    }
+    const group = L.layerGroup();
+    for (const obstacle of get(obstaclesStore)) {
+      L.circleMarker([obstacle.lat, obstacle.lon], {
+        radius: 5,
+        color: obstacleColor(obstacle.aglFt),
+        weight: 2,
+        fillOpacity: 0.7
+      })
+        .bindPopup(obstaclePopupHtml(obstacle))
+        .addTo(group);
+    }
+    group.addTo(leafletMap);
+    obstacleLayer = group;
   }
 
   function toggleFullScreen(element: HTMLElement) {
@@ -614,6 +681,16 @@
     void $showAirspaceStore;
     if (!hideOverlay) untrack(() => renderAirspace());
   });
+  $effect.pre(() => {
+    void $ceilingCellsStore;
+    void $showCeilingsStore;
+    if (!hideOverlay) untrack(() => renderCeilings());
+  });
+  $effect.pre(() => {
+    void $obstaclesStore;
+    void $showObstaclesStore;
+    if (!hideOverlay) untrack(() => renderObstacles());
+  });
 </script>
 
 <style lang="css">
@@ -688,6 +765,12 @@
     {#if !hideOverlay}
       <button class="map-btn" aria-label="Toggle airspace overlay" title="Toggle airspace overlay" onclick={toggleAirspace}>
         <i class="fas fa-tower-broadcast {$showAirspaceStore ? 'text-[#f24e4e]' : ''}"></i>
+      </button>
+      <button class="map-btn" aria-label="Toggle LAANC ceiling grid" title="Toggle LAANC ceiling grid (max pre-approved altitude per square)" onclick={toggleCeilings}>
+        <i class="fas fa-border-all {$showCeilingsStore ? 'text-[#22c55e]' : ''}"></i>
+      </button>
+      <button class="map-btn" aria-label="Toggle obstacles" title="Toggle obstacles (towers and tall structures from the FAA obstacle file)" onclick={toggleObstacles}>
+        <i class="fas fa-tower-observation {$showObstaclesStore ? 'text-[#f97316]' : ''}"></i>
       </button>
     {/if}
   </div>
