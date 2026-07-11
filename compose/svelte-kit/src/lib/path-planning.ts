@@ -1,158 +1,283 @@
-import { haversineMeters, pathLengthMeters, segmentIntersectsPolygon, type LatLon } from './geo';
+import { haversineMeters, pointInRing, type LatLon } from './geo';
+import { feetToMeters, type Obstacle } from './hazards';
 import type { MissionPlanActions, MissionPlanItem } from '../stores/missionPlanStore';
 import type { AirspaceZone } from './safety';
 
-// Smart mission pathing: reorder the movement waypoints for the shortest route
-// while keeping fixed points (takeoff, RTL, land) in place. A nearest-neighbor
-// seed is refined with 2-opt, the standard open-path TSP heuristic. When
-// restricted airspace is supplied, legs that cross a no-fly zone carry a large
-// cost penalty so the search prefers routes that stay clear of it.
+// Smart mission pathing routes around hazards without changing the order the
+// operator laid out. It keeps every waypoint in sequence and, where a leg would
+// cross restricted airspace or pass too close to a tall obstacle, inserts detour
+// waypoints that go around the hazard (a visibility-graph shortest path over the
+// buffered hazard corners). A waypoint that lands inside restricted airspace is
+// nudged just outside it. The route is never reordered.
 
-const MAX_2OPT_PASSES = 20;
-// Dominates any realistic leg distance, so clearing one no-fly-zone crossing
-// always outweighs a shorter route.
-const CROSSING_PENALTY_M = 1_000_000;
+const EARTH_M_PER_DEG_LAT = 111_320;
+// Buffer hazards outward by these margins so the routed path clears them rather
+// than grazing the boundary.
+const AIRSPACE_MARGIN_M = 60;
+const OBSTACLE_KEEPOUT_M = 100;
+const OBSTACLE_CLEARANCE_M = 10;
+const CIRCLE_SIDES = 10;
+// Bounds the visibility graph so a dense hazard field cannot stall the click.
+const MAX_GRAPH_VERTICES = 160;
 
-// Commands whose position is not a free waypoint, so they keep their slot.
-const FIXED_TYPES = new Set([
-  'NAV_TAKEOFF',
-  'NAV_RETURN_TO_LAUNCH',
-  'NAV_LAND',
-  'NAV_LOITER_UNLIM'
-]);
+const FIXED_TYPES = new Set(['NAV_TAKEOFF', 'NAV_RETURN_TO_LAUNCH', 'NAV_LAND', 'NAV_LOITER_UNLIM']);
 
-// Commands with no lat/lon of their own (servo, delay, yaw, ...) stay attached
-// to the waypoint they follow rather than being reordered independently.
+function hasPosition(item: MissionPlanItem): boolean {
+  return item.lat !== 0 || item.lon !== 0;
+}
+
+// A free waypoint the planner may nudge out of a no-fly zone; takeoff, land, and
+// loiter keep their spot.
 function isMovement(item: MissionPlanItem): boolean {
-  return item.type.startsWith('NAV_') && !FIXED_TYPES.has(item.type);
+  return item.type.startsWith('NAV_') && !FIXED_TYPES.has(item.type) && hasPosition(item);
 }
 
 function toLatLon(item: MissionPlanItem): LatLon {
   return { lat: item.lat, lon: item.lon };
 }
 
-function nearestNeighborOrder(start: LatLon, items: MissionPlanItem[]): MissionPlanItem[] {
-  const remaining = [...items];
-  const ordered: MissionPlanItem[] = [];
-  let current = start;
-  while (remaining.length > 0) {
-    let bestIndex = 0;
-    let bestDistance = Infinity;
-    for (let i = 0; i < remaining.length; i++) {
-      const d = haversineMeters(current, toLatLon(remaining[i]));
-      if (d < bestDistance) {
-        bestDistance = d;
-        bestIndex = i;
+function metersPerDegLon(lat: number): number {
+  return EARTH_M_PER_DEG_LAT * Math.cos((lat * Math.PI) / 180);
+}
+
+function offsetMeters(p: LatLon, eastM: number, northM: number): LatLon {
+  return {
+    lat: p.lat + northM / EARTH_M_PER_DEG_LAT,
+    lon: p.lon + eastM / metersPerDegLon(p.lat)
+  };
+}
+
+type Ring = number[][]; // [lon, lat] pairs
+
+function ringCentroid(ring: Ring): LatLon {
+  let lon = 0;
+  let lat = 0;
+  for (const [x, y] of ring) {
+    lon += x;
+    lat += y;
+  }
+  return { lon: lon / ring.length, lat: lat / ring.length };
+}
+
+// Push each vertex outward from the centroid by the margin, so the routed path
+// clears the true boundary by that distance.
+function bufferRing(ring: Ring, marginM: number): Ring {
+  const c = ringCentroid(ring);
+  const perLon = metersPerDegLon(c.lat);
+  return ring.map(([x, y]) => {
+    const eastM = (x - c.lon) * perLon;
+    const northM = (y - c.lat) * EARTH_M_PER_DEG_LAT;
+    const len = Math.hypot(eastM, northM) || 1;
+    const scale = (len + marginM) / len;
+    return [c.lon + (eastM * scale) / perLon, c.lat + (northM * scale) / EARTH_M_PER_DEG_LAT];
+  });
+}
+
+function circleRing(center: LatLon, radiusM: number): Ring {
+  const ring: Ring = [];
+  for (let i = 0; i < CIRCLE_SIDES; i++) {
+    const angle = (i / CIRCLE_SIDES) * 2 * Math.PI;
+    const p = offsetMeters(center, Math.cos(angle) * radiusM, Math.sin(angle) * radiusM);
+    ring.push([p.lon, p.lat]);
+  }
+  ring.push(ring[0]);
+  return ring;
+}
+
+// Strict segment crossing: true only when a-b and c-d cross at a point interior
+// to both, so sharing an endpoint or running along a boundary does not count.
+function orient(o: LatLon, a: LatLon, b: LatLon): number {
+  return (a.lon - o.lon) * (b.lat - o.lat) - (a.lat - o.lat) * (b.lon - o.lon);
+}
+
+function properCross(a: LatLon, b: LatLon, c: LatLon, d: LatLon): boolean {
+  const d1 = orient(c, d, a);
+  const d2 = orient(c, d, b);
+  const d3 = orient(a, b, c);
+  const d4 = orient(a, b, d);
+  return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
+}
+
+function segmentEntersRing(a: LatLon, b: LatLon, ring: Ring): boolean {
+  const mid = { lat: (a.lat + b.lat) / 2, lon: (a.lon + b.lon) / 2 };
+  if (pointInRing(mid, ring)) return true;
+  for (let i = 0; i < ring.length - 1; i++) {
+    const c = { lon: ring[i][0], lat: ring[i][1] };
+    const d = { lon: ring[i + 1][0], lat: ring[i + 1][1] };
+    if (properCross(a, b, c, d)) return true;
+  }
+  return false;
+}
+
+function segmentClear(a: LatLon, b: LatLon, rings: Ring[]): boolean {
+  return !rings.some((ring) => segmentEntersRing(a, b, ring));
+}
+
+function pointInAnyRing(p: LatLon, rings: Ring[]): boolean {
+  return rings.some((ring) => pointInRing(p, ring));
+}
+
+// Nearest point just outside every ring the point sits in, pushed out from the
+// ring centroid past its far edge plus a margin.
+function projectOut(p: LatLon, rings: Ring[]): LatLon {
+  let moved = p;
+  for (const ring of rings) {
+    if (!pointInRing(moved, ring)) continue;
+    const c = ringCentroid(ring);
+    const perLon = metersPerDegLon(c.lat);
+    let eastM = (moved.lon - c.lon) * perLon;
+    let northM = (moved.lat - c.lat) * EARTH_M_PER_DEG_LAT;
+    let len = Math.hypot(eastM, northM);
+    if (len < 1) {
+      eastM = 1;
+      northM = 0;
+      len = 1;
+    }
+    // Farthest ring vertex distance sets how far out is guaranteed clear.
+    let maxReach = 0;
+    for (const [x, y] of ring) {
+      maxReach = Math.max(maxReach, Math.hypot((x - c.lon) * perLon, (y - c.lat) * EARTH_M_PER_DEG_LAT));
+    }
+    const scale = (maxReach + AIRSPACE_MARGIN_M) / len;
+    moved = offsetMeters(c, eastM * scale, northM * scale);
+  }
+  return moved;
+}
+
+// Visibility-graph shortest detour from a to b around the rings. Returns the
+// intermediate corners to visit, or null when no clear route is found.
+function routeAround(a: LatLon, b: LatLon, rings: Ring[]): LatLon[] | null {
+  const nodes: LatLon[] = [a, b];
+  for (const ring of rings) {
+    for (let i = 0; i < ring.length - 1 && nodes.length < MAX_GRAPH_VERTICES; i++) {
+      nodes.push({ lon: ring[i][0], lat: ring[i][1] });
+    }
+  }
+
+  const n = nodes.length;
+  const dist = new Array(n).fill(Infinity);
+  const prev = new Array(n).fill(-1);
+  const done = new Array(n).fill(false);
+  dist[0] = 0;
+
+  for (let iter = 0; iter < n; iter++) {
+    let u = -1;
+    let best = Infinity;
+    for (let i = 0; i < n; i++) {
+      if (!done[i] && dist[i] < best) {
+        best = dist[i];
+        u = i;
       }
     }
-    const [next] = remaining.splice(bestIndex, 1);
-    ordered.push(next);
-    current = toLatLon(next);
-  }
-  return ordered;
-}
-
-function routeLength(start: LatLon, items: MissionPlanItem[]): number {
-  return pathLengthMeters([start, ...items.map(toLatLon)]);
-}
-
-function routeCrossings(start: LatLon, items: MissionPlanItem[], airspace: AirspaceZone[]): number {
-  if (airspace.length === 0) return 0;
-  const points = [start, ...items.map(toLatLon)];
-  let count = 0;
-  for (let i = 0; i < points.length - 1; i++) {
-    for (const zone of airspace) {
-      if (zone.restricted && segmentIntersectsPolygon(points[i], points[i + 1], zone.polygon)) count++;
-    }
-  }
-  return count;
-}
-
-function routeCost(start: LatLon, items: MissionPlanItem[], airspace: AirspaceZone[]): number {
-  return routeLength(start, items) + CROSSING_PENALTY_M * routeCrossings(start, items, airspace);
-}
-
-// 2-opt: repeatedly reverse the segment between two waypoints whenever doing so
-// shortens the route, until no improving swap remains.
-function twoOpt(start: LatLon, items: MissionPlanItem[], airspace: AirspaceZone[]): MissionPlanItem[] {
-  let best = [...items];
-  let bestCost = routeCost(start, best, airspace);
-  for (let pass = 0; pass < MAX_2OPT_PASSES; pass++) {
-    let improved = false;
-    for (let i = 0; i < best.length - 1; i++) {
-      for (let k = i + 1; k < best.length; k++) {
-        const candidate = [
-          ...best.slice(0, i),
-          ...best.slice(i, k + 1).reverse(),
-          ...best.slice(k + 1)
-        ];
-        const cost = routeCost(start, candidate, airspace);
-        if (cost < bestCost - 1e-6) {
-          best = candidate;
-          bestCost = cost;
-          improved = true;
-        }
+    if (u === -1) break;
+    if (u === 1) break; // reached b
+    done[u] = true;
+    for (let v = 0; v < n; v++) {
+      if (done[v] || v === u) continue;
+      if (!segmentClear(nodes[u], nodes[v], rings)) continue;
+      const w = dist[u] + haversineMeters(nodes[u], nodes[v]);
+      if (w < dist[v]) {
+        dist[v] = w;
+        prev[v] = u;
       }
     }
-    if (!improved) break;
   }
-  return best;
+
+  if (!isFinite(dist[1])) return null;
+  const path: LatLon[] = [];
+  for (let at = prev[1]; at > 1; at = prev[at]) path.unshift(nodes[at]);
+  return path;
 }
 
 export interface OptimizeResult {
   actions: MissionPlanActions;
-  originalMeters: number;
-  optimizedMeters: number;
-  avoidedCrossings: number;
-  reordered: boolean;
+  addedWaypoints: number;
+  movedWaypoints: number;
+  clearedLegs: number;
+  changed: boolean;
 }
 
-// Returns a new MissionPlanActions with the movement waypoints reordered for
-// the shortest route. Fixed commands keep their index; non-positional commands
-// keep their original relative order after the movement waypoints.
-export function optimizeMissionPath(actions: MissionPlanActions, airspace: AirspaceZone[] = []): OptimizeResult {
+// Rings that block a leg: restricted airspace always, plus obstacles tall enough
+// to matter at the leg's altitude floor.
+function legHazardRings(
+  floorM: number,
+  restrictedRings: Ring[],
+  obstacles: Obstacle[]
+): Ring[] {
+  const rings = [...restrictedRings];
+  for (const obstacle of obstacles) {
+    if (feetToMeters(obstacle.aglFt) + OBSTACLE_CLEARANCE_M <= floorM) continue;
+    rings.push(circleRing({ lat: obstacle.lat, lon: obstacle.lon }, OBSTACLE_KEEPOUT_M));
+  }
+  return rings;
+}
+
+export function optimizeMissionPath(
+  actions: MissionPlanActions,
+  airspace: AirspaceZone[] = [],
+  obstacles: Obstacle[] = []
+): OptimizeResult {
   const indices = Object.keys(actions)
     .map(Number)
     .sort((a, b) => a - b);
-  const items = indices.map((i) => actions[i]);
+  const items = indices.map((i) => ({ ...actions[i] }));
 
-  const movement = items.filter(isMovement);
-  const others = items.filter((item) => !isMovement(item));
+  const restrictedRings: Ring[] = airspace
+    .filter((zone) => zone.restricted)
+    .map((zone) => bufferRing(zone.polygon[0], AIRSPACE_MARGIN_M));
 
-  if (movement.length < 3) {
-    const meters = routeLength(toLatLon(items[0] ?? ({ lat: 0, lon: 0 } as MissionPlanItem)), movement);
-    return {
-      actions,
-      originalMeters: meters,
-      optimizedMeters: meters,
-      avoidedCrossings: 0,
-      reordered: false
-    };
-  }
+  let movedWaypoints = 0;
+  let addedWaypoints = 0;
+  let clearedLegs = 0;
 
-  // Anchor the route at the first fixed or movement point (usually takeoff).
-  const start = toLatLon(items[0]);
-  const originalMeters = routeLength(start, movement);
-  const originalCost = routeCost(start, movement, airspace);
-  const seeded = nearestNeighborOrder(start, movement);
-  const optimized = twoOpt(start, seeded, airspace);
-  const optimizedMeters = routeLength(start, optimized);
-  const optimizedCost = routeCost(start, optimized, airspace);
-  const avoidedCrossings = Math.max(
-    0,
-    routeCrossings(start, movement, airspace) - routeCrossings(start, optimized, airspace)
-  );
-
-  // Reassemble: fixed items keep their slot, movement waypoints fill the rest
-  // in optimized order, remaining non-positional commands trail at the end.
-  const rebuilt: MissionPlanItem[] = [];
-  let movePtr = 0;
+  // Nudge any waypoint that sits inside restricted airspace back outside it.
   for (const item of items) {
-    if (FIXED_TYPES.has(item.type)) rebuilt.push(item);
-    else if (isMovement(item)) rebuilt.push(optimized[movePtr++]);
+    if (!isMovement(item)) continue;
+    const p = toLatLon(item);
+    if (pointInAnyRing(p, restrictedRings)) {
+      const safe = projectOut(p, restrictedRings);
+      item.lat = safe.lat;
+      item.lon = safe.lon;
+      movedWaypoints++;
+    }
   }
-  for (const item of others) {
-    if (!FIXED_TYPES.has(item.type)) rebuilt.push(item);
+
+  const rebuilt: MissionPlanItem[] = [];
+  let prev: LatLon | null = null;
+
+  // Legs run between consecutive positioned items (takeoff, waypoints, land);
+  // non-positioned commands (servo, delay, yaw) pass through untouched.
+  for (const item of items) {
+    if (!hasPosition(item)) {
+      rebuilt.push(item);
+      continue;
+    }
+    const target = toLatLon(item);
+    if (prev) {
+      const rings = legHazardRings(item.alt ?? 0, restrictedRings, obstacles);
+      if (!segmentClear(prev, target, rings)) {
+        const detour = routeAround(prev, target, rings);
+        if (detour && detour.length > 0) {
+          for (const point of detour) {
+            rebuilt.push({
+              type: 'NAV_WAYPOINT',
+              lat: point.lat,
+              lon: point.lon,
+              alt: item.alt,
+              notes: 'Auto-routed to avoid a hazard',
+              param1: null,
+              param2: null,
+              param3: null,
+              param4: null
+            });
+            addedWaypoints++;
+          }
+          clearedLegs++;
+        }
+      }
+    }
+    rebuilt.push(item);
+    prev = target;
   }
 
   const result: MissionPlanActions = {};
@@ -162,9 +287,9 @@ export function optimizeMissionPath(actions: MissionPlanActions, airspace: Airsp
 
   return {
     actions: result,
-    originalMeters,
-    optimizedMeters,
-    avoidedCrossings,
-    reordered: optimizedCost < originalCost - 1e-6
+    addedWaypoints,
+    movedWaypoints,
+    clearedLegs,
+    changed: addedWaypoints > 0 || movedWaypoints > 0
   };
 }

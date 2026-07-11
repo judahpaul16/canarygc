@@ -23,30 +23,37 @@
     import { parseMissionFile } from '../lib/mission-import';
     import { isPX4 } from '../lib/flight-modes';
     import { mavModelStore } from '../stores/mavlinkStore';
-    import { airspaceZonesStore } from '../stores/safetyStore';
+    import { airspaceZonesStore, obstaclesStore } from '../stores/safetyStore';
+    import { refreshAirspace, refreshHazards } from '../lib/preflight';
 
     const SAVE_FEEDBACK_MS = 3000;
     const DEGREES_TO_E7 = 1e7;
 
-    function optimizePath() {
-        const result = optimizeMissionPath(get(missionPlanActionsStore), get(airspaceZonesStore));
-        if (!result.reordered) {
+    async function optimizePath() {
+        const actions = get(missionPlanActionsStore);
+        // Pull current hazards for the mission area so avoidance has data even
+        // if the overlays were never opened.
+        await Promise.all([refreshAirspace(actions), refreshHazards(actions)]);
+        const result = optimizeMissionPath(actions, get(airspaceZonesStore), get(obstaclesStore));
+        if (!result.changed) {
             notify({
-                title: 'Path already optimal',
-                content: 'The current waypoint order is already the shortest clear route.',
+                title: 'Path already clear',
+                content: 'No waypoint crosses restricted airspace or a mapped obstacle.',
                 duration: SAVE_FEEDBACK_MS
             });
             return;
         }
         missionPlanActionsStore.set(result.actions);
-        const savedM = Math.round(result.originalMeters - result.optimizedMeters);
-        const detail =
-            result.avoidedCrossings > 0
-                ? `Rerouted to clear ${result.avoidedCrossings} restricted-airspace crossing${result.avoidedCrossings > 1 ? 's' : ''}.`
-                : `Reordered waypoints for the shortest route, saving about ${savedM} m of travel.`;
+        const parts: string[] = [];
+        if (result.clearedLegs > 0) {
+            parts.push(`added ${result.addedWaypoints} waypoint${result.addedWaypoints > 1 ? 's' : ''} to route around ${result.clearedLegs} hazard${result.clearedLegs > 1 ? 's' : ''}`);
+        }
+        if (result.movedWaypoints > 0) {
+            parts.push(`moved ${result.movedWaypoints} waypoint${result.movedWaypoints > 1 ? 's' : ''} clear of restricted airspace`);
+        }
         notify({
-            title: 'Path optimized',
-            content: `${detail} Review the plan before flying.`,
+            title: 'Path adjusted for hazards',
+            content: `Path ${parts.join(' and ')}. Review the plan before flying.`,
             duration: SAVE_FEEDBACK_MS * 2
         });
     }
