@@ -134,11 +134,11 @@ The app is served at `http://localhost:5173`; SITL exposes MAVLink on TCP `5760`
 On first run the database is empty, so open `/register` to create the operator account. To reset it later, wipe the dev database and restart:
 
 ```bash
-docker compose exec app-dev rm -f /app/src/data.db
-docker compose --profile development restart app-dev
+docker exec canarygc_app sh -c 'rm -f /app/src/data.db*'
+docker restart canarygc_app
 ```
 
-The schema recreates empty on the next boot.
+The schema recreates empty on the next boot, and the app then prompts for first-run operator setup.
 
 **Production** builds the Node server image and runs the WebRTC camera bridge, talking to a real autopilot over UART:
 
