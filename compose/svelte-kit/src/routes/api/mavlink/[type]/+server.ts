@@ -1,8 +1,6 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import {
-    port,
-    reader,
-    online,
+    linkAlive,
     initializePort,
     requestStatus,
     requestParameters,
@@ -20,7 +18,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
     switch (event.params.type) {
         case 'heartbeat':
             try {
-                const connected = (port && reader && online);
+                const connected = linkAlive();
                 if (!connected) await initializePort();
                 else await requestStatus();
 

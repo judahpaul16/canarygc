@@ -16,18 +16,31 @@ let online = false;
 const logs: string[] = [];
 const newLogs: string[] = [];
 let connecting = false;
+let lastPacketAt = 0;
+
+// Treat the link as down when no packet has arrived within this window, even if
+// the socket never fires 'close' (a silent stall), so the next heartbeat can
+// re-establish it.
+const STALE_LINK_MS = 4000;
+const CONNECT_TIMEOUT_MS = 5000;
+
+function linkAlive(): boolean {
+    return Boolean(port && reader && lastPacketAt > 0 && Date.now() - lastPacketAt < STALE_LINK_MS);
+}
 
 async function initializePort(): Promise<void> {
+    if (connecting) return;
+    connecting = true;
     try {
-        connecting = true;
         await closeExistingConnection();
         await openNewConnection();
         setupPacketReader();
         setupPortListeners();
-        connecting = false;
     } catch (error) {
         console.error('Failed to initialize port:', error);
         throw error;
+    } finally {
+        connecting = false;
     }
 }
 
@@ -54,13 +67,22 @@ async function openNewConnection(): Promise<void> {
         port = new SerialPort({ path: '/dev/ttyACM0', baudRate: 115200, lock: false });
     } else {
         // Use TCP socket in development
-        port = connect({ host: 'sitl', port: 5760 });
+        const socket = connect({ host: 'sitl', port: 5760 });
+        socket.setKeepAlive(true, 1000);
+        socket.setNoDelay(true);
+        port = socket;
     }
     await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            reject(new Error('Timed out waiting for MAVLink data'));
+        }, CONNECT_TIMEOUT_MS);
         port!.once('error', (err) => {
+            clearTimeout(timeout);
             reject(new Error(`Error connecting to the MAVLink server: ${err.message}`));
         });
         port!.once('data', () => {
+            clearTimeout(timeout);
+            lastPacketAt = Date.now();
             logs.push('MAVLink connection initialized');
             resolve();
         });
@@ -74,6 +96,7 @@ function setupPacketReader(): void {
 
     reader.on('data', (packet) => {
         online = true;
+        lastPacketAt = Date.now();
         const clazz = REGISTRY[packet.header.msgid];
         if (clazz) {
             const data = packet.protocol.data(packet.payload, clazz);
@@ -89,6 +112,9 @@ function setupPacketReader(): void {
 
 function setupPortListeners(): void {
     port!.on('close', handlePortClose);
+    // A stream 'error' with no listener would crash the process; handle it so a
+    // mid-flight read error drops the link cleanly instead.
+    port!.on('error', handlePortError);
 }
 
 function handlePortClose(): void {
@@ -96,6 +122,11 @@ function handlePortClose(): void {
     reader = null;
     online = false;
     logs.push('MAVLink connection closed');
+}
+
+function handlePortError(err: Error): void {
+    online = false;
+    logs.push(`MAVLink connection error: ${err.message}`);
 }
 
 async function requestStatus() {
@@ -297,6 +328,7 @@ export {
     loadMissionItem,
     clearAllMissionItems,
     setPositionLocal,
+    linkAlive,
     port,
     reader,
     online,
