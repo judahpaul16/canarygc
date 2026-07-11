@@ -127,7 +127,7 @@ curl -s https://raw.githubusercontent.com/judahpaul16/canarygc/main/contrib/setu
 
 ## 🧑‍💻 Local Development
 
-The stack is a single `docker-compose.yml` with two profiles.
+The stack is a single `docker-compose.yml` with `development`, `development-px4`, and `production` profiles.
 
 **Development** runs the SvelteKit dev server with hot reload against an ArduPilot SITL container:
 
@@ -136,6 +136,14 @@ docker compose --profile development up
 ```
 
 The app is served at `http://localhost:5173`; SITL exposes MAVLink on TCP `5760`. Set a different host port with `APP_DEV_PORT` in a root `.env` if 5173 collides. The first bring-up builds the ArduPilot SITL image from source (Copter 4.5.7), which takes a while; later runs reuse it, and the simulator streams telemetry about a minute after it starts.
+
+To develop against **PX4** instead, use the `development-px4` profile:
+
+```bash
+docker compose --profile development-px4 up
+```
+
+This runs headless PX4 SITL (Gazebo) alongside a MAVProxy bridge that presents PX4's MAVLink on the same TCP `5760`, so the app connects identically. Both dev profiles bind `5760`, so run one at a time. PX4 SITL streams telemetry about a minute after Gazebo finishes initializing.
 
 On first run the database is empty, so open `/register` to create the operator account. To reset it later, wipe the dev database and restart:
 

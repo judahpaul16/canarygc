@@ -1,7 +1,7 @@
 services:
   # Development: Vite dev server with hot reload, talks to the SITL container.
   app-dev:
-    profiles: ["development"]
+    profiles: ["development", "development-px4"]
     build:
       context: ./compose/svelte-kit
       dockerfile: Dockerfile.dev
@@ -62,6 +62,43 @@ services:
       - "${SITL_PORT:-5760}:5760"
     healthcheck:
       timeout: 10s
+
+  # Headless PX4 SITL for local testing (development-px4 profile). It streams
+  # MAVLink to the bridge, which the app reaches through the shared "sitl" alias.
+  px4:
+    profiles: ["development-px4"]
+    image: jonasvautherin/px4-gazebo-headless:latest
+    command: ["sitl", "sitl"]
+    container_name: canarygc_px4
+    environment:
+      - PX4_HOME_LAT=33.79105092934356
+      - PX4_HOME_LON=-84.37130870603511
+      - PX4_HOME_ALT=0
+    depends_on:
+      px4-bridge:
+        condition: service_healthy
+    tty: true
+
+  # Serves PX4's UDP GCS stream as the TCP endpoint the app connects to. The
+  # "sitl" network alias means the app talks to it exactly as it does ArduPilot.
+  px4-bridge:
+    profiles: ["development-px4"]
+    build:
+      context: ./compose/px4-bridge
+    command: ["--master=udpin:0.0.0.0:14550", "--out=tcpin:0.0.0.0:5760", "--non-interactive"]
+    container_name: canarygc_px4_bridge
+    networks:
+      default:
+        aliases:
+          - sitl
+    ports:
+      - "${SITL_PORT:-5760}:5760"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; rows=open('/proc/net/tcp').read().splitlines()[1:]; sys.exit(0 if any(r.split()[1].split(':')[1]=='1680' and r.split()[3]=='0A' for r in rows if r.strip()) else 1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 5s
 
   # On-board WebRTC camera bridge (production profile).
   webrtc:
