@@ -16,8 +16,23 @@ const FAA_BASE = 'https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/serv
 interface FaaProps {
   NAME?: string;
   TYPE_CODE?: string;
-  UPPER_DESC?: string;
-  LOWER_DESC?: string;
+  LOWER_VAL?: number;
+  LOWER_UOM?: string;
+  LOWER_CODE?: string;
+  UPPER_VAL?: number;
+  UPPER_UOM?: string;
+  UPPER_CODE?: string;
+}
+
+// FAA altitude comes as value + unit + reference code. A negative value is a
+// sentinel for an unspecified limit (the airspace extends up to the overlying
+// airspace), which reads as no ceiling rather than a number.
+function formatAltitude(val?: number, uom?: string, code?: string): string | undefined {
+  if (val === undefined || val === null || val < 0) return undefined;
+  if (val === 0) return 'Surface';
+  const measure = !uom || uom === 'FT' ? `${Math.round(val).toLocaleString()} ft` : `${val} ${uom}`;
+  const reference = code === 'MSL' ? ' MSL' : code === 'AGL' ? ' AGL' : '';
+  return `${measure}${reference}`;
 }
 
 const SUA_TYPE_NAMES: Record<string, string> = {
@@ -44,19 +59,19 @@ const FAA_LAYERS: {
 }[] = [
   {
     service: 'Prohibited_Areas',
-    outFields: 'NAME,UPPER_DESC,LOWER_DESC',
+    outFields: 'NAME,LOWER_VAL,LOWER_UOM,LOWER_CODE,UPPER_VAL,UPPER_UOM,UPPER_CODE',
     restricted: () => true,
     type: () => 'Prohibited area'
   },
   {
     service: 'Special_Use_Airspace',
-    outFields: 'NAME,TYPE_CODE,UPPER_DESC,LOWER_DESC',
+    outFields: 'NAME,TYPE_CODE,LOWER_VAL,LOWER_UOM,LOWER_CODE,UPPER_VAL,UPPER_UOM,UPPER_CODE',
     restricted: (p) => p.TYPE_CODE === 'P' || p.TYPE_CODE === 'R',
     type: (p) => (p.TYPE_CODE ? SUA_TYPE_NAMES[p.TYPE_CODE] ?? p.TYPE_CODE : undefined)
   },
   {
     service: 'Class_Airspace',
-    outFields: 'NAME,UPPER_DESC,LOWER_DESC',
+    outFields: 'NAME,LOWER_VAL,LOWER_UOM,LOWER_CODE,UPPER_VAL,UPPER_UOM,UPPER_CODE',
     restricted: () => false,
     type: (p) => classFromName(p.NAME ?? '')
   }
@@ -128,8 +143,8 @@ async function fetchFaaLayer(bbox: string, layer: (typeof FAA_LAYERS)[number]): 
       name: props.NAME || 'Airspace',
       restricted: layer.restricted(props),
       type: layer.type(props),
-      lower: props.LOWER_DESC || undefined,
-      upper: props.UPPER_DESC || undefined
+      lower: formatAltitude(props.LOWER_VAL, props.LOWER_UOM, props.LOWER_CODE),
+      upper: formatAltitude(props.UPPER_VAL, props.UPPER_UOM, props.UPPER_CODE)
     });
   });
 }

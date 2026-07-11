@@ -11,16 +11,18 @@ function airspaceKind(zone: AirspaceZone): string {
   return zone.type ?? (zone.restricted ? 'Restricted airspace' : 'Controlled airspace');
 }
 
-function airspaceBand(zone: AirspaceZone): string {
-  return [zone.lower, zone.upper].filter(Boolean).join(' to ');
-}
-
 function airspaceImplication(zone: AirspaceZone): string {
   if (zone.restricted) return 'No-fly. Entry requires prior authorization.';
   if (/moa|military|warning|alert/i.test(zone.type ?? '')) {
     return 'Special-use airspace. Check activity and use caution.';
   }
-  return 'Controlled airspace. UAS operations need ATC authorization (e.g. LAANC).';
+  if (zone.lower === 'Surface') {
+    return 'Controlled airspace down to the surface, so a UAS needs authorization (e.g. LAANC) here even at low altitude.';
+  }
+  if (zone.lower) {
+    return `Controlled airspace above ${zone.lower}; below that is uncontrolled (Class G). A UAS needs authorization (e.g. LAANC) only within it.`;
+  }
+  return 'Controlled airspace. UAS operations need authorization (e.g. LAANC).';
 }
 
 const HTML_ENTITIES: Record<string, string> = {
@@ -35,13 +37,15 @@ function esc(value: string): string {
   return value.replace(/[&<>"']/g, (c) => HTML_ENTITIES[c]);
 }
 
-// Zone names and altitude bands come from the FAA/OpenAIP feeds, so escape them
+// Zone names and altitudes come from the FAA/OpenAIP feeds, so escape them
 // before they reach a Leaflet or MapLibre popup's innerHTML.
 export function airspacePopupHtml(zone: AirspaceZone): string {
-  const band = airspaceBand(zone);
+  const floor = zone.lower ? `<br>Floor: ${esc(zone.lower)}` : '';
+  const ceiling = zone.upper ? `<br>Ceiling: ${esc(zone.upper)}` : '';
   return (
     `<strong>${esc(zone.name)}</strong><br>${esc(airspaceKind(zone))}` +
-    (band ? `<br>Altitude: ${esc(band)}` : '') +
+    floor +
+    ceiling +
     `<br><em>${esc(airspaceImplication(zone))}</em>`
   );
 }
