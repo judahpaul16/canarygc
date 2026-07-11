@@ -1,6 +1,6 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { getAlertConfig } from '$lib/server/settings';
+import { getEnabledAlerts } from '$lib/server/settings';
 import { sendMail, isSmtpConfigured } from '$lib/server/mailer';
 import { ALERT_TYPES, type AlertPayload, type AlertTelemetry } from '$lib/alert-types';
 
@@ -67,10 +67,10 @@ export const POST: RequestHandler = async (event) => {
     const meta = ALERT_TYPES.find((a) => a.id === payload.type);
     if (!meta) return json({ skipped: 'unknown type' }, 200);
 
-    const { recipient, enabled } = await getAlertConfig();
+    const enabled = await getEnabledAlerts();
     if (!enabled.has(payload.type)) return json({ skipped: 'disabled' }, 200);
 
-    const to = recipient || (await operatorEmail(event.locals.user.id));
+    const to = await operatorEmail(event.locals.user.id);
     if (!to) return json({ skipped: 'no recipient' }, 200);
     if (!(await isSmtpConfigured())) return json({ skipped: 'smtp not configured' }, 200);
 

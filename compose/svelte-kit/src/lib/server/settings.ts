@@ -43,16 +43,11 @@ export async function getSmtpConfig(): Promise<SmtpConfig | null> {
   return { host, port, secure: secureRaw === 'true', user, pass, from };
 }
 
-export interface AlertConfig {
-  recipient: string;
-  enabled: Set<string>;
-}
-
-export async function getAlertConfig(): Promise<AlertConfig> {
+export async function getEnabledAlerts(): Promise<Set<string>> {
   const s = await getSettings('alert.');
   const enabled = new Set<string>();
   for (const [key, value] of Object.entries(s)) {
     if (key.startsWith('alert.enabled.') && value === 'true') enabled.add(key.slice('alert.enabled.'.length));
   }
-  return { recipient: s['alert.recipient'] ?? '', enabled };
+  return enabled;
 }

@@ -74,9 +74,12 @@
 </svelte:head>
 
 <div
-  class="settings"
+  class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0"
   style="--primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
 >
+  <div class="dashboard w-full p-5 rounded-[30px] rounded-l-none overflow-auto overflow-x-hidden h-[90vh] max-h-[90vh]">
+    <div class="settings rounded-2xl h-full p-6 overflow-y-auto">
+      <div class="content">
   <header class="head">
     <h1><i class="fas fa-plug"></i> Integrations</h1>
     <p>Connect external services. Secrets are stored on this station and never shown again after saving.</p>
@@ -87,17 +90,27 @@
   {:else}
     <form onsubmit={(e) => { e.preventDefault(); save(); }}>
       <section class="panel">
-        <h2><i class="fas fa-user-gear"></i> Operator</h2>
-        <p class="muted">Used for password resets and as the default alert recipient.</p>
+        <div class="panel-head">
+          <span class="icon-chip"><i class="fas fa-user-gear"></i></span>
+          <div>
+            <h2>Operator</h2>
+            <p class="muted">Used for password resets and as the alert recipient.</p>
+          </div>
+        </div>
         <div class="field">
           <label for="email">Operator email</label>
-          <input type="email" id="email" bind:value={email} autocomplete="email" />
+          <input type="email" id="email" bind:value={email} autocomplete="email" placeholder="operator@example.com" />
         </div>
       </section>
 
       <section class="panel">
-        <h2><i class="fas fa-envelope"></i> Email (SMTP)</h2>
-        <p class="muted">Regular SMTP to your own mail server. Powers password resets and alert emails.</p>
+        <div class="panel-head">
+          <span class="icon-chip"><i class="fas fa-envelope"></i></span>
+          <div>
+            <h2>Email (SMTP)</h2>
+            <p class="muted">Regular SMTP to your own mail server. Powers password resets and alert emails.</p>
+          </div>
+        </div>
         <div class="grid">
           <div class="field">
             <label for="smtp-host">Host</label>
@@ -140,8 +153,13 @@
       </section>
 
       <section class="panel">
-        <h2><i class="fas fa-tower-broadcast"></i> Airspace data</h2>
-        <p class="muted">Optional keys for worldwide airspace. Leave blank to use the keyless FAA fallback.</p>
+        <div class="panel-head">
+          <span class="icon-chip"><i class="fas fa-tower-broadcast"></i></span>
+          <div>
+            <h2>Airspace data</h2>
+            <p class="muted">Optional keys for worldwide airspace. Leave blank to use the keyless FAA fallback.</p>
+          </div>
+        </div>
         <div class="field">
           <label for="openaip">OpenAIP API key {#if openaipSet}<span class="badge">configured</span>{/if}</label>
           <input id="openaip" bind:value={openaip} autocomplete="off" placeholder={openaipSet ? '•••••••• (saved)' : 'OpenAIP key'} />
@@ -159,21 +177,30 @@
       </div>
     </form>
   {/if}
+      </div>
+    </div>
+  </div>
 </div>
 
 <style>
+  .dashboard {
+    background-color: var(--secondaryColor);
+  }
+
   .settings {
+    background: var(--primaryColor);
     color: var(--fontColor);
-    max-width: 760px;
+  }
+
+  .content {
+    max-width: 860px;
     margin: 0 auto;
-    padding: 1.5rem 1rem 3rem;
-    width: 100%;
-    height: 100%;
-    overflow-y: auto;
   }
 
   .head {
-    margin-bottom: 1.25rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid rgb(from var(--fontColor) r g b / 0.08);
   }
 
   .head h1 {
@@ -195,31 +222,46 @@
   }
 
   .panel {
-    background-color: rgb(from var(--primaryColor) r g b / 70%);
-    border: 1px solid rgb(from var(--secondaryColor) r g b / 65%);
+    background-color: rgb(from var(--tertiaryColor) r g b / 0.32);
+    border: 1px solid rgb(from var(--fontColor) r g b / 0.08);
     border-radius: 1rem;
-    padding: 1.25rem;
-    margin-bottom: 1.1rem;
+    padding: 1.35rem 1.5rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .panel-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+    padding-bottom: 1.1rem;
+    margin-bottom: 1.2rem;
+    border-bottom: 1px solid rgb(from var(--fontColor) r g b / 0.08);
+  }
+
+  .icon-chip {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.65rem;
+    background: rgba(245, 197, 24, 0.12);
+    border: 1px solid rgba(245, 197, 24, 0.28);
+    color: #f5c518;
+    font-size: 1rem;
   }
 
   .panel h2 {
-    font-size: 1.05rem;
+    font-size: 1rem;
     font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .panel h2 i {
-    color: #f5c518;
-    width: 1.1rem;
-    text-align: center;
+    line-height: 1.2;
   }
 
   .muted {
     opacity: 0.65;
     font-size: 0.82rem;
-    margin: 0.3rem 0 1rem;
+    margin-top: 0.25rem;
   }
 
   .grid {
@@ -249,17 +291,26 @@
   }
 
   input {
-    background-color: rgb(from var(--tertiaryColor) r g b / 85%);
-    border: 1px solid rgb(from var(--secondaryColor) r g b / 80%);
+    background-color: rgb(from var(--tertiaryColor) r g b / 0.7);
+    border: 1px solid rgb(from var(--fontColor) r g b / 0.12);
     color: var(--fontColor);
     border-radius: 0.6rem;
-    padding: 0.55rem 0.75rem;
+    padding: 0.6rem 0.8rem;
     outline: none;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+  }
+
+  input::placeholder {
+    color: rgb(from var(--fontColor) r g b / 0.35);
+  }
+
+  input:hover {
+    border-color: rgb(from var(--fontColor) r g b / 0.22);
   }
 
   input:focus {
     border-color: #f5c518;
+    background-color: rgb(from var(--tertiaryColor) r g b / 0.9);
     box-shadow: 0 0 0 3px rgba(245, 197, 24, 0.18);
   }
 
@@ -281,10 +332,10 @@
     justify-content: space-between;
     align-self: end;
     margin-bottom: 0.9rem;
-    background-color: rgb(from var(--tertiaryColor) r g b / 55%);
-    border: 1px solid rgb(from var(--secondaryColor) r g b / 60%);
+    background-color: rgb(from var(--tertiaryColor) r g b / 0.7);
+    border: 1px solid rgb(from var(--fontColor) r g b / 0.12);
     border-radius: 0.6rem;
-    padding: 0.55rem 0.75rem;
+    padding: 0.5rem 0.8rem;
   }
 
   .toggle-label {
@@ -339,6 +390,8 @@
   .actions {
     display: flex;
     justify-content: flex-end;
+    padding-top: 1.1rem;
+    border-top: 1px solid rgb(from var(--fontColor) r g b / 0.08);
   }
 
   .cta {
