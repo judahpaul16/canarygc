@@ -245,10 +245,7 @@
     });
     leafletMap.on('dblclick', (e: L.LeafletMouseEvent) => {
       if (hideOverlay) return;
-      const index = Object.keys(actions).length;
-      actions[index] = { type: 'NAV_WAYPOINT', lat: e.latlng.lat, lon: e.latlng.lng, alt: null, notes: '', param1: null, param2: null, param3: null, param4: null };
-      missionPlanActionsStore.set(actions);
-      updateMap(index);
+      addWaypoint(e.latlng);
     });
 
     updateAttributionVisibility();
@@ -261,6 +258,37 @@
       refreshHazards(get(missionPlanActionsStore));
       renderAirspace();
     }
+  }
+
+  // A modest climb so the takeoff actually leaves the ground; 0 would read as
+  // "current altitude" and never climb.
+  const DEFAULT_TAKEOFF_ALT_M = 10;
+
+  // Adding a waypoint seeds a takeoff at the aircraft's location first when the
+  // mission has none, since nearly every ArduPilot and PX4 mission must begin
+  // with a takeoff. The waypoint lands at the double-clicked point.
+  function addWaypoint(latlng: L.LatLng) {
+    const current = get(missionPlanActionsStore);
+    const ordered = Object.keys(current)
+      .map(Number)
+      .sort((a, b) => a - b)
+      .map((i) => current[i]);
+    const blank = { notes: '', param1: null, param2: null, param3: null, param4: null };
+
+    const hasTakeoff = ordered.some((a) => a.type === 'NAV_TAKEOFF' || a.type === 'NAV_VTOL_TAKEOFF');
+    if (!hasTakeoff) {
+      const mav = get(mavLocationStore);
+      const lat = mav && 'lat' in mav && mav.lat !== 0 ? mav.lat : latlng.lat;
+      const lon = mav && 'lng' in mav && mav.lng !== 0 ? mav.lng : latlng.lng;
+      ordered.unshift({ type: 'NAV_TAKEOFF', lat, lon, alt: DEFAULT_TAKEOFF_ALT_M, ...blank });
+    }
+    ordered.push({ type: 'NAV_WAYPOINT', lat: latlng.lat, lon: latlng.lng, alt: null, ...blank });
+
+    const next: MissionPlanActions = {};
+    ordered.forEach((item, i) => {
+      next[i] = item;
+    });
+    missionPlanActionsStore.set(next);
   }
 
   const FEATURE_HIT_PX = 16;

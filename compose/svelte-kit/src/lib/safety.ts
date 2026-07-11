@@ -50,6 +50,9 @@ export interface Hazards {
 const OBSTACLE_WARN_RADIUS_M = 100;
 const OBSTACLE_CLEARANCE_M = 10;
 
+// Commands that conclude a mission by bringing the vehicle down or home.
+const LANDING_TYPES = new Set(['NAV_RETURN_TO_LAUNCH', 'NAV_LAND', 'NAV_VTOL_LAND']);
+
 function isPositional(item: MissionPlanItem): boolean {
   return item.type.startsWith('NAV_') && item.lat !== 0 && item.lon !== 0;
 }
@@ -170,6 +173,38 @@ export function validateMission(
         });
       }
     }
+  }
+
+  // Mission structure: takeoff climbs, takeoff leads, and the route ends with a
+  // landing command so the vehicle does not simply hold at the last waypoint.
+  const takeoffIndex = indices.find(
+    (i) => actions[i].type === 'NAV_TAKEOFF' || actions[i].type === 'NAV_VTOL_TAKEOFF'
+  );
+  if (takeoffIndex !== undefined) {
+    if ((actions[takeoffIndex].alt ?? 0) <= 0) {
+      violations.push({
+        severity: 'warning',
+        index: takeoffIndex,
+        message: `Takeoff altitude should be above 0 m so the vehicle climbs before flying the route.`
+      });
+    }
+    const firstPositional = indices.find((i) => isPositional(actions[i]));
+    if (firstPositional !== undefined && firstPositional < takeoffIndex) {
+      violations.push({
+        severity: 'warning',
+        index: takeoffIndex,
+        message: `Takeoff should be the first command, but a waypoint comes before it.`
+      });
+    }
+  }
+
+  const lastType = actions[indices[indices.length - 1]]?.type;
+  if (lastType && !LANDING_TYPES.has(lastType)) {
+    violations.push({
+      severity: 'warning',
+      index: null,
+      message: `Mission does not end with Return-to-Launch or Land; the vehicle will hold at the final waypoint.`
+    });
   }
 
   return violations;
