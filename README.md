@@ -32,10 +32,14 @@ Unlike traditional GCS software, Canary Ground Control is a web-based applicatio
 * **Live telemetry & control** over MAVLink: attitude, position, battery, GPS, flight-mode changes, arm/disarm, and a virtual D-Pad.
 * **ArduPilot and PX4 support.** Flight-mode encoding and decoding is selected per autopilot through a strategy layer, so mode changes and armed-state readouts work on both stacks.
 * **Mission planner** with a 2D map (Leaflet) and a 3D map (MapLibre).
-* **Smart path optimization.** One click reorders mission waypoints for the shortest route (nearest-neighbor seed refined by 2-opt), holding takeoff, RTL, and land commands in place, and reports the distance saved.
-* **Airspace overlays.** The map draws restricted and controlled airspace for the mission area, toggled from a map control. Worldwide coverage comes from [OpenAIP](https://www.openaip.net) with a key; without one it falls back to the FAA's keyless public airspace layers (US).
-* **Pre-flight safety checks.** Before a mission starts, every waypoint is validated against an altitude ceiling and floor, a home-relative geofence radius, and the fetched airspace. Waypoints in restricted airspace or past a limit block the launch; controlled-airspace waypoints prompt for confirmation.
+* **Cross-autopilot missions.** A plan is stored autopilot-neutral and normalized to the connected stack on upload: ArduPilot runs the full command set, and PX4 substitutes or skips commands it cannot run and reports what changed.
+* **Mission import.** Load QGroundControl `.plan` and Mission Planner `.waypoints` (QGC WPL) files, or the app's own JSON, straight into the planner.
+* **Smart path optimization.** One click reorders mission waypoints for the shortest route (nearest-neighbor seed refined by 2-opt), holding takeoff, RTL, and land commands in place. It steers legs clear of restricted airspace where a waypoint order allows, and reports the distance saved or the crossings avoided.
+* **Airspace overlays.** Both the 2D and 3D maps draw restricted and controlled airspace for the mission area, toggled from a map control, with a popup for each zone's class, altitude band, and operating implication. Worldwide coverage comes from [OpenAIP](https://www.openaip.net) with a key; without one it falls back to the FAA's keyless public airspace layers (US).
+* **Pre-flight safety checks.** Before a mission starts, every waypoint is validated against an altitude ceiling and floor, a home-relative geofence radius, and the fetched airspace, and each leg is checked for passing through a zone. Restricted airspace, or a waypoint past a limit, blocks the launch; controlled airspace prompts for confirmation.
 * **Audible callouts.** Spoken telemetry callouts (arm/disarm, mode changes, battery, GPS, failsafe, link loss) over the browser speech API, with an on/off toggle that defaults on.
+* **Email alerts.** Enable per-event alerts (arm/disarm, mode change, failsafe, low battery, GPS or link loss, and more); each fires an email with the live coordinates and telemetry.
+* **Integrations & password reset.** In-app settings for SMTP (your own mail server), airspace keys, and the operator email, which also backs an emailed, expiring password-reset link.
 * **WebRTC camera feed** from an on-board Raspberry Pi camera via [MediaMTX](https://github.com/bluenviron/mediamtx).
 * **Weather, compass, and stats** widgets on a customizable dashboard.
 * **Build info** at `/version` (release tag, commit, build time).
@@ -150,12 +154,14 @@ The app is served at `http://localhost:3000`.
 
 ### Gates
 
-From `compose/svelte-kit`:
+From `compose/svelte-kit`, mirroring CI:
 
 ```bash
-npm run lint     # eslint
-npm run check    # svelte-check
-npm run build    # production build
+npm ci                              # install from the lockfile
+npm run lint                        # eslint
+npm run check                       # svelte-check
+npm run build                       # production build
+npm audit --audit-level=moderate    # dependency audit
 ```
 
 ---
@@ -166,9 +172,12 @@ The app reads its configuration from environment variables (see `compose/svelte-
 
 | Variable | Purpose |
 | --- | --- |
-| `DATABASE_PATH` | Path to the SQLite database file (created on first boot). |
-| `OPENAIP_API_KEY` | [OpenAIP](https://www.openaip.net) key for airspace overlays and no-fly-zone safety checks. Airspace features degrade to empty when unset. |
+| `DATABASE_PATH` | Path to the SQLite database file (migrated on first boot). |
+| `OPENAIP_API_KEY` | [OpenAIP](https://www.openaip.net) key for worldwide airspace. Without it, airspace falls back to the FAA's keyless US layers. |
 | `VITE_ALTITUDE_ANGEL_API_KEY` | Optional key for the Altitude Angel airspace endpoint. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | SMTP for password-reset and alert email. |
+
+The airspace keys and SMTP settings are also editable in-app under **Integrations**, which stores them in the database and takes precedence over the environment.
 
 ---
 
