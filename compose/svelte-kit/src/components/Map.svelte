@@ -89,6 +89,17 @@
   let isFullscreen = $state(false);
   let feedDockOpen = $state(true);
   let controlDockOpen = $state(true);
+  let lockPulse = $state(false);
+  let lockPulseTimer: ReturnType<typeof setTimeout> | undefined;
+  // A recenter closer than this is telemetry jitter, not a snap worth signaling.
+  const LOCK_PULSE_MIN_PX = 30;
+
+  function triggerLockPulse() {
+    lockPulse = false;
+    clearTimeout(lockPulseTimer);
+    requestAnimationFrame(() => (lockPulse = true));
+    lockPulseTimer = setTimeout(() => (lockPulse = false), 1200);
+  }
 
   function isSmallScreen(): boolean {
     return window.matchMedia('(max-width: 990px)').matches;
@@ -243,6 +254,7 @@
 
     if (!hideOverlay) {
       refreshAirspace(get(missionPlanActionsStore));
+      refreshHazards(get(missionPlanActionsStore));
       renderAirspace();
     }
   }
@@ -676,8 +688,12 @@
             .bindPopup('MAV is here: ' + mavLocation.lat + ', ' + mavLocation.lng);
           leafletMap?.addLayer(mavMarker);
           updateMarkersAndPolylines();
-          if (lockView) {
-            leafletMap?.setView(mavLocation as L.LatLng, get(mapZoomStore));
+          if (lockView && leafletMap) {
+            const centerPoint = leafletMap.latLngToContainerPoint(leafletMap.getCenter());
+            const targetPoint = leafletMap.latLngToContainerPoint(mavLocation as L.LatLng);
+            const snapDistance = Math.hypot(centerPoint.x - targetPoint.x, centerPoint.y - targetPoint.y);
+            if (snapDistance > LOCK_PULSE_MIN_PX) triggerLockPulse();
+            leafletMap.setView(mavLocation as L.LatLng, get(mapZoomStore));
           }
         }
       };
@@ -797,6 +813,19 @@
   .map-btn:hover {
     opacity: 0.75;
     transform: scale(1.05);
+  }
+
+  .map-btn.lock-pulse {
+    animation: lock-pulse 1.2s ease-out;
+  }
+
+  @keyframes lock-pulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba(245, 197, 24, 0.75);
+    }
+    100% {
+      box-shadow: 0 0 0 14px rgba(245, 197, 24, 0);
+    }
   }
   #location-display {
     position: absolute;
@@ -952,8 +981,8 @@
     <button class="map-btn" aria-label="Toggle fullscreen" title="Toggle fullscreen" onclick={handleFullScreen}>
       <i class="fas fa-expand"></i>
     </button>
-    <button class="map-btn" aria-label="Toggle map lock" title={lockView ? 'Unlock map (stop following the aircraft)' : 'Lock map to the aircraft'} onclick={toggleLockView}>
-      <i class="fas {lockView ? 'fa-lock' : 'fa-lock-open'}"></i>
+    <button class="map-btn {lockPulse ? 'lock-pulse' : ''}" aria-label="Toggle map lock" title={lockView ? 'Unlock map (stop following the aircraft)' : 'Lock map to the aircraft'} onclick={toggleLockView}>
+      <i class="fas {lockView ? 'fa-lock text-[#f5c518]' : 'fa-lock-open'}"></i>
     </button>
     {#if !hideOverlay}
       <button class="map-btn" aria-label="Toggle airspace overlay" title="Toggle airspace overlay" onclick={toggleAirspace}>
