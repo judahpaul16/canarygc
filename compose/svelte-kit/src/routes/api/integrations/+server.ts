@@ -33,7 +33,13 @@ export const GET: RequestHandler = async (event) => {
             passSet: Boolean(smtp['smtp.pass'])
         },
         openaipSet: Boolean(openaip),
-        altitudeAngelSet: Boolean(altitudeAngel)
+        altitudeAngelSet: Boolean(altitudeAngel),
+        maptiler: (await getSetting('integration.maptiler')) ?? '',
+        tiles: {
+            light: (await getSetting('tiles.light')) ?? '',
+            dark: (await getSetting('tiles.dark')) ?? '',
+            satellite: (await getSetting('tiles.satellite')) ?? ''
+        }
     });
 };
 
@@ -57,6 +63,13 @@ export const POST: RequestHandler = async (event) => {
     if (typeof body.openaip === 'string' && body.openaip.length > 0) await setSetting('integration.openaip', body.openaip.trim());
     if (typeof body.altitudeAngel === 'string' && body.altitudeAngel.length > 0)
         await setSetting('integration.altitude_angel', body.altitudeAngel.trim());
+
+    // Map tile settings are public config, so a blank value clears the override.
+    if (typeof body.maptiler === 'string') await setSetting('integration.maptiler', body.maptiler.trim());
+    const tiles = body.tiles ?? {};
+    if (typeof tiles.light === 'string') await setSetting('tiles.light', tiles.light.trim());
+    if (typeof tiles.dark === 'string') await setSetting('tiles.dark', tiles.dark.trim());
+    if (typeof tiles.satellite === 'string') await setSetting('tiles.satellite', tiles.satellite.trim());
 
     return json({ message: 'Saved' });
 };

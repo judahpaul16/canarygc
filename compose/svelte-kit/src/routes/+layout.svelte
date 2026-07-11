@@ -45,7 +45,6 @@
   import { initAlerts } from '../lib/alerts';
   import { decodeMode, isArmed } from '../lib/flight-modes';
   import { decodeParameterValue, requestParameters } from '../lib/mavlink-client';
-  import { mapTypeStore } from '../stores/mapStore';
 
   let { children } = $props();
 
@@ -480,11 +479,6 @@
     isNavOpen = !isNavOpen;
   }
 
-  // The tile-inverting `.dark` class lives on the app root reactively, so every
-  // map on the page follows the theme on load and on toggle; satellite imagery
-  // stays uninverted.
-  let invertMapTiles = $derived(darkMode && $mapTypeStore !== 'Satellite');
-
   function toggleDarkMode() {
     darkModeStore.set(!get(darkModeStore));
   }
@@ -496,7 +490,7 @@
   }
 </script>
 
-<main class="bg-black flex overflow-auto" class:dark={invertMapTiles}
+<main class="bg-black flex overflow-auto"
   style="--heightOfDashboard: {heightOfDashboard}px; --primaryColor: {primaryColor}; --secondaryColor: {secondaryColor}; --tertiaryColor: {tertiaryColor}; --fontColor: {fontColor};"
 >
   <div class="bg fixed w-full h-full" style="background-image: url('{darkMode ? 'bg-map.webp' : 'bg-map-light.webp'}');"></div>

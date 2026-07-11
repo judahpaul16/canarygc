@@ -34,6 +34,7 @@
   import { airspaceColor, airspacePopupHtml } from '../lib/airspace';
   import { ceilingColor, ceilingPopupHtml, obstacleColor, obstaclePopupHtml } from '../lib/hazards';
   import { pointInPolygon } from '../lib/geo';
+  import { resolveTiles, type TileSources } from '../lib/tiles';
   import { refreshAirspace, refreshHazards, fetchAirspaceForBbox, fetchHazardsForBbox } from '../lib/preflight';
   import ThreeDMap from './3DMap.svelte';
   import pkg from 'maplibre-gl';
@@ -147,6 +148,7 @@
 
   onMount(async () => {
     try {
+      await loadTileConfig();
       // Load and initialize Leaflet
       L = (await import('leaflet')).default;
       if (id !== null) initializeLeafletMap(id);
@@ -191,34 +193,49 @@
     mapZoomStore.set(zoom);
   }
 
+  // Basemap sources resolve from the MapTiler key and any per-mode overrides set
+  // in Integrations; the defaults use MapTiler's rich dark and hybrid styles.
+  let tileSources = $state<TileSources>(resolveTiles());
+
+  // Dark mode swaps to a genuine dark basemap rather than inverting the light
+  // tiles, so the map reads cleanly and follows the theme toggle live.
+  function osmTileUrl(): string {
+    return darkMode ? tileSources.dark : tileSources.light;
+  }
+
+  async function loadTileConfig() {
+    try {
+      const res = await fetch('/api/map-config');
+      if (res.ok) tileSources = await res.json();
+    } catch {
+      // Keep the built-in defaults.
+    }
+  }
+
   function initializeLeafletMap(id: string = 'map') {
     let threedmap = document.getElementById('threedmap')!;
     if (threedmap) threedmap.style.display = 'none';
     leafletMap = L.map(id).setView(mavLocation, zoom);
     if (mapType.toLowerCase() === 'openstreetmap') {
-      currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      currentTileLayer = L.tileLayer(osmTileUrl(), {
           minZoom: 0,
           maxZoom: 20,
-          attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+          attribution: tileSources.osmAttribution
         }).addTo(leafletMap);
       mapType = 'OpenStreetMap';
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
     } else {
-      currentTileLayer = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+      currentTileLayer = L.tileLayer(tileSources.satellite, {
           minZoom: 0,
           maxZoom: 20,
           subdomains:['mt0','mt1','mt2','mt3'],
-          attribution: 'Map data &copy; <a href="https://www.google.com/maps">Google Maps</a>'
+          attribution: tileSources.satelliteAttribution
         }).addTo(leafletMap);
       mapType = 'Satellite';
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
     }
-    if (darkMode && mapType.toLowerCase() !== 'satellite') {
-      document.getElementById('map')!.classList.add('dark');
-    }
-
     if (hideOverlay) document.querySelectorAll('.map-btn i').forEach((element) => { (element as HTMLElement).style.fontSize = 'small'; });
     updateMAVMarker();
 
@@ -430,12 +447,11 @@
       map.style.display = 'block';
       threedmap.style.display = 'none';
       mapType = 'OpenStreetMap';
-      if (darkMode) map.classList.add('dark');
       map.classList.remove('satellite');
-      currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      currentTileLayer = L.tileLayer(osmTileUrl(), {
         minZoom: 0,
         maxZoom: 20,
-        attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+        attribution: tileSources.osmAttribution
       }).addTo(leafletMap);
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
@@ -443,13 +459,12 @@
       map.style.display = 'block';
       threedmap.style.display = 'none';
       mapType = 'Satellite';
-      map.classList.remove('dark');
       map.classList.add('satellite');
-      currentTileLayer = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+      currentTileLayer = L.tileLayer(tileSources.satellite, {
         minZoom: 0,
         maxZoom: 20,
         subdomains:['mt0','mt1','mt2','mt3'],
-        attribution: 'Map data &copy; <a href="https://www.google.com/maps">Google Maps</a>'
+        attribution: tileSources.satelliteAttribution
       }).addTo(leafletMap);
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
@@ -857,6 +872,18 @@
   let tertiaryColor = $derived($tertiaryColorStore);
   let fontColor = $derived(darkMode ? '#ffffff' : '#000000');
   let lockView = $derived($lockViewStore);
+  // Swap the basemap tiles live when the theme toggles (OpenStreetMap only;
+  // satellite has no dark variant).
+  $effect(() => {
+    const dark = $darkModeStore;
+    const sources = tileSources;
+    untrack(() => {
+      const layer = get(mapTileLayerStore);
+      if (!layer || get(mapTypeStore) === 'Satellite') return;
+      (layer as L.TileLayer).setUrl(dark ? sources.dark : sources.light);
+    });
+  });
+
   $effect.pre(() => {
     mavHeading = $mavHeadingStore;
     untrack(() => updateMAVMarker());

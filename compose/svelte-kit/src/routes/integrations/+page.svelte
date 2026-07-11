@@ -7,6 +7,7 @@
     tertiaryColorStore
   } from '../../stores/customizationStore';
   import { notify } from '../../lib/overlays';
+  import { resolveTiles, TILE_PRESETS } from '../../lib/tiles';
 
   let darkMode = $derived($darkModeStore);
   let primaryColor = $derived($primaryColorStore);
@@ -24,6 +25,31 @@
   let openaipSet = $state(false);
   let altitudeAngel = $state('');
   let altitudeAngelSet = $state(false);
+  let maptiler = $state('');
+  let tiles = $state({ light: '', dark: '', satellite: '' });
+
+  const TILE_PLACEHOLDER = {
+    light: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    satellite: 'https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}'
+  };
+
+  function pickPreset(event: Event, mode: 'light' | 'dark' | 'satellite') {
+    const select = event.currentTarget as HTMLSelectElement;
+    if (select.value) tiles[mode] = select.value;
+    select.selectedIndex = 0;
+  }
+
+  // Save a tile URL only when it differs from the current default, so an
+  // autofilled default stays as "use default" rather than a frozen override.
+  function tileOverrides() {
+    const def = resolveTiles({ maptilerKey: maptiler });
+    return {
+      light: tiles.light === def.light ? '' : tiles.light,
+      dark: tiles.dark === def.dark ? '' : tiles.dark,
+      satellite: tiles.satellite === def.satellite ? '' : tiles.satellite
+    };
+  }
 
   onMount(async () => {
     try {
@@ -34,6 +60,16 @@
       passSet = data.smtp.passSet;
       openaipSet = data.openaipSet;
       altitudeAngelSet = data.altitudeAngelSet;
+      maptiler = data.maptiler ?? '';
+      // Autofill with the effective URLs (saved override, else the resolved
+      // default) so the fields show what the map is actually using.
+      const eff = resolveTiles({
+        maptilerKey: maptiler,
+        lightUrl: data.tiles?.light,
+        darkUrl: data.tiles?.dark,
+        satelliteUrl: data.tiles?.satellite
+      });
+      tiles = { light: eff.light, dark: eff.dark, satellite: eff.satellite };
     } catch {
       notify({ title: 'Load failed', content: 'Could not load integration settings.', type: 'warning' });
     } finally {
@@ -47,7 +83,7 @@
       const res = await fetch('/api/integrations', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email, smtp, openaip, altitudeAngel })
+        body: JSON.stringify({ email, smtp, openaip, altitudeAngel, maptiler, tiles: tileOverrides() })
       });
       if (res.ok) {
         if (smtp.pass) passSet = true;
@@ -167,6 +203,50 @@
         <div class="field">
           <label for="altitude-angel">Altitude Angel API key {#if altitudeAngelSet}<span class="badge">configured</span>{/if}</label>
           <input id="altitude-angel" bind:value={altitudeAngel} autocomplete="off" placeholder={altitudeAngelSet ? '•••••••• (saved)' : 'Altitude Angel key'} />
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <span class="icon-chip"><i class="fas fa-map"></i></span>
+          <div>
+            <h2>Map tiles</h2>
+            <p class="muted">A MapTiler key gives a rich dark basemap and a labeled hybrid satellite. Leave blank for keyless tiles. Each mode accepts a custom XYZ tile URL to override the default.</p>
+          </div>
+        </div>
+        <div class="field">
+          <label for="maptiler">MapTiler API key</label>
+          <input id="maptiler" bind:value={maptiler} autocomplete="off" placeholder="MapTiler key (optional)" />
+        </div>
+        <div class="field">
+          <label for="tiles-light">Light basemap URL</label>
+          <div class="tile-row">
+            <select class="preset" aria-label="Light basemap preset" onchange={(e) => pickPreset(e, 'light')}>
+              <option value="">Preset...</option>
+              {#each TILE_PRESETS.light as p (p.url)}<option value={p.url}>{p.label}</option>{/each}
+            </select>
+            <input id="tiles-light" bind:value={tiles.light} autocomplete="off" placeholder={TILE_PLACEHOLDER.light} />
+          </div>
+        </div>
+        <div class="field">
+          <label for="tiles-dark">Dark basemap URL</label>
+          <div class="tile-row">
+            <select class="preset" aria-label="Dark basemap preset" onchange={(e) => pickPreset(e, 'dark')}>
+              <option value="">Preset...</option>
+              {#each TILE_PRESETS.dark as p (p.url)}<option value={p.url}>{p.label}</option>{/each}
+            </select>
+            <input id="tiles-dark" bind:value={tiles.dark} autocomplete="off" placeholder={TILE_PLACEHOLDER.dark} />
+          </div>
+        </div>
+        <div class="field">
+          <label for="tiles-satellite">Satellite basemap URL</label>
+          <div class="tile-row">
+            <select class="preset" aria-label="Satellite basemap preset" onchange={(e) => pickPreset(e, 'satellite')}>
+              <option value="">Preset...</option>
+              {#each TILE_PRESETS.satellite as p (p.url)}<option value={p.url}>{p.label}</option>{/each}
+            </select>
+            <input id="tiles-satellite" bind:value={tiles.satellite} autocomplete="off" placeholder={TILE_PLACEHOLDER.satellite} />
+          </div>
         </div>
       </section>
 
@@ -290,7 +370,8 @@
     gap: 0.4rem;
   }
 
-  input {
+  input,
+  .preset {
     background-color: rgb(from var(--tertiaryColor) r g b / 0.7);
     border: 1px solid rgb(from var(--fontColor) r g b / 0.12);
     color: var(--fontColor);
@@ -298,6 +379,22 @@
     padding: 0.6rem 0.8rem;
     outline: none;
     transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+  }
+
+  .tile-row {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .tile-row input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .preset {
+    flex-shrink: 0;
+    width: 10rem;
+    cursor: pointer;
   }
 
   input::placeholder {
