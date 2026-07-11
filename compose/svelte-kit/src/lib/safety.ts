@@ -20,6 +20,9 @@ export interface AirspaceZone {
   restricted: boolean; // prohibited / restricted / danger => hard no-fly
   // GeoJSON Polygon coordinates: outer ring plus optional holes, [lon, lat].
   polygon: number[][][];
+  type?: string; // class or category label, e.g. "Class E", "Restricted area", "MOA"
+  lower?: string; // lower limit description, e.g. "SFC", "700 ft AGL"
+  upper?: string; // upper limit description, e.g. "10000 ft MSL"
 }
 
 export interface SafetyLimits {

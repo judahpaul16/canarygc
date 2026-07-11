@@ -15,18 +15,50 @@ const FAA_BASE = 'https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/serv
 interface FaaProps {
   NAME?: string;
   TYPE_CODE?: string;
+  UPPER_DESC?: string;
+  LOWER_DESC?: string;
+}
+
+const SUA_TYPE_NAMES: Record<string, string> = {
+  P: 'Prohibited area',
+  R: 'Restricted area',
+  W: 'Warning area',
+  A: 'Alert area',
+  MOA: 'Military Operations Area',
+  NSA: 'National Security Area'
+};
+
+function classFromName(name: string): string | undefined {
+  const match = /CLASS\s+([A-G])/i.exec(name);
+  return match ? `Class ${match[1].toUpperCase()}` : undefined;
 }
 
 // Prohibited and Restricted areas are hard no-fly; MOAs, warning and alert
 // areas, and class airspace are advisory (they warn, they do not block).
-const FAA_LAYERS: { service: string; outFields: string; restricted: (props: FaaProps) => boolean }[] = [
-  { service: 'Prohibited_Areas', outFields: 'NAME', restricted: () => true },
+const FAA_LAYERS: {
+  service: string;
+  outFields: string;
+  restricted: (props: FaaProps) => boolean;
+  type: (props: FaaProps) => string | undefined;
+}[] = [
+  {
+    service: 'Prohibited_Areas',
+    outFields: 'NAME,UPPER_DESC,LOWER_DESC',
+    restricted: () => true,
+    type: () => 'Prohibited area'
+  },
   {
     service: 'Special_Use_Airspace',
-    outFields: 'NAME,TYPE_CODE',
-    restricted: (p) => p.TYPE_CODE === 'P' || p.TYPE_CODE === 'R'
+    outFields: 'NAME,TYPE_CODE,UPPER_DESC,LOWER_DESC',
+    restricted: (p) => p.TYPE_CODE === 'P' || p.TYPE_CODE === 'R',
+    type: (p) => (p.TYPE_CODE ? SUA_TYPE_NAMES[p.TYPE_CODE] ?? p.TYPE_CODE : undefined)
   },
-  { service: 'Class_Airspace', outFields: 'NAME', restricted: () => false }
+  {
+    service: 'Class_Airspace',
+    outFields: 'NAME,UPPER_DESC,LOWER_DESC',
+    restricted: () => false,
+    type: (p) => classFromName(p.NAME ?? '')
+  }
 ];
 
 interface GeoFeature {
@@ -41,12 +73,12 @@ function isRestricted(feature: { name?: string; type?: number | string; icaoClas
 
 // A GeoJSON Polygon maps to one zone; a MultiPolygon maps to one zone per
 // polygon so the point-in-polygon check stays a simple ring test.
-function polygonZones(feature: GeoFeature, name: string, restricted: boolean): AirspaceZone[] {
+function polygonZones(feature: GeoFeature, base: Omit<AirspaceZone, 'polygon'>): AirspaceZone[] {
   const g = feature.geometry;
   if (!g || !g.coordinates) return [];
-  if (g.type === 'Polygon') return [{ name, restricted, polygon: g.coordinates as number[][][] }];
+  if (g.type === 'Polygon') return [{ ...base, polygon: g.coordinates as number[][][] }];
   if (g.type === 'MultiPolygon') {
-    return (g.coordinates as number[][][][]).map((polygon) => ({ name, restricted, polygon }));
+    return (g.coordinates as number[][][][]).map((polygon) => ({ ...base, polygon }));
   }
   return [];
 }
@@ -91,7 +123,13 @@ async function fetchFaaLayer(bbox: string, layer: (typeof FAA_LAYERS)[number]): 
   const features: GeoFeature[] = Array.isArray(data?.features) ? data.features : [];
   return features.flatMap((f) => {
     const props = (f.properties ?? {}) as FaaProps;
-    return polygonZones(f, props.NAME || 'Airspace', layer.restricted(props));
+    return polygonZones(f, {
+      name: props.NAME || 'Airspace',
+      restricted: layer.restricted(props),
+      type: layer.type(props),
+      lower: props.LOWER_DESC || undefined,
+      upper: props.UPPER_DESC || undefined
+    });
   });
 }
 
