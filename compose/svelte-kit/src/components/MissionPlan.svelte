@@ -357,6 +357,10 @@
         <div class="tooltip">Stop Mission (RTL)</div>
       </button>
     </div>
+    <p class="hint">
+      <i class="fas fa-circle-info"></i>
+      Double-click the map to add a waypoint. Drag a marker to move it.
+    </p>
     <div class="column overflow-auto" id="mission-plan-actions">
       <div class="overflow-auto">
         <hr>
@@ -461,6 +465,18 @@
   .column {
     flex: 1;
     padding: 0 1rem;
+  }
+
+  .hint {
+    margin: 0.25rem 0 0.5rem 1rem;
+    font-size: 8.5pt;
+    opacity: 0.6;
+    clear: both;
+  }
+
+  .hint i {
+    color: #61cd89;
+    margin-right: 0.35rem;
   }
 
   .separator {
