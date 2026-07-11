@@ -33,6 +33,7 @@
   } from '../stores/safetyStore';
   import { airspaceColor, airspacePopupHtml } from '../lib/airspace';
   import { ceilingColor, ceilingPopupHtml, obstacleColor, obstaclePopupHtml } from '../lib/hazards';
+  import { pointInPolygon } from '../lib/geo';
   import { refreshAirspace, refreshHazards } from '../lib/preflight';
   import ThreeDMap from './3DMap.svelte';
   import pkg from 'maplibre-gl';
@@ -236,6 +237,9 @@
     });
 
     leafletMap.on('click', (e: L.LeafletMouseEvent) => {
+      // A click on any overlay or marker opens the combined popup instead of
+      // dropping a waypoint.
+      if (openCombinedPopup(e.latlng)) return;
       if (Object.keys(actions).length > 1) {
         const lat = e.latlng.lat;
         const lon = e.latlng.lng;
@@ -259,6 +263,59 @@
     }
   }
 
+  const FEATURE_HIT_PX = 16;
+
+  // Everything under a click, so overlapping airspace, ceilings, obstacles, and
+  // mission markers collapse into one popup instead of fighting over the map.
+  function popupSectionsAt(latlng: L.LatLng): string[] {
+    if (!leafletMap) return [];
+    const point = { lat: latlng.lat, lon: latlng.lng };
+    const clickPx = leafletMap.latLngToContainerPoint(latlng);
+    const withinHit = (lat: number, lon: number) => {
+      const px = leafletMap!.latLngToContainerPoint([lat, lon] as L.LatLngExpression);
+      return Math.hypot(px.x - clickPx.x, px.y - clickPx.y) <= FEATURE_HIT_PX;
+    };
+
+    const sections: string[] = [];
+    if (get(showAirspaceStore)) {
+      for (const zone of get(airspaceZonesStore)) {
+        if (pointInPolygon(point, zone.polygon)) sections.push(airspacePopupHtml(zone));
+      }
+    }
+    if (get(showCeilingsStore)) {
+      for (const cell of get(ceilingCellsStore)) {
+        if (pointInPolygon(point, cell.polygon)) sections.push(ceilingPopupHtml(cell));
+      }
+    }
+    if (get(showObstaclesStore)) {
+      for (const obstacle of get(obstaclesStore)) {
+        if (withinHit(obstacle.lat, obstacle.lon)) sections.push(obstaclePopupHtml(obstacle));
+      }
+    }
+
+    const missionHits: string[] = [];
+    if (mavMarker) {
+      const mav = mavMarker.getLatLng();
+      if (withinHit(mav.lat, mav.lng)) missionHits.push('Aircraft position');
+    }
+    markers.forEach((marker, index) => {
+      const ll = marker.getLatLng();
+      if (withinHit(ll.lat, ll.lng)) missionHits.push(`Waypoint ${index}: ${actions[index]?.type ?? ''}`);
+    });
+    if (missionHits.length) sections.push(`<strong>Mission</strong><br>${missionHits.join('<br>')}`);
+
+    return sections;
+  }
+
+  function openCombinedPopup(latlng: L.LatLng): boolean {
+    if (!L || !leafletMap) return false;
+    const sections = popupSectionsAt(latlng);
+    if (!sections.length) return false;
+    const html = `<div class="combined-popup">${sections.join('<hr class="popup-sep" />')}</div>`;
+    L.popup({ maxHeight: 300, autoPan: true }).setLatLng(latlng).setContent(html).openOn(leafletMap);
+    return true;
+  }
+
   let airspaceLayer: L.LayerGroup | null = null;
 
   function renderAirspace() {
@@ -270,16 +327,13 @@
     }
     const group = L.layerGroup();
     for (const zone of get(airspaceZonesStore)) {
-      const popupHtml = airspacePopupHtml(zone);
       for (const ring of zone.polygon) {
         const latlngs = ring.map(([lon, lat]) => [lat, lon] as [number, number]);
         L.polygon(latlngs, {
           color: airspaceColor(zone),
           weight: 1,
           fillOpacity: 0.12
-        })
-          .bindPopup(popupHtml)
-          .addTo(group);
+        }).addTo(group);
       }
     }
     group.addTo(leafletMap);
@@ -369,9 +423,7 @@
           color: ceilingColor(cell.ceilingFt),
           weight: 0.5,
           fillOpacity: 0.22
-        })
-          .bindPopup(ceilingPopupHtml(cell))
-          .addTo(group);
+        }).addTo(group);
       }
     }
     group.addTo(leafletMap);
@@ -393,7 +445,7 @@
         weight: 2,
         fillOpacity: 0.7
       })
-        .bindPopup(obstaclePopupHtml(obstacle))
+        .on('click', (ev) => openCombinedPopup((ev as L.LeafletMouseEvent).latlng))
         .addTo(group);
     }
     group.addTo(leafletMap);
@@ -562,7 +614,7 @@
         
         if (!isNaN(lat) && !isNaN(lon) && iconIndex >= 0) {
           const marker = L.marker([lat, lon], { icon: icons[iconIndex] })
-            .bindPopup(`${index} - ${type}`);
+            .on('click', (ev) => openCombinedPopup((ev as L.LeafletMouseEvent).latlng));
           try { leafletMap.addLayer(marker); } catch { return; }
           markers.set(index, marker);
         }
@@ -610,11 +662,6 @@
         markers3D.delete(Object.keys(actions).length + 1);
         markers.delete(Object.keys(actions).length + 1);
       }
-      // Update the popup content for each marker
-      markers.forEach((marker, index) => {
-        const action = actions[index];
-        marker.bindPopup(`${index} - ${action.type}`);
-      });
     }
 
     // Clear existing polylines before recalculating
@@ -685,7 +732,7 @@
             leafletMap?.removeLayer(mavMarker);
           }
           mavMarker = L.marker(mavLocation as L.LatLng, { icon: icon })
-            .bindPopup('MAV is here: ' + mavLocation.lat + ', ' + mavLocation.lng);
+            .on('click', (ev) => openCombinedPopup((ev as L.LeafletMouseEvent).latlng));
           leafletMap?.addLayer(mavMarker);
           updateMarkersAndPolylines();
           if (lockView && leafletMap) {
@@ -768,6 +815,15 @@
 
 <style lang="css">
   @import url('https://unpkg.com/leaflet@1.7.1/dist/leaflet.css');
+
+  /* Leaflet renders popups outside this component, so the combined-popup
+     separator between stacked features needs a global rule. */
+  :global(.combined-popup .popup-sep) {
+    border: none;
+    border-top: 1px solid rgba(127, 127, 127, 0.35);
+    margin: 0.5rem 0;
+  }
+
   .map-container {
     position: relative;
     height: 100%;
