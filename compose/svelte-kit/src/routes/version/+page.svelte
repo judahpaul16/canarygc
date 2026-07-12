@@ -22,9 +22,10 @@
   ]);
 </script>
 
-<div class="mx-auto w-full max-w-md px-4 py-16">
+<div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">
+  <div class="dashboard w-full flex items-center justify-center p-5 rounded-3xl rounded-l-none h-[90vh] max-h-[90vh]">
   <div
-    class="rounded-2xl border p-6 shadow-md"
+    class="w-full max-w-md rounded-2xl border p-6 shadow-md"
     style="background-color: var(--primaryColor); color: var(--fontColor); border-color: var(--secondaryColor);"
   >
     <h1 class="text-xl font-bold">Build info</h1>
@@ -38,5 +39,6 @@
       {/each}
     </dl>
     <a href="/" class="mt-6 inline-block text-sm font-semibold text-[#62bbff] hover:underline">&larr; Back to home</a>
+  </div>
   </div>
 </div>

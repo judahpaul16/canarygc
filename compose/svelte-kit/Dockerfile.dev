@@ -1,5 +1,8 @@
 FROM node:26-alpine
 
+# The /version page resolves the release tag and commit from the mounted repo.
+RUN apk add --no-cache git && git config --global --add safe.directory /app
+
 WORKDIR /app
 
 COPY . .
