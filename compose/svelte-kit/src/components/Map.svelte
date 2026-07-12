@@ -43,6 +43,7 @@
 
   import {
     darkModeStore,
+    mavIconStore,
   } from '../stores/customizationStore';
   import { mapWindowStore, mapShellStore, mapPanelStore, mapFullscreenStore, type MapRect } from '../stores/mapStore';
   import { loggedInStore } from '../stores/authStore';
@@ -454,6 +455,41 @@
 
   const FEATURE_HIT_PX = 16;
 
+  const MAV_ICONS = [
+    { src: '/map/here.png', label: 'Arrow' },
+    { src: '/map/mav-plane.png', label: 'Plane' },
+    { src: '/map/mav-jet.png', label: 'Jet' },
+    { src: '/map/mav-quad.png', label: 'Quadcopter' },
+    { src: '/map/mav-hex.png', label: 'Hexacopter' },
+    { src: '/map/mav-boat.png', label: 'Boat' },
+    { src: '/map/mav-rover.png', label: 'Rover' }
+  ];
+
+  function mavMarkerSectionHtml(): string {
+    const current = get(mavIconStore);
+    const buttons = MAV_ICONS.map(
+      (icon) =>
+        `<button type="button" class="am-icon${icon.src === current ? ' am-icon-active' : ''}" data-mav-icon="${icon.src}" title="${icon.label}" aria-label="${icon.label}"><img src="${icon.src}" alt="${icon.label}"></button>`
+    ).join('');
+    return `<strong>Aircraft position</strong><br><span class="am-note">Vehicle marker:</span><div class="am-icons">${buttons}</div>`;
+  }
+
+  // The modal body is injected HTML, so the icon buttons resolve through one
+  // delegated listener instead of per-button handlers.
+  function onIconPick(e: MouseEvent) {
+    const btn = (e.target as HTMLElement).closest('[data-mav-icon]') as HTMLElement | null;
+    if (!btn || !btn.dataset.mavIcon) return;
+    mavIconStore.set(btn.dataset.mavIcon);
+    btn.parentElement?.querySelectorAll('.am-icon-active').forEach((el) => el.classList.remove('am-icon-active'));
+    btn.classList.add('am-icon-active');
+    updateMAVMarker();
+  }
+
+  $effect(() => {
+    document.addEventListener('click', onIconPick);
+    return () => document.removeEventListener('click', onIconPick);
+  });
+
   // Everything under a click, so overlapping airspace, ceilings, obstacles, and
   // mission markers collapse into one popup instead of fighting over the map.
   // Each section carries the accent color of its map layer so the modal cards
@@ -490,11 +526,16 @@
         if (withinHit(obstacle.lat, obstacle.lon)) sections.push({ html: obstaclePopupHtml(obstacle), accent: obstacleColor(obstacle.aglFt) });
       }
     }
+    if (get(showTrafficStore)) {
+      for (const contact of Object.values(get(trafficStore))) {
+        if (withinHit(contact.lat, contact.lon)) sections.push({ html: trafficPopupHtml(contact), accent: '#38bdf8' });
+      }
+    }
 
     const missionHits: string[] = [];
     if (mavMarker) {
       const mav = mavMarker.getLatLng();
-      if (withinHit(mav.lat, mav.lng)) missionHits.push('Aircraft position');
+      if (withinHit(mav.lat, mav.lng)) sections.push({ html: mavMarkerSectionHtml(), accent: '#4e94f7' });
     }
     markers.forEach((marker, index) => {
       const ll = marker.getLatLng();
@@ -652,7 +693,9 @@
         iconSize: [20, 20],
         iconAnchor: [10, 10]
       });
-      L.marker([c.lat, c.lon], { icon }).bindPopup(trafficPopupHtml(c)).addTo(group);
+      L.marker([c.lat, c.lon], { icon })
+        .on('click', (ev) => openCombinedPopup((ev as L.LeafletMouseEvent).latlng))
+        .addTo(group);
     }
     group.addTo(leafletMap);
     trafficLayer = group;
@@ -997,7 +1040,7 @@
   function updateMAVMarker() {
     if (leafletMap && mavLocation) {
       let img = new Image();
-      img.src = '/map/here.png'; // Use static path directly
+      img.src = get(mavIconStore);
       if (!L) return;
       img.onload = () => {
         let canvas = document.createElement('canvas');
@@ -1063,6 +1106,10 @@
   });
   $effect.pre(() => {
     void $mavLocationStore;
+    untrack(() => updateMAVMarker());
+  });
+  $effect.pre(() => {
+    void $mavIconStore;
     untrack(() => updateMAVMarker());
   });
   $effect(() => {

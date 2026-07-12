@@ -2,6 +2,7 @@
   import { onMount, onDestroy, untrack } from 'svelte';
   import { mavHeadingStore, mavLocationStore } from '../stores/mavlinkStore';
   import { mapZoomStore, lockViewStore, threeDMapStore, mapWindowStore, mapFullscreenStore } from '../stores/mapStore';
+  import { mavIconStore } from '../stores/customizationStore';
   import { airspaceZonesStore, showAirspaceStore } from '../stores/safetyStore';
   import {
     AIRSPACE_CONTROLLED_COLOR,
@@ -210,7 +211,7 @@
     if (location && m) {
       marker?.remove();
       let img = new Image();
-      img.src = '/map/here.png'; // Use static path directly
+      img.src = get(mavIconStore);
       img.onload = () => {
         let canvas = document.createElement('canvas');
         canvas.width = img.width;
