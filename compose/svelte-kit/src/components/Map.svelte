@@ -11,9 +11,9 @@
     lockViewStore,
     threeDMapStore
   } from '../stores/mapStore';
-  import { mavLocationStore, mavHeadingStore, mavAltitudeStore, mavModeStore } from '../stores/mavlinkStore';
+  import { mavLocationStore, mavHeadingStore, mavAltitudeStore, mavModeStore, mavTypeStore } from '../stores/mavlinkStore';
   import { sendMavlinkCommand, setFlightMode, setPositionLocal } from '../lib/mavlink-client';
-  import { isGuidedLabel } from '../lib/flight-modes';
+  import { isGuidedLabel, isAirVehicle } from '../lib/flight-modes';
   import DPad from './DPad.svelte';
   import LiveFeed from './LiveFeed.svelte';
   import Stats from './Stats.svelte';
@@ -129,6 +129,26 @@
         showTrafficStore.set(false);
         renderTraffic();
       }
+    });
+  });
+
+  // Airspace, LAANC ceilings, obstacles, and live traffic only matter to
+  // something that flies, so they enable themselves once when an air vehicle
+  // type comes over the link and stay off for rovers, boats, and submarines.
+  let overlayDefaultsApplied = false;
+  $effect(() => {
+    const type = $mavTypeStore;
+    untrack(() => {
+      if (overlayDefaultsApplied || !type || hideOverlay) return;
+      overlayDefaultsApplied = true;
+      if (!isAirVehicle(type)) return;
+      if (!get(showAirspaceStore)) showAirspaceStore.set(true);
+      if (!get(showCeilingsStore)) showCeilingsStore.set(true);
+      if (!get(showObstaclesStore)) showObstaclesStore.set(true);
+      if (!get(showTrafficStore)) showTrafficStore.set(true);
+      refreshAirspace(get(missionPlanActionsStore));
+      refreshHazards(get(missionPlanActionsStore));
+      refreshTraffic();
     });
   });
 
@@ -407,7 +427,7 @@
   // "current altitude" and never climb.
   const DEFAULT_TAKEOFF_ALT_M = 10;
 
-  // Adding a waypoint seeds a takeoff at the aircraft's location first when the
+  // Adding a waypoint seeds a takeoff at the vehicle's location first when the
   // mission has none, since nearly every ArduPilot and PX4 mission must begin
   // with a takeoff. The waypoint lands at the double-clicked point.
   function addWaypoint(latlng: L.LatLng) {
@@ -471,7 +491,7 @@
       (icon) =>
         `<button type="button" class="am-icon${icon.src === current ? ' am-icon-active' : ''}" data-mav-icon="${icon.src}" title="${icon.label}" aria-label="${icon.label}"><img src="${icon.src}" alt="${icon.label}"></button>`
     ).join('');
-    return `<strong>Aircraft position</strong><br><span class="am-note">Vehicle marker:</span><div class="am-icons">${buttons}</div>`;
+    return `<strong>${get(mavTypeStore) || 'Vehicle'} position</strong><br><span class="am-note">Vehicle marker:</span><div class="am-icons">${buttons}</div>`;
   }
 
   // The modal body is injected HTML, so the icon buttons resolve through one
@@ -1564,7 +1584,7 @@
     <button class="map-btn" aria-label="Toggle fullscreen" title="Toggle fullscreen" onclick={handleFullScreen}>
       <i class="fas fa-expand"></i>
     </button>
-    <button class="map-btn {lockPulse ? 'lock-pulse' : ''}" aria-label="Toggle map lock" title={lockView ? 'Unlock map (stop following the aircraft)' : 'Lock map to the aircraft'} onclick={toggleLockView}>
+    <button class="map-btn {lockPulse ? 'lock-pulse' : ''}" aria-label="Toggle map lock" title={lockView ? 'Unlock map (stop following the vehicle)' : 'Lock map to the vehicle'} onclick={toggleLockView}>
       <i class="fas {lockView ? 'fa-lock text-[#f5c518]' : 'fa-lock-open'}"></i>
     </button>
     {#if !hideOverlay}

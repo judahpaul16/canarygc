@@ -1,5 +1,5 @@
 import { get } from 'svelte/store';
-import { mavModelStore } from '../stores/mavlinkStore';
+import { mavModelStore, mavTypeStore } from '../stores/mavlinkStore';
 
 export type FlightMode = 'GUIDED' | 'AUTO' | 'RTL' | 'LOITER' | 'LAND';
 
@@ -81,6 +81,11 @@ const px4Strategy: AutopilotStrategy = {
   },
   supportsLocalSetpoint: false
 };
+
+// Ground and water vehicles fly nothing; airspace-related chrome keys off this.
+export function isAirVehicle(type: string = get(mavTypeStore)): boolean {
+  return !!type && !/rover|boat|submarine/i.test(type);
+}
 
 export function isPX4(model: string = get(mavModelStore)): boolean {
   return model.toUpperCase().includes('PX4');

@@ -129,7 +129,6 @@
     {:else}
       <div class="weather-detail wind">Wind Speed: {windSpeed} m/s</div>
       <div class="weather-detail wind">Wind Direction: {windDirection}</div>
-      <img src={weatherImage} alt={weatherDescription} class="weather-icon" />
       <div class="weather-summary">{weatherDescription}</div>
       <div class="weather-detail rain">Rain Chance: {rainChance}</div>
       <div class="weather-detail temp">Temp: {temperature}</div>

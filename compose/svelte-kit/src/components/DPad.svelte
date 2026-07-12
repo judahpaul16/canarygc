@@ -31,7 +31,7 @@
       <i class="fas fa-chevron-left"></i>
     </button>
     <div class="center-circle">
-      <span class="move-text" title="Arrows move the aircraft in world frame: North, East, South, West">N/E/S/W</span>
+      <span class="move-text" title="Arrows move the vehicle in world frame: North, East, South, West">N/E/S/W</span>
     </div>
   </nav>
 </div>

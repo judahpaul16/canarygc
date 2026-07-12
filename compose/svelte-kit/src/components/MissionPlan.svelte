@@ -28,6 +28,15 @@
 
   let { title = $bindable('') }: Props = $props();
   let actions: MissionPlanActions = $derived($missionPlanActionsStore);
+  // Rows with any parameter set keep the inputs visible; the rest collapse to
+  // a button so the common case stays compact.
+  let paramsOpen: Record<number, boolean> = $state({});
+
+  function hasParams(action: MissionPlanActions[number] | undefined): boolean {
+    return [action?.param1, action?.param2, action?.param3, action?.param4].some(
+      (v) => v !== null && v !== undefined && `${v}` !== ''
+    );
+  }
   let action_types = [
     'NAV_WAYPOINT', 'NAV_SPLINE_WAYPOINT', 'NAV_TAKEOFF', 'NAV_RETURN_TO_LAUNCH', 'NAV_GUIDED_ENABLE', 'NAV_LAND',
     'NAV_LOITER_TIME', 'NAV_LOITER_TURNS', 'NAV_LOITER_UNLIM', 'NAV_PAYLOAD_PLACE', 'DO_WINCH', 'DO_GRIPPER', 'DO_SET_CAM_TRIGG_DIST',
@@ -401,26 +410,32 @@
                         <i class="fas fa-info-circle"></i>
                       </a>
                     </h2>
-                    <div class="flex justify-between items-center gap-3">
+                    {#if paramsOpen[Number(index)] || hasParams(actions[Number(index)])}
                       <div class="flex justify-between items-center gap-3">
-                        <span class="text-[8pt]">P1</span>
-                        <input type="number" id="param1-{index}" placeholder="Empty" value={actions[Number(index)].param1} onchange={updateParam} />
+                        <div class="flex justify-between items-center gap-3">
+                          <span class="text-[8pt]">P1</span>
+                          <input type="number" id="param1-{index}" placeholder="Empty" value={actions[Number(index)].param1} onchange={updateParam} />
+                        </div>
+                        <div class="flex justify-between items-center gap-3">
+                          <span class="text-[8pt]">P2</span>
+                          <input type="number" id="param2-{index}" placeholder="Empty" value={actions[Number(index)].param2} onchange={updateParam} />
+                        </div>
                       </div>
                       <div class="flex justify-between items-center gap-3">
-                        <span class="text-[8pt]">P2</span>
-                        <input type="number" id="param2-{index}" placeholder="Empty" value={actions[Number(index)].param2} onchange={updateParam} />
+                        <div class="flex justify-between items-center gap-3">
+                          <span class="text-[8pt]">P3</span>
+                          <input type="number" id="param3-{index}" placeholder="Empty" value={actions[Number(index)].param3} onchange={updateParam} />
+                        </div>
+                        <div class="flex justify-between items-center gap-3">
+                          <span class="text-[8pt]">P4</span>
+                          <input type="number" id="param4-{index}" placeholder="Empty" value={actions[Number(index)].param4} onchange={updateParam} />
+                        </div>
                       </div>
-                    </div>
-                    <div class="flex justify-between items-center gap-3">
-                      <div class="flex justify-between items-center gap-3">
-                        <span class="text-[8pt]">P3</span>
-                        <input type="number" id="param3-{index}" placeholder="Empty" value={actions[Number(index)].param3} onchange={updateParam} />
-                      </div>
-                      <div class="flex justify-between items-center gap-3">
-                        <span class="text-[8pt]">P4</span>
-                        <input type="number" id="param4-{index}" placeholder="Empty" value={actions[Number(index)].param4} onchange={updateParam} />
-                      </div>
-                    </div>
+                    {:else}
+                      <button type="button" class="params-toggle" onclick={() => (paramsOpen[Number(index)] = true)}>
+                        <i class="fas fa-sliders"></i> Set parameters
+                      </button>
+                    {/if}
                   </div>
                   <div class="separator"></div>
                   <div class="form-input flex flex-col gap-1 items-center justify-center">
@@ -593,6 +608,23 @@
   .missionPlan {
     color: var(--fontColor);
     background-color: var(--primaryColor);
+  }
+
+  .params-toggle {
+    justify-self: center;
+    margin: auto;
+    padding: 0.4rem 0.9rem;
+    font-size: 9pt;
+    color: var(--fontColor);
+    background-color: var(--secondaryColor);
+    border: 1px solid var(--tertiaryColor);
+    border-radius: var(--radius-control);
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  .params-toggle:hover {
+    border-color: #61cd89;
   }
 
   /* Mobile Styles */

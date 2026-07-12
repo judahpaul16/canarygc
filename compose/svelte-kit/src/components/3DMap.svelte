@@ -231,7 +231,7 @@
         }
       };
       if (get(lockViewStore) && !m.isMoving()) {
-        // Camera padding centers the aircraft inside the registered window.
+        // Camera padding centers the vehicle inside the registered window.
         const w = get(mapFullscreenStore) ? null : get(mapWindowStore);
         const padding = w
           ? {
