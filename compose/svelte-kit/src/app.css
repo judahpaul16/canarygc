@@ -32,6 +32,10 @@ html.dark .elevated-surface {
   --secondaryColor: var(--tertiaryColor);
 }
 
+.elevated-surface {
+  pointer-events: auto;
+}
+
 body {
   transition:
     background-color 0.2s ease-in-out,

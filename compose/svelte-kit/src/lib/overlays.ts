@@ -33,6 +33,12 @@ export interface NotifyOptions {
 
 const NOTIFY_DURATION_MS = 10_000;
 
+// The Fullscreen API renders only the fullscreen element's subtree, so
+// overlays mount inside it while the map is fullscreen.
+function overlayTarget(): HTMLElement {
+  return (document.fullscreenElement as HTMLElement | null) ?? document.body;
+}
+
 export function showModal(options: ModalOptions): () => void {
   let closed = false;
   const close = () => {
@@ -41,7 +47,7 @@ export function showModal(options: ModalOptions): () => void {
     unmount(instance);
   };
   const instance = mount(Modal, {
-    target: document.body,
+    target: overlayTarget(),
     props: {
       title: options.title,
       content: options.content,
@@ -76,7 +82,7 @@ export function notify(options: NotifyOptions): () => void {
     unmount(instance);
   };
   const instance = mount(Notification, {
-    target: document.body,
+    target: overlayTarget(),
     props: {
       title: options.title,
       content: options.content,

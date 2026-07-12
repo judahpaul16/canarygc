@@ -43,13 +43,92 @@
   import {
     darkModeStore,
   } from '../stores/customizationStore';
+  import { mapWindowStore, mapShellStore, mapPanelStore, mapFullscreenStore, type MapRect } from '../stores/mapStore';
+  import { loggedInStore } from '../stores/authStore';
+  import { trafficStore, showTrafficStore, upsertTraffic, type TrafficContact } from '../stores/trafficStore';
+  import 'leaflet/dist/leaflet.css';
+
   interface Props {
-    hideOverlay?: boolean;
-    mavLocation: L.LatLng | { lat: number; lng: number };
     id?: string | null;
   }
 
-  let { hideOverlay = $bindable(false), mavLocation = $bindable(), id = null }: Props = $props();
+  let { id = 'map' }: Props = $props();
+
+  let mavLocation: L.LatLng | { lat: number; lng: number } = $derived($mavLocationStore);
+  let win = $derived($mapWindowStore);
+  let isFullscreen = $state(false);
+  let hideOverlay = $derived(isFullscreen ? false : win ? !win.overlay : true);
+
+  // Window corner radius in px, matching --radius-surface.
+  const SURFACE_R = 16;
+
+  let shell = $derived($mapShellStore);
+  let panel = $derived($mapPanelStore);
+
+  // Splits a surface rect into strips around the window so the surface reads
+  // as one card with the window punched out.
+  function piecesAround(s: MapRect, w: MapRect | null, radius: string, edgeRadius: [string, string]): Array<MapRect & { radius: string }> {
+    if (!w) return [{ ...s, radius }];
+    return [
+      { top: s.top, left: s.left, width: s.width, height: w.top - s.top, radius: edgeRadius[0] },
+      { top: w.top + w.height, left: s.left, width: s.width, height: s.top + s.height - (w.top + w.height), radius: edgeRadius[1] },
+      { top: w.top, left: s.left, width: w.left - s.left, height: w.height, radius: '0' },
+      { top: w.top, left: w.left + w.width, width: s.left + s.width - (w.left + w.width), height: w.height, radius: '0' }
+    ].filter((p) => p.width > 0 && p.height > 0);
+  }
+
+  // The nav rail and the dashboard slab read as one shell (right corners
+  // rounded, left flat against the nav).
+  let shellPieces = $derived.by(() => {
+    if (!shell || isFullscreen) return [] as Array<MapRect & { radius: string }>;
+    return piecesAround(shell, win, '0 var(--radius-shell) var(--radius-shell) 0', [
+      '0 var(--radius-shell) 0 0',
+      '0 0 var(--radius-shell) 0'
+    ]);
+  });
+
+  let panelPieces = $derived.by(() => {
+    if (!panel || isFullscreen) return [] as Array<MapRect & { radius: string }>;
+    return piecesAround(panel, win, 'var(--radius-surface)', [
+      'var(--radius-surface) var(--radius-surface) 0 0',
+      '0 0 var(--radius-surface) var(--radius-surface)'
+    ]);
+  });
+
+  // Concave corner covers: the window hole is square while the frame is
+  // rounded, so each corner paints the surrounding surface outside the ring's
+  // arc to stop raw map pixels peeking past the rounded corners.
+  // The covers sit inside the window rect where no dim layer runs, so the slab
+  // tone carries the dim composited in to match the surrounding pieces.
+  let winCornerColor = $derived(panel ? 'var(--primaryColor)' : 'rgb(from var(--secondaryColor) calc(r * 0.91) calc(g * 0.91) calc(b * 0.91) / 0.93)');
+
+  function cornerStyle(top: number, left: number, r: number, at: string, color: string): string {
+    return `top:${top}px; left:${left}px; width:${r}px; height:${r}px; background: radial-gradient(circle at ${at}, transparent ${r - 1}px, ${color} ${r}px);`;
+  }
+
+  // Mission-planner chrome does not belong on other pages; leaving the map
+  // page clears the overlay toggles and their rendered layers.
+  $effect(() => {
+    if (!hideOverlay) return;
+    untrack(() => {
+      if (get(showAirspaceStore)) {
+        showAirspaceStore.set(false);
+        renderAirspace();
+      }
+      if (get(showCeilingsStore)) {
+        showCeilingsStore.set(false);
+        renderCeilings();
+      }
+      if (get(showObstaclesStore)) {
+        showObstaclesStore.set(false);
+        renderObstacles();
+      }
+      if (get(showTrafficStore)) {
+        showTrafficStore.set(false);
+        renderTraffic();
+      }
+    });
+  });
 
   let L: typeof import('leaflet');
   let leafletMap: L.Map | null = $derived($mapStore);
@@ -85,7 +164,6 @@
   const YAW_RELATIVE_OFFSET = 1;
   const ALTITUDE_STEP_M = 10;
 
-  let isFullscreen = $state(false);
   let feedDockOpen = $state(true);
   let controlDockOpen = $state(true);
   let lockPulse = $state(false);
@@ -117,7 +195,7 @@
 
   function handleFullscreenChange() {
     isFullscreen = Boolean(document.fullscreenElement);
-    if (!isFullscreen && window.location.href.includes('dashboard')) hideOverlay = true;
+    mapFullscreenStore.set(isFullscreen);
     setTimeout(() => {
       window.dispatchEvent(new Event('resize'));
       leafletMap?.invalidateSize();
@@ -215,6 +293,19 @@
     return L.tileLayer(url, options);
   }
 
+  // setView centers the viewport; panBy shifts that point to the window center.
+  function centerInWindow(latlng: L.LatLngExpression, zoom?: number) {
+    if (!leafletMap) return;
+    leafletMap.setView(latlng, zoom ?? leafletMap.getZoom(), { animate: false });
+    const w = isFullscreen ? null : get(mapWindowStore);
+    if (!w) return;
+    const size = leafletMap.getSize();
+    leafletMap.panBy(
+      [size.x / 2 - (w.left + w.width / 2), size.y / 2 - (w.top + w.height / 2)],
+      { animate: false }
+    );
+  }
+
   async function loadTileConfig() {
     try {
       const res = await fetch('/api/map-config');
@@ -227,7 +318,8 @@
   function initializeLeafletMap(id: string = 'map') {
     let threedmap = document.getElementById('threedmap')!;
     if (threedmap) threedmap.style.display = 'none';
-    leafletMap = L.map(id).setView(mavLocation, zoom);
+    leafletMap = L.map(id);
+    centerInWindow(mavLocation, zoom);
     if (mapType.toLowerCase() === 'openstreetmap') {
       currentTileLayer = tileLayerFor(osmTileUrl(), false).addTo(leafletMap);
       mapType = 'OpenStreetMap';
@@ -239,21 +331,19 @@
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
     }
-    if (hideOverlay) document.querySelectorAll('.map-btn i').forEach((element) => { (element as HTMLElement).style.fontSize = 'small'; });
     updateMAVMarker();
 
     const locationDisplay = document.querySelector('#location-display')!;
 
     // Update location display when MAV position changes
-    function updateLocationDisplay() {
-        locationDisplay.textContent = `MAV Location: ${mavLocation.lat.toFixed(6)}°, ${mavLocation.lng.toFixed(6)}°, Yaw Angle: ${mavHeading}°, Altitude: ${get(mavAltitudeStore)}m`;
+    function updateLocationDisplay(loc: L.LatLng | { lat: number; lng: number }) {
+        locationDisplay.textContent = `MAV Location: ${loc.lat.toFixed(6)}°, ${loc.lng.toFixed(6)}°, Yaw Angle: ${mavHeading}°, Altitude: ${get(mavAltitudeStore)}m`;
     }
-    updateLocationDisplay();
+    updateLocationDisplay(mavLocation);
 
     // Subscribe to MAV location changes
     mavLocationStore.subscribe(location => {
-        mavLocation = location;
-        updateLocationDisplay();
+        updateLocationDisplay(location);
     });
 
     // A single click inspects (combined popup); a double-click adds a waypoint,
@@ -282,10 +372,7 @@
       viewportTimer = setTimeout(refreshViewportOverlays, VIEWPORT_REFRESH_DELAY_MS);
     });
 
-    updateAttributionVisibility();
-
     mapStore.set(leafletMap);
-    mavLocationStore.set(mavLocation);
 
     if (!hideOverlay) {
       refreshAirspace(get(missionPlanActionsStore));
@@ -314,13 +401,18 @@
       .map((i) => current[i]);
     const blank = { notes: '', param1: null, param2: null, param3: null, param4: null };
 
-    const hasTakeoff = ordered.some((a) => a.type === 'NAV_TAKEOFF' || a.type === 'NAV_VTOL_TAKEOFF');
-    if (!hasTakeoff) {
-      const mav = get(mavLocationStore);
-      const lat = mav && 'lat' in mav && mav.lat !== 0 ? mav.lat : latlng.lat;
-      const lon = mav && 'lng' in mav && mav.lng !== 0 ? mav.lng : latlng.lng;
-      ordered.unshift({ type: 'NAV_TAKEOFF', lat, lon, alt: DEFAULT_TAKEOFF_ALT_M, ...blank });
-    }
+    const mav = get(mavLocationStore);
+    const lat = mav && 'lat' in mav && mav.lat !== 0 ? mav.lat : latlng.lat;
+    const lon = mav && 'lng' in mav && mav.lng !== 0 ? mav.lng : latlng.lng;
+    const takeoff = () => ({ type: 'NAV_TAKEOFF', lat, lon, alt: DEFAULT_TAKEOFF_ALT_M, ...blank });
+
+    // Index 0 is the hidden home slot (the panel and the markers skip it), so
+    // the plan needs one, and the takeoff check only counts the visible rows.
+    if (ordered.length === 0) ordered.push(takeoff());
+    const hasTakeoff = ordered
+      .slice(1)
+      .some((a) => a.type === 'NAV_TAKEOFF' || a.type === 'NAV_VTOL_TAKEOFF');
+    if (!hasTakeoff) ordered.splice(1, 0, takeoff());
     ordered.push({ type: 'NAV_WAYPOINT', lat: latlng.lat, lon: latlng.lng, alt: null, ...blank });
 
     const next: MissionPlanActions = {};
@@ -471,7 +563,6 @@
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(null);
     }
-    updateAttributionVisibility();
   }
 
   function toggleLockView() {
@@ -496,6 +587,65 @@
 
   let ceilingLayer: L.LayerGroup | null = null;
   let obstacleLayer: L.LayerGroup | null = null;
+  let trafficLayer: L.LayerGroup | null = null;
+  const TRAFFIC_POLL_MS = 5000;
+  const M_PER_FT = 0.3048;
+
+  async function refreshTraffic() {
+    if (!leafletMap || hideOverlay || !get(showTrafficStore)) return;
+    const b = leafletMap.getBounds();
+    const bbox = `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`;
+    try {
+      const res = await fetch(`/api/traffic?bbox=${bbox}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const now = Date.now();
+      upsertTraffic(
+        (data.contacts ?? []).map((c: Omit<TrafficContact, 'source' | 'seenAt'>) => ({
+          ...c,
+          source: 'network' as const,
+          seenAt: now
+        }))
+      );
+    } catch {
+      // Feed hiccup; the next poll retries.
+    }
+  }
+
+  function trafficPopupHtml(c: TrafficContact): string {
+    const esc = (v: string) => v.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
+    const alt = c.altM === null ? 'unknown' : `${Math.round(c.altM)} m (${Math.round(c.altM / M_PER_FT)} ft)`;
+    const speed = c.speedMps === null ? 'unknown' : `${Math.round(c.speedMps)} m/s`;
+    const heading = c.headingDeg === null ? 'unknown' : `${Math.round(c.headingDeg)}°`;
+    const source = c.source === 'vehicle' ? 'onboard ADS-B receiver' : 'network feed';
+    return `<b>${esc(c.callsign)}</b><br>Altitude: ${alt}<br>Speed: ${speed}<br>Track: ${heading}<br>Source: ${source}`;
+  }
+
+  function renderTraffic() {
+    if (!L || !leafletMap) return;
+    trafficLayer?.remove();
+    trafficLayer = null;
+    if (!get(showTrafficStore)) return;
+    const group = L.layerGroup();
+    for (const c of Object.values(get(trafficStore))) {
+      const icon = L.divIcon({
+        className: 'traffic-icon',
+        html: `<i class="fas fa-plane" style="transform: rotate(${(c.headingDeg ?? 0) - 90}deg)"></i>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      });
+      L.marker([c.lat, c.lon], { icon }).bindPopup(trafficPopupHtml(c)).addTo(group);
+    }
+    group.addTo(leafletMap);
+    trafficLayer = group;
+  }
+
+  function toggleTraffic() {
+    const next = !get(showTrafficStore);
+    showTrafficStore.set(next);
+    renderTraffic();
+    if (next) refreshTraffic();
+  }
   let obstacleRenderer: L.Renderer | null = null;
 
   // A pane above the polygon fills (overlayPane is 400) but below the mission
@@ -559,7 +709,6 @@
   }
 
   function toggleFullScreen(element: HTMLElement) {
-    if (window.location.href.includes('dashboard')) hideOverlay = !hideOverlay;
     if (!document.fullscreenElement) {
       element.requestFullscreen().catch(err => {
         showModal({
@@ -577,7 +726,6 @@
         window.dispatchEvent(new Event('resize'));
       }, 1000);
     }
-    updateAttributionVisibility();
   }
 
   function handleFullScreen() {
@@ -585,11 +733,6 @@
     if (el instanceof HTMLElement) {
       toggleFullScreen(el);
     }
-  }
-
-  function updateAttributionVisibility() {
-    const attribution = document.querySelector('.leaflet-control-attribution') as HTMLElement | null;
-    if (attribution) attribution.style.display = hideOverlay ? 'none' : 'inline-flex';
   }
 
   function removeAllMarkers() {
@@ -851,29 +994,37 @@
           leafletMap?.addLayer(mavMarker);
           updateMarkersAndPolylines();
           if (lockView && leafletMap) {
-            const centerPoint = leafletMap.latLngToContainerPoint(leafletMap.getCenter());
+            const w = isFullscreen ? null : get(mapWindowStore);
+            const size = leafletMap.getSize();
+            const windowCenter = w
+              ? { x: w.left + w.width / 2, y: w.top + w.height / 2 }
+              : { x: size.x / 2, y: size.y / 2 };
             const targetPoint = leafletMap.latLngToContainerPoint(mavLocation as L.LatLng);
-            const snapDistance = Math.hypot(centerPoint.x - targetPoint.x, centerPoint.y - targetPoint.y);
+            const snapDistance = Math.hypot(windowCenter.x - targetPoint.x, windowCenter.y - targetPoint.y);
             if (snapDistance > LOCK_PULSE_MIN_PX) triggerLockPulse();
-            leafletMap.setView(mavLocation as L.LatLng, get(mapZoomStore));
+            centerInWindow(mavLocation as L.LatLng, get(mapZoomStore));
           }
         }
       };
     }
   }
   let lockView = $derived($lockViewStore);
-  // Swap the basemap tiles live when the theme toggles (OpenStreetMap only;
-  // satellite has no dark variant).
   $effect(() => {
     const dark = $darkModeStore;
     const sources = tileSources;
     untrack(() => {
       const layer = get(mapTileLayerStore) as L.TileLayer | null;
-      if (!layer || get(mapTypeStore) === 'Satellite') return;
-      const url = dark ? sources.dark : sources.light;
+      if (!layer) return;
+      const url =
+        get(mapTypeStore) === 'Satellite' ? sources.satellite : dark ? sources.dark : sources.light;
       layer.options.maxNativeZoom = nativeMaxZoom(url);
       layer.setUrl(url);
     });
+  });
+
+  // The tile config is behind auth; refetch once the operator logs in.
+  $effect(() => {
+    if ($loggedInStore) untrack(() => void loadTileConfig());
   });
 
   $effect.pre(() => {
@@ -881,8 +1032,17 @@
     untrack(() => updateMAVMarker());
   });
   $effect.pre(() => {
-    mavLocation = $mavLocationStore;
+    void $mavLocationStore;
     untrack(() => updateMAVMarker());
+  });
+  $effect(() => {
+    void win;
+    void isFullscreen;
+    untrack(() => {
+      if (!leafletMap) return;
+      leafletMap.invalidateSize();
+      centerInWindow(get(mavLocationStore) as L.LatLng, get(mapZoomStore));
+    });
   });
   $effect.pre(() => {
     actions = $missionPlanActionsStore;
@@ -925,26 +1085,27 @@
     void $showObstaclesStore;
     if (!hideOverlay) untrack(() => renderObstacles());
   });
-  // Overlay chrome follows hideOverlay wherever it changes, including an Esc
-  // exit from fullscreen, so the dashboard mini-map reverts cleanly.
   $effect.pre(() => {
-    const mini = hideOverlay;
-    untrack(() => {
-      updateAttributionVisibility();
-      document.querySelectorAll('.map-btn i').forEach((element) => {
-        (element as HTMLElement).style.fontSize = mini ? 'small' : '';
-      });
-    });
+    void $trafficStore;
+    void $showTrafficStore;
+    if (!hideOverlay) untrack(() => renderTraffic());
+  });
+  // Live traffic goes stale in seconds, so poll while the overlay is on.
+  $effect(() => {
+    if (!$showTrafficStore || hideOverlay) return;
+    const timer = setInterval(refreshTraffic, TRAFFIC_POLL_MS);
+    return () => clearInterval(timer);
   });
 </script>
 
 <style lang="css">
-  @import url('https://unpkg.com/leaflet@1.7.1/dist/leaflet.css');
-
   .map-container {
-    position: relative;
-    height: 100%;
-    width: 100%;
+    position: fixed;
+    inset: 0;
+    height: 100vh;
+    width: 100vw;
+    z-index: 0;
+    pointer-events: auto;
   }
 
   #map {
@@ -953,10 +1114,119 @@
     position: absolute;
     top: 0;
     left: 0;
+    display: block;
   }
 
-  #map {
-    display: block;
+  .dim {
+    position: absolute;
+    z-index: 2;
+    background: rgba(0, 0, 0, 0.55);
+    pointer-events: auto;
+  }
+
+  .shell-piece {
+    position: absolute;
+    z-index: 3;
+    background-color: rgb(from var(--secondaryColor) r g b / 0.85);
+    pointer-events: auto;
+  }
+
+  .panel-piece {
+    position: absolute;
+    z-index: 4;
+    background-color: var(--primaryColor);
+    pointer-events: auto;
+  }
+
+  .corner {
+    position: absolute;
+    z-index: 2;
+    pointer-events: auto;
+  }
+
+  .corner-win {
+    z-index: 5;
+  }
+
+  .dim-full {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 1;
+    pointer-events: auto;
+  }
+
+  .window-frame {
+    position: absolute;
+    top: var(--wt);
+    left: var(--wl);
+    width: var(--ww);
+    height: var(--wh);
+    z-index: 6;
+    pointer-events: none;
+    border: 8px solid var(--primaryColor);
+    border-radius: var(--radius-surface);
+  }
+
+  .window-frame > * {
+    pointer-events: auto;
+  }
+
+  .map-container.fs .window-frame {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 0;
+  }
+
+  .map-container.mini .window-frame {
+    border-width: 4px;
+    border-color: var(--secondaryColor);
+  }
+
+  .map-container.mini .map-btn {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  .map-container.mini .map-btn i {
+    font-size: small;
+  }
+
+  .map-container :global(.leaflet-control-container),
+  .map-container :global(.maplibregl-control-container) {
+    position: absolute;
+    top: var(--wt);
+    left: var(--wl);
+    width: var(--ww);
+    height: var(--wh);
+    pointer-events: none;
+  }
+
+  .map-container.fs :global(.leaflet-control-container),
+  .map-container.fs :global(.maplibregl-control-container) {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .map-container.passive :global(.leaflet-control-container),
+  .map-container.passive :global(.maplibregl-control-container) {
+    display: none;
+  }
+
+  .map-container.mini :global(.leaflet-control-attribution),
+  .map-container.passive :global(.leaflet-control-attribution) {
+    display: none;
+  }
+
+  .map-container :global(.traffic-icon i) {
+    color: #38bdf8;
+    font-size: 16px;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.9);
   }
 
   #map-toggle {
@@ -1164,9 +1434,41 @@
   }
 </style>
 
-<div class="map-container">
-  <div id={id !== null ? id : 'map'} class="relative h-full rounded-2xl z-0"></div>
+<div
+  class="map-container"
+  class:fs={isFullscreen}
+  class:passive={!win && !isFullscreen}
+  class:mini={!isFullscreen && win !== null && !win.overlay}
+  style="--wt: {win?.top ?? 0}px; --wl: {win?.left ?? 0}px; --ww: {win?.width ?? 0}px; --wh: {win?.height ?? 0}px;"
+>
+  <div id={id !== null ? id : 'map'} class="relative h-full z-0"></div>
   <ThreeDMap />
+  {#if !isFullscreen && win}
+    <div class="dim" style="top:0; left:0; right:0; height:{win.top}px;"></div>
+    <div class="dim" style="top:{win.top + win.height}px; left:0; right:0; bottom:0;"></div>
+    <div class="dim" style="top:{win.top}px; left:0; width:{win.left}px; height:{win.height}px;"></div>
+    <div class="dim" style="top:{win.top}px; left:{win.left + win.width}px; right:0; height:{win.height}px;"></div>
+  {/if}
+  {#each shellPieces as p, i (i)}
+    <div
+      class="shell-piece"
+      style="top:{p.top}px; left:{p.left}px; width:{p.width}px; height:{p.height}px; border-radius:{p.radius};"
+    ></div>
+  {/each}
+  {#each panelPieces as p, i (i)}
+    <div
+      class="panel-piece"
+      style="top:{p.top}px; left:{p.left}px; width:{p.width}px; height:{p.height}px; border-radius:{p.radius};"
+    ></div>
+  {/each}
+  {#if !isFullscreen && win}
+    <div class="corner corner-win" style={cornerStyle(win.top, win.left, SURFACE_R, '100% 100%', winCornerColor)}></div>
+    <div class="corner corner-win" style={cornerStyle(win.top, win.left + win.width - SURFACE_R, SURFACE_R, '0% 100%', winCornerColor)}></div>
+    <div class="corner corner-win" style={cornerStyle(win.top + win.height - SURFACE_R, win.left, SURFACE_R, '100% 0%', winCornerColor)}></div>
+    <div class="corner corner-win" style={cornerStyle(win.top + win.height - SURFACE_R, win.left + win.width - SURFACE_R, SURFACE_R, '0% 0%', winCornerColor)}></div>
+  {/if}
+  {#if isFullscreen || win}
+    <div class="window-frame">
   <div class="map-controls absolute top-3 right-2 z-[1] flex flex-col gap-2">
     <button class="map-btn" aria-label="Toggle fullscreen" title="Toggle fullscreen" onclick={handleFullScreen}>
       <i class="fas fa-expand"></i>
@@ -1183,6 +1485,9 @@
       </button>
       <button class="map-btn" aria-label="Toggle obstacles" title="Toggle obstacles (towers and tall structures from the FAA obstacle file)" onclick={toggleObstacles}>
         <i class="fas fa-tower-observation {$showObstaclesStore ? 'text-[#f97316]' : ''}"></i>
+      </button>
+      <button class="map-btn" aria-label="Toggle live air traffic" title="Toggle live air traffic (ADS-B from the vehicle receiver and network feeds)" onclick={toggleTraffic}>
+        <i class="fas fa-plane {$showTrafficStore ? 'text-[#38bdf8]' : ''}"></i>
       </button>
     {/if}
   </div>
@@ -1250,5 +1555,9 @@
         </button>
       {/if}
     </div>
+  {/if}
+    </div>
+  {:else}
+    <div class="dim-full"></div>
   {/if}
 </div>

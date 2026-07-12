@@ -78,12 +78,10 @@ export function encodeParameterValue(value: number, paramType: number): number {
   return range.integer ? Math.round(clamped) : clamped;
 }
 
-export function decodeParameterValue(encodedValue: string, paramType: string): number {
+// PX4 publishes some params as NaN (shipped as null); those carry no value.
+export function decodeParameterValue(encodedValue: string, paramType: string): number | null {
   const value = parseFloat(encodedValue);
-  if (isNaN(value)) {
-    console.warn('Invalid parameter value:', encodedValue);
-    return 0;
-  }
+  if (!Number.isFinite(value)) return null;
   return encodeParameterValue(value, parseInt(paramType));
 }
 

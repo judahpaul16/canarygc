@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy, untrack } from 'svelte';
   import { mavHeadingStore, mavLocationStore } from '../stores/mavlinkStore';
-  import { mapZoomStore, lockViewStore, threeDMapStore } from '../stores/mapStore';
+  import { mapZoomStore, lockViewStore, threeDMapStore, mapWindowStore, mapFullscreenStore } from '../stores/mapStore';
   import { airspaceZonesStore, showAirspaceStore } from '../stores/safetyStore';
   import {
     AIRSPACE_CONTROLLED_COLOR,
@@ -230,9 +230,20 @@
         }
       };
       if (get(lockViewStore) && !m.isMoving()) {
+        // Camera padding centers the aircraft inside the registered window.
+        const w = get(mapFullscreenStore) ? null : get(mapWindowStore);
+        const padding = w
+          ? {
+              top: Math.max(0, w.top),
+              left: Math.max(0, w.left),
+              right: Math.max(0, window.innerWidth - (w.left + w.width)),
+              bottom: Math.max(0, window.innerHeight - (w.top + w.height))
+            }
+          : { top: 0, left: 0, right: 0, bottom: 0 };
         m.jumpTo({
           center: [location.lng, location.lat],
-          zoom: get(mapZoomStore) - 1
+          zoom: get(mapZoomStore) - 1,
+          padding
         });
       }
     }

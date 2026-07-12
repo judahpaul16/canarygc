@@ -5,6 +5,7 @@
   import Compass from '../../components/Compass.svelte';
   import ManageMissionPlans from '../../components/ManageMissionPlans.svelte';
   import { mavLocationStore } from '../../stores/mavlinkStore';
+  import { mapShell } from '../../lib/map-window';
 
   let mavLocation = $derived($mavLocationStore);
 
@@ -17,6 +18,7 @@
 <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">
   <div
     class="dashboard w-full grid grid-cols-12 grid-rows-7 gap-5 p-5 rounded-3xl rounded-l-none overflow-auto h-[90vh] max-h-[720px]"
+    use:mapShell
   >
       <div class="cell live-feed col-span-6 row-span-4">
         <LiveFeed />
@@ -42,6 +44,23 @@
   .cell {
     border-radius: var(--radius-surface);
     box-shadow: 0 14px 38px rgba(0, 0, 0, 0.3);
+  }
+
+  .dashboard {
+    background-color: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .dashboard-container {
+    pointer-events: none;
+  }
+
+  .dashboard > * {
+    pointer-events: auto;
+  }
+
+  .dashboard > .controls {
+    pointer-events: none;
   }
 
   /* Mobile Styles */

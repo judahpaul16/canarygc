@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Map from './Map.svelte';
   import DPad from './DPad.svelte';
+  import { mapWindow, mapPanel } from '../lib/map-window';
   import Weather from './Weather.svelte';
   import { mavModeStore, mavAltitudeStore, mavLocationStore, mavSatelliteStore } from '../stores/mavlinkStore';
   import { sendMavlinkCommand, setFlightMode, setPositionLocal } from '../lib/mavlink-client';
@@ -26,12 +26,11 @@
 </script>
 
 <div class="controls px-10 rounded-2xl h-full flex items-center overflow-x-auto overflow-y-hidden gap-4"
+  use:mapPanel
   >
-  <div class="flex flex-col">
-    <div class="map-container flex-shrink-0 h-48 w-48">
-      <Map {mavLocation} hideOverlay={true} />
-    </div>
-    <div class="flex justify-between w-full px-2 pt-2">
+  <div class="mini-col flex flex-col">
+    <div class="mini-map flex-shrink-0 h-48 w-48" use:mapWindow={{ overlay: false }}></div>
+    <div class="hdop-strip flex justify-between w-full px-2 pt-2">
       <span class="text-xs text-gray-400">
         <a href="https://en.wikipedia.org/wiki/Dilution_of_precision_(navigation)" target="_blank">
           <i class="far fa-question-circle relative">
@@ -265,15 +264,20 @@
     font-size: 10pt;
   }
 
-  .map-container {
-    padding: 4px;
-    background: var(--secondaryColor);
-    border-radius: var(--radius-surface);
-  }
-
   .controls {
     color: var(--fontColor);
-    background-color: var(--primaryColor);
+  }
+
+  .controls > * {
+    pointer-events: auto;
+  }
+
+  .mini-col {
+    pointer-events: none;
+  }
+
+  .hdop-strip {
+    pointer-events: auto;
   }
 
   /* Mobile Styles */
@@ -291,7 +295,7 @@
       margin: auto;
     }
 
-    .map-container {
+    .mini-map {
       width: auto;
     }
 

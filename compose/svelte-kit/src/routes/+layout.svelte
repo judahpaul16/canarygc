@@ -34,11 +34,13 @@
   import { loggedInStore } from '../stores/authStore';
   import { get } from 'svelte/store';
   import Offline from '../components/Offline.svelte';
+  import Map from '../components/Map.svelte';
   import { notify, type NotificationType } from '../lib/overlays';
   import { callout, initCallouts, stopCallouts } from '../lib/callouts';
   import { initAlerts } from '../lib/alerts';
   import { decodeMode, isArmed } from '../lib/flight-modes';
   import { decodeParameterValue, requestParameters } from '../lib/mavlink-client';
+  import { upsertTraffic } from '../stores/trafficStore';
 
   let { children } = $props();
 
@@ -152,6 +154,9 @@
         } else {
           setOnline(false);
         }
+      } else if (response.status === 401) {
+        // The server session is gone; return to login.
+        handleLogout();
       } else {
         setOnline(false);
       }
@@ -379,9 +384,11 @@
       const paramType = extractValue(text, 'paramType');
 
       if (paramId && paramValue && paramType) {
+          const decodedValue = decodeParameterValue(paramValue, paramType);
+          if (decodedValue === null) return;
           let param: Parameter = {
               param_id: paramId,
-              param_value: decodeParameterValue(paramValue, paramType),
+              param_value: decodedValue,
               param_type: parseInt(paramType),
               param_count: parseInt(extractValue(text, 'paramCount') || '0'),
               param_index: parseInt(extractValue(text, 'paramIndex') || '0')
@@ -390,6 +397,33 @@
           let params = get(mavlinkParamStore);
           params[paramId] = param;
           mavlinkParamStore.set(params);
+      }
+    },
+
+    // Traffic reported by the vehicle's own ADS-B receiver.
+    ADSB_VEHICLE: (text: string) => {
+      const first = text.indexOf('::');
+      const second = first >= 0 ? text.indexOf('::', first + 2) : -1;
+      if (second < 0) return;
+      try {
+        const m = JSON.parse(text.slice(second + 2));
+        if (typeof m.lat !== 'number' || typeof m.lon !== 'number' || (m.lat === 0 && m.lon === 0)) return;
+        const icaoHex = Number(m.icaoAddress ?? 0).toString(16).toUpperCase();
+        upsertTraffic([
+          {
+            id: `mav-${icaoHex}`,
+            callsign: String(m.callsign ?? '').trim() || `ICAO ${icaoHex}`,
+            lat: m.lat / 1e7,
+            lon: m.lon / 1e7,
+            altM: typeof m.altitude === 'number' ? m.altitude / 1000 : null,
+            headingDeg: typeof m.heading === 'number' ? m.heading / 100 : null,
+            speedMps: typeof m.horVelocity === 'number' ? m.horVelocity / 100 : null,
+            source: 'vehicle',
+            seenAt: Date.now()
+          }
+        ]);
+      } catch {
+        // Malformed entry; skip it.
       }
     }
   };
@@ -420,6 +454,10 @@
     }, STARTUP_SYNC_DELAY_MS);
 
     const checkCookieInterval = setInterval(() => {
+      // Auth pages have no session to expire; without this guard an epoch
+      // cookie loops handleLogout's goto every second and each same-route
+      // navigation resets input focus on the login form.
+      if (isNavHidden) return;
       const lastActivity = parseInt(document.cookie.replace(/(?:(?:^|.*;\s*)lastActivity\s*=\s*([^;]*).*$)|^.*$/, '$1'));
       if (Date.now() - lastActivity > IDLE_LOGOUT_MS) {
         loggedInStore.set(false);
@@ -463,7 +501,8 @@
     loggedInStore.set(false);
     document.cookie = 'lastActivity=' + Date.UTC(1970);
     fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
-    if (!window.location.pathname.includes('register')) goto('/login');
+    const path = window.location.pathname;
+    if (!path.includes('register') && path !== '/login') goto('/login');
   }
 
   function handleNavigation(path: string, target: string = '') {
@@ -504,13 +543,13 @@
 <main class="bg-black flex overflow-auto"
   style="--heightOfDashboard: {heightOfDashboard}px;"
 >
-  <div class="bg fixed w-full h-full" style="background-image: url('{darkMode ? 'bg-map.webp' : 'bg-map-light.webp'}');"></div>
+  <Map />
   <div class="dark-mode-btn absolute top-2 left-2 z-20">
     <button class="nav-button" aria-label="Toggle Dark Mode" onclick={toggleDarkMode}>
       <i class="nav-icon fas {darkMode ? 'fa-sun' : 'fa-moon'}"></i>
     </button>
   </div>
-  <div class="bg-[#0000001f] flex w-full h-full z-10">
+  <div class="flex w-full h-full z-10">
     <!-- Desktop Navigation -->
     <nav class="desktop-nav w-min h-full p-4 flex flex-col opacity-0 z-20" style:display={isNavHidden ? 'none' : 'flex'}>
       <div class="shrink-0 mb-5 flex justify-center">
@@ -625,13 +664,6 @@
 </main>
 
 <style>
-  .bg {
-    background: url('bg-map.webp') no-repeat center center fixed;
-    background-size: cover !important;
-    margin: 0;
-    filter: blur(2px);
-  }
-
   .dark-mode-btn {
     z-index: 25;
     background-color: rgb(from var(--primaryColor) r g b / 0.5);
@@ -646,6 +678,20 @@
 
   .separator {
     background-color: var(--tertiaryColor);
+  }
+
+  main {
+    pointer-events: none;
+  }
+
+  .desktop-nav,
+  .mobile-nav,
+  .dark-mode-btn {
+    pointer-events: auto;
+  }
+
+  .slot-container > :global(*) {
+    pointer-events: auto;
   }
 
   .desktop-nav {
