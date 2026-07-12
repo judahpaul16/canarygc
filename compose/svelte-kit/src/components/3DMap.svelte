@@ -1,23 +1,40 @@
 <script lang="ts">
   import { onMount, onDestroy, untrack } from 'svelte';
   import { mavHeadingStore, mavLocationStore } from '../stores/mavlinkStore';
-  import { mapZoomStore, lockViewStore, threeDMapStore, mapWindowStore, mapFullscreenStore } from '../stores/mapStore';
+  import { mapZoomStore, lockViewStore, threeDMapStore, mapWindowStore, mapFullscreenStore, missionPathsStore } from '../stores/mapStore';
   import { mavIconStore } from '../stores/customizationStore';
-  import { airspaceZonesStore, showAirspaceStore } from '../stores/safetyStore';
+  import {
+    airspaceZonesStore,
+    showAirspaceStore,
+    ceilingCellsStore,
+    showCeilingsStore,
+    obstaclesStore,
+    showObstaclesStore
+  } from '../stores/safetyStore';
+  import { trafficStore, showTrafficStore } from '../stores/trafficStore';
+  import { missionPlanActionsStore } from '../stores/missionPlanStore';
+  import { actionMarkerSrc } from '../lib/mission-icons';
   import {
     AIRSPACE_CONTROLLED_COLOR,
-    AIRSPACE_RESTRICTED_COLOR,
-    airspacePopupHtml
+    AIRSPACE_RESTRICTED_COLOR
   } from '../lib/airspace';
+  import { ceilingColor, obstacleColor } from '../lib/hazards';
+  import { fetchAirspaceForBbox, fetchHazardsForBbox } from '../lib/preflight';
   import { get } from 'svelte/store';
   import pkg, { type GeoJSONSource, type ExpressionSpecification } from 'maplibre-gl';
-  const { Map, Marker, NavigationControl, Popup } = pkg;
+  const { Map, Marker, NavigationControl } = pkg;
+
+  interface Props {
+    onFeatureClick?: (lat: number, lng: number) => void;
+  }
+
+  let { onFeatureClick }: Props = $props();
 
   let map: pkg.Map | null = $derived($threeDMapStore);
-  let marker: pkg.Marker | undefined;
-  let markerInterval: ReturnType<typeof setInterval>;
 
   let mavLocation = $derived($mavLocationStore);
+  let win = $derived($mapWindowStore);
+  let hideOverlay = $derived($mapFullscreenStore ? false : win ? !win.overlay : true);
 
   const airspaceColorExpr: ExpressionSpecification = [
     'case',
@@ -26,15 +43,112 @@
     AIRSPACE_CONTROLLED_COLOR
   ];
 
+  const featureColorExpr: ExpressionSpecification = ['get', 'color'];
+
   function airspaceFeatureCollection(): GeoJSON.FeatureCollection {
     return {
       type: 'FeatureCollection',
       features: get(airspaceZonesStore).map((zone) => ({
         type: 'Feature',
-        properties: { restricted: zone.restricted, popupHtml: airspacePopupHtml(zone) },
+        properties: { restricted: zone.restricted },
         geometry: { type: 'Polygon', coordinates: zone.polygon }
       }))
     };
+  }
+
+  function ceilingFeatureCollection(): GeoJSON.FeatureCollection {
+    return {
+      type: 'FeatureCollection',
+      features: get(ceilingCellsStore).map((cell) => ({
+        type: 'Feature',
+        properties: { color: ceilingColor(cell.ceilingFt) },
+        geometry: { type: 'Polygon', coordinates: cell.polygon }
+      }))
+    };
+  }
+
+  function obstacleFeatureCollection(): GeoJSON.FeatureCollection {
+    return {
+      type: 'FeatureCollection',
+      features: get(obstaclesStore).map((obstacle) => ({
+        type: 'Feature',
+        properties: { color: obstacleColor(obstacle.aglFt) },
+        geometry: { type: 'Point', coordinates: [obstacle.lon, obstacle.lat] }
+      }))
+    };
+  }
+
+  function missionFeatureCollection(): GeoJSON.FeatureCollection {
+    return {
+      type: 'FeatureCollection',
+      features: get(missionPathsStore)
+        .filter((path) => path.length >= 2)
+        .map((path) => ({
+          type: 'Feature',
+          properties: {},
+          geometry: { type: 'LineString', coordinates: path.map((p) => [p.lng, p.lat]) }
+        }))
+    };
+  }
+
+  // One persistent source updated in place; tearing sources down per change
+  // drops the lines for a frame on the GPU render loop.
+  function renderMissionPaths3D() {
+    const m = map;
+    if (!m || !m.isStyleLoaded()) return;
+    const source = m.getSource('mission') as GeoJSONSource | undefined;
+    if (!source) return;
+    source.setData(missionFeatureCollection());
+  }
+
+  // Mission markers reconcile in place, keyed by plan index; index 0 is the
+  // hidden home slot. Recreating them per plan change blinks like the old MAV
+  // marker did.
+  let missionMarkers = new globalThis.Map<number, pkg.Marker>();
+
+  function renderMissionMarkers3D() {
+    const m = map;
+    if (!m) return;
+    const actions = get(missionPlanActionsStore);
+    const live = new Set<number>();
+    for (const key of Object.keys(actions)) {
+      const index = Number(key);
+      if (index === 0) continue;
+      const action = actions[index];
+      const src = action ? actionMarkerSrc(action.type) : null;
+      if (!action || !src || isNaN(action.lat) || isNaN(action.lon)) continue;
+      live.add(index);
+      let marker = missionMarkers.get(index);
+      if (!marker) {
+        const img = new Image();
+        img.style.width = '50px';
+        img.style.height = '50px';
+        img.style.cursor = 'pointer';
+        img.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const ll = missionMarkers.get(index)?.getLngLat();
+          if (ll) onFeatureClick?.(ll.lat, ll.lng);
+        });
+        marker = new Marker({ element: img }).setLngLat([action.lon, action.lat]).addTo(m);
+        missionMarkers.set(index, marker);
+      }
+      const img = marker.getElement() as HTMLImageElement;
+      if (img.getAttribute('src') !== src) img.src = src;
+      marker.setLngLat([action.lon, action.lat]);
+    }
+    for (const [index, marker] of missionMarkers) {
+      if (!live.has(index)) {
+        marker.remove();
+        missionMarkers.delete(index);
+      }
+    }
+  }
+
+  function setLayerVisibility(m: pkg.Map, ids: string[], visible: boolean) {
+    const visibility: 'visible' | 'none' = visible ? 'visible' : 'none';
+    for (const layerId of ids) {
+      if (m.getLayer(layerId)) m.setLayoutProperty(layerId, 'visibility', visibility);
+    }
   }
 
   function renderAirspace3D() {
@@ -43,10 +157,121 @@
     const source = m.getSource('airspace') as GeoJSONSource | undefined;
     if (!source) return;
     source.setData(airspaceFeatureCollection());
-    const visibility: 'visible' | 'none' = get(showAirspaceStore) ? 'visible' : 'none';
-    if (m.getLayer('airspace-fill')) m.setLayoutProperty('airspace-fill', 'visibility', visibility);
-    if (m.getLayer('airspace-outline'))
-      m.setLayoutProperty('airspace-outline', 'visibility', visibility);
+    setLayerVisibility(m, ['airspace-fill', 'airspace-outline'], get(showAirspaceStore) && !hideOverlay);
+  }
+
+  function renderCeilings3D() {
+    const m = map;
+    if (!m || !m.isStyleLoaded()) return;
+    const source = m.getSource('ceilings') as GeoJSONSource | undefined;
+    if (!source) return;
+    source.setData(ceilingFeatureCollection());
+    setLayerVisibility(m, ['ceilings-fill', 'ceilings-outline'], get(showCeilingsStore) && !hideOverlay);
+  }
+
+  function renderObstacles3D() {
+    const m = map;
+    if (!m || !m.isStyleLoaded()) return;
+    const source = m.getSource('obstacles') as GeoJSONSource | undefined;
+    if (!source) return;
+    source.setData(obstacleFeatureCollection());
+    setLayerVisibility(m, ['obstacles-circle'], get(showObstaclesStore) && !hideOverlay);
+  }
+
+  // Traffic contacts are DOM markers so each one rotates to its track and
+  // takes a click; the map keys them by contact id and prunes stale ones.
+  let trafficMarkers = new globalThis.Map<string, pkg.Marker>();
+
+  function renderTraffic3D() {
+    const m = map;
+    if (!m) return;
+    const contacts = get(trafficStore);
+    const visible = get(showTrafficStore) && !hideOverlay;
+    for (const [contactId, marker] of trafficMarkers) {
+      if (!visible || !contacts[contactId]) {
+        marker.remove();
+        trafficMarkers.delete(contactId);
+      }
+    }
+    if (!visible) return;
+    for (const contact of Object.values(contacts)) {
+      let marker = trafficMarkers.get(contact.id);
+      if (!marker) {
+        const el = document.createElement('div');
+        el.className = 'traffic-icon';
+        el.innerHTML = '<i class="fas fa-plane"></i>';
+        el.style.cursor = 'pointer';
+        const contactId = contact.id;
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const ll = trafficMarkers.get(contactId)?.getLngLat();
+          if (ll) onFeatureClick?.(ll.lat, ll.lng);
+        });
+        marker = new Marker({ element: el, rotationAlignment: 'map' })
+          .setLngLat([contact.lon, contact.lat])
+          .addTo(m);
+        trafficMarkers.set(contactId, marker);
+      }
+      marker.setLngLat([contact.lon, contact.lat]);
+      marker.setRotation((contact.headingDeg ?? 0) - 90);
+    }
+  }
+
+  // One persistent MAV marker; position, rotation, and icon update in place so
+  // the marker never detaches between telemetry frames.
+  let mavMarker: pkg.Marker | null = null;
+  let mavImg: HTMLImageElement | null = null;
+
+  function ensureMavMarker(m: pkg.Map, loc: { lat: number; lng: number }) {
+    if (mavMarker) return;
+    const img = new Image();
+    img.src = get(mavIconStore);
+    img.style.width = '50px';
+    img.style.height = '50px';
+    img.style.cursor = 'pointer';
+    img.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const ll = mavMarker?.getLngLat();
+      if (ll) onFeatureClick?.(ll.lat, ll.lng);
+    });
+    mavImg = img;
+    mavMarker = new Marker({ element: img, rotationAlignment: 'map', pitchAlignment: 'map' })
+      .setLngLat([loc.lng, loc.lat])
+      .addTo(m);
+  }
+
+  function followCamera(m: pkg.Map, loc: { lat: number; lng: number }) {
+    if (!get(lockViewStore) || m.isMoving()) return;
+    // Camera padding centers the vehicle inside the registered window.
+    const w = get(mapFullscreenStore) ? null : get(mapWindowStore);
+    const padding = w
+      ? {
+          top: Math.max(0, w.top),
+          left: Math.max(0, w.left),
+          right: Math.max(0, window.innerWidth - (w.left + w.width)),
+          bottom: Math.max(0, window.innerHeight - (w.top + w.height))
+        }
+      : { top: 0, left: 0, right: 0, bottom: 0 };
+    m.jumpTo({
+      center: [loc.lng, loc.lat],
+      zoom: get(mapZoomStore) - 1,
+      padding
+    });
+  }
+
+  // Refetch overlays for the visible area as the operator pans the 3D view,
+  // mirroring the 2D map's debounce and zoom floor (Leaflet zoom = this + 1).
+  const VIEWPORT_REFRESH_DELAY_MS = 500;
+  const MIN_OVERLAY_ZOOM = 9;
+  let viewportTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function refreshViewportOverlays3D() {
+    const m = map;
+    if (!m || hideOverlay || m.getZoom() + 1 < MIN_OVERLAY_ZOOM) return;
+    const b = m.getBounds();
+    const bbox = `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`;
+    if (get(showAirspaceStore)) fetchAirspaceForBbox(bbox);
+    if (get(showCeilingsStore) || get(showObstaclesStore)) fetchHazardsForBbox(bbox);
   }
 
   onMount(() => {
@@ -73,7 +298,7 @@
       canvasContextAttributes: {antialias: true}
     });
     map = m;
-    
+
     // The 'building' layer in the streets vector source contains building-height
     // data from OpenStreetMap.
     m.on('load', () => {
@@ -153,28 +378,75 @@
             }
         });
 
-        const airspaceVisibility: 'visible' | 'none' = get(showAirspaceStore) ? 'visible' : 'none';
+        // Overlay stack mirrors the 2D pane order: ceilings under airspace
+        // under obstacles; mission lines and DOM markers land above them.
+        m.addSource('ceilings', { type: 'geojson', data: ceilingFeatureCollection() });
+        m.addLayer({
+            'id': 'ceilings-fill',
+            'type': 'fill',
+            'source': 'ceilings',
+            'layout': { 'visibility': 'none' },
+            'paint': { 'fill-color': featureColorExpr, 'fill-opacity': 0.22 }
+        });
+        m.addLayer({
+            'id': 'ceilings-outline',
+            'type': 'line',
+            'source': 'ceilings',
+            'layout': { 'visibility': 'none' },
+            'paint': { 'line-color': featureColorExpr, 'line-width': 0.5 }
+        });
+
         m.addSource('airspace', { type: 'geojson', data: airspaceFeatureCollection() });
         m.addLayer({
             'id': 'airspace-fill',
             'type': 'fill',
             'source': 'airspace',
-            'layout': { 'visibility': airspaceVisibility },
+            'layout': { 'visibility': 'none' },
             'paint': { 'fill-color': airspaceColorExpr, 'fill-opacity': 0.12 }
         });
         m.addLayer({
             'id': 'airspace-outline',
             'type': 'line',
             'source': 'airspace',
-            'layout': { 'visibility': airspaceVisibility },
+            'layout': { 'visibility': 'none' },
             'paint': { 'line-color': airspaceColorExpr, 'line-width': 1 }
         });
-        m.on('click', 'airspace-fill', (e) => {
-            const html = e.features?.[0]?.properties?.popupHtml;
-            if (html) new Popup().setLngLat(e.lngLat).setHTML(String(html)).addTo(m);
+
+        m.addSource('obstacles', { type: 'geojson', data: obstacleFeatureCollection() });
+        m.addLayer({
+            'id': 'obstacles-circle',
+            'type': 'circle',
+            'source': 'obstacles',
+            'layout': { 'visibility': 'none' },
+            'paint': {
+                'circle-radius': 5,
+                'circle-color': featureColorExpr,
+                'circle-opacity': 0.9,
+                'circle-stroke-width': 2,
+                'circle-stroke-color': featureColorExpr
+            }
         });
-        m.on('mouseenter', 'airspace-fill', () => { m.getCanvas().style.cursor = 'pointer'; });
-        m.on('mouseleave', 'airspace-fill', () => { m.getCanvas().style.cursor = ''; });
+
+        // Mission legs sit above every overlay, mirroring the 2D pane order.
+        m.addSource('mission', { type: 'geojson', data: missionFeatureCollection() });
+        m.addLayer({
+            'id': 'mission-line',
+            'type': 'line',
+            'source': 'mission',
+            'layout': { 'line-join': 'round', 'line-cap': 'round' },
+            'paint': { 'line-color': '#BF93E4', 'line-width': 5 }
+        });
+
+        for (const hoverLayer of ['airspace-fill', 'ceilings-fill', 'obstacles-circle']) {
+            m.on('mouseenter', hoverLayer, () => { m.getCanvas().style.cursor = 'pointer'; });
+            m.on('mouseleave', hoverLayer, () => { m.getCanvas().style.cursor = ''; });
+        }
+
+        renderAirspace3D();
+        renderCeilings3D();
+        renderObstacles3D();
+        renderMissionPaths3D();
+        renderMissionMarkers3D();
 
         m.addControl(
             new NavigationControl({
@@ -185,75 +457,84 @@
         );
     });
 
+    // Every feature under a click resolves through the same combined modal as
+    // the 2D map.
+    m.on('click', (e) => {
+      onFeatureClick?.(e.lngLat.lat, e.lngLat.lng);
+    });
+
     m.on('zoom', () => {
       mapZoomStore.set(m.getZoom() + 1);
     });
 
-    threeDMapStore.set(m);
+    m.on('moveend', () => {
+      if (viewportTimer) clearTimeout(viewportTimer);
+      viewportTimer = setTimeout(refreshViewportOverlays3D, VIEWPORT_REFRESH_DELAY_MS);
+    });
 
-    markerInterval = setInterval(() => {
-      updateMAVMarker();
-    }, 1000);
+    threeDMapStore.set(m);
     })();
   });
 
   onDestroy(() => {
-    if (markerInterval) clearInterval(markerInterval);
+    if (viewportTimer) clearTimeout(viewportTimer);
+    mavMarker?.remove();
+    mavMarker = null;
+    for (const marker of trafficMarkers.values()) marker.remove();
+    trafficMarkers.clear();
+    for (const marker of missionMarkers.values()) marker.remove();
+    missionMarkers.clear();
   });
 
-  
-  // Runs on an interval, so it reads the stores directly rather than the
-  // component's derived runes, which would be stale once the effect is torn
-  // down (Svelte's derived_inert warning).
-  function updateMAVMarker() {
-    const m = get(threeDMapStore);
-    const location = get(mavLocationStore);
-    if (location && m) {
-      marker?.remove();
-      let img = new Image();
-      img.src = get(mavIconStore);
-      img.onload = () => {
-        let canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        let ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.translate(img.width / 2, img.height / 2);
-          ctx.drawImage(img, -img.width / 2, -img.height / 2);
-          ctx.save();
-          canvas.style.width = '50px';
-          canvas.style.height = '50px';
-          marker = new Marker({ element: canvas });
-          marker.setLngLat([location.lng, location.lat]);
-          // offset camera bearing
-          marker.setRotation(get(mavHeadingStore) - m.getBearing());
-          marker.addTo(m);
-        }
-      };
-      if (get(lockViewStore) && !m.isMoving()) {
-        // Camera padding centers the vehicle inside the registered window.
-        const w = get(mapFullscreenStore) ? null : get(mapWindowStore);
-        const padding = w
-          ? {
-              top: Math.max(0, w.top),
-              left: Math.max(0, w.left),
-              right: Math.max(0, window.innerWidth - (w.left + w.width)),
-              bottom: Math.max(0, window.innerHeight - (w.top + w.height))
-            }
-          : { top: 0, left: 0, right: 0, bottom: 0 };
-        m.jumpTo({
-          center: [location.lng, location.lat],
-          zoom: get(mapZoomStore) - 1,
-          padding
-        });
-      }
-    }
-  }
+  $effect(() => {
+    const loc = $mavLocationStore;
+    const heading = $mavHeadingStore;
+    const icon = $mavIconStore;
+    const m = map;
+    untrack(() => {
+      if (!m || !loc) return;
+      ensureMavMarker(m, loc);
+      if (mavImg && mavImg.getAttribute('src') !== icon) mavImg.src = icon;
+      mavMarker!.setLngLat([loc.lng, loc.lat]);
+      mavMarker!.setRotation(heading);
+      followCamera(m, loc);
+    });
+  });
 
   $effect(() => {
     void $airspaceZonesStore;
     void $showAirspaceStore;
+    void hideOverlay;
     untrack(() => renderAirspace3D());
+  });
+  $effect(() => {
+    void $ceilingCellsStore;
+    void $showCeilingsStore;
+    void hideOverlay;
+    untrack(() => renderCeilings3D());
+  });
+  $effect(() => {
+    void $obstaclesStore;
+    void $showObstaclesStore;
+    void hideOverlay;
+    untrack(() => renderObstacles3D());
+  });
+  $effect(() => {
+    void $trafficStore;
+    void $showTrafficStore;
+    void hideOverlay;
+    untrack(() => renderTraffic3D());
+  });
+  $effect(() => {
+    void $missionPathsStore;
+    untrack(() => renderMissionPaths3D());
+  });
+  $effect(() => {
+    void $missionPlanActionsStore;
+    const m = map;
+    untrack(() => {
+      if (m) renderMissionMarkers3D();
+    });
   });
 </script>
 

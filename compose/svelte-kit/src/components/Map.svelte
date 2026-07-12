@@ -9,11 +9,14 @@
     mapTileLayerStore,
     mapZoomStore,
     lockViewStore,
-    threeDMapStore
+    threeDMapStore,
+    missionPathsStore
   } from '../stores/mapStore';
   import { mavLocationStore, mavHeadingStore, mavAltitudeStore, mavModeStore, mavTypeStore } from '../stores/mavlinkStore';
   import { sendMavlinkCommand, setFlightMode, setPositionLocal } from '../lib/mavlink-client';
-  import { isGuidedLabel, isAirVehicle } from '../lib/flight-modes';
+  import { isGuidedLabel, isAirVehicle, isPX4 } from '../lib/flight-modes';
+  import { missionSegmentPaths, stopsAt, type PathNode, type PathPoint } from '../lib/spline-path';
+  import { hasSessionValue } from '../lib/session-persisted';
   import DPad from './DPad.svelte';
   import LiveFeed from './LiveFeed.svelte';
   import Stats from './Stats.svelte';
@@ -38,8 +41,8 @@
   import { resolveTiles, nativeMaxZoom, type TileSources } from '../lib/tiles';
   import { refreshAirspace, refreshHazards, fetchAirspaceForBbox, fetchHazardsForBbox } from '../lib/preflight';
   import ThreeDMap from './3DMap.svelte';
-  import pkg from 'maplibre-gl';
-  const { Marker } = pkg;
+  import type pkg from 'maplibre-gl';
+  import { ACTION_TYPES, ACTION_MARKERS } from '../lib/mission-icons';
 
   import {
     darkModeStore,
@@ -108,47 +111,38 @@
     return `top:${top}px; left:${left}px; width:${r}px; height:${r}px; background: radial-gradient(circle at ${at}, transparent ${r - 1}px, ${color} ${r}px);`;
   }
 
-  // Mission-planner chrome does not belong on other pages; leaving the map
-  // page clears the overlay toggles and their rendered layers.
-  $effect(() => {
-    if (!hideOverlay) return;
-    untrack(() => {
-      if (get(showAirspaceStore)) {
-        showAirspaceStore.set(false);
-        renderAirspace();
-      }
-      if (get(showCeilingsStore)) {
-        showCeilingsStore.set(false);
-        renderCeilings();
-      }
-      if (get(showObstaclesStore)) {
-        showObstaclesStore.set(false);
-        renderObstacles();
-      }
-      if (get(showTrafficStore)) {
-        showTrafficStore.set(false);
-        renderTraffic();
-      }
-    });
-  });
-
   // Airspace, LAANC ceilings, obstacles, and live traffic only matter to
   // something that flies, so they enable themselves once when an air vehicle
   // type comes over the link and stay off for rovers, boats, and submarines.
+  // Toggles the operator already set this session win over the default.
   let overlayDefaultsApplied = false;
   $effect(() => {
     const type = $mavTypeStore;
+    const hidden = hideOverlay;
     untrack(() => {
-      if (overlayDefaultsApplied || !type || hideOverlay) return;
+      if (overlayDefaultsApplied || !type || hidden) return;
       overlayDefaultsApplied = true;
       if (!isAirVehicle(type)) return;
-      if (!get(showAirspaceStore)) showAirspaceStore.set(true);
-      if (!get(showCeilingsStore)) showCeilingsStore.set(true);
-      if (!get(showObstaclesStore)) showObstaclesStore.set(true);
-      if (!get(showTrafficStore)) showTrafficStore.set(true);
-      refreshAirspace(get(missionPlanActionsStore));
-      refreshHazards(get(missionPlanActionsStore));
-      refreshTraffic();
+      if (!hasSessionValue('map.showAirspace')) showAirspaceStore.set(true);
+      if (!hasSessionValue('map.showCeilings')) showCeilingsStore.set(true);
+      if (!hasSessionValue('map.showObstacles')) showObstaclesStore.set(true);
+      if (!hasSessionValue('map.showTraffic')) showTrafficStore.set(true);
+    });
+  });
+
+  // Whenever an overlay is on with the planner visible (toggled on, restored
+  // from the session, or auto-enabled), fetch its data; the endpoints sit
+  // behind TTL caches so repeats are cheap.
+  $effect(() => {
+    const wantAirspace = $showAirspaceStore;
+    const wantCeilings = $showCeilingsStore;
+    const wantObstacles = $showObstaclesStore;
+    const wantTraffic = $showTrafficStore;
+    if (hideOverlay) return;
+    untrack(() => {
+      if (wantAirspace) refreshAirspace(get(missionPlanActionsStore));
+      if (wantCeilings || wantObstacles) refreshHazards(get(missionPlanActionsStore));
+      if (wantTraffic) refreshTraffic();
     });
   });
 
@@ -160,23 +154,9 @@
   let zoom = $derived($mapZoomStore);
 
   let actions: MissionPlanActions = $state({});
-  let action_types = [
-    'NAV_WAYPOINT', 'NAV_SPLINE_WAYPOINT', 'NAV_TAKEOFF', 'NAV_RETURN_TO_LAUNCH', 'NAV_GUIDED_ENABLE', 'NAV_LAND',
-    'NAV_LOITER_TIME', 'NAV_LOITER_TURNS', 'NAV_LOITER_UNLIM', 'NAV_PAYLOAD_PLACE', 'DO_WINCH', 'DO_GRIPPER', 'DO_SET_CAM_TRIGG_DIST',
-    'DO_SET_SERVO', 'DO_REPEAT_SERVO', 'DO_DIGICAM_CONFIGURE', 'DO_DIGICAM_CONTROL', 'DO_FENCE_ENABLE',
-    'DO_ENGINE_CONTROL', 'CONDITION_DELAY', 'CONDITION_CHANGE_ALT', 'CONDITION_DISTANCE', 'CONDITION_YAW'
-  ];
-  let action_markers = [
-    'map/waypoint.png', 'map/spline-waypoint.png', 'map/takeoff.png', 'map/rtl.png', 'map/guided_enable.png', 'map/land.png',
-    'map/loiter.png', 'map/loiter.png', 'map/loiter.png', 'map/do_winch.png', 'map/do_winch.png', 'map/gripper.png', 'map/camera.png',
-    'map/do_set_servo.png', 'map/do_repeat_servo.png', 'map/camera.png', 'map/camera.png', 'map/do_fence_enable.png',
-    'map/do_engine_control.png', 'map/delay.png', 'map/condition_change_alt.png', 'map/condition_distance.png', 'map/condition_yaw.png'
-  ];
   let icons: L.Icon[] = [];
   let markers: Map<number, L.Marker> = $state(get(markersStore)); // Map to keep track of markers
   let polylines: Map<string, L.Polyline> = $state(get(polylinesStore)); // Map to keep track of polylines
-  let markers3D: Map<number, pkg.Marker> = new Map();
-  let polylines3D: string[] = [];
   let mavHeading: number = $state(0);
   let mavMarker: L.Marker;
   let darkMode = $derived($darkModeStore);
@@ -276,7 +256,7 @@
       controlDockOpen = false;
     }
 
-    icons = action_markers.map((marker) => {
+    icons = ACTION_MARKERS.map((marker) => {
       return L.icon({
         iconUrl: marker,
         iconSize: [45, 45],
@@ -353,11 +333,19 @@
   }
 
   function initializeLeafletMap(id: string = 'map') {
+    // The session remembers the street/satellite/3D selection; a restored 3D
+    // view boots with the MapLibre container up and no Leaflet tile layer.
+    const restored3D = mapType.toLowerCase() === '3d';
     let threedmap = document.getElementById('threedmap')!;
-    if (threedmap) threedmap.style.display = 'none';
+    if (threedmap) threedmap.style.display = restored3D ? 'block' : 'none';
     leafletMap = L.map(id);
     centerInWindow(mavLocation, zoom);
-    if (mapType.toLowerCase() === 'openstreetmap') {
+    if (restored3D) {
+      document.getElementById(id)!.style.display = 'none';
+      mapType = '3D';
+      mapTypeStore.set(mapType);
+      mapTileLayerStore.set(null);
+    } else if (mapType.toLowerCase() === 'openstreetmap') {
       currentTileLayer = tileLayerFor(osmTileUrl(), false).addTo(leafletMap);
       mapType = 'OpenStreetMap';
       mapTypeStore.set(mapType);
@@ -514,12 +502,17 @@
   // mission markers collapse into one popup instead of fighting over the map.
   // Each section carries the accent color of its map layer so the modal cards
   // match the overlays.
-  function popupSectionsAt(latlng: L.LatLng): { html: string; accent: string }[] {
-    if (!leafletMap) return [];
+  type ScreenProjector = (lat: number, lon: number) => { x: number; y: number };
+
+  function popupSectionsAt(latlng: L.LatLng, project?: ScreenProjector): { html: string; accent: string }[] {
+    if (!leafletMap && !project) return [];
     const point = { lat: latlng.lat, lon: latlng.lng };
-    const clickPx = leafletMap.latLngToContainerPoint(latlng);
+    const toScreen: ScreenProjector =
+      project ??
+      ((lat, lon) => leafletMap!.latLngToContainerPoint([lat, lon] as L.LatLngExpression));
+    const clickPx = toScreen(latlng.lat, latlng.lng);
     const withinHit = (lat: number, lon: number) => {
-      const px = leafletMap!.latLngToContainerPoint([lat, lon] as L.LatLngExpression);
+      const px = toScreen(lat, lon);
       return Math.hypot(px.x - clickPx.x, px.y - clickPx.y) <= FEATURE_HIT_PX;
     };
 
@@ -566,8 +559,8 @@
     return sections;
   }
 
-  function openCombinedPopup(latlng: L.LatLng): boolean {
-    const sections = popupSectionsAt(latlng);
+  function openCombinedPopup(latlng: L.LatLng, project?: ScreenProjector): boolean {
+    const sections = popupSectionsAt(latlng, project);
     if (!sections.length) return false;
     const lat = latlng.lat.toFixed(6);
     const lon = latlng.lng.toFixed(6);
@@ -585,12 +578,20 @@
     return true;
   }
 
+  // Hit-testing a 3D click projects features through the MapLibre camera so
+  // pitch and bearing keep the same pixel tolerance as the 2D map.
+  function openCombinedPopup3D(lat: number, lng: number): boolean {
+    const m = get(threeDMapStore);
+    if (!m || !L) return false;
+    return openCombinedPopup(L.latLng(lat, lng), (la, lo) => m.project([lo, la]));
+  }
+
   let airspaceLayer: L.LayerGroup | null = null;
 
   function renderAirspace() {
     if (!L || !leafletMap) return;
     airspaceLayer?.remove();
-    if (!get(showAirspaceStore)) {
+    if (!get(showAirspaceStore) || hideOverlay) {
       airspaceLayer = null;
       return;
     }
@@ -625,6 +626,9 @@
       currentTileLayer = tileLayerFor(osmTileUrl(), false).addTo(leafletMap);
       mapTypeStore.set(mapType);
       mapTileLayerStore.set(currentTileLayer);
+      // A session restored straight into 3D booted Leaflet in a hidden div.
+      leafletMap.invalidateSize();
+      centerInWindow(get(mavLocationStore) as L.LatLng, get(mapZoomStore));
     } else if (leafletMap && mapType.toLowerCase() === 'openstreetmap') {
       map.style.display = 'block';
       threedmap.style.display = 'none';
@@ -651,17 +655,14 @@
 
   function toggleAirspace() {
     showAirspaceStore.set(!get(showAirspaceStore));
-    if (get(showAirspaceStore)) refreshAirspace(get(missionPlanActionsStore));
   }
 
   function toggleCeilings() {
     showCeilingsStore.set(!get(showCeilingsStore));
-    if (get(showCeilingsStore)) refreshHazards(get(missionPlanActionsStore));
   }
 
   function toggleObstacles() {
     showObstaclesStore.set(!get(showObstaclesStore));
-    if (get(showObstaclesStore)) refreshHazards(get(missionPlanActionsStore));
   }
 
   let ceilingLayer: L.LayerGroup | null = null;
@@ -672,7 +673,9 @@
 
   async function refreshTraffic() {
     if (!leafletMap || hideOverlay || !get(showTrafficStore)) return;
-    const b = leafletMap.getBounds();
+    // The 3D map pans independently, so contacts follow whichever view is up.
+    const b =
+      get(mapTypeStore) === '3D' && threeDMap ? threeDMap.getBounds() : leafletMap.getBounds();
     const bbox = `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`;
     try {
       const res = await fetch(`/api/traffic?bbox=${bbox}`);
@@ -704,7 +707,7 @@
     if (!L || !leafletMap) return;
     trafficLayer?.remove();
     trafficLayer = null;
-    if (!get(showTrafficStore)) return;
+    if (!get(showTrafficStore) || hideOverlay) return;
     const group = L.layerGroup();
     for (const c of Object.values(get(trafficStore))) {
       const icon = L.divIcon({
@@ -722,10 +725,7 @@
   }
 
   function toggleTraffic() {
-    const next = !get(showTrafficStore);
-    showTrafficStore.set(next);
-    renderTraffic();
-    if (next) refreshTraffic();
+    showTrafficStore.set(!get(showTrafficStore));
   }
 
   // A pane above the polygon fills (overlayPane is 400) but below the mission
@@ -755,7 +755,7 @@
   function renderCeilings() {
     if (!L || !leafletMap) return;
     ceilingLayer?.remove();
-    if (!get(showCeilingsStore)) {
+    if (!get(showCeilingsStore) || hideOverlay) {
       ceilingLayer = null;
       return;
     }
@@ -779,7 +779,7 @@
   function renderObstacles() {
     if (!L || !leafletMap) return;
     obstacleLayer?.remove();
-    if (!get(showObstaclesStore)) {
+    if (!get(showObstaclesStore) || hideOverlay) {
       obstacleLayer = null;
       return;
     }
@@ -836,11 +836,6 @@
     });
     markers.clear();
 
-    markers3D.forEach((marker) => {
-      marker.remove();
-    });
-    markers3D.clear();
-
     polylines.forEach(polyline => {
       if (leafletMap?.hasLayer(polyline)) {
         leafletMap.removeLayer(polyline);
@@ -849,14 +844,9 @@
     polylines.clear();
     markersStore.set(markers);
     polylinesStore.set(polylines);
-
-    polylines3D.forEach(polyline => {
-      threeDMap?.removeLayer(polyline);
-      threeDMap?.removeSource(polyline);
-    });
-    polylines3D = [];
+    missionPathsStore.set([]);
   }
-  
+
   function removeConnectedPolylines(index: number) {
     const connectedKeys = Array.from(polylines.keys()).filter(key => {
       const [startIndex, endIndex] = key.split('-').map(Number);
@@ -871,9 +861,6 @@
         }
         polylines.delete(key);
       }
-      threeDMap?.removeLayer(key);
-      threeDMap?.removeSource(key);
-      polylines3D = polylines3D.filter(polyline => polyline !== key);
     });
   }
 
@@ -886,51 +873,19 @@
         leafletMap.removeLayer(polylineToRemove);
       }
       polylines.delete(key);
-      threeDMap?.removeLayer(key);
-      threeDMap?.removeSource(key);
-      polylines3D = polylines3D.filter(polyline => polyline !== key);
     }
   }
 
-  function addPolyline(start: L.LatLng, end: L.LatLng) {
+  function addPolyline(start: L.LatLng, end: L.LatLng, via?: PathPoint[]) {
     const key = generatePolylineKey(start, end);
     removePolyline(start, end); // Ensure no old polyline is left
 
-    const latlngs: L.LatLngExpression[] = [start, end];
+    const points: PathPoint[] = via && via.length >= 2 ? via : [start, end];
+    const latlngs: L.LatLngExpression[] = points.map((p) => [p.lat, p.lng]);
     const renderer = paneRenderer('mission', '590');
     const polyline = L.polyline(latlngs, { color: 'red', ...(renderer ? { renderer } : {}) });
     leafletMap?.addLayer(polyline);
     polylines.set(key, polyline);
-
-    // 3D Map
-    if (threeDMap) {
-      const geojson = {
-        'type': 'Feature',
-        'properties': {},
-        'geometry': {
-          'type': 'LineString',
-          'coordinates': [[start.lng, start.lat], [end.lng, end.lat]]
-        }
-      };
-      threeDMap.addSource(key, {
-        'type': 'geojson',
-        'data': geojson as GeoJSON.Feature
-      });
-      threeDMap.addLayer({
-        'id': key,
-        'type': 'line',
-        'source': key,
-        'layout': {
-          'line-join': 'round',
-          'line-cap': 'round'
-        },
-        'paint': {
-          'line-color': '#BF93E4',
-          'line-width': 5
-        }
-      });
-      polylines3D.push(key);
-    }
   }
 
   function generatePolylineKey(start: L.LatLng, end: L.LatLng): string {
@@ -952,8 +907,8 @@
       // Add new marker with updated info if leafletMap and action are valid
       if (L && leafletMap && action) {
         const { type, lat, lon } = action;
-        const iconIndex = action_types.indexOf(type);
-        
+        const iconIndex = ACTION_TYPES.indexOf(type);
+
         if (!isNaN(lat) && !isNaN(lon) && iconIndex >= 0) {
           const numericIndex = Number(index);
           const marker = L.marker([lat, lon], { icon: icons[iconIndex], draggable: !hideOverlay })
@@ -971,33 +926,6 @@
         }
       }
 
-      // 3D Map
-      if (threeDMap && action) {
-        const { type, lat, lon } = action;
-        if (!isNaN(lat) && !isNaN(lon)) {
-          let img = new Image();
-          img.src = action_markers[action_types.indexOf(type)];
-          img.onload = () => {
-            let canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            let ctx = canvas.getContext('2d');
-            if (ctx) {
-              ctx.translate(img.width / 2, img.height / 2);
-              ctx.drawImage(img, -img.width / 2, -img.height / 2);
-              ctx.save();
-              canvas.style.width = '50px';
-              canvas.style.height = '50px';
-              const marker = new Marker({ element: canvas });
-              marker.setLngLat([lon, lat]);
-              markers3D.get(index)?.remove();
-              markers3D.set(index, marker);
-              if (threeDMap) marker.addTo(threeDMap);
-            }
-          }
-        }
-      }
-
       // Remove polylines connected to this action and update all polylines
       removeConnectedPolylines(index);
       updateMarkersAndPolylines();
@@ -1010,7 +938,6 @@
       const lastMarker = markers.get(Object.keys(actions).length + 1);
       if (lastMarker) {
         leafletMap?.removeLayer(lastMarker);
-        markers3D.delete(Object.keys(actions).length + 1);
         markers.delete(Object.keys(actions).length + 1);
       }
     }
@@ -1022,24 +949,37 @@
       }
     });
     polylines.clear();
-    polylines3D.forEach(polyline => {
-      threeDMap?.removeLayer(polyline);
-      threeDMap?.removeSource(polyline);
-    });
-    polylines3D = [];
-    
+
+    const drawnPaths: PathPoint[][] = [];
     const markerEntries = Array.from(markers.entries()).sort((a, b) => a[0] - b[0]); // Ensure order by index
+
+    // Spline waypoints fly ArduPilot's hermite curve, so their legs draw the
+    // sampled curve instead of a straight line. PX4 substitutes splines with
+    // straight waypoints on upload, so its path stays straight.
+    const nodes: PathNode[] = markerEntries.map(([index, marker]) => {
+      const ll = marker.getLatLng();
+      const action = actions[index];
+      return {
+        lat: ll.lat,
+        lng: ll.lng,
+        spline: action?.type === 'NAV_SPLINE_WAYPOINT',
+        stop: stopsAt(action?.type ?? '', action?.param1)
+      };
+    });
+    const segmentPaths = missionSegmentPaths(nodes, !isPX4());
 
     for (let i = 0; i < markerEntries.length - 1; i++) {
       const [currentIndex, currentMarker] = markerEntries[i];
       const [, nextMarker] = markerEntries[i + 1];
       let [, prevMarker] = markerEntries[i];
       if (i > 0) [, prevMarker] = markerEntries[i - 1];
-      
+
       if (currentMarker && nextMarker && currentIndex >= get(missionIndexStore)) {
         let currentLatLng = currentMarker.getLatLng();
         let nextLatLng = nextMarker.getLatLng();
-        addPolyline(currentLatLng, nextLatLng);
+        const path = segmentPaths[i] ?? [currentLatLng, nextLatLng];
+        addPolyline(currentLatLng, nextLatLng, path);
+        drawnPaths.push(path.map((p) => ({ lat: p.lat, lng: p.lng })));
       }
       if (currentIndex < get(missionIndexStore) && prevMarker) {
         removePolyline(prevMarker.getLatLng(), currentMarker.getLatLng());
@@ -1051,10 +991,17 @@
         let mavLocation = get(mavLocationStore)!;
         let firstUnreachedMarker = markerEntries.find(([index]) => index === get(missionIndexStore));
         if (mavLocation && firstUnreachedMarker) {
-          addPolyline(mavLocation as L.LatLng, firstUnreachedMarker[1].getLatLng());
+          const target = firstUnreachedMarker[1].getLatLng();
+          addPolyline(mavLocation as L.LatLng, target);
+          drawnPaths.push([
+            { lat: (mavLocation as L.LatLng).lat, lng: (mavLocation as L.LatLng).lng },
+            { lat: target.lat, lng: target.lng }
+          ]);
         }
       }
     }
+
+    missionPathsStore.set(drawnPaths);
   }
 
   function updateMAVMarker() {
@@ -1170,22 +1117,26 @@
   $effect.pre(() => {
     void $airspaceZonesStore;
     void $showAirspaceStore;
-    if (!hideOverlay) untrack(() => renderAirspace());
+    void hideOverlay;
+    untrack(() => renderAirspace());
   });
   $effect.pre(() => {
     void $ceilingCellsStore;
     void $showCeilingsStore;
-    if (!hideOverlay) untrack(() => renderCeilings());
+    void hideOverlay;
+    untrack(() => renderCeilings());
   });
   $effect.pre(() => {
     void $obstaclesStore;
     void $showObstaclesStore;
-    if (!hideOverlay) untrack(() => renderObstacles());
+    void hideOverlay;
+    untrack(() => renderObstacles());
   });
   $effect.pre(() => {
     void $trafficStore;
     void $showTrafficStore;
-    if (!hideOverlay) untrack(() => renderTraffic());
+    void hideOverlay;
+    untrack(() => renderTraffic());
   });
   // Live traffic goes stale in seconds, so poll while the overlay is on.
   $effect(() => {
@@ -1316,7 +1267,9 @@
   }
 
   .map-container.mini :global(.leaflet-control-attribution),
-  .map-container.passive :global(.leaflet-control-attribution) {
+  .map-container.mini :global(.maplibregl-ctrl-attrib),
+  .map-container.passive :global(.leaflet-control-attribution),
+  .map-container.passive :global(.maplibregl-ctrl-attrib) {
     display: none;
   }
 
@@ -1553,7 +1506,7 @@
   style="--wt: {win?.top ?? 0}px; --wl: {win?.left ?? 0}px; --ww: {win?.width ?? 0}px; --wh: {win?.height ?? 0}px;"
 >
   <div id={id !== null ? id : 'map'} class="relative h-full z-0"></div>
-  <ThreeDMap />
+  <ThreeDMap onFeatureClick={openCombinedPopup3D} />
   {#if !isFullscreen && win}
     <div class="dim" style="top:0; left:0; right:0; height:{win.top}px;"></div>
     <div class="dim" style="top:{win.top + win.height}px; left:0; right:0; bottom:0;"></div>

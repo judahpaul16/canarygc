@@ -1,13 +1,14 @@
 import { writable } from 'svelte/store';
 import pkg from 'maplibre-gl';
+import { sessionBool, sessionString } from '../lib/session-persisted';
 
 export const mapStore = writable<L.Map | null>(null);
 export const markersStore = writable<Map<number, L.Marker>>(new Map());
 export const polylinesStore = writable<Map<string, L.Polyline>>(new Map());
-export const mapTypeStore = writable<string>('Satellite');
+export const mapTypeStore = sessionString('map.type', 'Satellite');
 export const mapTileLayerStore = writable<L.TileLayer | null>(null);
 export const mapZoomStore = writable<number>(18);
-export const lockViewStore = writable<boolean>(true);
+export const lockViewStore = sessionBool('map.lockView', true);
 export const threeDMapStore = writable<pkg.Map | null>(null);
 
 export interface MapRect {
@@ -34,3 +35,7 @@ export const mapShellStore = writable<MapRect | null>(null);
 export const mapPanelStore = writable<MapRect | null>(null);
 
 export const mapFullscreenStore = writable<boolean>(false);
+
+// Sampled mission leg paths (spline curves included); the 3D map renders them
+// from one geojson source so updates never tear layers down.
+export const missionPathsStore = writable<{ lat: number; lng: number }[][]>([]);

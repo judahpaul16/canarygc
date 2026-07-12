@@ -12,6 +12,7 @@
   import { showModal, notify } from '../lib/overlays';
   import { sendMavlinkCommand, setFlightMode, armDisarm, writeParameter, encodeParameterValue } from '../lib/mavlink-client';
   import { isAutoLabel, isGuidedLabel, isPX4 } from '../lib/flight-modes';
+  import { ACTION_TYPES } from '../lib/mission-icons';
   import { preflightCheck } from '../lib/preflight';
 
   const GRIPPER_SERVO_CHANNEL = 9;
@@ -37,12 +38,8 @@
       (v) => v !== null && v !== undefined && `${v}` !== ''
     );
   }
-  let action_types = [
-    'NAV_WAYPOINT', 'NAV_SPLINE_WAYPOINT', 'NAV_TAKEOFF', 'NAV_RETURN_TO_LAUNCH', 'NAV_GUIDED_ENABLE', 'NAV_LAND',
-    'NAV_LOITER_TIME', 'NAV_LOITER_TURNS', 'NAV_LOITER_UNLIM', 'NAV_PAYLOAD_PLACE', 'DO_WINCH', 'DO_GRIPPER', 'DO_SET_CAM_TRIGG_DIST',
-    'DO_SET_SERVO', 'DO_REPEAT_SERVO', 'DO_DIGICAM_CONFIGURE', 'DO_DIGICAM_CONTROL', 'DO_FENCE_ENABLE',
-    'DO_ENGINE_CONTROL', 'CONDITION_DELAY', 'CONDITION_CHANGE_ALT', 'CONDITION_DISTANCE', 'CONDITION_YAW'
-  ];  let mavLocation = $derived($mavLocationStore);
+  let action_types = ACTION_TYPES;
+  let mavLocation = $derived($mavLocationStore);
   let mavMode = $derived($mavModeStore);
   let systemState = $derived($mavStateStore);
   $effect(() => {

@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import { sessionBool } from '../lib/session-persisted';
 
 export interface TrafficContact {
   id: string;
@@ -14,7 +15,7 @@ export interface TrafficContact {
 
 const CONTACT_STALE_MS = 15_000;
 
-export const showTrafficStore = writable<boolean>(false);
+export const showTrafficStore = sessionBool('map.showTraffic', false);
 export const trafficStore = writable<Record<string, TrafficContact>>({});
 
 export function upsertTraffic(contacts: TrafficContact[]) {
