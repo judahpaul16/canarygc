@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount, onDestroy, untrack } from 'svelte';
   import { mavHeadingStore, mavLocationStore } from '../stores/mavlinkStore';
-  import { mapZoomStore, lockViewStore, threeDMapStore, mapWindowStore, mapFullscreenStore, missionPathsStore } from '../stores/mapStore';
+  import { mapZoomStore, lockViewStore, mapTypeStore, threeDMapStore, mapWindowStore, mapFullscreenStore, missionPathsStore } from '../stores/mapStore';
+  import 'maplibre-gl/dist/maplibre-gl.css';
   import { mavIconStore } from '../stores/customizationStore';
   import {
     airspaceZonesStore,
@@ -241,7 +242,10 @@
   }
 
   function followCamera(m: pkg.Map, loc: { lat: number; lng: number }) {
-    if (!get(lockViewStore) || m.isMoving()) return;
+    // Camera moves cost a full MapLibre render; skip them while the 3D view
+    // is hidden behind the 2D map. The next telemetry frame after switching
+    // to 3D catches the camera up.
+    if (get(mapTypeStore) !== '3D' || !get(lockViewStore) || m.isMoving()) return;
     // Camera padding centers the vehicle inside the registered window.
     const w = get(mapFullscreenStore) ? null : get(mapWindowStore);
     const padding = w
@@ -369,7 +373,7 @@
             'source': {
                 'type': 'raster',
                 'tiles': [
-                    'http://mt0.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
+                    'https://mt0.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
                 ],
                 'tileSize': 256
             },
@@ -539,7 +543,3 @@
 </script>
 
 <div id='threedmap' class="relative h-full rounded-2xl z-0"></div>
-
-<style>
-  @import url('https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css');
-</style>

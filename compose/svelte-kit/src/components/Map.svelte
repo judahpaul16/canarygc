@@ -164,7 +164,10 @@
   const YAW_STEP_DEG = 10;
   const YAW_RATE_DEG_PER_S = 10;
   const YAW_RELATIVE_OFFSET = 1;
-  const ALTITUDE_STEP_M = 10;
+  // One meter per click: a vertical step is the ground-impact axis, so each
+  // press stays small and predictable; big altitude changes belong to the
+  // plan or a guided target. Horizontal D-pad nudges stay at 10 m.
+  const ALTITUDE_STEP_M = 1;
 
   let feedDockOpen = $state(true);
   let controlDockOpen = $state(true);
@@ -666,7 +669,6 @@
 
   let ceilingLayer: L.LayerGroup | null = null;
   let obstacleLayer: L.LayerGroup | null = null;
-  let trafficLayer: L.LayerGroup | null = null;
   const TRAFFIC_POLL_MS = 5000;
   const M_PER_FT = 0.3048;
 
@@ -702,25 +704,40 @@
     return `<b>${esc(c.callsign)}</b><br>Altitude: ${alt}<br>Speed: ${speed}<br>Track: ${heading}<br>Source: ${source}`;
   }
 
+  // Contacts arrive per ADSB_VEHICLE message and per network poll, so markers
+  // reconcile in place by contact id instead of tearing the layer down.
+  const trafficMarkers2D = new Map<string, L.Marker>();
+
   function renderTraffic() {
     if (!L || !leafletMap) return;
-    trafficLayer?.remove();
-    trafficLayer = null;
-    if (!get(showTrafficStore) || hideOverlay) return;
-    const group = L.layerGroup();
-    for (const c of Object.values(get(trafficStore))) {
-      const icon = L.divIcon({
-        className: 'traffic-icon',
-        html: `<i class="fas fa-plane" style="transform: rotate(${(c.headingDeg ?? 0) - 90}deg)"></i>`,
-        iconSize: [20, 20],
-        iconAnchor: [10, 10]
-      });
-      L.marker([c.lat, c.lon], { icon })
-        .on('click', (ev) => openCombinedPopup((ev as L.LeafletMouseEvent).latlng))
-        .addTo(group);
+    const contacts = Object.values(get(trafficStore));
+    const visible = get(showTrafficStore) && !hideOverlay;
+    const live = new Set(contacts.map((c) => c.id));
+    for (const [id, marker] of trafficMarkers2D) {
+      if (!visible || !live.has(id)) {
+        marker.remove();
+        trafficMarkers2D.delete(id);
+      }
     }
-    group.addTo(leafletMap);
-    trafficLayer = group;
+    if (!visible) return;
+    for (const c of contacts) {
+      let marker = trafficMarkers2D.get(c.id);
+      if (!marker) {
+        const icon = L.divIcon({
+          className: 'traffic-icon',
+          html: '<i class="fas fa-plane"></i>',
+          iconSize: [20, 20],
+          iconAnchor: [10, 10]
+        });
+        marker = L.marker([c.lat, c.lon], { icon })
+          .on('click', (ev) => openCombinedPopup((ev as L.LeafletMouseEvent).latlng))
+          .addTo(leafletMap);
+        trafficMarkers2D.set(c.id, marker);
+      }
+      marker.setLatLng([c.lat, c.lon]);
+      const iconEl = marker.getElement()?.querySelector('i') as HTMLElement | null;
+      if (iconEl) iconEl.style.transform = `rotate(${(c.headingDeg ?? 0) - 90}deg)`;
+    }
   }
 
   function toggleTraffic() {
@@ -731,10 +748,12 @@
   // markers (markerPane is 600), so obstacle dots keep their true color instead
   // of being tinted by the translucent airspace and ceiling overlays.
   // Vector paths render into their renderer's pane, so each overlay gets a
-  // dedicated pane and SVG renderer with a fixed z-order: ceilings (402) under
+  // dedicated pane and renderer with a fixed z-order: ceilings (402) under
   // airspace (405) under obstacles (450) under mission paths (590) under the
   // markers (Leaflet's markerPane, 600). Sharing one pane makes stacking follow
   // insertion order, which flickers as layers re-render at different cadences.
+  // Canvas renderers keep the dense LAANC grid cheap to pan and zoom, where
+  // one SVG node per cell makes the DOM crawl.
   const paneRenderers = new Map<string, L.Renderer>();
   function paneRenderer(name: string, zIndex: string): L.Renderer | null {
     if (!L || !leafletMap) return null;
@@ -743,7 +762,7 @@
       const pane = leafletMap.getPane(name);
       if (pane) pane.style.zIndex = zIndex;
     }
-    if (!paneRenderers.has(name)) paneRenderers.set(name, L.svg({ pane: name }));
+    if (!paneRenderers.has(name)) paneRenderers.set(name, L.canvas({ pane: name }));
     return paneRenderers.get(name) ?? null;
   }
 
@@ -843,6 +862,9 @@
     polylines.clear();
     markersStore.set(markers);
     polylinesStore.set(polylines);
+    planPaths = [];
+    mavLegLine?.remove();
+    mavLegLine = null;
     missionPathsStore.set([]);
   }
 
@@ -985,67 +1007,84 @@
       }
     }
 
-    if (markerEntries.length > 0) {
-      if (get(mapStore)) {
-        let mavLocation = get(mavLocationStore)!;
-        let firstUnreachedMarker = markerEntries.find(([index]) => index === get(missionIndexStore));
-        if (mavLocation && firstUnreachedMarker) {
-          const target = firstUnreachedMarker[1].getLatLng();
-          addPolyline(mavLocation as L.LatLng, target);
-          drawnPaths.push([
-            { lat: (mavLocation as L.LatLng).lat, lng: (mavLocation as L.LatLng).lng },
-            { lat: target.lat, lng: target.lng }
-          ]);
-        }
-      }
-    }
-
-    missionPathsStore.set(drawnPaths);
+    planPaths = drawnPaths;
+    updateMavLeg();
   }
 
+  // The vehicle marker updates in place at telemetry rate: position through
+  // setLatLng, heading through a CSS rotation, art through the img src.
+  // Recreating the marker or re-encoding a rotated canvas per frame burns
+  // main-thread time and drops the marker between frames.
   function updateMAVMarker() {
-    if (leafletMap && mavLocation) {
-      let img = new Image();
-      img.src = get(mavIconStore);
-      if (!L) return;
-      img.onload = () => {
-        let canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        let ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.translate(img.width / 2, img.height / 2);
-          ctx.rotate((mavHeading) * Math.PI / 180);
-          ctx.drawImage(img, -img.width / 2, -img.height / 2);
-          ctx.save();
-          let icon = L.icon({
-            iconUrl: canvas.toDataURL(),
-            iconSize: [45, 45],
-            iconAnchor: [23, 20],
-            popupAnchor: [0, -15],
-            shadowSize: [41, 41]
-          });
-          if (mavMarker) {
-            leafletMap?.removeLayer(mavMarker);
-          }
-          mavMarker = L.marker(mavLocation as L.LatLng, { icon: icon })
-            .on('click', (ev) => openCombinedPopup((ev as L.LeafletMouseEvent).latlng));
-          leafletMap?.addLayer(mavMarker);
-          updateMarkersAndPolylines();
-          if (lockView && leafletMap) {
-            const w = isFullscreen ? null : get(mapWindowStore);
-            const size = leafletMap.getSize();
-            const windowCenter = w
-              ? { x: w.left + w.width / 2, y: w.top + w.height / 2 }
-              : { x: size.x / 2, y: size.y / 2 };
-            const targetPoint = leafletMap.latLngToContainerPoint(mavLocation as L.LatLng);
-            const snapDistance = Math.hypot(windowCenter.x - targetPoint.x, windowCenter.y - targetPoint.y);
-            if (snapDistance > LOCK_PULSE_MIN_PX) triggerLockPulse();
-            centerInWindow(mavLocation as L.LatLng, get(mapZoomStore));
-          }
-        }
-      };
+    if (!L || !leafletMap || !mavLocation) return;
+    if (!mavMarker) {
+      const icon = L.divIcon({
+        className: 'mav-marker',
+        html: `<img src="${get(mavIconStore)}" alt="Vehicle">`,
+        iconSize: [45, 45],
+        iconAnchor: [22.5, 22.5]
+      });
+      mavMarker = L.marker(mavLocation as L.LatLng, { icon })
+        .on('click', (ev) => openCombinedPopup((ev as L.LeafletMouseEvent).latlng));
+      leafletMap.addLayer(mavMarker);
     }
+    mavMarker.setLatLng(mavLocation as L.LatLng);
+    const img = mavMarker.getElement()?.querySelector('img');
+    if (img) {
+      const src = get(mavIconStore);
+      if (img.getAttribute('src') !== src) img.src = src;
+      img.style.transform = `rotate(${mavHeading}deg)`;
+    }
+    updateMavLeg();
+    if (lockView) {
+      const w = isFullscreen ? null : get(mapWindowStore);
+      const size = leafletMap.getSize();
+      const windowCenter = w
+        ? { x: w.left + w.width / 2, y: w.top + w.height / 2 }
+        : { x: size.x / 2, y: size.y / 2 };
+      const targetPoint = leafletMap.latLngToContainerPoint(mavLocation as L.LatLng);
+      const snapDistance = Math.hypot(windowCenter.x - targetPoint.x, windowCenter.y - targetPoint.y);
+      if (snapDistance > LOCK_PULSE_MIN_PX) triggerLockPulse();
+      centerInWindow(mavLocation as L.LatLng, get(mapZoomStore));
+    }
+  }
+
+  // The vehicle-to-next-waypoint leg is the only path that moves at telemetry
+  // rate; it updates in place while the plan segments rebuild only on plan or
+  // progress changes.
+  let planPaths: PathPoint[][] = [];
+  let mavLegLine: L.Polyline | null = null;
+
+  function updateMavLeg() {
+    if (!L || !leafletMap) return;
+    const mav = get(mavLocationStore) as L.LatLng | null;
+    const target = mav ? markers.get(get(missionIndexStore)) : undefined;
+    if (!mav || !target) {
+      mavLegLine?.remove();
+      mavLegLine = null;
+      missionPathsStore.set(planPaths);
+      return;
+    }
+    const targetLatLng = target.getLatLng();
+    const points: L.LatLngExpression[] = [
+      [mav.lat, mav.lng],
+      [targetLatLng.lat, targetLatLng.lng]
+    ];
+    if (!mavLegLine) {
+      const renderer = paneRenderer('mission', '590');
+      mavLegLine = L.polyline(points, { color: 'red', ...(renderer ? { renderer } : {}) }).addTo(
+        leafletMap
+      );
+    } else {
+      mavLegLine.setLatLngs(points);
+    }
+    missionPathsStore.set([
+      ...planPaths,
+      [
+        { lat: mav.lat, lng: mav.lng },
+        { lat: targetLatLng.lat, lng: targetLatLng.lng }
+      ]
+    ]);
   }
   let lockView = $derived($lockViewStore);
   $effect(() => {
@@ -1078,13 +1117,31 @@
     void $mavIconStore;
     untrack(() => updateMAVMarker());
   });
+  // Mission progress redraws the plan segments (reached legs drop off).
+  $effect.pre(() => {
+    void $missionIndexStore;
+    untrack(() => updateMarkersAndPolylines());
+  });
+  // The window rect changes on every scroll tick; invalidateSize forces a
+  // reflow, so it only runs when the window actually resizes. A resize also
+  // recenters (arriving at a page with a different window); a pure move only
+  // recenters while the view is locked to the vehicle.
+  let trackedWinSize = { width: 0, height: 0 };
   $effect(() => {
-    void win;
+    const w = win;
     void isFullscreen;
     untrack(() => {
       if (!leafletMap) return;
-      leafletMap.invalidateSize();
-      centerInWindow(get(mavLocationStore) as L.LatLng, get(mapZoomStore));
+      const width = w?.width ?? window.innerWidth;
+      const height = w?.height ?? window.innerHeight;
+      const resized = width !== trackedWinSize.width || height !== trackedWinSize.height;
+      if (resized) {
+        trackedWinSize = { width, height };
+        leafletMap.invalidateSize();
+      }
+      if (resized || get(lockViewStore)) {
+        centerInWindow(get(mavLocationStore) as L.LatLng, get(mapZoomStore));
+      }
     });
   });
   $effect.pre(() => {
@@ -1276,6 +1333,17 @@
     color: #38bdf8;
     font-size: 16px;
     text-shadow: 0 0 3px rgba(0, 0, 0, 0.9);
+    display: inline-block;
+  }
+
+  .map-container :global(.mav-marker) {
+    background: transparent;
+    border: none;
+  }
+
+  .map-container :global(.mav-marker img) {
+    width: 45px;
+    height: 45px;
   }
 
   #map-toggle {
@@ -1370,12 +1438,13 @@
     color: var(--fontColor);
   }
 
+  /* The panel itself never clips (tooltips escape its edges); the bodies clip
+     their own content to the bottom radius instead. */
   .dock-panel {
     width: 320px;
     background-color: rgb(from var(--primaryColor) r g b / 0.88);
     border: 1px solid rgb(from var(--secondaryColor) r g b / 0.9);
     border-radius: var(--radius-surface);
-    overflow: hidden;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
   }
@@ -1385,6 +1454,7 @@
   .stats-body {
     max-height: 46vh;
     overflow-y: auto;
+    border-radius: 0 0 var(--radius-surface) var(--radius-surface);
   }
 
   .stats-body :global(.stats) {
@@ -1460,6 +1530,8 @@
     width: 100%;
     aspect-ratio: 16 / 9;
     position: relative;
+    overflow: hidden;
+    border-radius: 0 0 var(--radius-surface) var(--radius-surface);
   }
 
   .control-body {
@@ -1664,10 +1736,10 @@
             </div>
             <DPad />
             <div class="control-col">
-              <button class="ctl-btn" aria-label="Rotate left" data-tip="Yaw left {YAW_STEP_DEG}°" onclick={() => rotate(-1)}>
+              <button class="ctl-btn" aria-label="Rotate left" data-tip="Yaw left {YAW_STEP_DEG}°" data-tip-pos="left" onclick={() => rotate(-1)}>
                 <i class="fas fa-rotate-left"></i>
               </button>
-              <button class="ctl-btn" aria-label="Rotate right" data-tip="Yaw right {YAW_STEP_DEG}°" onclick={() => rotate(1)}>
+              <button class="ctl-btn" aria-label="Rotate right" data-tip="Yaw right {YAW_STEP_DEG}°" data-tip-pos="left" onclick={() => rotate(1)}>
                 <i class="fas fa-rotate-right"></i>
               </button>
             </div>

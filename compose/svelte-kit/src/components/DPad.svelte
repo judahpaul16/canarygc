@@ -6,6 +6,20 @@
 
   const MOVE_STEP_M = 10;
 
+  type Dir = 'up' | 'right' | 'down' | 'left';
+
+  const TIPS: Record<Dir, string> = {
+    up: `Move north ${MOVE_STEP_M} m`,
+    right: `Move east ${MOVE_STEP_M} m`,
+    down: `Move south ${MOVE_STEP_M} m`,
+    left: `Move west ${MOVE_STEP_M} m`
+  };
+
+  // The arrow buttons are rotated 45 degrees, so a pseudo-element tooltip on
+  // the button itself renders rotated; one tip element outside the rotated
+  // frame shows above whichever arrow is hovered or focused.
+  let tipDir: Dir | null = $state(null);
+
   let altitude: number = $derived($mavAltitudeStore);
 
   let mavMode = $derived($mavModeStore);
@@ -16,27 +30,59 @@
   }
 </script>
 
-<div
-  class="dpad-container relative flex items-center justify-center w-48 h-48"
-  data-tip="Moves {MOVE_STEP_M} m in world frame (N / E / S / W)"
->
+<div class="dpad-container relative flex items-center justify-center w-48 h-48">
   <nav class="d-pad relative">
-    <button class="up" aria-label="Move north" onclick={() => nudge(MOVE_STEP_M, 0)}>
+    <button
+      class="up"
+      aria-label="Move north"
+      onmouseenter={() => (tipDir = 'up')}
+      onmouseleave={() => (tipDir = null)}
+      onfocus={() => (tipDir = 'up')}
+      onblur={() => (tipDir = null)}
+      onclick={() => nudge(MOVE_STEP_M, 0)}
+    >
       <i class="fas fa-chevron-up"></i>
     </button>
-    <button class="right" aria-label="Move east" onclick={() => nudge(0, MOVE_STEP_M)}>
+    <button
+      class="right"
+      aria-label="Move east"
+      onmouseenter={() => (tipDir = 'right')}
+      onmouseleave={() => (tipDir = null)}
+      onfocus={() => (tipDir = 'right')}
+      onblur={() => (tipDir = null)}
+      onclick={() => nudge(0, MOVE_STEP_M)}
+    >
       <i class="fas fa-chevron-right"></i>
     </button>
-    <button class="down" aria-label="Move south" onclick={() => nudge(-MOVE_STEP_M, 0)}>
+    <button
+      class="down"
+      aria-label="Move south"
+      onmouseenter={() => (tipDir = 'down')}
+      onmouseleave={() => (tipDir = null)}
+      onfocus={() => (tipDir = 'down')}
+      onblur={() => (tipDir = null)}
+      onclick={() => nudge(-MOVE_STEP_M, 0)}
+    >
       <i class="fas fa-chevron-down"></i>
     </button>
-    <button class="left" aria-label="Move west" onclick={() => nudge(0, -MOVE_STEP_M)}>
+    <button
+      class="left"
+      aria-label="Move west"
+      onmouseenter={() => (tipDir = 'left')}
+      onmouseleave={() => (tipDir = null)}
+      onfocus={() => (tipDir = 'left')}
+      onblur={() => (tipDir = null)}
+      onclick={() => nudge(0, -MOVE_STEP_M)}
+    >
       <i class="fas fa-chevron-left"></i>
     </button>
-    <div class="center-circle">
+    <div class="center-circle" data-tip="World frame (N / E / S / W)">
       <span class="move-text">N/E/S/W</span>
     </div>
   </nav>
+  {#if tipDir}
+    <div class="dpad-tip dpad-tip-{tipDir}">{TIPS[tipDir]}</div>
+  {/if}
 </div>
 
 <style>
@@ -137,7 +183,45 @@
     font-size: 10pt;
     color: var(--fontColor);
   }
-  
+
+  .dpad-tip {
+    position: absolute;
+    z-index: 60;
+    padding: 0.25rem 0.6rem;
+    border-radius: var(--radius-control);
+    background-color: #3290e7;
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  .dpad-tip-up {
+    left: 50%;
+    bottom: calc(100% + 2px);
+    transform: translateX(-50%);
+  }
+
+  .dpad-tip-down {
+    left: 50%;
+    bottom: calc(30% + 6px);
+    transform: translateX(-50%);
+  }
+
+  .dpad-tip-left {
+    left: 15%;
+    bottom: calc(65% + 6px);
+    transform: translateX(-50%);
+  }
+
+  .dpad-tip-right {
+    left: 85%;
+    bottom: calc(65% + 6px);
+    transform: translateX(-50%);
+  }
+
   /* Mobile Styles */
   @media (max-width: 990px) {
     .dpad-container {
