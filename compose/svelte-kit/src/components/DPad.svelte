@@ -16,22 +16,25 @@
   }
 </script>
 
-<div class="dpad-container relative flex items-center justify-center w-48 h-48">
+<div
+  class="dpad-container relative flex items-center justify-center w-48 h-48"
+  data-tip="Moves {MOVE_STEP_M} m in world frame (N / E / S / W)"
+>
   <nav class="d-pad relative">
-    <button class="up" aria-label="Move north" title="Move north {MOVE_STEP_M} m (world frame)" onclick={() => nudge(MOVE_STEP_M, 0)}>
+    <button class="up" aria-label="Move north" onclick={() => nudge(MOVE_STEP_M, 0)}>
       <i class="fas fa-chevron-up"></i>
     </button>
-    <button class="right" aria-label="Move east" title="Move east {MOVE_STEP_M} m (world frame)" onclick={() => nudge(0, MOVE_STEP_M)}>
+    <button class="right" aria-label="Move east" onclick={() => nudge(0, MOVE_STEP_M)}>
       <i class="fas fa-chevron-right"></i>
     </button>
-    <button class="down" aria-label="Move south" title="Move south {MOVE_STEP_M} m (world frame)" onclick={() => nudge(-MOVE_STEP_M, 0)}>
+    <button class="down" aria-label="Move south" onclick={() => nudge(-MOVE_STEP_M, 0)}>
       <i class="fas fa-chevron-down"></i>
     </button>
-    <button class="left" aria-label="Move west" title="Move west {MOVE_STEP_M} m (world frame)" onclick={() => nudge(0, -MOVE_STEP_M)}>
+    <button class="left" aria-label="Move west" onclick={() => nudge(0, -MOVE_STEP_M)}>
       <i class="fas fa-chevron-left"></i>
     </button>
     <div class="center-circle">
-      <span class="move-text" title="Arrows move the vehicle in world frame: North, East, South, West">N/E/S/W</span>
+      <span class="move-text">N/E/S/W</span>
     </div>
   </nav>
 </div>

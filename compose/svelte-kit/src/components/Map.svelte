@@ -1578,23 +1578,23 @@
   {#if isFullscreen || win}
     <div class="window-frame">
   <div class="map-controls absolute top-3 right-2 z-[1] flex flex-col gap-2">
-    <button class="map-btn" aria-label="Toggle fullscreen" title="Toggle fullscreen" onclick={handleFullScreen}>
+    <button class="map-btn" aria-label="Toggle fullscreen" data-tip={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'} data-tip-pos="left" onclick={handleFullScreen}>
       <i class="fas fa-expand"></i>
     </button>
-    <button class="map-btn {lockPulse ? 'lock-pulse' : ''}" aria-label="Toggle map lock" title={lockView ? 'Unlock map (stop following the vehicle)' : 'Lock map to the vehicle'} onclick={toggleLockView}>
+    <button class="map-btn {lockPulse ? 'lock-pulse' : ''}" aria-label="Toggle map lock" data-tip={lockView ? 'Unlock map (stop following the vehicle)' : 'Lock map to the vehicle'} data-tip-pos="left" onclick={toggleLockView}>
       <i class="fas {lockView ? 'fa-lock text-[#f5c518]' : 'fa-lock-open'}"></i>
     </button>
     {#if !hideOverlay}
-      <button class="map-btn" aria-label="Toggle airspace overlay" title="Toggle airspace overlay" onclick={toggleAirspace}>
+      <button class="map-btn" aria-label="Toggle airspace overlay" data-tip="{$showAirspaceStore ? 'Hide' : 'Show'} airspace zones" data-tip-pos="left" onclick={toggleAirspace}>
         <i class="fas fa-tower-broadcast {$showAirspaceStore ? 'text-[#f24e4e]' : ''}"></i>
       </button>
-      <button class="map-btn" aria-label="Toggle LAANC ceiling grid" title="Toggle LAANC ceiling grid (max pre-approved altitude per square)" onclick={toggleCeilings}>
+      <button class="map-btn" aria-label="Toggle LAANC ceiling grid" data-tip="{$showCeilingsStore ? 'Hide' : 'Show'} LAANC ceiling grid (pre-approved altitude per square)" data-tip-pos="left" onclick={toggleCeilings}>
         <i class="fas fa-border-all {$showCeilingsStore ? 'text-[#22c55e]' : ''}"></i>
       </button>
-      <button class="map-btn" aria-label="Toggle obstacles" title="Toggle obstacles (towers and tall structures from the FAA obstacle file)" onclick={toggleObstacles}>
+      <button class="map-btn" aria-label="Toggle obstacles" data-tip="{$showObstaclesStore ? 'Hide' : 'Show'} obstacles (FAA towers and tall structures)" data-tip-pos="left" onclick={toggleObstacles}>
         <i class="fas fa-tower-observation {$showObstaclesStore ? 'text-[#f97316]' : ''}"></i>
       </button>
-      <button class="map-btn" aria-label="Toggle live air traffic" title="Toggle live air traffic (ADS-B from the vehicle receiver and network feeds)" onclick={toggleTraffic}>
+      <button class="map-btn" aria-label="Toggle live air traffic" data-tip="{$showTrafficStore ? 'Hide' : 'Show'} live air traffic (ADS-B)" data-tip-pos="left" onclick={toggleTraffic}>
         <i class="fas fa-plane {$showTrafficStore ? 'text-[#38bdf8]' : ''}"></i>
       </button>
     {/if}
@@ -1617,7 +1617,7 @@
         <div class="dock-panel">
           <div class="dock-head">
             <span><i class="fas fa-gauge-high"></i>Stats</span>
-            <button class="dock-min" aria-label="Minimize stats" title="Minimize" onclick={() => (statsDockOpen = false)}>
+            <button class="dock-min" aria-label="Minimize stats" data-tip="Minimize" data-tip-pos="left" onclick={() => (statsDockOpen = false)}>
               <i class="fas fa-chevron-down"></i>
             </button>
           </div>
@@ -1633,7 +1633,7 @@
         <div class="dock-panel">
           <div class="dock-head">
             <span><i class="fas fa-video"></i>Live feed</span>
-            <button class="dock-min" aria-label="Minimize live feed" title="Minimize" onclick={() => (feedDockOpen = false)}>
+            <button class="dock-min" aria-label="Minimize live feed" data-tip="Minimize" data-tip-pos="left" onclick={() => (feedDockOpen = false)}>
               <i class="fas fa-chevron-down"></i>
             </button>
           </div>
@@ -1649,25 +1649,25 @@
         <div class="dock-panel">
           <div class="dock-head">
             <span><i class="fas fa-gamepad"></i>Manual control</span>
-            <button class="dock-min" aria-label="Minimize manual control" title="Minimize" onclick={() => (controlDockOpen = false)}>
+            <button class="dock-min" aria-label="Minimize manual control" data-tip="Minimize" data-tip-pos="left" onclick={() => (controlDockOpen = false)}>
               <i class="fas fa-chevron-down"></i>
             </button>
           </div>
           <div class="control-body">
             <div class="control-col">
-              <button class="ctl-btn" aria-label="Altitude up" title="Altitude up {ALTITUDE_STEP_M} m" onclick={() => nudgeAltitude(1)}>
+              <button class="ctl-btn" aria-label="Altitude up" data-tip="Climb {ALTITUDE_STEP_M} m" data-tip-pos="right" onclick={() => nudgeAltitude(1)}>
                 <i class="fas fa-arrow-up"></i>
               </button>
-              <button class="ctl-btn" aria-label="Altitude down" title="Altitude down {ALTITUDE_STEP_M} m" onclick={() => nudgeAltitude(-1)}>
+              <button class="ctl-btn" aria-label="Altitude down" data-tip="Descend {ALTITUDE_STEP_M} m" data-tip-pos="right" onclick={() => nudgeAltitude(-1)}>
                 <i class="fas fa-arrow-down"></i>
               </button>
             </div>
             <DPad />
             <div class="control-col">
-              <button class="ctl-btn" aria-label="Rotate left" title="Rotate left {YAW_STEP_DEG} degrees" onclick={() => rotate(-1)}>
+              <button class="ctl-btn" aria-label="Rotate left" data-tip="Yaw left {YAW_STEP_DEG}°" onclick={() => rotate(-1)}>
                 <i class="fas fa-rotate-left"></i>
               </button>
-              <button class="ctl-btn" aria-label="Rotate right" title="Rotate right {YAW_STEP_DEG} degrees" onclick={() => rotate(1)}>
+              <button class="ctl-btn" aria-label="Rotate right" data-tip="Yaw right {YAW_STEP_DEG}°" onclick={() => rotate(1)}>
                 <i class="fas fa-rotate-right"></i>
               </button>
             </div>

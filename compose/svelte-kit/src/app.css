@@ -232,6 +232,56 @@ iframe {
   background-color: #3290e7;
 }
 
+/* Instant styled tooltips for map chrome and dock buttons; renders in place,
+   so it survives fullscreen where portaled tooltips would land behind the
+   fullscreen element. Default sits above; data-tip-pos="left" hangs off the
+   left edge for controls against the right side of a window or panel. */
+[data-tip] {
+  position: relative;
+}
+
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-control);
+  background-color: #3290e7;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease 0.12s, visibility 0.15s ease 0.12s;
+  pointer-events: none;
+  z-index: 60;
+}
+
+[data-tip]:hover::after,
+[data-tip]:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+[data-tip][data-tip-pos='left']::after {
+  left: auto;
+  right: calc(100% + 8px);
+  bottom: auto;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+[data-tip][data-tip-pos='right']::after {
+  left: calc(100% + 8px);
+  bottom: auto;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
 .dashboard {
   opacity: 0;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
