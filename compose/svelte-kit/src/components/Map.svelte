@@ -13,7 +13,7 @@
     missionPathsStore
   } from '../stores/mapStore';
   import { mavLocationStore, mavHeadingStore, mavAltitudeStore, mavModeStore, mavTypeStore } from '../stores/mavlinkStore';
-  import { sendMavlinkCommand, setFlightMode, setPositionLocal } from '../lib/mavlink-client';
+  import { sendMavlinkCommand, setFlightMode, setPositionLocal, repositionRelative } from '../lib/mavlink-client';
   import { isGuidedLabel, isAirVehicle, isPX4 } from '../lib/flight-modes';
   import { missionSegmentPaths, stopsAt, type PathNode, type PathPoint } from '../lib/spline-path';
   import { hasSessionValue } from '../lib/session-persisted';
@@ -226,12 +226,24 @@
     if (!isGuidedLabel(get(mavModeStore))) await setFlightMode('GUIDED');
   }
 
+  // PX4 rides DO_REPOSITION for altitude and yaw (CONDITION_YAW and single
+  // local setpoints come back UNSUPPORTED there); ArduPilot keeps its GUIDED
+  // mechanisms.
   async function nudgeAltitude(direction: 1 | -1) {
+    if (isPX4()) {
+      await repositionRelative(0, 0, direction * ALTITUDE_STEP_M);
+      return;
+    }
     await ensureGuided();
     await setPositionLocal(0, 0, -(get(mavAltitudeStore) + direction * ALTITUDE_STEP_M));
   }
 
   async function rotate(direction: 1 | -1) {
+    if (isPX4()) {
+      const yaw = (get(mavHeadingStore) + direction * YAW_STEP_DEG + 360) % 360;
+      await repositionRelative(0, 0, 0, yaw);
+      return;
+    }
     await ensureGuided();
     await sendMavlinkCommand('CONDITION_YAW', [YAW_STEP_DEG, YAW_RATE_DEG_PER_S, direction, YAW_RELATIVE_OFFSET]);
   }
@@ -361,10 +373,12 @@
     }
     updateMAVMarker();
 
-    const locationDisplay = document.querySelector('#location-display')!;
-
-    // Update location display when MAV position changes
+    // The display only exists while a window or fullscreen renders the frame,
+    // so it resolves per update; a fixed reference taken on a passive page is
+    // null and would abort the rest of the map setup.
     function updateLocationDisplay(loc: L.LatLng | { lat: number; lng: number }) {
+        const locationDisplay = document.querySelector('#location-display');
+        if (!locationDisplay) return;
         locationDisplay.textContent = `MAV Location: ${loc.lat.toFixed(6)}°, ${loc.lng.toFixed(6)}°, Yaw Angle: ${mavHeading}°, Altitude: ${get(mavAltitudeStore)}m`;
     }
     updateLocationDisplay(mavLocation);
@@ -1675,7 +1689,7 @@
     <input type="checkbox" value="" class="sr-only peer" onclick={toggleMap}>
     <span class="text-white flex items-center gap-2">
       <i class="fas fa-map"></i>
-      <span>{mapType == '3D' ? '3D Buildings' : mapType}</span>
+      <span>{mapType === '3D' ? '3D Buildings' : mapType === 'OpenStreetMap' ? 'Streets' : mapType}</span>
     </span>
     <div class="relative w-16 h-6 ml-3 bg-[#2b7c3f rounded-full transition-colors peer-focus:outline-none" class:bg-blue-500={mapType === 'OpenStreetMap'} class:bg-green-500={mapType === 'Satellite'} class:bg-purple-500={mapType === '3D'}>
       <div class="absolute top-[2px] left-[2px] bg-white rounded-full h-5 w-5 transition-all duration-300" style:transform={mapType === 'OpenStreetMap' ? 'translateX(0)' : mapType === 'Satellite' ? 'translateX(100%)' : 'translateX(200%)'}></div>

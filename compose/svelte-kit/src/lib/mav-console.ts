@@ -1,4 +1,8 @@
-import { common, ardupilotmega } from 'mavlink-mappings';
+// Subpath imports keep the whole app on one prebundled copy of the mappings;
+// mixing them with the package root makes Vite optimize the dependency twice
+// and split the module graph across versions.
+import { MavCmd as CommonMavCmd } from 'mavlink-mappings/dist/lib/common';
+import { MavCmd as ArduMavCmd } from 'mavlink-mappings/dist/lib/ardupilotmega';
 import { get } from 'svelte/store';
 import { mavModelStore } from '../stores/mavlinkStore';
 import { isPX4 } from './flight-modes';
@@ -8,10 +12,10 @@ export interface ConsoleCommand {
   ardu: boolean;
 }
 
-const COMMON_COMMANDS = Object.keys(common.MavCmd)
+const COMMON_COMMANDS = Object.keys(CommonMavCmd)
   .filter((k) => isNaN(Number(k)))
   .sort();
-const ARDU_COMMANDS = Object.keys(ardupilotmega.MavCmd)
+const ARDU_COMMANDS = Object.keys(ArduMavCmd)
   .filter((k) => isNaN(Number(k)))
   .sort();
 
@@ -21,7 +25,7 @@ export function commandCatalog(model: string = get(mavModelStore)): ConsoleComma
   const list: ConsoleCommand[] = COMMON_COMMANDS.map((name) => ({ name, ardu: false }));
   if (!isPX4(model)) {
     for (const name of ARDU_COMMANDS) {
-      if (!(name in common.MavCmd)) list.push({ name, ardu: true });
+      if (!(name in CommonMavCmd)) list.push({ name, ardu: true });
     }
   }
   return list.sort((a, b) => a.name.localeCompare(b.name));

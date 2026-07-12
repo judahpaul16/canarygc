@@ -1,5 +1,5 @@
 import { get } from 'svelte/store';
-import { mavModelStore } from '../stores/mavlinkStore';
+import { mavModelStore, mavLocationStore, mavAltitudeAmslStore } from '../stores/mavlinkStore';
 import { strategyFor, isPX4, type FlightMode } from './flight-modes';
 import { notify } from './overlays';
 
@@ -25,6 +25,36 @@ export async function sendMavlinkCommand(
   });
   if (!response.ok) console.error(`Error: ${await response.text()}`);
   return response.ok;
+}
+
+const DO_REPOSITION_CHANGE_MODE = 1;
+const M_PER_DEG_LAT = 111320;
+
+// PX4 flies click nudges through DO_REPOSITION in Hold, the same command QGC
+// uses for go-to; it also takes a target heading, covering yaw where PX4
+// rejects CONDITION_YAW. Offsets are meters in world frame, yaw in degrees
+// (NaN keeps the current heading). PX4's navigator reads the altitude as AMSL
+// and the yaw as radians, whatever the message declares.
+export async function repositionRelative(
+  dNorthM: number,
+  dEastM: number,
+  dAltM: number,
+  yawDeg: number = NaN
+): Promise<boolean> {
+  const loc = get(mavLocationStore);
+  if (!loc) return false;
+  const lat = loc.lat + dNorthM / M_PER_DEG_LAT;
+  const lng = loc.lng + dEastM / (M_PER_DEG_LAT * Math.cos((loc.lat * Math.PI) / 180));
+  const yawRad = (yawDeg * Math.PI) / 180;
+  return sendMavlinkCommand('DO_REPOSITION', [
+    -1,
+    DO_REPOSITION_CHANGE_MODE,
+    0,
+    Math.atan2(Math.sin(yawRad), Math.cos(yawRad)),
+    Math.round(lat * 1e7),
+    Math.round(lng * 1e7),
+    get(mavAltitudeAmslStore) + dAltM
+  ]);
 }
 
 // Sets the flight mode using the encoding of whichever autopilot is connected.

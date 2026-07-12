@@ -13,6 +13,7 @@
     mavlinkLogStore,
     mavlinkParamStore,
     mavAltitudeStore,
+    mavAltitudeAmslStore,
     mavSpeedStore,
     mavModelStore,
     mavTypeStore,
@@ -268,6 +269,9 @@
 
       const altitude = extractValue(text, 'relativeAlt');
       if (altitude) mavAltitudeStore.set(parseFloat(altitude) / 1000);
+
+      const altitudeAmsl = extractValue(text, 'alt');
+      if (altitudeAmsl) mavAltitudeAmslStore.set(parseFloat(altitudeAmsl) / 1000);
 
       const speed = calculateSpeed(text);
       if (speed) mavSpeedStore.set(parseFloat(speed.toFixed(2)));

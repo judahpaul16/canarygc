@@ -28,6 +28,9 @@ export const mavLocationStore = writable<import('leaflet').LatLng | { lat: numbe
 export const mavSatelliteStore = writable<{ total: number; hdop: number }>({ total: 0, hdop: 999.0 });
 export const mavHeadingStore = writable<number>(320);
 export const mavAltitudeStore = writable<number>(0);
+// Altitude above mean sea level; PX4's DO_REPOSITION reads its altitude as
+// AMSL regardless of the declared frame.
+export const mavAltitudeAmslStore = writable<number>(0);
 export const mavSpeedStore = writable<number>(0);
 export const mavBatteryStore = writable<number|null>(null);
 export const mavlinkLogStore = writable<string[]>([]);

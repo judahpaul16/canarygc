@@ -268,7 +268,10 @@
     color: var(--fontColor);
   }
 
-  .controls > * {
+  /* :global reaches child-component roots (the D-pad); the scoped universal
+     selector only matches this component's own elements, leaving embedded
+     components inert inside the pass-through card. */
+  .controls > :global(*) {
     pointer-events: auto;
   }
 

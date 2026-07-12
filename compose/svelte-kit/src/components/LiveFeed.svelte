@@ -62,22 +62,28 @@
   onMount(() => {
     feedSrc = `http://${window.location.hostname}:8889/cam`;
 
+    // The MediaMTX feed is optional; while it is down the iframe just stays
+    // behind the static placeholder instead of spamming fetch rejections.
     const fetchLiveFeed = async () => {
-      let response = await fetch(`http://${window.location.hostname}:8889/cam`);
-      const liveFeed = document.getElementById('live-feed') as HTMLIFrameElement;
-      
-      if (response.status === 200) {
-        liveFeed.style.zIndex = '20';
-      } else {
+      const liveFeed = document.getElementById('live-feed');
+      if (!liveFeed) return;
+      try {
+        const response = await fetch(feedSrc);
+        liveFeed.style.zIndex = response.ok ? '20' : '0';
+      } catch {
         liveFeed.style.zIndex = '0';
       }
-      
       adjustVideoSize();
     };
 
-    setInterval(() => fetchLiveFeed(), 5000);
+    const feedTimer = setInterval(() => fetchLiveFeed(), 5000);
 
     window.addEventListener('resize', adjustVideoSize);
+
+    return () => {
+      clearInterval(feedTimer);
+      window.removeEventListener('resize', adjustVideoSize);
+    };
   });
 </script>
 

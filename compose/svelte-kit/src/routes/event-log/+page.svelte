@@ -593,10 +593,11 @@
         background-color: var(--primaryColor);
     }
 
-    @media (min-width: 990px) {
-        .event-log > div {
-            overflow: hidden;
-        }
+    /* The log view is the only flexible region; the header and console hold
+       their size, otherwise a full log buffer crushes them to nothing. */
+    .log-head,
+    .console {
+        flex-shrink: 0;
     }
 
     /* Mobile Styles */
@@ -658,17 +659,4 @@
         }
     }
 
-    @media (max-width: 1440px) {
-        @media (min-width: 990px) {
-            .event-log > div {
-                display: inline-table;
-                text-align: center;
-                height: 10%;
-            }
-
-            .filters + div {
-                display: inline-flex;
-            }
-        }
-    }
 </style>

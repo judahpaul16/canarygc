@@ -1,10 +1,10 @@
 <script lang="ts">
   import { mavModeStore, mavAltitudeStore } from '../stores/mavlinkStore';
 
-  import { setFlightMode, setPositionLocal } from '../lib/mavlink-client';
-  import { isGuidedLabel } from '../lib/flight-modes';
+  import { setFlightMode, setPositionLocal, repositionRelative } from '../lib/mavlink-client';
+  import { isGuidedLabel, isPX4 } from '../lib/flight-modes';
 
-  const MOVE_STEP_M = 10;
+  const MOVE_STEP_M = 1;
 
   type Dir = 'up' | 'right' | 'down' | 'left';
 
@@ -25,6 +25,10 @@
   let mavMode = $derived($mavModeStore);
 
   async function nudge(x: number, y: number) {
+    if (isPX4()) {
+      await repositionRelative(x, y, 0);
+      return;
+    }
     if (!isGuidedLabel(mavMode)) await setFlightMode('GUIDED');
     await setPositionLocal(x, y, -altitude);
   }
