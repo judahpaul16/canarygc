@@ -173,9 +173,27 @@ From `compose/svelte-kit`, mirroring CI:
 npm ci                              # install from the lockfile
 npm run lint                        # eslint
 npm run check                       # svelte-check
+npm test                            # vitest unit suite
 npm run build                       # production build
 npm audit --audit-level=moderate    # dependency audit
 ```
+
+### End-to-end tests
+
+The Playwright suite in `compose/svelte-kit/e2e` drives the dev stack on
+`localhost:5174` and authenticates by minting a session for the operator
+account straight into `src/data.db`, so the stack must be up and the operator
+account created (first run). Browsers install once with
+`npx playwright install --with-deps chromium`.
+
+```bash
+npm run test:e2e                    # planner, event log, persistence
+E2E_SITL=1 npm run test:e2e         # adds the SITL flight: arm, takeoff, move, climb, yaw
+```
+
+The flight spec flies the simulator, so run it against a freshly started
+`development-px4` profile; a lockstep SITL under heavy host load drifts. The
+suite runs single-worker because every spec shares one app and one vehicle.
 
 ---
 
