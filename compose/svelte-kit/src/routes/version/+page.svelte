@@ -42,3 +42,12 @@
   </div>
   </div>
 </div>
+
+<style>
+  @media (max-width: 990px) {
+    .dashboard {
+      border-radius: 0;
+      padding: 0.7em;
+    }
+  }
+</style>

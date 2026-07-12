@@ -29,7 +29,6 @@
     mavLocation = $mavLocationStore;
   });
 
-  let locationName = $state('');
   let temperature = $state('');
   let weatherDescription = $state('');
   let weatherImage = $state('');
@@ -43,10 +42,7 @@
       const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${mavLocation.lat}&longitude=${mavLocation.lng}&current_weather=true&hourly=precipitation_probability&wind_speed_unit=ms`);
       const weatherData = await weatherResponse.json();
 
-      const geocodeResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${mavLocation.lat}&lon=${mavLocation.lng}`);
-      const geocodeData = await geocodeResponse.json();
-
-      if (weatherResponse.ok && geocodeResponse.ok) {
+      if (weatherResponse.ok) {
         const { temperature: temp, weathercode } = weatherData.current_weather;
         const isDaytime = new Date().getHours() >= 6 && new Date().getHours() < 18;
         const weatherCode = weatherCodesTyped[weathercode];
@@ -86,8 +82,6 @@
         } else if (parseFloat(windDirection.toString()) > 292.5 && parseFloat(windDirection.toString()) < 337.5) {
           windDirection += '° NW';
         }
-        
-        locationName = geocodeData.display_name;
       } else {
         error = weatherData.reason || 'Failed to fetch weather data';
       }
@@ -133,10 +127,7 @@
       <div class="weather-detail rain">Rain Chance: {rainChance}</div>
       <div class="weather-detail temp">Temp: {temperature}</div>
     {/if}
-      <br/>
-      <div class="location text-italic">Based on MAV location
-        <span id="location-name"><br/>{locationName}</span>
-      </div>
+    <div class="location-badge"><i class="fas fa-location-dot"></i> Based on MAV location</div>
   </div>
 {/if}
 
@@ -160,9 +151,15 @@
     font-weight: bold;
   }
 
-  .location {
-    font-size: 0.875rem;
+  .location-badge {
+    margin-top: 0.6rem;
+    align-self: center;
+    width: fit-content;
+    font-size: 0.7rem;
     color: #838383;
+    border: 1px solid var(--tertiaryColor);
+    border-radius: 9999px;
+    padding: 0.15rem 0.6rem;
   }
 
   .weather-summary {
@@ -184,13 +181,7 @@
     margin-inline: auto;
   }
 
-  #location-name, .weather-detail.wind {
+  .weather-detail.wind {
     color: #66e1ff;
-  }
-  
-  @media (max-height: 650px) {
-    #location-name {
-      display: none;
-    }
   }
 </style>

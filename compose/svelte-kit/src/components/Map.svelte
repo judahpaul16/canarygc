@@ -1289,6 +1289,18 @@
     color: var(--fontColor);
   }
 
+  /* A window shorter than the button stack folds extra buttons into a second
+     column growing leftward, so controls never spill past the window edge. */
+  .map-controls {
+    max-height: calc(var(--wh) - 4.5rem);
+    flex-wrap: wrap-reverse;
+    align-content: flex-start;
+  }
+
+  .map-container.fs .map-controls {
+    max-height: calc(100vh - 4.5rem);
+  }
+
   .map-btn {
     width: 2.25rem;
     height: 2.25rem;
@@ -1494,6 +1506,39 @@
     .control-body {
       gap: 0.4rem;
       padding: 0.5rem 0.6rem;
+    }
+
+    .map-controls {
+      gap: 0.375rem;
+      max-height: calc(var(--wh) - 3.5rem);
+    }
+
+    .map-btn {
+      width: 2rem;
+      height: 2rem;
+    }
+
+    .map-btn i {
+      font-size: small;
+    }
+
+    #map-toggle {
+      padding: 0.35rem 0.5rem 0.35rem 0.65rem;
+      font-size: 0.75rem;
+    }
+
+    #location-display {
+      font-size: 0.65rem;
+      line-height: 1.35;
+      max-width: min(62vw, calc(var(--ww) - 7rem));
+      bottom: 6px;
+      left: 6px;
+      padding: 3px 6px;
+    }
+
+    .map-container :global(.leaflet-control-attribution),
+    .map-container :global(.maplibregl-ctrl-attrib) {
+      font-size: 0.6rem;
     }
   }
 </style>

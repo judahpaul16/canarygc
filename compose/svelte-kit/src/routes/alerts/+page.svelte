@@ -324,7 +324,14 @@
     box-shadow: none;
   }
 
-  @media (max-width: 720px) {
+  @media (max-width: 990px) {
+    .dashboard {
+      border-radius: 0;
+      padding: 0.7em;
+      height: 100%;
+      max-height: 95vh;
+    }
+
     .grid {
       grid-template-columns: 1fr;
     }

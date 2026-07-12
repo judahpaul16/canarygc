@@ -257,7 +257,7 @@
     <div class="dashboard w-full gap-4 p-5 rounded-3xl rounded-l-none overflow-hidden h-[90vh] max-h-[90vh]"
     >
         <div class="event-log rounded-2xl h-full flex flex-col p-5">
-            <div class="flex items-center justify-between gap-4 mb-4">
+            <div class="log-head flex items-center justify-between gap-4 mb-4">
                 <h2 class="text-xl">MAVLink Events</h2>
                 <div class="filters flex gap-4 justify-center items-center">
                     <input type="text" class="form-input" placeholder="Search" bind:value={searchTerm}/>
@@ -605,22 +605,56 @@
             height: 100%;
             max-height: 95vh;
             border-radius: 0;
+            padding: 0.7em;
         }
+
         .event-log {
             height: 100%;
             max-height: 88vh;
+            padding: 0.75rem;
         }
-        .event-log > div {
-            display: flex;
-            flex-direction: column;
+
+        .log-head {
+            flex-wrap: wrap;
+            row-gap: 0.5rem;
+            margin-bottom: 0.5rem;
         }
-        .event-log > div > div:first-of-type {
-            display: flex;
-            flex-direction: column;
+
+        .filters {
+            width: 100%;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            gap: 0.5rem;
         }
+
+        .filters .form-input {
+            flex: 1 1 100%;
+            min-width: 0;
+        }
+
         .form-checkbox {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: auto 1fr auto 1fr;
+            column-gap: 0.5rem;
+            row-gap: 0.3rem;
+            align-items: center;
+        }
+
+        .system-state {
+            width: 100%;
+        }
+
+        .log-view {
+            font-size: 0.7rem;
+        }
+
+        .console-suggestions {
+            min-width: 0;
+            width: 100%;
+        }
+
+        .console-input {
+            min-width: 0;
         }
     }
 

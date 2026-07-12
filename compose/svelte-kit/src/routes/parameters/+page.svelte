@@ -147,7 +147,7 @@
         <div class="user-settings col-span-12 row-span-6 rounded-2xl h-full p-6">
             <div class="flex flex-col h-full">
                 <!-- Header -->
-                <div class="flex justify-between items-center mb-6">
+                <div class="page-head flex justify-between items-center mb-6">
                     <h2 class="text-2xl font-bold" style="color: var(--fontColor)">
                         Vehicle Parameters
                         <a target="_blank" href="https://ardupilot.org/dev/docs/mavlink-get-set-params.html" class="relative text-blue-500">
@@ -218,7 +218,7 @@
                 {/if}
 
                 <!-- Parameter List -->
-                <div class="flex-grow overflow-y-auto">
+                <div class="param-list flex-grow overflow-y-auto">
                     <table class="w-full text-white">
                         <thead class="sticky top-0" style={ $darkModeStore ? 'background-color: #1f2937' : 'background-color: slategrey' }>
                             <tr>
@@ -336,5 +336,42 @@
         opacity: 1;
         visibility: visible;
         transform: translate(-45px, 5px);
+    }
+
+    /* Mobile Styles */
+    @media (max-width: 990px) {
+        .dashboard {
+            border-radius: 0;
+            padding: 0.7em;
+            height: 100%;
+            max-height: 95vh;
+        }
+
+        .user-settings {
+            padding: 0.9rem;
+        }
+
+        .page-head {
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            margin-bottom: 0.9rem;
+        }
+
+        .page-head h2 {
+            font-size: 1.15rem;
+        }
+
+        .param-list {
+            overflow-x: auto;
+        }
+
+        .param-list table {
+            min-width: 540px;
+            font-size: 0.8rem;
+        }
+
+        .param-list .param_value {
+            width: 5.5rem;
+        }
     }
 </style>

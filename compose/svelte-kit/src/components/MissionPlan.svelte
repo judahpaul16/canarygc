@@ -406,6 +406,17 @@
                       <a href="https://mavlink.io/en/messages/common.html#mav_commands" target="_blank" class="text-[#61cd89] ml-1" title="More Information">
                         <i class="fas fa-info-circle"></i>
                       </a>
+                      {#if !hasParams(actions[Number(index)]) && paramsOpen[Number(index)]}
+                        <button
+                          type="button"
+                          class="params-cancel"
+                          title="Hide the parameter inputs"
+                          aria-label="Hide the parameter inputs"
+                          onclick={() => (paramsOpen[Number(index)] = false)}
+                        >
+                          <i class="fas fa-xmark"></i> Cancel
+                        </button>
+                      {/if}
                     </h2>
                     {#if paramsOpen[Number(index)] || hasParams(actions[Number(index)])}
                       <div class="flex justify-between items-center gap-3">
@@ -622,6 +633,22 @@
 
   .params-toggle:hover {
     border-color: #61cd89;
+  }
+
+  .params-cancel {
+    margin-left: 0.5rem;
+    padding: 0.1rem 0.5rem;
+    font-size: 8pt;
+    color: var(--fontColor);
+    background-color: var(--secondaryColor);
+    border: 1px solid var(--tertiaryColor);
+    border-radius: var(--radius-control);
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  .params-cancel:hover {
+    border-color: #ff6b6b;
   }
 
   /* Mobile Styles */

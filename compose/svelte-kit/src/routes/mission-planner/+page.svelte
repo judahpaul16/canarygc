@@ -91,6 +91,13 @@
         overflow-y: auto;
       }
 
+      .dashboard > .map {
+        flex: none;
+        height: 45vh;
+        min-height: 280px;
+        overflow: hidden;
+      }
+
       .weather {
         display: none;
       }
