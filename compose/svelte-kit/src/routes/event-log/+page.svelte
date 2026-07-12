@@ -1,6 +1,8 @@
 <script lang="ts">
-    import { mavlinkLogStore, mavStateStore } from '../../stores/mavlinkStore';
+    import { mavlinkLogStore, mavStateStore, mavModelStore } from '../../stores/mavlinkStore';
     import { showModal } from '../../lib/overlays';
+    import { sendMavlinkCommand } from '../../lib/mavlink-client';
+    import { commandCatalog, paramHint, parseConsoleInput } from '../../lib/mav-console';
 
     const HEARTBEAT_FLASH_MS = 2000;
 
@@ -149,6 +151,98 @@
         });
     }
 
+    const SUGGESTION_LIMIT = 8;
+    const HISTORY_LIMIT = 20;
+
+    let consoleInput = $state('');
+    let selIndex = $state(0);
+    let consoleError = $state('');
+    let sending = $state(false);
+    let history: string[] = [];
+    let historyPos = -1;
+
+    let mavModel = $derived($mavModelStore);
+    // Suggestions apply to the command token only; params take over after it.
+    let suggestions = $derived.by(() => {
+        if (consoleInput.includes(' ')) return [];
+        const token = consoleInput.trim().toUpperCase().replace(/^MAV_CMD_/, '');
+        if (!token) return [];
+        return commandCatalog(mavModel)
+            .filter((c) => c.name.includes(token))
+            .sort((a, b) => Number(b.name.startsWith(token)) - Number(a.name.startsWith(token)))
+            .slice(0, SUGGESTION_LIMIT);
+    });
+    let hintLine = $derived.by(() => {
+        const first = consoleInput.trim().split(/\s+/)[0]?.toUpperCase().replace(/^MAV_CMD_/, '') ?? '';
+        const known = first && commandCatalog(mavModel).some((c) => c.name === first);
+        if (known) return `${mavModel || 'Autopilot'} · ${first}: ${paramHint(first)}`;
+        return `${mavModel || 'Autopilot'} commands · type to search, Tab completes, Enter sends`;
+    });
+
+    function completeSuggestion(name: string) {
+        consoleInput = `${name} `;
+        selIndex = 0;
+        consoleError = '';
+        document.getElementById('mav-console-input')?.focus();
+    }
+
+    async function sendConsole() {
+        const parsed = parseConsoleInput(consoleInput, mavModel);
+        if (!parsed.ok) {
+            consoleError = parsed.error ?? 'Invalid command';
+            return;
+        }
+        sending = true;
+        const ok = await sendMavlinkCommand(parsed.name!, parsed.params!, {
+            cmdLong: true,
+            ardupilotMega: parsed.ardu
+        });
+        sending = false;
+        consoleError = ok ? '' : 'Send failed; the server rejected the command';
+        if (ok) {
+            history = [consoleInput, ...history.filter((h) => h !== consoleInput)].slice(0, HISTORY_LIMIT);
+            historyPos = -1;
+            consoleInput = '';
+        }
+    }
+
+    function onConsoleKeydown(e: KeyboardEvent) {
+        consoleError = '';
+        if (suggestions.length) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                selIndex = (selIndex + 1) % suggestions.length;
+                return;
+            }
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                selIndex = (selIndex - 1 + suggestions.length) % suggestions.length;
+                return;
+            }
+            if (e.key === 'Tab' || e.key === 'Enter') {
+                e.preventDefault();
+                completeSuggestion(suggestions[Math.min(selIndex, suggestions.length - 1)].name);
+                return;
+            }
+        }
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            sendConsole();
+            return;
+        }
+        if (e.key === 'ArrowUp' && !consoleInput && history.length) {
+            e.preventDefault();
+            historyPos = Math.min(historyPos + 1, history.length - 1);
+            consoleInput = history[historyPos];
+            return;
+        }
+        if (e.key === 'ArrowDown' && historyPos >= 0) {
+            e.preventDefault();
+            historyPos -= 1;
+            consoleInput = historyPos >= 0 ? history[historyPos] : '';
+        }
+    }
+
     function downloadLogs() {
         const element = document.createElement('a');
         const file = new Blob([logs.join('\n')], { type: 'text/plain' });
@@ -210,6 +304,34 @@
                     <div class="log-empty">No events yet.</div>
                 {/if}
             </div>
+            <div class="console">
+                {#if suggestions.length}
+                    <ul class="console-suggestions">
+                        {#each suggestions as s, i (s.name)}
+                            <li>
+                                <button type="button" class:active={i === selIndex} onclick={() => completeSuggestion(s.name)}>
+                                    <span>{s.name}</span>
+                                    {#if s.ardu}<span class="cs-tag">ArduPilot</span>{/if}
+                                </button>
+                            </li>
+                        {/each}
+                    </ul>
+                {/if}
+                <div class="console-row">
+                    <span class="console-prompt">&gt;</span>
+                    <input
+                        id="mav-console-input"
+                        class="console-input"
+                        placeholder="MAV_CMD name + params, e.g. NAV_TAKEOFF 0 0 0 NaN NaN NaN 10"
+                        bind:value={consoleInput}
+                        onkeydown={onConsoleKeydown}
+                        spellcheck="false"
+                        autocomplete="off"
+                    />
+                    <button class="console-send" onclick={sendConsole} disabled={sending}>Send</button>
+                </div>
+                <div class="console-hint" class:console-error={consoleError !== ''}>{consoleError || hintLine}</div>
+            </div>
         </div>
     </div>
 </div>
@@ -231,9 +353,106 @@
         background-color: var(--secondaryColor);
         border-radius: var(--radius-control);
         padding: 0.4rem 0;
-        max-height: 95%;
-        height: 100%;
+        flex: 1 1 auto;
+        min-height: 0;
         overflow-y: auto;
+    }
+
+    .console {
+        position: relative;
+        margin-top: 0.5rem;
+        font-family: ui-monospace, 'SFMono-Regular', 'Menlo', 'Consolas', monospace;
+    }
+
+    .console-suggestions {
+        position: absolute;
+        bottom: 100%;
+        left: 0;
+        margin-bottom: 0.35rem;
+        min-width: 340px;
+        background-color: var(--secondaryColor);
+        border: 1px solid var(--tertiaryColor);
+        border-radius: var(--radius-control);
+        overflow: hidden;
+        z-index: 5;
+    }
+
+    .console-suggestions button {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.35rem 0.7rem;
+        font-size: 0.8rem;
+        color: var(--fontColor);
+        text-align: left;
+    }
+
+    .console-suggestions button:hover,
+    .console-suggestions button.active {
+        background-color: var(--tertiaryColor);
+    }
+
+    .cs-tag {
+        font-size: 0.65rem;
+        color: #f5c518;
+        border: 1px solid rgb(from #f5c518 r g b / 0.5);
+        border-radius: 9999px;
+        padding: 0 0.4rem;
+    }
+
+    .console-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background-color: var(--secondaryColor);
+        border: 1px solid var(--tertiaryColor);
+        border-radius: var(--radius-control);
+        padding: 0.35rem 0.6rem;
+    }
+
+    .console-prompt {
+        color: #61cd89;
+        font-weight: 700;
+    }
+
+    .console-input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: var(--fontColor);
+        font-family: inherit;
+        font-size: 0.8rem;
+    }
+
+    .console-input:focus {
+        outline: none;
+    }
+
+    .console-send {
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.25rem 0.8rem;
+        border-radius: var(--radius-control);
+        background-color: #4e94f7;
+        color: #ffffff;
+    }
+
+    .console-send:disabled {
+        opacity: 0.5;
+    }
+
+    .console-hint {
+        margin-top: 0.3rem;
+        font-size: 0.7rem;
+        opacity: 0.6;
+        color: var(--fontColor);
+    }
+
+    .console-hint.console-error {
+        color: #ff6b6b;
+        opacity: 1;
     }
 
     .log-line {

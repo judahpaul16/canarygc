@@ -43,6 +43,7 @@ Unlike traditional GCS software, Canary Ground Control is a web-based applicatio
 * **Audible callouts.** Spoken telemetry callouts (arm/disarm, mode changes, battery, GPS, failsafe, link loss) over the browser speech API, with an on/off toggle that defaults on.
 * **Email alerts.** Enable per-event alerts (arm/disarm, mode change, failsafe, low battery, GPS or link loss, and more); each fires an email with the live coordinates and telemetry.
 * **Color-coded event log.** The `/event-log` stream colors each MAVLink event by message type and severity, with per-message filters, search highlighting, and one-click log download.
+* **MAVLink command console.** A console under the event stream sends raw `MAV_CMD`s with autocomplete over the detected autopilot's command set, per-command parameter hints, input validation, and history; the resulting `COMMAND_ACK` shows up in the stream above it.
 * **Integrations & password reset.** In-app settings for SMTP (your own mail server), airspace keys, map tiles, and the operator email, which also backs an emailed, expiring password-reset link.
 * **WebRTC camera feed** from an on-board Raspberry Pi camera via [MediaMTX](https://github.com/bluenviron/mediamtx).
 * **Weather, compass, and stats** widgets on a customizable dashboard.
