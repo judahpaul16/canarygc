@@ -16,6 +16,7 @@
   import { isGuidedLabel } from '../lib/flight-modes';
   import DPad from './DPad.svelte';
   import LiveFeed from './LiveFeed.svelte';
+  import Stats from './Stats.svelte';
   import {
     missionPlanActionsStore,
     type MissionPlanActions,
@@ -166,6 +167,7 @@
 
   let feedDockOpen = $state(true);
   let controlDockOpen = $state(true);
+  let statsDockOpen = $state(true);
   let lockPulse = $state(false);
   let lockPulseTimer: ReturnType<typeof setTimeout> | undefined;
   // A recenter closer than this is telemetry jitter, not a snap worth signaling.
@@ -185,12 +187,26 @@
   // Small screens fit one open dock at a time.
   function openFeedDock() {
     feedDockOpen = true;
-    if (isSmallScreen()) controlDockOpen = false;
+    if (isSmallScreen()) {
+      controlDockOpen = false;
+      statsDockOpen = false;
+    }
   }
 
   function openControlDock() {
     controlDockOpen = true;
-    if (isSmallScreen()) feedDockOpen = false;
+    if (isSmallScreen()) {
+      feedDockOpen = false;
+      statsDockOpen = false;
+    }
+  }
+
+  function openStatsDock() {
+    statsDockOpen = true;
+    if (isSmallScreen()) {
+      feedDockOpen = false;
+      controlDockOpen = false;
+    }
   }
 
   function handleFullscreenChange() {
@@ -1333,6 +1349,20 @@
     -webkit-backdrop-filter: blur(8px);
   }
 
+  /* The embedded Stats keeps its own rows and button logic; the dock panel
+     supplies the surface, so its card chrome and full height come off. */
+  .stats-body {
+    max-height: 46vh;
+    overflow-y: auto;
+  }
+
+  .stats-body :global(.stats) {
+    height: auto;
+    background-color: transparent;
+    box-shadow: none;
+    border-radius: 0;
+  }
+
   .dock-pill {
     display: flex;
     align-items: center;
@@ -1519,6 +1549,22 @@
 
   {#if isFullscreen}
     <div class="docks">
+      {#if statsDockOpen}
+        <div class="dock-panel">
+          <div class="dock-head">
+            <span><i class="fas fa-gauge-high"></i>Stats</span>
+            <button class="dock-min" aria-label="Minimize stats" title="Minimize" onclick={() => (statsDockOpen = false)}>
+              <i class="fas fa-chevron-down"></i>
+            </button>
+          </div>
+          <div class="stats-body"><Stats /></div>
+        </div>
+      {:else}
+        <button class="dock-pill" aria-label="Show stats" onclick={openStatsDock}>
+          <i class="fas fa-gauge-high"></i><span>Stats</span><i class="fas fa-chevron-up chev"></i>
+        </button>
+      {/if}
+
       {#if feedDockOpen}
         <div class="dock-panel">
           <div class="dock-head">
