@@ -517,6 +517,7 @@
       airspaceLayer = null;
       return;
     }
+    const renderer = paneRenderer('airspace', '405');
     const group = L.layerGroup();
     for (const zone of get(airspaceZonesStore)) {
       for (const ring of zone.polygon) {
@@ -524,7 +525,8 @@
         L.polygon(latlngs, {
           color: airspaceColor(zone),
           weight: 1,
-          fillOpacity: 0.12
+          fillOpacity: 0.12,
+          ...(renderer ? { renderer } : {})
         }).addTo(group);
       }
     }
@@ -646,20 +648,29 @@
     renderTraffic();
     if (next) refreshTraffic();
   }
-  let obstacleRenderer: L.Renderer | null = null;
 
   // A pane above the polygon fills (overlayPane is 400) but below the mission
   // markers (markerPane is 600), so obstacle dots keep their true color instead
   // of being tinted by the translucent airspace and ceiling overlays.
-  function obstaclePaneRenderer(): L.Renderer | null {
+  // Vector paths render into their renderer's pane, so each overlay gets a
+  // dedicated pane and SVG renderer with a fixed z-order: ceilings (402) under
+  // airspace (405) under obstacles (450) under mission paths (590) under the
+  // markers (Leaflet's markerPane, 600). Sharing one pane makes stacking follow
+  // insertion order, which flickers as layers re-render at different cadences.
+  const paneRenderers = new Map<string, L.Renderer>();
+  function paneRenderer(name: string, zIndex: string): L.Renderer | null {
     if (!L || !leafletMap) return null;
-    if (!leafletMap.getPane('obstacles')) {
-      leafletMap.createPane('obstacles');
-      const pane = leafletMap.getPane('obstacles');
-      if (pane) pane.style.zIndex = '450';
+    if (!leafletMap.getPane(name)) {
+      leafletMap.createPane(name);
+      const pane = leafletMap.getPane(name);
+      if (pane) pane.style.zIndex = zIndex;
     }
-    obstacleRenderer ??= L.svg({ pane: 'obstacles' });
-    return obstacleRenderer;
+    if (!paneRenderers.has(name)) paneRenderers.set(name, L.svg({ pane: name }));
+    return paneRenderers.get(name) ?? null;
+  }
+
+  function obstaclePaneRenderer(): L.Renderer | null {
+    return paneRenderer('obstacles', '450');
   }
 
   function renderCeilings() {
@@ -669,6 +680,7 @@
       ceilingLayer = null;
       return;
     }
+    const renderer = paneRenderer('ceilings', '402');
     const group = L.layerGroup();
     for (const cell of get(ceilingCellsStore)) {
       for (const ring of cell.polygon) {
@@ -676,7 +688,8 @@
         L.polygon(latlngs, {
           color: ceilingColor(cell.ceilingFt),
           weight: 0.5,
-          fillOpacity: 0.22
+          fillOpacity: 0.22,
+          ...(renderer ? { renderer } : {})
         }).addTo(group);
       }
     }
@@ -805,7 +818,8 @@
     removePolyline(start, end); // Ensure no old polyline is left
 
     const latlngs: L.LatLngExpression[] = [start, end];
-    const polyline = L.polyline(latlngs, { color: 'red' });
+    const renderer = paneRenderer('mission', '590');
+    const polyline = L.polyline(latlngs, { color: 'red', ...(renderer ? { renderer } : {}) });
     leafletMap?.addLayer(polyline);
     polylines.set(key, polyline);
 
