@@ -389,7 +389,6 @@
         clearTimeout(mapClickTimer);
         mapClickTimer = null;
       }
-      if (hideOverlay) return;
       addWaypoint(e.latlng);
     });
     leafletMap.on('moveend', () => {
@@ -911,7 +910,7 @@
 
         if (!isNaN(lat) && !isNaN(lon) && iconIndex >= 0) {
           const numericIndex = Number(index);
-          const marker = L.marker([lat, lon], { icon: icons[iconIndex], draggable: !hideOverlay })
+          const marker = L.marker([lat, lon], { icon: icons[iconIndex], draggable: true })
             .on('click', (ev) => openCombinedPopup((ev as L.LeafletMouseEvent).latlng))
             .on('dragend', () => {
               const ll = marker.getLatLng();

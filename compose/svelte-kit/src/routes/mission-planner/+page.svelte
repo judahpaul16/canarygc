@@ -51,7 +51,12 @@
       box-shadow: none !important;
     }
 
-    .dashboard-container {
+    /* The layout grants every page root pointer-events so ordinary pages stay
+       clickable over the map layer; map pages hand the map area back. The
+       element prefix outranks that grant instead of tying with it, since a tie
+       leaves the winner to bundle order. */
+    div.dashboard-container,
+    div.dashboard-container .dashboard {
       pointer-events: none;
     }
 
