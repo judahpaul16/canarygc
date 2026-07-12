@@ -496,6 +496,12 @@
     position: relative;
   }
 
+  /* The icon's inline line box inherits a taller line-height than the glyph,
+     which shifts it off the circle's center. */
+  .circular-button i {
+    line-height: 1;
+  }
+
   .circular-button:hover {
     filter: brightness(1.1);
   }
