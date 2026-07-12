@@ -46,7 +46,7 @@ services:
     image: canarygc-sitl
     build:
       context: ./compose/sitl
-      dockerfile: Dockerfile.apm
+      dockerfile: Dockerfile
     environment:
       - INSTANCE=0
       - LAT=33.79105092934356
