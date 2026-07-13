@@ -148,6 +148,17 @@ describe('MSP decoders', () => {
 		expect(a.amps).toBeCloseTo(12.34, 5);
 	});
 
+	it('prefers the extended U16 voltage over the clamped legacy byte', () => {
+		const payload = new Uint8Array(9);
+		const v = new DataView(payload.buffer);
+		v.setUint8(0, 255); // legacy byte saturates at 25.5 V
+		v.setUint16(1, 450, true);
+		v.setUint16(3, 900, true);
+		v.setInt16(5, 1234, true);
+		v.setUint16(7, 4210, true); // 42.10 V (12S pack)
+		expect(decodeAnalog(payload)!.voltageV).toBeCloseTo(42.1, 5);
+	});
+
 	it('decodes altitude and vario', () => {
 		const payload = new Uint8Array(6);
 		const v = new DataView(payload.buffer);

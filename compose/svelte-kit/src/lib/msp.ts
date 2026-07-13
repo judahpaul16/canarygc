@@ -224,7 +224,10 @@ export function decodeAnalog(payload: Uint8Array): {
 	if (payload.length < 7) return null;
 	const v = view(payload);
 	return {
-		voltageV: v.getUint8(0) / 10,
+		// Betaflight appends a U16 0.01V reading after the legacy fields; the
+		// legacy U8 (0.1V) caps at 25.5V, so prefer the wide field for high-cell
+		// packs and fall back to the legacy byte on older firmware.
+		voltageV: payload.length >= 9 ? v.getUint16(7, true) / 100 : v.getUint8(0) / 10,
 		mahDrawn: v.getUint16(1, true),
 		rssi: v.getUint16(3, true),
 		amps: v.getInt16(5, true) / 100
