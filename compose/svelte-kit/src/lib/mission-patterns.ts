@@ -99,6 +99,116 @@ export function surveyGrid({ polygon, spacingM, angleDeg, altM }: SurveyParams):
 	return waypoints;
 }
 
+export interface CorridorParams {
+	path: LatLon[];
+	widthM: number;
+	spacingM: number;
+	altM: number;
+}
+
+export interface SarParams {
+	center: LatLon;
+	spacingM: number;
+	legs: number;
+	altM: number;
+	clockwise: boolean;
+}
+
+export interface StructureScanParams {
+	center: LatLon;
+	radiusM: number;
+	points: number;
+	baseAltM: number;
+	layers: number;
+	layerHeightM: number;
+	clockwise: boolean;
+}
+
+// Parallel lanes that follow a path, offset perpendicular across a width and
+// walked serpentine, so the vehicle sweeps a strip along a road, shoreline, or
+// pipeline.
+export function corridor({ path, widthM, spacingM, altM }: CorridorParams): PatternPoint[] {
+	if (path.length < 2 || !(spacingM >= 1) || !(widthM >= 0)) return [];
+	const origin = path[0];
+	const pts = path.map((p) => toLocal(origin, p));
+	// The offset direction at each vertex is the normal of the averaged incoming
+	// and outgoing segment direction, so lanes stay parallel around bends.
+	const normals: Vec[] = pts.map((_, i) => {
+		const prev = pts[Math.max(0, i - 1)];
+		const next = pts[Math.min(pts.length - 1, i + 1)];
+		const dx = next.x - prev.x;
+		const dy = next.y - prev.y;
+		const len = Math.hypot(dx, dy) || 1;
+		return { x: dy / len, y: -dx / len };
+	});
+	const laneCount = Math.min(MAX_TRANSECTS, Math.max(1, Math.floor(widthM / spacingM) + 1));
+	const start = laneCount === 1 ? 0 : -widthM / 2;
+	const step = laneCount === 1 ? 0 : widthM / (laneCount - 1);
+	const waypoints: PatternPoint[] = [];
+	for (let l = 0; l < laneCount; l++) {
+		const off = start + l * step;
+		const lane = pts.map((p, i) => ({ x: p.x + normals[i].x * off, y: p.y + normals[i].y * off }));
+		if (l % 2 === 1) lane.reverse();
+		for (const v of lane) {
+			const ll = toLatLon(origin, v);
+			waypoints.push({ lat: ll.lat, lon: ll.lon, alt: altM });
+		}
+	}
+	return waypoints;
+}
+
+// Expanding-square search from a datum: legs grow by the track spacing every two
+// turns, the standard SAR pattern for sweeping outward from a last-known point.
+export function sarExpandingSquare({ center, spacingM, legs, altM, clockwise }: SarParams): PatternPoint[] {
+	if (!(spacingM >= 1) || !(legs >= 1)) return [];
+	const n = Math.min(120, Math.round(legs));
+	const dirs: Vec[] = clockwise
+		? [{ x: 1, y: 0 }, { x: 0, y: -1 }, { x: -1, y: 0 }, { x: 0, y: 1 }]
+		: [{ x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 0, y: -1 }];
+	let pos: Vec = { x: 0, y: 0 };
+	const waypoints: PatternPoint[] = [];
+	const push = (v: Vec) => {
+		const ll = toLatLon(center, v);
+		waypoints.push({ lat: ll.lat, lon: ll.lon, alt: altM });
+	};
+	push(pos);
+	for (let j = 0; j < n; j++) {
+		const legLen = (Math.floor(j / 2) + 1) * spacingM;
+		const d = dirs[j % 4];
+		pos = { x: pos.x + d.x * legLen, y: pos.y + d.y * legLen };
+		push(pos);
+	}
+	return waypoints;
+}
+
+// Concentric orbit rings at rising altitudes, alternating direction so the
+// vehicle spirals up a tower or facade for a face-on inspection.
+export function structureScan({
+	center,
+	radiusM,
+	points,
+	baseAltM,
+	layers,
+	layerHeightM,
+	clockwise
+}: StructureScanParams): PatternPoint[] {
+	if (!(radiusM > 0) || points < 3 || layers < 1) return [];
+	const layerCount = Math.min(40, Math.round(layers));
+	const out: PatternPoint[] = [];
+	for (let l = 0; l < layerCount; l++) {
+		out.push(
+			...orbit({
+				center,
+				radiusM,
+				points,
+				altM: baseAltM + l * layerHeightM,
+				clockwise: l % 2 === 0 ? clockwise : !clockwise
+			})
+		);
+	}
+	return out;
+}
+
 // Waypoints evenly spaced around the circle, starting north of the center and
 // closing back on the first point so the vehicle completes the ring.
 export function orbit({ center, radiusM, points, altM, clockwise }: OrbitParams): PatternPoint[] {

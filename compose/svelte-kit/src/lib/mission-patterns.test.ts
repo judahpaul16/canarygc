@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { orbit, surveyGrid } from './mission-patterns';
+import { orbit, surveyGrid, corridor, sarExpandingSquare, structureScan } from './mission-patterns';
 import { haversineMeters } from './geo';
 
 // 200 m x 100 m rectangle near Atlanta: 200 m east-west, 100 m north-south.
@@ -81,5 +81,71 @@ describe('orbit', () => {
 	it('rejects degenerate input', () => {
 		expect(orbit({ center, radiusM: 0, points: 8, altM: 25, clockwise: true })).toEqual([]);
 		expect(orbit({ center, radiusM: 50, points: 2, altM: 25, clockwise: true })).toEqual([]);
+	});
+});
+
+describe('corridor', () => {
+	const path = [
+		{ lat: 33.75, lon: -84.39 },
+		{ lat: 33.75, lon: -84.388 }
+	];
+
+	it('lays parallel serpentine lanes across the width', () => {
+		const wps = corridor({ path, widthM: 40, spacingM: 20, altM: 30 });
+		// width 40 / spacing 20 => 3 lanes, each with the 2 path points.
+		expect(wps).toHaveLength(6);
+		expect(wps.every((w) => w.alt === 30)).toBe(true);
+		// Lanes straddle the path in latitude (offset perpendicular to an
+		// east-west path is north-south).
+		const lats = wps.map((w) => w.lat);
+		expect(Math.max(...lats)).toBeGreaterThan(path[0].lat);
+		expect(Math.min(...lats)).toBeLessThan(path[0].lat);
+	});
+
+	it('is a single centered lane when the width is zero', () => {
+		const wps = corridor({ path, widthM: 0, spacingM: 20, altM: 30 });
+		expect(wps).toHaveLength(2);
+		expect(wps[0].lat).toBeCloseTo(path[0].lat, 6);
+	});
+
+	it('rejects a path shorter than two points', () => {
+		expect(corridor({ path: path.slice(0, 1), widthM: 40, spacingM: 20, altM: 30 })).toEqual([]);
+	});
+});
+
+describe('sarExpandingSquare', () => {
+	const center = { lat: 33.75, lon: -84.39 };
+
+	it('grows the leg length every two turns', () => {
+		const wps = sarExpandingSquare({ center, spacingM: 25, legs: 6, altM: 40, clockwise: false });
+		expect(wps).toHaveLength(7);
+		// First leg ~25 m, third leg ~50 m (legs 1,2 = 25; legs 3,4 = 50).
+		const leg1 = haversineMeters({ lat: wps[0].lat, lon: wps[0].lon }, { lat: wps[1].lat, lon: wps[1].lon });
+		const leg3 = haversineMeters({ lat: wps[2].lat, lon: wps[2].lon }, { lat: wps[3].lat, lon: wps[3].lon });
+		expect(leg1).toBeCloseTo(25, 0);
+		expect(leg3).toBeCloseTo(50, 0);
+	});
+
+	it('rejects degenerate input', () => {
+		expect(sarExpandingSquare({ center, spacingM: 0, legs: 6, altM: 40, clockwise: true })).toEqual([]);
+	});
+});
+
+describe('structureScan', () => {
+	const center = { lat: 33.75, lon: -84.39 };
+
+	it('stacks orbit rings at rising altitudes', () => {
+		const wps = structureScan({ center, radiusM: 30, points: 6, baseAltM: 20, layers: 3, layerHeightM: 5, clockwise: true });
+		// 3 layers x (6 + 1 closing) points.
+		expect(wps).toHaveLength(21);
+		const alts = [...new Set(wps.map((w) => w.alt))];
+		expect(alts).toEqual([20, 25, 30]);
+		for (const w of wps) {
+			expect(haversineMeters(center, { lat: w.lat, lon: w.lon })).toBeCloseTo(30, 0);
+		}
+	});
+
+	it('rejects degenerate input', () => {
+		expect(structureScan({ center, radiusM: 0, points: 6, baseAltM: 20, layers: 3, layerHeightM: 5, clockwise: true })).toEqual([]);
 	});
 });

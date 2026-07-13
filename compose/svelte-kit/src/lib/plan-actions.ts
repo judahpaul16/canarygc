@@ -88,6 +88,42 @@ export function startOrbitCapture(): void {
 	);
 }
 
+export function startCorridorCapture(): void {
+	patternCaptureStore.set({ kind: 'corridor', corners: [] });
+	holdInstruction(
+		notify({
+			title: 'Corridor pattern',
+			content: 'Click along the corridor path on the map, then double-click to finish. Escape cancels.',
+			type: 'info',
+			persistent: true
+		})
+	);
+}
+
+export function startSarCapture(): void {
+	patternCaptureStore.set({ kind: 'sar', corners: [] });
+	holdInstruction(
+		notify({
+			title: 'Search pattern',
+			content: 'Click the search datum (last-known point) on the map. Escape cancels.',
+			type: 'info',
+			persistent: true
+		})
+	);
+}
+
+export function startStructureScanCapture(): void {
+	patternCaptureStore.set({ kind: 'structure', corners: [] });
+	holdInstruction(
+		notify({
+			title: 'Structure scan',
+			content: 'Click the center of the structure on the map. Escape cancels.',
+			type: 'info',
+			persistent: true
+		})
+	);
+}
+
 async function removeAllActions(clearLoadedPlan: boolean): Promise<void> {
 	document.querySelectorAll('.action-container').forEach((el) => {
 		el.remove();

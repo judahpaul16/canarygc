@@ -5,7 +5,7 @@ import type { LatLon } from '../lib/geo';
 // (survey polygon corners, or the single orbit center) before the parameter
 // prompt generates the waypoints.
 export interface PatternCapture {
-	kind: 'survey' | 'orbit';
+	kind: 'survey' | 'orbit' | 'corridor' | 'sar' | 'structure';
 	corners: LatLon[];
 }
 

@@ -14,7 +14,7 @@
   import { isAutoLabel, isGuidedLabel, isPX4 } from '../lib/flight-modes';
   import { ACTION_TYPES } from '../lib/mission-icons';
   import { preflightCheck } from '../lib/preflight';
-  import { optimizePath, startSurveyCapture, startOrbitCapture } from '../lib/plan-actions';
+  import { optimizePath, startSurveyCapture, startOrbitCapture, startCorridorCapture, startSarCapture, startStructureScanCapture } from '../lib/plan-actions';
 
   const GRIPPER_SERVO_CHANNEL = 9;
   const GRIPPER_OPEN_PWM_US = 1050;
@@ -329,6 +329,18 @@
       <button class="px-2 py-1 bg-[#38bdf8] rounded-lg hover:bg-[#6fd1ff]" aria-label="Orbit pattern" onclick={startOrbitCapture}>
         <i class="fas fa-circle-notch"></i>
         <div class="tooltip">Orbit Pattern</div>
+      </button>
+      <button class="px-2 py-1 bg-[#2dd4bf] rounded-lg hover:bg-[#5ee7d5]" aria-label="Corridor pattern" onclick={startCorridorCapture}>
+        <i class="fas fa-road"></i>
+        <div class="tooltip">Corridor Pattern</div>
+      </button>
+      <button class="px-2 py-1 bg-[#fb923c] rounded-lg hover:bg-[#fdb974]" aria-label="Search pattern" onclick={startSarCapture}>
+        <i class="fas fa-magnifying-glass-location"></i>
+        <div class="tooltip">Search Pattern</div>
+      </button>
+      <button class="px-2 py-1 bg-[#f472b6] rounded-lg hover:bg-[#f9a8d4]" aria-label="Structure scan" onclick={startStructureScanCapture}>
+        <i class="fas fa-building"></i>
+        <div class="tooltip">Structure Scan</div>
       </button>
       <button class="px-2 py-1 bg-[#a06be0] rounded-lg hover:bg-[#c07bff]" aria-label="Optimize path" onclick={optimizePath}>
         <i class="fas fa-wand-magic-sparkles"></i>

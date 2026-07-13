@@ -17,7 +17,7 @@
   import { isGuidedLabel, isAirVehicle, isPX4 } from '../lib/flight-modes';
   import { missionSegmentPaths, stopsAt, type PathNode, type PathPoint } from '../lib/spline-path';
   import { hasSessionValue } from '../lib/session-persisted';
-  import { surveyGrid, orbit, type PatternPoint } from '../lib/mission-patterns';
+  import { surveyGrid, orbit, corridor, sarExpandingSquare, structureScan, type PatternPoint } from '../lib/mission-patterns';
   import { patternCaptureStore } from '../stores/patternStore';
   import { gamepadActiveStore, toggleGamepad } from '../lib/gamepad-session';
   import DPad from './DPad.svelte';
@@ -599,7 +599,9 @@
     const corners = [...capture.corners, { lat: latlng.lat, lon: latlng.lng }];
     patternCaptureStore.set({ ...capture, corners });
     drawPatternPreview(corners);
-    if (capture.kind === 'orbit') finishPatternCapture();
+    // Center-based patterns complete on the first click; polygon and path
+    // patterns collect points until a double-click finishes them.
+    if (capture.kind === 'orbit' || capture.kind === 'sar' || capture.kind === 'structure') finishPatternCapture();
   }
 
   function cancelPatternCapture() {
@@ -635,18 +637,17 @@
     notify({ title: 'Pattern added', content: `${points.length} waypoints appended to the plan.`, type: 'success' });
   }
 
+  const isClockwise = (v: string) => v.trim().toLowerCase() !== 'ccw';
+
   function finishPatternCapture() {
     const capture = get(patternCaptureStore);
     patternCaptureStore.set(null);
     clearPatternPreview();
     if (!capture) return;
+
     if (capture.kind === 'survey') {
       if (capture.corners.length < 3) {
-        notify({
-          title: 'Survey pattern',
-          content: 'A survey area needs at least three corners.',
-          type: 'warning'
-        });
+        notify({ title: 'Survey pattern', content: 'A survey area needs at least three corners.', type: 'warning' });
         return;
       }
       showModal({
@@ -661,17 +662,81 @@
         ],
         onConfirm: (values) => {
           appendPatternWaypoints(
-            surveyGrid({
-              polygon: capture.corners,
-              spacingM: Number(values[0]),
-              angleDeg: Number(values[1]),
-              altM: Number(values[2])
-            })
+            surveyGrid({ polygon: capture.corners, spacingM: Number(values[0]), angleDeg: Number(values[1]), altM: Number(values[2]) })
           );
         }
       });
       return;
     }
+
+    if (capture.kind === 'corridor') {
+      if (capture.corners.length < 2) {
+        notify({ title: 'Corridor pattern', content: 'A corridor needs at least two path points.', type: 'warning' });
+        return;
+      }
+      showModal({
+        title: 'Corridor pattern',
+        content: 'Parallel lanes that sweep a strip along the drawn path.',
+        confirmation: true,
+        confirmLabel: 'Generate',
+        inputs: [
+          { type: 'number', label: 'Corridor width (m)', placeholder: 'e.g. 60', required: true },
+          { type: 'number', label: 'Lane spacing (m)', placeholder: 'e.g. 20', required: true },
+          { type: 'number', label: 'Altitude (m)', placeholder: 'e.g. 40', required: true }
+        ],
+        onConfirm: (values) => {
+          appendPatternWaypoints(
+            corridor({ path: capture.corners, widthM: Number(values[0]), spacingM: Number(values[1]), altM: Number(values[2]) })
+          );
+        }
+      });
+      return;
+    }
+
+    if (capture.kind === 'sar') {
+      showModal({
+        title: 'Search pattern',
+        content: 'An expanding square outward from the datum.',
+        confirmation: true,
+        confirmLabel: 'Generate',
+        inputs: [
+          { type: 'number', label: 'Track spacing (m)', placeholder: 'e.g. 30', required: true },
+          { type: 'number', label: 'Number of legs', placeholder: 'e.g. 12', required: true },
+          { type: 'number', label: 'Altitude (m)', placeholder: 'e.g. 40', required: true },
+          { type: 'text', label: 'Direction', placeholder: 'cw or ccw', required: true }
+        ],
+        onConfirm: (values) => {
+          appendPatternWaypoints(
+            sarExpandingSquare({ center: capture.corners[0], spacingM: Number(values[0]), legs: Number(values[1]), altM: Number(values[2]), clockwise: isClockwise(values[3]) })
+          );
+        }
+      });
+      return;
+    }
+
+    if (capture.kind === 'structure') {
+      showModal({
+        title: 'Structure scan',
+        content: 'Stacked orbit rings that spiral up the structure.',
+        confirmation: true,
+        confirmLabel: 'Generate',
+        inputs: [
+          { type: 'number', label: 'Radius (m)', placeholder: 'e.g. 25', required: true },
+          { type: 'number', label: 'Waypoints per ring', placeholder: 'e.g. 12', required: true },
+          { type: 'number', label: 'Base altitude (m)', placeholder: 'e.g. 10', required: true },
+          { type: 'number', label: 'Number of layers', placeholder: 'e.g. 5', required: true },
+          { type: 'number', label: 'Height per layer (m)', placeholder: 'e.g. 5', required: true },
+          { type: 'text', label: 'Direction', placeholder: 'cw or ccw', required: true }
+        ],
+        onConfirm: (values) => {
+          appendPatternWaypoints(
+            structureScan({ center: capture.corners[0], radiusM: Number(values[0]), points: Number(values[1]), baseAltM: Number(values[2]), layers: Number(values[3]), layerHeightM: Number(values[4]), clockwise: isClockwise(values[5]) })
+          );
+        }
+      });
+      return;
+    }
+
     showModal({
       title: 'Orbit pattern',
       content: 'A ring of waypoints around the clicked center.',
@@ -685,13 +750,7 @@
       ],
       onConfirm: (values) => {
         appendPatternWaypoints(
-          orbit({
-            center: capture.corners[0],
-            radiusM: Number(values[0]),
-            points: Number(values[1]),
-            altM: Number(values[2]),
-            clockwise: values[3].trim().toLowerCase() !== 'ccw'
-          })
+          orbit({ center: capture.corners[0], radiusM: Number(values[0]), points: Number(values[1]), altM: Number(values[2]), clockwise: isClockwise(values[3]) })
         );
       }
     });
