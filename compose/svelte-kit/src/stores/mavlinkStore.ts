@@ -39,5 +39,8 @@ export const mavAttitudeStore = writable<{ rollDeg: number; pitchDeg: number }>(
     pitchDeg: 0
 });
 export const mavBatteryStore = writable<number|null>(null);
+// A camera stream the vehicle advertises via VIDEO_STREAM_INFORMATION; its uri
+// is offered as a ready-to-use RTSP source for the live feed.
+export const mavVideoStreamStore = writable<{ uri: string; name: string } | null>(null);
 export const mavlinkLogStore = writable<string[]>([]);
 export const mavlinkParamStore = writable<{[key: string]: Parameter}>({});
