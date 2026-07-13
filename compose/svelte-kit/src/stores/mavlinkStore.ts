@@ -32,6 +32,12 @@ export const mavAltitudeStore = writable<number>(0);
 // AMSL regardless of the declared frame.
 export const mavAltitudeAmslStore = writable<number>(0);
 export const mavSpeedStore = writable<number>(0);
+// Roll and pitch in degrees for the artificial-horizon HUD; yaw comes from
+// mavHeadingStore. Positive roll banks right, positive pitch is nose-up.
+export const mavAttitudeStore = writable<{ rollDeg: number; pitchDeg: number }>({
+    rollDeg: 0,
+    pitchDeg: 0
+});
 export const mavBatteryStore = writable<number|null>(null);
 export const mavlinkLogStore = writable<string[]>([]);
 export const mavlinkParamStore = writable<{[key: string]: Parameter}>({});

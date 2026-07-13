@@ -22,6 +22,7 @@
     mavBatteryStore,
     mavArmedStateStore,
     mavSatelliteStore,
+    mavAttitudeStore,
     type Parameter
   } from '../stores/mavlinkStore';
   import {
@@ -275,6 +276,14 @@
 
       const speed = calculateSpeed(text);
       if (speed) mavSpeedStore.set(parseFloat(speed.toFixed(2)));
+    },
+
+    ATTITUDE: (text: string) => {
+      const roll = extractValue(text, 'roll');
+      const pitch = extractValue(text, 'pitch');
+      if (!roll && !pitch) return;
+      const toDeg = (rad: string) => (rad ? (parseFloat(rad) * 180) / Math.PI : 0);
+      mavAttitudeStore.set({ rollDeg: toDeg(roll), pitchDeg: toDeg(pitch) });
     },
 
     GPS_RAW_INT: (text: string) => {
