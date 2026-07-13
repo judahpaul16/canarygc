@@ -27,6 +27,16 @@
   let ai = $state<{ baseUrl: string; model: string; apiKey: string }>({ baseUrl: '', model: '', apiKey: '' });
   let aiKeySet = $state(false);
   let mavlink = $state<{ signingKey: string; signingLinkId: string; signingStrict: boolean }>({ signingKey: '', signingLinkId: '1', signingStrict: false });
+  let mavKeyVisible = $state(false);
+  // Fills a strong random passphrase and reveals it so the operator can copy the
+  // same value onto the autopilot; both ends must share it for signing to secure
+  // the link.
+  function generateSigningPassphrase() {
+    const bytes = new Uint8Array(24);
+    crypto.getRandomValues(bytes);
+    mavlink.signingKey = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+    mavKeyVisible = true;
+  }
   let mavlinkKeySet = $state(false);
 
   const CAMERA_KINDS = [
@@ -374,8 +384,8 @@
           </div>
         </div>
         <div class="field">
-          <label for="mav-key">Signing passphrase {#if mavlinkKeySet}<span class="badge">active</span>{/if}</label>
-          <input id="mav-key" type="password" bind:value={mavlink.signingKey} autocomplete="off" placeholder={mavlinkKeySet ? 'Leave blank to keep the active key' : 'Shared secret passphrase'} />
+          <label for="mav-key">Signing passphrase {#if mavlinkKeySet}<span class="badge">active</span>{/if}<button type="button" class="key-link" onclick={generateSigningPassphrase}>Generate <i class="fa-solid fa-key"></i></button></label>
+          <input id="mav-key" type={mavKeyVisible ? 'text' : 'password'} bind:value={mavlink.signingKey} autocomplete="off" placeholder={mavlinkKeySet ? 'Leave blank to keep the active key' : 'Shared secret passphrase'} />
           <p class="hint">Hashed to the 32-byte key with SHA-256, the same way QGroundControl and Mission Planner derive it.</p>
         </div>
         <div class="field">
@@ -624,6 +634,11 @@
     font-weight: 500;
     color: #f5c518;
     text-decoration: none;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-family: inherit;
     opacity: 0.8;
     transition: opacity 0.2s;
   }
