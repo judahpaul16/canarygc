@@ -703,6 +703,7 @@
   .actions {
     display: flex;
     justify-content: flex-end;
+    margin-top: 1.75rem;
     padding-top: 1.1rem;
     border-top: 1px solid rgb(from var(--fontColor) r g b / 0.08);
   }

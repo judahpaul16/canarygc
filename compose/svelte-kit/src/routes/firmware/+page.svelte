@@ -475,7 +475,8 @@
   .catalog-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1rem;
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
   }
   .catalog-grid .panel { margin-bottom: 0; display: flex; flex-direction: column; }
   .catalog-grid .fields { flex: 1; }

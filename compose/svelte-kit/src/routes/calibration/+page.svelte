@@ -29,13 +29,14 @@
   ];
 
   // A pseudo-3D tilt per orientation, so each accel tile shows the pose to hold.
+  // Angles stay clear of 90deg, where a flat glyph would turn edge-on and vanish.
   const POSE: Record<string, string> = {
     level: 'rotateX(52deg)',
-    left: 'rotateX(52deg) rotateY(-62deg)',
-    right: 'rotateX(52deg) rotateY(62deg)',
-    nosedown: 'rotateX(90deg)',
-    noseup: 'rotateX(14deg)',
-    back: 'rotateX(150deg)'
+    left: 'rotateX(52deg) rotateY(-58deg)',
+    right: 'rotateX(52deg) rotateY(58deg)',
+    nosedown: 'rotateX(68deg) rotateZ(0deg)',
+    noseup: 'rotateX(20deg)',
+    back: 'rotateX(128deg)'
   };
 
   async function start(kind: CalKind) {
