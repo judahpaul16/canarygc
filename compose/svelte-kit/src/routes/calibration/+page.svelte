@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { mavArmedStateStore, mavModelStore } from '../../stores/mavlinkStore';
+  import { mavArmedStateStore, mavModelStore, mavlinkParamStore } from '../../stores/mavlinkStore';
   import { calibrationStore, resetCalibration } from '../../stores/calibrationStore';
   import {
     calCommand,
@@ -8,7 +8,7 @@
     type CalKind
   } from '../../lib/calibration';
   import { isPX4 } from '../../lib/flight-modes';
-  import { sendMavlinkCommand } from '../../lib/mavlink-client';
+  import { sendMavlinkCommand, writeParameter } from '../../lib/mavlink-client';
   import { notify } from '../../lib/overlays';
 
   const armed = $derived($mavArmedStateStore);
@@ -59,6 +59,29 @@
     if (cal.status === 'done') return 'ok';
     if (cal.status === 'failed') return 'bad';
     return 'run';
+  }
+
+  // ESC calibration is a physical procedure (throttle high, power-cycle) with no
+  // safe single command. ArduPilot's semi-automatic method arms it by setting
+  // ESC_CALIBRATION; the operator then power-cycles with the propellers off.
+  const escParam = $derived($mavlinkParamStore['ESC_CALIBRATION']);
+  let escEnabled = $state(false);
+  async function enableEscCal() {
+    if (armed) {
+      notify({ title: 'Disarm first', content: 'Arm ESC calibration only while disarmed and with propellers removed.', type: 'warning' });
+      return;
+    }
+    if (!escParam) {
+      notify({ title: 'Parameter unavailable', content: 'ESC_CALIBRATION was not found on this vehicle; it may still be loading.', type: 'warning' });
+      return;
+    }
+    const ok = await writeParameter('ESC_CALIBRATION', 3, escParam.param_type);
+    if (ok) {
+      escEnabled = true;
+      notify({ title: 'Semi-automatic ESC calibration armed', content: 'Remove propellers, then power-cycle with the throttle held high and follow the steps.', type: 'info' });
+    } else {
+      notify({ title: 'Could not arm', content: 'The autopilot did not accept the parameter write.', type: 'error' });
+    }
   }
 </script>
 
@@ -133,6 +156,51 @@
               </button>
             </section>
           {/each}
+
+          <section class="panel esc {armed ? 'bad' : ''}">
+            <div class="panel-head">
+              <span class="icon-chip"><i class="fas fa-plug-circle-bolt"></i></span>
+              <div>
+                <h2>ESC Calibration</h2>
+                <p class="muted">Set the throttle endpoints on every ESC so the motors respond together.</p>
+              </div>
+            </div>
+            <div class="esc-warn"><i class="fas fa-triangle-exclamation"></i> Remove all propellers before you begin. The motors can spin at full throttle.</div>
+            <div class="esc-body">
+              <div class="esc-scene" aria-hidden="true">
+                <div class="quad">
+                  <span class="arm a"></span>
+                  <span class="arm b"></span>
+                  {#each ['tl', 'tr', 'bl', 'br'] as pos (pos)}
+                    <span class="rotor {pos}"><span class="blade"></span></span>
+                  {/each}
+                  <span class="hub"></span>
+                </div>
+                <div class="throttle" title="throttle sweep">
+                  <div class="throttle-fill"></div>
+                  <span class="tcap top">MAX</span>
+                  <span class="tcap bot">MIN</span>
+                </div>
+                <div class="beeps"><span></span><span></span><span></span><span></span></div>
+              </div>
+              <ol class="esc-steps">
+                <li>Remove all propellers and disconnect the battery.</li>
+                <li>Hold the transmitter throttle at maximum.</li>
+                <li>Connect the battery and wait for the ready tones.</li>
+                <li>Power-cycle the battery while the throttle stays high.</li>
+                <li>Listen for the beeps that confirm the maximum endpoint.</li>
+                <li>Lower the throttle to minimum; a long tone confirms the minimum.</li>
+                <li>Raise the throttle slightly to confirm the motors spin together, then disconnect.</li>
+              </ol>
+            </div>
+            {#if px4}
+              <p class="hint">On PX4, run ESC calibration from the actuator setup, disarmed and with propellers removed.</p>
+            {:else if escEnabled}
+              <p class="hint ok-text"><i class="fas fa-circle-check"></i> Semi-automatic mode armed. Power-cycle to run it.</p>
+            {:else}
+              <button class="cta" disabled={armed} onclick={enableEscCal}><i class="fas fa-bolt"></i> Arm semi-automatic mode</button>
+            {/if}
+          </section>
         </div>
 
         <section class="panel log-panel">
@@ -230,4 +298,67 @@
     padding: 0.6rem 0.75rem; max-height: 12rem; overflow-y: auto;
   }
   .log-line { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+  /* ESC calibration card */
+  .esc { grid-column: 1 / -1; }
+  .esc-warn {
+    display: flex; align-items: center; gap: 0.5rem;
+    background: rgba(214, 41, 41, 0.12); border: 1px solid rgba(214, 41, 41, 0.45);
+    color: #f7d4d4; border-radius: 0.6rem; padding: 0.55rem 0.8rem;
+    margin-bottom: 1rem; font-size: 0.85rem; font-weight: 600;
+    animation: warnPulse 2.2s ease-in-out infinite;
+  }
+  .esc-warn i { color: #f87171; }
+  @keyframes warnPulse {
+    0%, 100% { border-color: rgba(214, 41, 41, 0.35); }
+    50% { border-color: rgba(248, 113, 113, 0.95); }
+  }
+
+  .esc-body { display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.9rem; }
+  .esc-scene { position: relative; display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
+
+  .quad { position: relative; width: 118px; height: 118px; }
+  .arm { position: absolute; top: 50%; left: 9%; width: 82%; height: 4px; background: #64748b; border-radius: 2px; transform-origin: center; }
+  .arm.a { transform: translateY(-50%) rotate(45deg); }
+  .arm.b { transform: translateY(-50%) rotate(-45deg); }
+  .hub { position: absolute; top: 50%; left: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); background: #1f2937; border: 2px solid #94a3b8; border-radius: 5px; }
+  .rotor { position: absolute; width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(148, 163, 184, 0.5); background: rgba(148, 163, 184, 0.08); display: flex; align-items: center; justify-content: center; }
+  .rotor.tl { top: 0; left: 0; }
+  .rotor.tr { top: 0; right: 0; }
+  .rotor.bl { bottom: 0; left: 0; }
+  .rotor.br { bottom: 0; right: 0; }
+  .blade { width: 34px; height: 4px; border-radius: 2px; background: linear-gradient(90deg, transparent, #f5c518, transparent); animation: spin 0.45s linear infinite; }
+  .rotor.tr .blade, .rotor.bl .blade { animation-direction: reverse; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .throttle { position: relative; width: 26px; height: 108px; border: 2px solid rgba(148, 163, 184, 0.4); border-radius: 8px; background: rgba(148, 163, 184, 0.08); display: flex; align-items: flex-end; overflow: hidden; }
+  .throttle-fill { width: 100%; background: linear-gradient(#4e9ff0, #3290e7); animation: throttleSeq 3.6s ease-in-out infinite; }
+  @keyframes throttleSeq {
+    0%, 8% { height: 12%; }
+    30%, 58% { height: 92%; }
+    78%, 100% { height: 12%; }
+  }
+  .tcap { position: absolute; left: 50%; transform: translateX(-50%); font-size: 0.5rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.04em; }
+  .tcap.top { top: 2px; }
+  .tcap.bot { bottom: 2px; }
+
+  .beeps { display: flex; flex-direction: column; gap: 0.5rem; }
+  .beeps span { width: 10px; height: 10px; border-radius: 50%; background: #4ade80; opacity: 0.2; animation: beep 3.6s ease-in-out infinite; }
+  .beeps span:nth-child(1) { animation-delay: 1.1s; }
+  .beeps span:nth-child(2) { animation-delay: 1.4s; }
+  .beeps span:nth-child(3) { animation-delay: 1.7s; }
+  .beeps span:nth-child(4) { animation-delay: 2.7s; }
+  @keyframes beep {
+    0%, 100% { opacity: 0.2; box-shadow: none; }
+    6% { opacity: 1; box-shadow: 0 0 8px #4ade80; }
+  }
+
+  .esc-steps { flex: 1; min-width: 240px; margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.82rem; opacity: 0.9; }
+  .esc-steps li { line-height: 1.35; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .blade, .throttle-fill, .beeps span, .esc-warn { animation: none; }
+    .throttle-fill { height: 60%; }
+    .beeps span { opacity: 0.8; }
+  }
 </style>

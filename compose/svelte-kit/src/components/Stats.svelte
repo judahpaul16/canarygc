@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { goto } from '$app/navigation';
   import {
     missionPlanTitleStore,
     missionCountStore,
@@ -173,9 +174,10 @@
     if (isPX4()) {
       notify({
         title: 'Not available on PX4',
-        content: 'Yaw-referenced compass calibration uses an ArduPilot command. Calibrate PX4 sensors from a full setup tool.',
+        content: 'Yaw-referenced compass calibration uses an ArduPilot command. Calibrate PX4 sensors from the Sensor Calibration page.',
         type: 'warning'
       });
+      goto('/calibration');
       return;
     }
     showModal({
