@@ -13,11 +13,53 @@
 
 A web-based ground control station (GCS) for remote autopilot management via the [MAVLink protocol](https://en.wikipedia.org/wiki/MAVLink).
 
-<img src="screenshots/dashboard.png" alt="Illustration" width="auto"/>
-
-**TL;DR:** A ground control station that runs on the drone's Raspberry Pi, so you fly and monitor it from any browser over the internet.
+![Dashboard 1](screenshots/dashboard_1.png)
+<table>
+  <tr>
+    <td width="50%">
+      <img src="screenshots/mission-planner.png" alt="Mission Planner" height="220" width="100%"><br>
+      <sub>Mission planning</sub>
+    </td>
+    <td width="50%">
+      <img src="screenshots/calibration.png" alt="Calibration" height="220" width="100%"><br>
+      <sub>Calibration</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="screenshots/events.png" alt="MAVLink Events" height="220" width="100%"><br>
+      <sub>MAVLink Events</sub>
+    </td>
+    <td width="50%">
+      <img src="screenshots/parameters.png" alt="Vehicle Parameters" height="220" width="100%"><br>
+      <sub>Vehicle Parameters</sub>
+    </td>
+  </tr>
+</table>
 
 </div>
+
+## 🐚 TL;DR | Setup Script
+
+### Production Deployment
+```bash
+curl -s https://raw.githubusercontent.com/judahpaul16/canarygc/main/contrib/setup.sh | \
+    bash -s --
+```
+
+### Local Testing with SITL
+```bash
+curl -s https://raw.githubusercontent.com/judahpaul16/canarygc/main/contrib/setup.sh | \
+    bash -s -- --simulation
+```
+
+### Install-Only (Without System Setup)
+Skips the host provisioning (installing Docker, nginx, and the other system packages, the UFW firewall and 4G routing rules, the Docker daemon config, and the Raspberry Pi UART overlays) and just brings the app up with Docker Compose, assuming Docker is already installed and running.
+```bash
+curl -s https://raw.githubusercontent.com/judahpaul16/canarygc/main/contrib/setup.sh | \
+    bash -s -- --install-only
+```
+
 
 ---
 
@@ -114,28 +156,6 @@ CanaryGC is designed for **headless, remote-first UAV deployments**:
 * The Pi streams only telemetry and control data, not full-screen images, making it far more efficient over LTE links.
 * The interface gracefully handles network interruptions and reconnects.
 * It works from any device (phone, tablet, laptop) with a browser, ideal for field operations.
-
----
-
-## 🐚 Setup Script
-
-### Production Deployment
-```bash
-curl -s https://raw.githubusercontent.com/judahpaul16/canarygc/main/contrib/setup.sh | \
-    bash -s --
-```
-
-### Local Testing with SITL
-```bash
-curl -s https://raw.githubusercontent.com/judahpaul16/canarygc/main/contrib/setup.sh | \
-    bash -s -- --simulation
-```
-
-### Install-Only (Without System Setup)
-```bash
-curl -s https://raw.githubusercontent.com/judahpaul16/canarygc/main/contrib/setup.sh | \
-    bash -s -- --install-only
-```
 
 ---
 
