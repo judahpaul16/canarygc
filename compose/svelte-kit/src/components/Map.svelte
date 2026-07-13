@@ -1376,14 +1376,21 @@
   // recentering the Leaflet view on every scroll frame is what lags native
   // scroll on mobile, and the vehicle-follow recenter already lives in the
   // marker update, so scroll is left to reposition the frame alone.
+  // The map fits its framing rect: the interactive window (planner, mini-map),
+  // else the page shell (the dashboard slab, which has no window), else the
+  // viewport. Tracking shell and panel too means a dashboard slab reflow
+  // refits Leaflet, not only a full viewport resize.
   let trackedWinSize = { width: 0, height: 0 };
   $effect(() => {
     const w = win;
+    void shell;
+    void panel;
     void isFullscreen;
     untrack(() => {
       if (!leafletMap) return;
-      const width = w?.width ?? window.innerWidth;
-      const height = w?.height ?? window.innerHeight;
+      const rect = w ?? get(mapShellStore);
+      const width = rect?.width ?? window.innerWidth;
+      const height = rect?.height ?? window.innerHeight;
       const resized = width !== trackedWinSize.width || height !== trackedWinSize.height;
       if (resized) {
         trackedWinSize = { width, height };
