@@ -2,8 +2,10 @@
   import { onMount } from 'svelte';
   import { notify } from '../../lib/overlays';
   import { resolveTiles, TILE_PRESETS, MAPTILER_PRESETS, maptilerTileUrl } from '../../lib/tiles';
+  import Select from '../../components/Select.svelte';
   let loading = $state(true);
   let saving = $state(false);
+  let filter = $state('');
 
   let email = $state('');
   let smtp = $state({ host: '', port: '587', secure: false, user: '', from: '', pass: '' });
@@ -14,6 +16,7 @@
   let altitudeAngelSet = $state(false);
   let maptiler = $state('');
   let tiles = $state({ light: '', dark: '', satellite: '' });
+  let presetPick = $state({ light: '', dark: '', satellite: '' });
 
   const TILE_PLACEHOLDER = {
     light: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -21,10 +24,38 @@
     satellite: 'https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}'
   };
 
-  function pickPreset(event: Event, mode: 'light' | 'dark' | 'satellite') {
-    const select = event.currentTarget as HTMLSelectElement;
-    if (select.value) tiles[mode] = select.value;
-    select.selectedIndex = 0;
+  // The page search hides panels whose title and field words miss the query,
+  // so a long settings page narrows to the one being looked for.
+  const PANEL_KEYWORDS = {
+    operator: 'operator email password reset alert recipient account',
+    smtp: 'email smtp mail server host port username password from tls alerts',
+    airspace: 'airspace openaip altitude angel api key faa zones no-fly',
+    tiles: 'map tiles basemap maptiler key light dark satellite url preset xyz'
+  };
+
+  function panelVisible(panel: keyof typeof PANEL_KEYWORDS): boolean {
+    const q = filter.trim().toLowerCase();
+    return !q || PANEL_KEYWORDS[panel].includes(q);
+  }
+
+  function tilePresetGroups(mode: 'light' | 'dark' | 'satellite') {
+    const groups = [];
+    if (maptiler.trim()) {
+      groups.push({
+        label: 'MapTiler (your key)',
+        options: MAPTILER_PRESETS[mode].map((p) => ({
+          value: maptilerTileUrl(p.style, maptiler.trim(), p.ext),
+          label: p.label
+        }))
+      });
+    }
+    groups.push({ label: 'Keyless', options: TILE_PRESETS[mode].map((p) => ({ value: p.url, label: p.label })) });
+    return groups;
+  }
+
+  function applyPreset(mode: 'light' | 'dark' | 'satellite', value: string) {
+    if (value) tiles[mode] = value;
+    presetPick[mode] = '';
   }
 
   // Save a tile URL only when it differs from the current default, so an
@@ -103,7 +134,13 @@
     <div class="settings rounded-2xl h-full p-6 overflow-y-auto">
       <div class="content">
   <header class="head">
-    <h1><i class="fas fa-plug"></i> Integrations</h1>
+    <div class="head-row">
+      <h1><i class="fas fa-plug"></i> Integrations</h1>
+      <div class="search">
+        <i class="fas fa-magnifying-glass"></i>
+        <input bind:value={filter} placeholder="Search settings" aria-label="Search settings" />
+      </div>
+    </div>
     <p>Connect external services. Secrets are stored on this station and never shown again after saving.</p>
   </header>
 
@@ -111,20 +148,12 @@
     <div class="panel"><p class="muted">Loading...</p></div>
   {:else}
     <form onsubmit={(e) => { e.preventDefault(); save(); }}>
-      <section class="panel">
-        <div class="panel-head">
-          <span class="icon-chip"><i class="fas fa-user-gear"></i></span>
-          <div>
-            <h2>Operator</h2>
-            <p class="muted">Used for password resets and as the alert recipient.</p>
-          </div>
-        </div>
-        <div class="field">
-          <label for="email">Operator email</label>
-          <input type="email" id="email" bind:value={email} autocomplete="email" placeholder="operator@example.com" />
-        </div>
-      </section>
-
+      {#if filter.trim() && !panelVisible('operator') && !panelVisible('smtp') && !panelVisible('airspace') && !panelVisible('tiles')}
+        <div class="panel"><p class="muted">No settings match "{filter}".</p></div>
+      {/if}
+      <div class="settings-grid">
+      <div class="col-main">
+      {#if panelVisible('smtp')}
       <section class="panel">
         <div class="panel-head">
           <span class="icon-chip"><i class="fas fa-envelope"></i></span>
@@ -173,7 +202,59 @@
           </div>
         </div>
       </section>
+      {/if}
 
+      {#if panelVisible('tiles')}
+      <section class="panel">
+        <div class="panel-head">
+          <span class="icon-chip"><i class="fas fa-map"></i></span>
+          <div>
+            <h2>Map tiles</h2>
+            <p class="muted">A MapTiler key gives a rich dark basemap and a labeled hybrid satellite. Leave blank for keyless tiles. Each mode accepts a custom XYZ tile URL to override the default.</p>
+          </div>
+        </div>
+        <div class="field">
+          <label for="maptiler">MapTiler API key<a class="key-link" href="https://cloud.maptiler.com/account/keys/" target="_blank" rel="noopener">Get key <i class="fa-solid fa-square-arrow-up-right"></i></a></label>
+          <input id="maptiler" bind:value={maptiler} autocomplete="off" placeholder="MapTiler key (optional)" />
+        </div>
+        {#each ['light', 'dark', 'satellite'] as const as mode (mode)}
+          <div class="field">
+            <label for="tiles-{mode}">{mode[0].toUpperCase() + mode.slice(1)} basemap URL</label>
+            <div class="tile-row">
+              <div class="preset">
+                <Select
+                  bind:value={presetPick[mode]}
+                  placeholder="Preset..."
+                  groups={tilePresetGroups(mode)}
+                  onchange={(v) => applyPreset(mode, v)}
+                />
+              </div>
+              <input id="tiles-{mode}" bind:value={tiles[mode]} autocomplete="off" placeholder={TILE_PLACEHOLDER[mode]} />
+            </div>
+          </div>
+        {/each}
+      </section>
+      {/if}
+      </div>
+
+      <div class="col-side">
+      {#if panelVisible('operator')}
+      <section class="panel">
+        <div class="panel-head">
+          <span class="icon-chip"><i class="fas fa-user-gear"></i></span>
+          <div>
+            <h2>Operator</h2>
+            <p class="muted">Used for password resets and as the alert recipient.</p>
+          </div>
+        </div>
+        <div class="field">
+          <label for="email">Operator email</label>
+          <input type="email" id="email" bind:value={email} autocomplete="email" placeholder="operator@example.com" />
+        </div>
+      </section>
+      {/if}
+
+      {#if panelVisible('airspace')}
       <section class="panel">
         <div class="panel-head">
           <span class="icon-chip"><i class="fas fa-tower-broadcast"></i></span>
@@ -191,71 +272,9 @@
           <input id="altitude-angel" bind:value={altitudeAngel} autocomplete="off" placeholder={altitudeAngelSet ? '•••••••• (saved)' : 'Altitude Angel key'} />
         </div>
       </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <span class="icon-chip"><i class="fas fa-map"></i></span>
-          <div>
-            <h2>Map tiles</h2>
-            <p class="muted">A MapTiler key gives a rich dark basemap and a labeled hybrid satellite. Leave blank for keyless tiles. Each mode accepts a custom XYZ tile URL to override the default.</p>
-          </div>
-        </div>
-        <div class="field">
-          <label for="maptiler">MapTiler API key<a class="key-link" href="https://cloud.maptiler.com/account/keys/" target="_blank" rel="noopener">Get key <i class="fa-solid fa-square-arrow-up-right"></i></a></label>
-          <input id="maptiler" bind:value={maptiler} autocomplete="off" placeholder="MapTiler key (optional)" />
-        </div>
-        <div class="field">
-          <label for="tiles-light">Light basemap URL</label>
-          <div class="tile-row">
-            <select class="preset" aria-label="Light basemap preset" onchange={(e) => pickPreset(e, 'light')}>
-              <option value="">Preset...</option>
-              {#if maptiler.trim()}
-                <optgroup label="MapTiler (your key)">
-                  {#each MAPTILER_PRESETS.light as p (p.style)}<option value={maptilerTileUrl(p.style, maptiler.trim(), p.ext)}>{p.label}</option>{/each}
-                </optgroup>
-              {/if}
-              <optgroup label="Keyless">
-                {#each TILE_PRESETS.light as p (p.url)}<option value={p.url}>{p.label}</option>{/each}
-              </optgroup>
-            </select>
-            <input id="tiles-light" bind:value={tiles.light} autocomplete="off" placeholder={TILE_PLACEHOLDER.light} />
-          </div>
-        </div>
-        <div class="field">
-          <label for="tiles-dark">Dark basemap URL</label>
-          <div class="tile-row">
-            <select class="preset" aria-label="Dark basemap preset" onchange={(e) => pickPreset(e, 'dark')}>
-              <option value="">Preset...</option>
-              {#if maptiler.trim()}
-                <optgroup label="MapTiler (your key)">
-                  {#each MAPTILER_PRESETS.dark as p (p.style)}<option value={maptilerTileUrl(p.style, maptiler.trim(), p.ext)}>{p.label}</option>{/each}
-                </optgroup>
-              {/if}
-              <optgroup label="Keyless">
-                {#each TILE_PRESETS.dark as p (p.url)}<option value={p.url}>{p.label}</option>{/each}
-              </optgroup>
-            </select>
-            <input id="tiles-dark" bind:value={tiles.dark} autocomplete="off" placeholder={TILE_PLACEHOLDER.dark} />
-          </div>
-        </div>
-        <div class="field">
-          <label for="tiles-satellite">Satellite basemap URL</label>
-          <div class="tile-row">
-            <select class="preset" aria-label="Satellite basemap preset" onchange={(e) => pickPreset(e, 'satellite')}>
-              <option value="">Preset...</option>
-              {#if maptiler.trim()}
-                <optgroup label="MapTiler (your key)">
-                  {#each MAPTILER_PRESETS.satellite as p (p.style)}<option value={maptilerTileUrl(p.style, maptiler.trim(), p.ext)}>{p.label}</option>{/each}
-                </optgroup>
-              {/if}
-              <optgroup label="Keyless">
-                {#each TILE_PRESETS.satellite as p (p.url)}<option value={p.url}>{p.label}</option>{/each}
-              </optgroup>
-            </select>
-            <input id="tiles-satellite" bind:value={tiles.satellite} autocomplete="off" placeholder={TILE_PLACEHOLDER.satellite} />
-          </div>
-        </div>
-      </section>
+      {/if}
+      </div>
+      </div>
 
       <div class="actions">
         <button type="submit" class="cta" disabled={saving}>
@@ -280,14 +299,73 @@
   }
 
   .content {
-    max-width: 860px;
+    max-width: 980px;
     margin: 0 auto;
+    padding-bottom: 2rem;
+  }
+
+  /* Primary sections (SMTP, map tiles) stack in a wider left column; the
+     short operator and airspace cards sit in a narrower right column, so the
+     page reads as two balanced columns rather than one tall stack. */
+  .settings-grid {
+    display: grid;
+    grid-template-columns: 1.9fr 1fr;
+    gap: 1rem;
+    align-items: start;
+  }
+
+  .col-main,
+  .col-side {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-width: 0;
+  }
+
+  .settings-grid .panel {
+    margin-bottom: 0;
+  }
+
+  @media (max-width: 900px) {
+    .settings-grid {
+      grid-template-columns: 1fr;
+    }
   }
 
   .head {
-    margin-bottom: 1.5rem;
-    padding-bottom: 1.25rem;
+    margin-bottom: 1.35rem;
+    padding-bottom: 1.1rem;
     border-bottom: 1px solid rgb(from var(--fontColor) r g b / 0.08);
+  }
+
+  .head-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .search {
+    position: relative;
+    width: 16rem;
+    max-width: 100%;
+  }
+
+  .search i {
+    position: absolute;
+    left: 0.8rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.75rem;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .search input {
+    width: 100%;
+    padding: 0.5rem 0.8rem 0.5rem 2.1rem;
+    font-size: 0.85rem;
   }
 
   .head h1 {
@@ -312,16 +390,16 @@
     background-color: rgb(from var(--tertiaryColor) r g b / 0.32);
     border: 1px solid rgb(from var(--fontColor) r g b / 0.08);
     border-radius: var(--radius-surface);
-    padding: 1.35rem 1.5rem;
-    margin-bottom: 1.2rem;
+    padding: 1.1rem 1.3rem;
+    margin-bottom: 1rem;
   }
 
   .panel-head {
     display: flex;
     align-items: flex-start;
     gap: 0.9rem;
-    padding-bottom: 1.1rem;
-    margin-bottom: 1.2rem;
+    padding-bottom: 0.9rem;
+    margin-bottom: 1rem;
     border-bottom: 1px solid rgb(from var(--fontColor) r g b / 0.08);
   }
 
@@ -360,7 +438,7 @@
   .field {
     display: flex;
     flex-direction: column;
-    margin-bottom: 0.9rem;
+    margin-bottom: 0.75rem;
   }
 
   .field.narrow {
@@ -393,13 +471,12 @@
     text-decoration: underline;
   }
 
-  input,
-  .preset {
+  input {
     background-color: rgb(from var(--tertiaryColor) r g b / 0.7);
     border: 1px solid rgb(from var(--fontColor) r g b / 0.12);
     color: var(--fontColor);
     border-radius: var(--radius-control);
-    padding: 0.6rem 0.8rem;
+    padding: 0.55rem 0.8rem;
     outline: none;
     transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
   }
@@ -416,8 +493,7 @@
 
   .preset {
     flex-shrink: 0;
-    width: 10rem;
-    cursor: pointer;
+    width: 11.5rem;
   }
 
   input::placeholder {

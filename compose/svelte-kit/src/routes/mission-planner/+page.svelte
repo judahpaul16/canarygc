@@ -50,7 +50,7 @@
        floating controls pin to never drifts by a scrollbar width. */
     .dashboard {
       grid-template-columns: repeat(12, minmax(0, 1fr));
-      grid-template-rows: repeat(6, minmax(0, 1fr));
+      grid-template-rows: repeat(4, minmax(0, 0.92fr)) repeat(2, minmax(0, 1.16fr));
       height: 95vh;
       scrollbar-gutter: stable;
       background-color: transparent !important;

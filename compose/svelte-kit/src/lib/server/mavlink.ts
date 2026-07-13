@@ -41,6 +41,7 @@ interface MavlinkState {
     gcsBeat: ReturnType<typeof setInterval> | null;
     lastErrorMessage: string;
     wasAlive: boolean;
+    suspended: boolean;
 }
 
 // The link state lives on globalThis so a dev-server module reload reuses the
@@ -60,10 +61,12 @@ const state: MavlinkState = (g.__canarygcMavlink ??= {
     supervisor: null,
     gcsBeat: null,
     lastErrorMessage: '',
-    wasAlive: false
+    wasAlive: false,
+    suspended: false
 });
 
 function superviseLink(): void {
+    if (state.suspended) return;
     const alive = linkAlive();
     if (alive !== state.wasAlive) {
         state.wasAlive = alive;
@@ -112,6 +115,18 @@ export function latestHeartbeat(): string {
     return state.latestHeartbeat;
 }
 
+// A firmware upload needs the autopilot's serial device to itself; suspend
+// releases the connection and holds the supervisor off until resume, when the
+// station dials back into the freshly flashed board.
+export function suspendLink(): void {
+    state.suspended = true;
+    teardownConnection();
+}
+
+export function resumeLink(): void {
+    state.suspended = false;
+}
+
 function pushLog(entry: string): void {
     logs.push(entry);
     newLogs.push(entry);
@@ -129,7 +144,7 @@ function linkAlive(): boolean {
 // first packet arrives. Safe to call repeatedly, it only dials when no
 // connection exists.
 function initializePort(): void {
-    if (state.port) return;
+    if (state.port || state.suspended) return;
     try {
         openConnection();
         setupPacketReader();
