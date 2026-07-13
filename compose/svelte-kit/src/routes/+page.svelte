@@ -1,6 +1,38 @@
 <script lang="ts">
+  import Modal from '../components/Modal.svelte';
+  import { mavLocationStore } from '../stores/mavlinkStore';
+  import { notify } from '../lib/overlays';
 
   let { data } = $props();
+  let originModalOpen = $state(false);
+
+  // Sets the vehicle's global origin and home to a manual start point so a
+  // GPS-less aircraft can operate in local position relative to it.
+  async function setStartPoint(values: string[]) {
+    const lat = parseFloat(values[0]);
+    const lon = parseFloat(values[1]);
+    const alt = parseFloat(values[2] || '0');
+    if (Number.isNaN(lat) || Number.isNaN(lon)) {
+      notify({ title: 'Invalid coordinates', content: 'Enter a numeric latitude and longitude.', type: 'warning' });
+      return;
+    }
+    try {
+      const res = await fetch('/api/mavlink/set_origin', {
+        method: 'POST',
+        headers: { lat: String(lat), lon: String(lon), alt: String(Number.isNaN(alt) ? 0 : alt) }
+      });
+      if (res.ok) {
+        mavLocationStore.set({ lat, lng: lon });
+        notify({ title: 'Start point set', content: 'Origin and home set on the vehicle; local moves now reference this point.', duration: 5000 });
+      } else if (res.status === 503) {
+        notify({ title: 'No vehicle connected', content: 'Connect the autopilot, then set the start point.', type: 'warning' });
+      } else {
+        notify({ title: 'Could not set the start point', content: await res.text(), type: 'warning' });
+      }
+    } catch {
+      notify({ title: 'Could not set the start point', content: 'Network error reaching the vehicle.', type: 'warning' });
+    }
+  }
   const features = [
     {
       icon: 'fa-satellite-dish',
@@ -82,7 +114,12 @@
 
       {#if data.user}
         <p class="state-note">Signed in as <strong>{data.user.username}</strong>.</p>
-        <a href="/dashboard" class="cta">Open dashboard <i class="fas fa-arrow-right"></i></a>
+        <div class="cta-row">
+          <a href="/dashboard" class="cta">Open dashboard <i class="fas fa-arrow-right"></i></a>
+          <button type="button" class="cta cta-ghost" onclick={() => (originModalOpen = true)}>
+            <i class="fas fa-location-crosshairs"></i> Set start point
+          </button>
+        </div>
       {:else if data.operatorExists}
         <p class="state-note">Sign in to reach the station.</p>
         <a href="/login" class="cta">Log in <i class="fas fa-arrow-right"></i></a>
@@ -124,6 +161,20 @@
     </section>
   </div>
 </div>
+
+<Modal
+  bind:isOpen={originModalOpen}
+  title="Set start point (no GPS)"
+  content="Fly in local position with no GPS: enter a start location and the station sets the vehicle's global origin and home to it, so local moves and the map share one reference. Use the takeoff spot; leave altitude at 0 unless you know the field elevation."
+  confirmation={true}
+  confirmLabel="Set origin & home"
+  inputs={[
+    { type: 'number', placeholder: 'e.g. 33.7911', required: true, label: 'Latitude' },
+    { type: 'number', placeholder: 'e.g. -84.3713', required: true, label: 'Longitude' },
+    { type: 'number', placeholder: '0', required: false, label: 'Altitude (m AMSL)' }
+  ]}
+  onConfirm={setStartPoint}
+/>
 
 <style>
   .home {
@@ -225,6 +276,29 @@
     transform: translateY(-2px);
     box-shadow: 0 8px 24px rgba(245, 197, 24, 0.35);
     background: #ffd23f;
+  }
+
+  .cta-row {
+    margin-top: 0.9rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.6rem;
+  }
+  .cta-row .cta {
+    margin-top: 0;
+  }
+  .cta-ghost {
+    background: transparent;
+    color: #f5c518;
+    border: 1px solid rgb(from #f5c518 r g b / 0.5);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+  }
+  .cta-ghost:hover {
+    background: rgb(from #f5c518 r g b / 0.12);
+    box-shadow: none;
   }
 
   .grid {

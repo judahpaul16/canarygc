@@ -633,6 +633,24 @@ async function setPositionLocal(x: number, y: number, z: number) {
     await sendMsg(state.port, msg);
   }
 
+// Establishes the vehicle's global origin so a vehicle with no GPS can hold a
+// local position referenced to a manual start point, and sets home to the same
+// point. This gives the local-NED moves and the map one shared reference instead
+// of a missing global fix.
+async function setGlobalOrigin(lat: number, lon: number, altM: number) {
+    if (!state.port || !state.reader) {
+        state.online = false;
+        return;
+    }
+    const origin = new common.SetGpsGlobalOrigin();
+    origin.targetSystem = 1;
+    origin.latitude = Math.round(lat * 1e7);
+    origin.longitude = Math.round(lon * 1e7);
+    origin.altitude = Math.round(altM * 1000);
+    await sendMsg(state.port, origin);
+    await sendMavlinkCommand('DO_SET_HOME', [0, 0, 0, 0, lat, lon, altM]);
+}
+
 function convertBigIntToNumber(obj: unknown): unknown {
     if (typeof obj === 'bigint') {
         return Number(obj);
@@ -657,6 +675,7 @@ export {
     uploadMission,
     clearAllMissionItems,
     setPositionLocal,
+    setGlobalOrigin,
     linkAlive,
     logs,
     newLogs,

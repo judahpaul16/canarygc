@@ -11,6 +11,7 @@ import {
     uploadMission,
     clearAllMissionItems,
     setPositionLocal,
+    setGlobalOrigin,
     newLogs,
     logs,
     latestHeartbeat,
@@ -112,6 +113,24 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
                 const items = JSON.parse(actions) as import('$lib/server/mavlink').MissionItemInput[];
                 const result = await uploadMission(items);
                 return new Response(result.message, { status: result.ok ? 200 : 502 });
+            } catch (err) {
+                console.error(err);
+                return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
+            }
+        }
+        case 'set_origin': {
+            const lat = parseFloat(event.request.headers.get('lat')!);
+            const lon = parseFloat(event.request.headers.get('lon')!);
+            const alt = parseFloat(event.request.headers.get('alt') ?? '0');
+            if (isNaN(lat) || isNaN(lon) || isNaN(alt)) {
+                return new Response('Invalid coordinates', { status: 400 });
+            }
+            if (!linkAlive()) {
+                return new Response('No vehicle connected', { status: 503 });
+            }
+            try {
+                await setGlobalOrigin(lat, lon, alt);
+                return new Response(`Origin and home set to ${lat}, ${lon}, ${alt} m`, { status: 200 });
             } catch (err) {
                 console.error(err);
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
