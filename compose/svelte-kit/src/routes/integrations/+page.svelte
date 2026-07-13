@@ -3,6 +3,7 @@
   import { notify } from '../../lib/overlays';
   import { resolveTiles, TILE_PRESETS, MAPTILER_PRESETS, maptilerTileUrl } from '../../lib/tiles';
   import Select from '../../components/Select.svelte';
+  import { mavVideoStreamStore } from '../../stores/mavlinkStore';
   let loading = $state(true);
   let saving = $state(false);
   let filter = $state('');
@@ -17,6 +18,26 @@
   let maptiler = $state('');
   let tiles = $state({ light: '', dark: '', satellite: '' });
   let presetPick = $state({ light: '', dark: '', satellite: '' });
+  let camera = $state<{ kind: string; url: string; device: string }>({
+    kind: 'pi',
+    url: '',
+    device: '/dev/video0'
+  });
+  let cameraApplied = $state<boolean | null>(null);
+
+  const CAMERA_KINDS = [
+    { value: 'pi', label: 'Raspberry Pi camera' },
+    { value: 'url', label: 'RTSP / RTMP / SRT URL' },
+    { value: 'usb', label: 'USB / V4L2 capture device' }
+  ];
+
+  const detectedStream = $derived($mavVideoStreamStore);
+
+  function useDetectedStream() {
+    if (!detectedStream) return;
+    camera.kind = 'url';
+    camera.url = detectedStream.uri;
+  }
 
   const TILE_PLACEHOLDER = {
     light: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -30,7 +51,8 @@
     operator: 'operator email password reset alert recipient account',
     smtp: 'email smtp mail server host port username password from tls alerts',
     airspace: 'airspace openaip altitude angel api key faa zones no-fly',
-    tiles: 'map tiles basemap maptiler key light dark satellite url preset xyz'
+    tiles: 'map tiles basemap maptiler key light dark satellite url preset xyz',
+    camera: 'camera video feed source stream live rtsp rtmp srt usb v4l2 capture fpv betaflight mediamtx pi'
   };
 
   function panelVisible(panel: keyof typeof PANEL_KEYWORDS): boolean {
@@ -88,6 +110,7 @@
         satelliteUrl: data.tiles?.satellite
       });
       tiles = { light: eff.light, dark: eff.dark, satellite: eff.satellite };
+      if (data.camera) camera = { kind: data.camera.kind ?? 'pi', url: data.camera.url ?? '', device: data.camera.device ?? '/dev/video0' };
     } catch {
       notify({ title: 'Load failed', content: 'Could not load integration settings.', type: 'warning' });
     } finally {
@@ -101,15 +124,17 @@
       const res = await fetch('/api/integrations', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email, smtp, openaip, altitudeAngel, maptiler, tiles: tileOverrides() })
+        body: JSON.stringify({ email, smtp, openaip, altitudeAngel, maptiler, tiles: tileOverrides(), camera })
       });
       if (res.ok) {
+        const data = await res.json();
         if (smtp.pass) passSet = true;
         if (openaip) openaipSet = true;
         if (altitudeAngel) altitudeAngelSet = true;
         smtp.pass = '';
         openaip = '';
         altitudeAngel = '';
+        cameraApplied = data.cameraApplied ?? null;
         notify({ title: 'Integrations saved', content: 'Your integration settings have been updated.', duration: 3000 });
       } else {
         const data = await res.json();
@@ -148,7 +173,7 @@
     <div class="panel"><p class="muted">Loading...</p></div>
   {:else}
     <form onsubmit={(e) => { e.preventDefault(); save(); }}>
-      {#if filter.trim() && !panelVisible('operator') && !panelVisible('smtp') && !panelVisible('airspace') && !panelVisible('tiles')}
+      {#if filter.trim() && !panelVisible('operator') && !panelVisible('smtp') && !panelVisible('airspace') && !panelVisible('tiles') && !panelVisible('camera')}
         <div class="panel"><p class="muted">No settings match "{filter}".</p></div>
       {/if}
       <div class="settings-grid">
@@ -233,6 +258,50 @@
             </div>
           </div>
         {/each}
+      </section>
+      {/if}
+
+      {#if panelVisible('camera')}
+      <section class="panel">
+        <div class="panel-head">
+          <span class="icon-chip"><i class="fas fa-video"></i></span>
+          <div>
+            <h2>Camera source</h2>
+            <p class="muted">The live feed serves one WebRTC stream; pick what feeds it. Applied to the running feed when you save.</p>
+          </div>
+        </div>
+        {#if detectedStream}
+          <div class="detected">
+            <div>
+              <span class="badge">detected</span>
+              The vehicle advertises a camera stream{detectedStream.name ? ` (${detectedStream.name})` : ''}:
+              <code class="uri">{detectedStream.uri}</code>
+            </div>
+            <button type="button" class="mini" onclick={useDetectedStream}>Use this URL</button>
+          </div>
+        {/if}
+        <div class="field">
+          <label for="camera-kind">Source type</label>
+          <Select id="camera-kind" bind:value={camera.kind} options={CAMERA_KINDS} />
+        </div>
+        {#if camera.kind === 'url'}
+          <div class="field">
+            <label for="camera-url">Stream URL</label>
+            <input id="camera-url" bind:value={camera.url} autocomplete="off" placeholder="rtsp://user:pass@192.168.1.50:554/stream" />
+            <p class="hint">An IP camera, a companion computer, or a flight controller camera that advertises RTSP. MediaMTX transcodes it to WebRTC.</p>
+          </div>
+        {:else if camera.kind === 'usb'}
+          <div class="field">
+            <label for="camera-device">Capture device</label>
+            <input id="camera-device" bind:value={camera.device} autocomplete="off" placeholder="/dev/video0" />
+            <p class="hint">A USB analog capture dongle (analog FPV) or an HDMI grabber (HDZero, DJI, or Walksnail digital FPV, including a Betaflight board's FPV feed). MediaMTX captures it with FFmpeg.</p>
+          </div>
+        {:else}
+          <p class="hint">The Raspberry Pi CSI camera on the companion computer. No extra hardware.</p>
+        {/if}
+        {#if cameraApplied !== null}
+          <p class="hint">{cameraApplied ? 'Applied to the live feed.' : 'Saved. It applies once the camera bridge is reachable.'}</p>
+        {/if}
       </section>
       {/if}
       </div>
@@ -520,6 +589,54 @@
     border: 1px solid rgba(97, 205, 137, 0.4);
     border-radius: 9999px;
     padding: 0.1rem 0.5rem;
+  }
+
+  .hint {
+    opacity: 0.6;
+    font-size: 0.78rem;
+    margin-top: 0.35rem;
+    line-height: 1.35;
+  }
+
+  code {
+    font-family: ui-monospace, monospace;
+    font-size: 0.8rem;
+    background: rgb(from var(--fontColor) r g b / 0.08);
+    padding: 0.05rem 0.3rem;
+    border-radius: 0.3rem;
+  }
+
+  .detected {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    justify-content: space-between;
+    background: rgba(97, 205, 137, 0.08);
+    border: 1px solid rgba(97, 205, 137, 0.35);
+    border-radius: 0.6rem;
+    padding: 0.6rem 0.75rem;
+    margin-bottom: 0.9rem;
+    font-size: 0.82rem;
+  }
+  .detected .uri {
+    display: inline-block;
+    margin-top: 0.25rem;
+    overflow-wrap: anywhere;
+  }
+
+  .mini {
+    flex-shrink: 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--fontColor);
+    background: rgb(from var(--fontColor) r g b / 0.08);
+    border: 1px solid rgb(from var(--fontColor) r g b / 0.15);
+    border-radius: 0.45rem;
+    padding: 0.3rem 0.6rem;
+    cursor: pointer;
+  }
+  .mini:hover {
+    background: rgb(from var(--fontColor) r g b / 0.16);
   }
 
   .toggle-field {

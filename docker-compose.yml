@@ -35,6 +35,9 @@ services:
     container_name: canarygc_app
     environment:
       - NODE_ENV=production
+      - MEDIAMTX_API_URL=${MEDIAMTX_API_URL:-http://host.docker.internal:9997}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     deploy:
       resources:
         limits:
@@ -107,7 +110,8 @@ services:
     image: bluenviron/mediamtx:latest-rpi
     container_name: canarygc_webrtc
     environment:
-      - MTX_PATHS_CAM_SOURCE=rpiCamera
+      - MTX_PATHS_CAM_SOURCE=${WEBRTC_SOURCE:-rpiCamera}
+      - MTX_PATHS_CAM_RUNONDEMAND=${WEBRTC_RUNONDEMAND:-}
       - MTX_WEBRTCICESERVERS=stun:stun.l.google.com:19302
       - MTX_READTIMEOUT=10s
       - MTX_WRITETIMEOUT=10s

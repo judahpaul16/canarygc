@@ -4,6 +4,7 @@ import type { Handle } from "@sveltejs/kit";
 // Booting the MAVLink module starts its link supervisor with the server, so
 // the station holds the autopilot connection without a browser session open.
 import "$lib/server/mavlink";
+import { initCameraSource } from "$lib/server/mediamtx";
 
 const PUBLIC_PAGES = new Set(["/", "/login", "/register", "/version", "/forgot-password", "/reset-password"]);
 const PUBLIC_API_PREFIX = "/api/auth/";
@@ -14,6 +15,10 @@ function isPublic(pathname: string): boolean {
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
+	// Re-apply the saved camera source to MediaMTX once the DB is ready; guarded
+	// to run a single time per process.
+	void initCameraSource();
+
 	const sessionId = event.cookies.get(lucia.sessionCookieName);
 	if (!sessionId) {
 		event.locals.user = null;

@@ -1,6 +1,8 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { getSetting, getSettings, setSetting } from '$lib/server/settings';
+import { applyCameraSource } from '$lib/server/mediamtx';
+import type { CameraSourceKind } from '$lib/camera-source';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -39,6 +41,11 @@ export const GET: RequestHandler = async (event) => {
             light: (await getSetting('tiles.light')) ?? '',
             dark: (await getSetting('tiles.dark')) ?? '',
             satellite: (await getSetting('tiles.satellite')) ?? ''
+        },
+        camera: {
+            kind: (await getSetting('camera.kind')) ?? 'pi',
+            url: (await getSetting('camera.url')) ?? '',
+            device: (await getSetting('camera.device')) ?? '/dev/video0'
         }
     });
 };
@@ -71,5 +78,20 @@ export const POST: RequestHandler = async (event) => {
     if (typeof tiles.dark === 'string') await setSetting('tiles.dark', tiles.dark.trim());
     if (typeof tiles.satellite === 'string') await setSetting('tiles.satellite', tiles.satellite.trim());
 
-    return json({ message: 'Saved' });
+    // The live-feed camera source is applied to MediaMTX after it is stored, so
+    // the operator's pick takes effect without touching a file or the stack.
+    let cameraApplied: boolean | null = null;
+    const camera = body.camera ?? {};
+    if (typeof camera.kind === 'string') {
+        await setSetting('camera.kind', camera.kind);
+        if (typeof camera.url === 'string') await setSetting('camera.url', camera.url.trim());
+        if (typeof camera.device === 'string') await setSetting('camera.device', camera.device.trim());
+        cameraApplied = await applyCameraSource({
+            kind: camera.kind as CameraSourceKind,
+            url: typeof camera.url === 'string' ? camera.url.trim() : '',
+            device: typeof camera.device === 'string' ? camera.device.trim() : '/dev/video0'
+        });
+    }
+
+    return json({ message: 'Saved', cameraApplied });
 };
