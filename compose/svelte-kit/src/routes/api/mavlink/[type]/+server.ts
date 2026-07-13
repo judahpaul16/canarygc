@@ -116,9 +116,9 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
             }
         }
         case 'set_position_local': {
-            const x: number = parseInt(event.request.headers.get('x')!);
-            const y: number = parseInt(event.request.headers.get('y')!);
-            const z: number = parseInt(event.request.headers.get('z')!);
+            const x: number = parseFloat(event.request.headers.get('x')!);
+            const y: number = parseFloat(event.request.headers.get('y')!);
+            const z: number = parseFloat(event.request.headers.get('z')!);
             if (isNaN(x) || isNaN(y) || isNaN(z)) {
                 return new Response('Invalid coordinates', { status: 400 });
             }
