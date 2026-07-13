@@ -1,6 +1,7 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import {
     linkAlive,
+    mavlinkConfigured,
     initializePort,
     requestStatus,
     requestParameters,
@@ -26,6 +27,12 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
                 return new Response(`Error: ${(err as Error).message}`, { status: 500 });
             }
         case 'heartbeat':
+            if (!mavlinkConfigured()) {
+                return new Response(JSON.stringify({ disabled: true }), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
             try {
                 const connected = linkAlive();
                 if (!connected) initializePort();

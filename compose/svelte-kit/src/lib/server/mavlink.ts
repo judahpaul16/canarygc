@@ -223,7 +223,7 @@ function noteSignatureReject(reason: string): void {
 // first packet arrives. Safe to call repeatedly, it only dials when no
 // connection exists.
 function initializePort(): void {
-    if (state.port || state.suspended) return;
+    if (state.port || state.suspended || !mavlinkConfigured()) return;
     try {
         // Reload signing config on every dial so a fresh link always picks up
         // the current key, self-healing a startup that raced the DB.
@@ -255,14 +255,23 @@ function teardownConnection(): void {
     state.connectedAt = 0;
 }
 
+function mavlinkTcpHost(): string {
+    return process.env.MAVLINK_TCP_HOST ?? 'sitl';
+}
+
+// A blank MAVLINK_TCP_HOST in development marks an MSP-only profile (Betaflight
+// or INAV), which carries no MAVLink vehicle, so the link stays down instead of
+// churning a doomed reconnect and the dashboard skips its offline nag.
+export function mavlinkConfigured(): boolean {
+    return process.env.NODE_ENV === 'production' || mavlinkTcpHost() !== '';
+}
+
 function openConnection(): void {
-    const isProduction = process.env.NODE_ENV === 'production';
-    if (isProduction === true) {
-        // Use UART serial port in production
+    if (process.env.NODE_ENV === 'production') {
         state.port = new SerialPort({ path: '/dev/ttyACM0', baudRate: 115200, lock: false });
     } else {
-        // Use TCP socket in development
-        const socket = connect({ host: 'sitl', port: 5760 });
+        const port = Number(process.env.MAVLINK_TCP_PORT ?? 5760);
+        const socket = connect({ host: mavlinkTcpHost(), port });
         socket.setKeepAlive(true, 1000);
         socket.setNoDelay(true);
         state.port = socket;

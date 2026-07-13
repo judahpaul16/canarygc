@@ -131,6 +131,9 @@
   // the offline modal; the link counts as down after several misses in a row.
   const OFFLINE_AFTER_MISSES = 3;
   let consecutiveMisses = 0;
+  // An MSP-only dev profile (Betaflight or INAV SITL) carries no MAVLink vehicle,
+  // so the heartbeat reports the link disabled and the offline modal stays hidden.
+  let mavlinkDisabled = $state(false);
 
   function setOnline(value: boolean) {
     if (value) {
@@ -153,6 +156,15 @@
       });
       if (response.ok) {
         const data = await response.json();
+        if (data && data.disabled) {
+          if (!mavlinkDisabled) {
+            mavlinkDisabled = true;
+            mavModelStore.set('N/A');
+            mavTypeStore.set('N/A');
+          }
+          return;
+        }
+        mavlinkDisabled = false;
         if (data.length > 0) {
           data.forEach((log: string) => {
             getLogs(log.replace(/\\"/g, '"') + '\n');
@@ -746,7 +758,7 @@
       {@render children?.()}
     </div>
 
-    {#if !online && !isNavHidden}
+    {#if !online && !mavlinkDisabled && !isNavHidden}
       <Offline />
     {/if}
   </div>

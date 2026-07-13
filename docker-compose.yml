@@ -36,6 +36,9 @@ services:
       - NODE_ENV=development
       - MSP_TCP_HOST=msp-sitl
       - MSP_TCP_PORT=5761
+      # Blank MAVLink host: this profile has no MAVLink vehicle, only the MSP FC,
+      # so the dashboard link stays idle instead of dialing a missing SITL.
+      - MAVLINK_TCP_HOST=
 
   # Production: built Node server on the Pi, talks to the autopilot over UART.
   app:
