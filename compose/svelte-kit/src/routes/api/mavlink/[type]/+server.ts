@@ -7,8 +7,7 @@ import {
     writeParameter,
     sendMavlinkCommand,
     sendManualControl,
-    setMissionCount,
-    loadMissionItem,
+    uploadMission,
     clearAllMissionItems,
     setPositionLocal,
     newLogs,
@@ -104,12 +103,8 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
             if (!actions) return new Response('Mission actions not provided', { status: 400 });
             try {
                 const items = JSON.parse(actions) as import('$lib/server/mavlink').MissionItemInput[];
-                await setMissionCount(items.length);
-                for (let i = 0; i < items.length; i++) {
-                    await new Promise((resolve) => setTimeout(resolve, 250)); // Pace item uploads
-                    await loadMissionItem(items[i], i);
-                }
-                return new Response('MAVLink mission loaded', { status: 200 });
+                const result = await uploadMission(items);
+                return new Response(result.message, { status: result.ok ? 200 : 502 });
             } catch (err) {
                 console.error(err);
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });

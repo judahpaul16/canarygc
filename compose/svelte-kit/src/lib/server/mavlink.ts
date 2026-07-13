@@ -14,6 +14,7 @@ import { building } from '$app/environment';
 import { REGISTRY } from '$lib/mavlink-registry'
 import { getSettings } from '$lib/server/settings';
 import { deriveSigningKey, nextSigningTimestamp } from '$lib/server/mavlink-signing';
+import { decideUploadAction, type UploadEvent } from '$lib/server/mission-upload';
 
 // Once telemetry has flowed, silence beyond this window means a stalled link
 // and the connection recycles. Before the first packet the connection just
@@ -30,6 +31,11 @@ const MAX_LOG_ENTRIES = 5000;
 
 const SUPERVISOR_INTERVAL_MS = 2000;
 const GCS_HEARTBEAT_MS = 1000;
+// Mission upload: how long to wait for the vehicle to request the next item (or
+// send the final ack) before resending, and how many MISSION_COUNT attempts to
+// make before giving up when the vehicle never requests an item.
+const MISSION_STEP_TIMEOUT_MS = 3000;
+const MISSION_MAX_COUNT_TRIES = 3;
 // A stream of rejected signatures logs at most once per window so a flood of
 // forged or wrong-key packets cannot fill the event log.
 const SIG_WARN_INTERVAL_MS = 5000;
@@ -57,6 +63,9 @@ interface MavlinkState {
     lastSignAt: number;
     sigRejects: number;
     lastSigWarnAt: number;
+    // Set while a mission upload is in flight; the reader routes each
+    // MISSION_REQUEST_INT and MISSION_ACK here so the handshake can proceed.
+    missionUpload: { onEvent: (event: UploadEvent) => void } | null;
 }
 
 // The link state lives on globalThis so a dev-server module reload reuses the
@@ -83,7 +92,8 @@ const state: MavlinkState = (g.__canarygcMavlink ??= {
     signingStrict: false,
     lastSignAt: 0,
     sigRejects: 0,
-    lastSigWarnAt: 0
+    lastSigWarnAt: 0,
+    missionUpload: null
 });
 
 function superviseLink(): void {
@@ -300,6 +310,15 @@ function setupPacketReader(): void {
             if (clazz.MSG_NAME === 'HEARTBEAT' && (sanitizedData as { type?: number }).type !== 6) {
                 state.latestHeartbeat = logEntry;
             }
+            // Drive the mission-upload handshake: the vehicle requests each item
+            // in turn and acks the completed plan.
+            if (state.missionUpload) {
+                if (clazz.MSG_NAME === 'MISSION_REQUEST_INT' || clazz.MSG_NAME === 'MISSION_REQUEST') {
+                    state.missionUpload.onEvent({ kind: 'request', seq: (sanitizedData as { seq: number }).seq });
+                } else if (clazz.MSG_NAME === 'MISSION_ACK') {
+                    state.missionUpload.onEvent({ kind: 'ack', type: (sanitizedData as { type: number }).type });
+                }
+            }
             if (logEntry.includes('_ACK') && !logEntry.includes('"command":512')) console.log(logEntry);
         }
     });
@@ -438,19 +457,15 @@ async function sendManualControl(x: number, y: number, z: number, r: number, but
     await sendMsg(state.port, msg);
 }
 
-async function setMissionCount(numItems: number) {
-    if (!state.port || !state.reader) {
-        state.online = false;
-        return;
-    }
-
+function sendMissionCount(numItems: number): void {
+    if (!state.port) return;
     const count = new common.MissionCount();
     count.targetSystem = 1;
     count.targetComponent = 1;
     count.count = numItems;
     count.opaqueId = 0;
-    await sendMsg(state.port, count);
-    await new Promise((resolve) => setTimeout(resolve, 250)); // Wait for 250 ms
+    count.missionType = 0; // MAV_MISSION_TYPE_MISSION
+    void sendMsg(state.port, count);
 }
 
 export interface MissionItemInput {
@@ -502,6 +517,70 @@ async function clearAllMissionItems() {
     await sendMsg(state.port, msg);
 }
 
+export interface MissionUploadResult {
+    ok: boolean;
+    message: string;
+}
+
+// Uploads a plan with the MISSION_REQUEST_INT handshake: send the count, then
+// send each item the vehicle asks for, and resolve on its final MISSION_ACK.
+// Every step has a timeout that resends, and an unanswered count gives up after
+// a few tries, so a lost packet cannot hang the upload.
+async function uploadMission(items: MissionItemInput[]): Promise<MissionUploadResult> {
+    if (!state.port || !state.reader) return { ok: false, message: 'No vehicle link.' };
+    if (items.length === 0) {
+        await clearAllMissionItems();
+        return { ok: true, message: 'Mission cleared.' };
+    }
+
+    return new Promise<MissionUploadResult>((resolve) => {
+        let settled = false;
+        let stepTimer: ReturnType<typeof setTimeout> | null = null;
+        let countTries = 0;
+
+        const finish = (ok: boolean, message: string) => {
+            if (settled) return;
+            settled = true;
+            if (stepTimer) clearTimeout(stepTimer);
+            state.missionUpload = null;
+            resolve({ ok, message });
+        };
+
+        const sendCount = () => {
+            countTries++;
+            sendMissionCount(items.length);
+            if (stepTimer) clearTimeout(stepTimer);
+            stepTimer = setTimeout(() => {
+                if (countTries >= MISSION_MAX_COUNT_TRIES) {
+                    finish(false, 'The vehicle did not request any mission item.');
+                } else {
+                    sendCount();
+                }
+            }, MISSION_STEP_TIMEOUT_MS);
+        };
+
+        state.missionUpload = {
+            onEvent: (event) => {
+                const action = decideUploadAction(event, items.length);
+                if (action.kind === 'send') {
+                    void loadMissionItem(items[action.seq], action.seq);
+                    if (stepTimer) clearTimeout(stepTimer);
+                    stepTimer = setTimeout(
+                        () => finish(false, 'Timed out waiting for the vehicle to request the next item.'),
+                        MISSION_STEP_TIMEOUT_MS
+                    );
+                } else if (action.kind === 'done') {
+                    finish(true, 'The vehicle accepted the mission.');
+                } else {
+                    finish(false, action.reason);
+                }
+            }
+        };
+
+        sendCount();
+    });
+}
+
 async function setPositionLocal(x: number, y: number, z: number) {
     if (!state.port || !state.reader) {
         state.online = false;
@@ -543,8 +622,7 @@ export {
     writeParameter,
     sendMavlinkCommand,
     sendManualControl,
-    setMissionCount,
-    loadMissionItem,
+    uploadMission,
     clearAllMissionItems,
     setPositionLocal,
     linkAlive,
