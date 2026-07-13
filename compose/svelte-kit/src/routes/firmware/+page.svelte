@@ -425,7 +425,7 @@
   /* The scroll container owns the padding, so its own bottom padding is always
      honored below the last panel where a scrolled child margin can collapse. */
   .settings { background: var(--primaryColor); color: var(--fontColor); padding: 1.5rem 1.5rem 2.5rem; }
-  .content { max-width: 1080px; margin: 0 auto; }
+  .content { max-width: 1080px; margin: 0 auto; padding-bottom: 2.5rem; }
 
   .head { margin-bottom: 1.35rem; padding-bottom: 1.1rem; border-bottom: 1px solid rgb(from var(--fontColor) r g b / 0.08); }
   .head h1 { font-size: 1.6rem; font-weight: 800; display: flex; align-items: center; gap: 0.6rem; }

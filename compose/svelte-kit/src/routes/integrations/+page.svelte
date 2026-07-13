@@ -370,7 +370,7 @@
   .content {
     max-width: 980px;
     margin: 0 auto;
-    padding-bottom: 2rem;
+    padding-bottom: 3rem;
   }
 
   /* Primary sections (SMTP, map tiles) stack in a wider left column; the

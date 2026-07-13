@@ -1588,6 +1588,44 @@
     display: none;
   }
 
+  /* Inset the native zoom, attribution, and MapLibre controls ~10px from the
+     window edges so they sit with the same gap as #location-display instead of
+     hugging the corners. */
+  .map-container :global(.leaflet-top) {
+    top: 10px;
+  }
+  .map-container :global(.leaflet-bottom) {
+    bottom: 10px;
+  }
+  .map-container :global(.leaflet-left) {
+    left: 10px;
+  }
+  .map-container :global(.leaflet-right) {
+    right: 10px;
+  }
+  .map-container :global(.leaflet-control) {
+    margin: 0;
+  }
+  .map-container :global(.maplibregl-ctrl-top-left) {
+    top: 10px;
+    left: 10px;
+  }
+  .map-container :global(.maplibregl-ctrl-top-right) {
+    top: 10px;
+    right: 10px;
+  }
+  .map-container :global(.maplibregl-ctrl-bottom-left) {
+    bottom: 10px;
+    left: 10px;
+  }
+  .map-container :global(.maplibregl-ctrl-bottom-right) {
+    bottom: 10px;
+    right: 10px;
+  }
+  .map-container :global(.maplibregl-ctrl) {
+    margin: 0;
+  }
+
   .map-container :global(.traffic-icon i) {
     color: #38bdf8;
     font-size: 16px;
@@ -1936,7 +1974,7 @@
   {/if}
   {#if isFullscreen || win}
     <div class="window-frame">
-  <div class="map-controls absolute top-3 right-2 z-[1] flex flex-col gap-2">
+  <div class="map-controls absolute top-2.5 right-2.5 z-[1] flex flex-col gap-2">
     <button class="map-btn" aria-label="Toggle fullscreen" data-tip={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'} data-tip-pos="left" onclick={handleFullScreen}>
       <i class="fas fa-expand"></i>
     </button>
