@@ -108,9 +108,10 @@
        their tooltips are not cut off. -->
   <div class="media">
     {#if showFeed}
-      {#if view === 'feed'}
-        <img id="no-signal" src="no-signal.gif" alt="No Signal" class="absolute top-0 w-full h-full object-cover z-10" />
-      {/if}
+      <!-- The static sits under the video (which covers it while the feed is up),
+           so hybrid shows the static behind the instruments when the feed is down
+           instead of the broken iframe. -->
+      <img id="no-signal" src="no-signal.gif" alt="No Signal" class="absolute top-0 w-full h-full object-cover z-10" />
       <iframe allowfullscreen id="live-feed" title="Live Feed" src={feedSrc}></iframe>
     {/if}
     {#if showHud}
