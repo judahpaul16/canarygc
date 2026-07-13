@@ -1,6 +1,6 @@
 <div align="center">
 
-<span style="color: red;">⚠️ **Warning**: This project is in **early development**. Use at your own risk! **It is your responsibility** to understand the risks involved as well as the **laws and regulations** governing the use of unmanned aerial vehicles (UAVs) in your area. ⚠️</span>
+<span style="color: red;">⚠️ **Warning**: This project is in **early development**. Use at your own risk! **It is your responsibility** to understand the risks involved as well as the **laws and regulations** governing the use of unmanned aerial vehicles (UAVs) in your area.</span>
 
 <img src="compose/svelte-kit/static/logo.png" alt="Canary Ground Control Logo" width="100"/>
 
