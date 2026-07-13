@@ -1,6 +1,6 @@
 <div align="center">
 
-<span style="color: red;">⚠️ **Warning**: This project is in **early development** and is not yet ready for production use. Use at your own risk! **It is your responsibility** to understand the risks involved as well as the **laws and regulations** governing the use of unmanned aerial vehicles (UAVs) in your area. ⚠️</span>
+<span style="color: red;">⚠️ **Warning**: This project is in **early development**. Use at your own risk! **It is your responsibility** to understand the risks involved as well as the **laws and regulations** governing the use of unmanned aerial vehicles (UAVs) in your area. ⚠️</span>
 
 <img src="compose/svelte-kit/static/logo.png" alt="Canary Ground Control Logo" width="100"/>
 
@@ -15,6 +15,8 @@ A web-based ground control station (GCS) for remote autopilot management via the
 
 <img src="screenshots/dashboard.png" alt="Illustration" width="auto"/>
 
+**TL;DR:** A ground control station that runs on the drone's Raspberry Pi, so you fly and monitor it from any browser over the internet.
+
 </div>
 
 ---
@@ -25,19 +27,21 @@ Unlike traditional GCS software, Canary Ground Control is a web-based applicatio
 
 ![Diagram](screenshots/diagram.png)
 
+The reference hardware build (Raspberry Pi 4B, Holybro S500 V2, camera, and 4G modem) is documented in the [Build guide](https://github.com/judahpaul16/canarygc/wiki/Build).
+
 ---
 
 ## ✨ Features
 
 * **Live telemetry & control** over MAVLink: attitude, position, battery, GPS, flight-mode changes, arm/disarm, and a virtual D-Pad.
 * **ArduPilot and PX4 support.** Flight-mode encoding and decoding is selected per autopilot through a strategy layer, so mode changes and armed-state readouts work on both stacks.
-* **Mission planner** with a 2D map (Leaflet) and a 3D map (MapLibre). One persistent map renders behind every page; the planner and the dashboard mini-map are live windows into it, and fullscreen expands the same map. Spline waypoint legs draw the curved hermite path ArduPilot actually flies, and the map toggles (overlays, view lock, street/satellite/3D) are remembered for the browser session.
+* **Mission planner** with a 2D map (Leaflet) and a 3D map (MapLibre). A single persistent map renders behind every page; the planner and dashboard mini-map are windows into it, and fullscreen expands the same map. Waypoint legs draw as smooth curves, and the map toggles (overlays, view lock, street/satellite/3D) persist for the browser session.
 * **Configurable basemaps.** Light, dark, and hybrid-satellite tiles resolve from a MapTiler key (with keyless fallbacks), and the map swaps to a real dark basemap when the theme toggles. Each mode's tile source is overridable in Integrations with a preset dropdown or a custom XYZ URL.
 * **Cross-autopilot missions.** A plan is stored autopilot-neutral and normalized to the connected stack on upload: ArduPilot runs the full command set, and PX4 substitutes or skips commands it cannot run and reports what changed.
 * **Mission import.** Load QGroundControl `.plan` and Mission Planner `.waypoints` (QGC WPL) files, or the app's own JSON, straight into the planner.
 * **Mission patterns.** Survey and orbit generators in the planner: click an area's corners for serpentine survey transects at a chosen spacing, grid angle, and altitude, or click a center for a waypoint ring at a chosen radius, modeled on QGroundControl's Survey and Orbit patterns.
-* **Gamepad flight.** A toggle on the dashboard Controls card and in the fullscreen manual-control dock streams a connected gamepad as MAVLink `MANUAL_CONTROL` (Mode 2 sticks, 20 Hz, hover-centered thrust), with a connect dialog that walks pairing and previews live stick input. Enabling in flight switches the vehicle to its stick-flying mode (PX4 Position, ArduPilot Loiter), and ending the stream, by toggle or disconnect, hands it straight to an autonomous hold.
-* **Smart path optimization.** One click routes the mission clear of hazards without changing the waypoint order. It pulls FAA obstacles and OpenStreetMap building heights for the mission area and, where a leg would strike one, raises the leg to clear it when the ceiling allows or routes around it when it is too tall. Restricted airspace is always routed around, and a waypoint inside it is moved out. The map overlays refetch as you pan, and the airspace, hazard, and building lookups are cached per area.
+* **Gamepad flight.** A toggle streams a connected gamepad as MAVLink `MANUAL_CONTROL` (Mode 2 sticks, 20 Hz, hover-centered thrust), with a connect dialog that previews live stick input. Enabling in flight switches the vehicle to its stick-flying mode (PX4 Position, ArduPilot Loiter); ending the stream hands it back to an autonomous hold.
+* **Smart path optimization.** One click routes the mission clear of hazards without reordering waypoints: it raises legs over FAA obstacles and OpenStreetMap buildings when the ceiling allows, routes around them when it does not, and always routes around restricted airspace. Overlays refetch as you pan and lookups are cached per area.
 * **Airspace overlays.** Both the 2D and 3D maps draw restricted and controlled airspace for the mission area, toggled from a map control, with a popup for each zone's class, altitude band, and operating implication. Worldwide coverage comes from [OpenAIP](https://www.openaip.net) with a key; without one it falls back to the FAA's keyless public airspace layers (US).
 * **LAANC ceilings and obstacles.** Two more toggleable overlays on both maps from the FAA's keyless layers: the UAS Facility Map grid colored by each square's pre-approved ceiling, and Digital Obstacle File towers and structures colored by height, each with plain-language popups.
 * **Live air traffic.** A toggleable ADS-B layer on both maps draws nearby aircraft with heading, altitude, and speed, merging traffic reported by the vehicle's onboard receiver (`ADSB_VEHICLE`) with keyless community network feeds (adsb.lol, adsb.fi).
