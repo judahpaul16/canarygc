@@ -14,6 +14,11 @@ FROM node:26-alpine
 
 WORKDIR /app
 
+# dfu-util writes firmware over USB DFU and binutils' objcopy lifts the Intel
+# HEX to the raw image it expects, so the firmware tab can flash a connected
+# Betaflight or INAV board.
+RUN apk add --no-cache dfu-util binutils
+
 # The server creates its SQLite schema on first boot (src/lib/server/db.ts),
 # so the runtime only needs a writable directory for the database file.
 RUN mkdir -p /app/src

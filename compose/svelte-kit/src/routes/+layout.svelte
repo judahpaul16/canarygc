@@ -579,6 +579,10 @@
           <i class="nav-icon fas fa-cog"></i>
           <div class="tooltip text-white">Vehicle Parameters</div>
         </a>
+        <a href="/firmware" class="nav-button mb-4 {currentPath === '/firmware' ? 'active' : ''}">
+          <i class="nav-icon fas fa-microchip"></i>
+          <div class="tooltip text-white">Firmware</div>
+        </a>
         <a href="/integrations" class="nav-button mb-4 {currentPath === '/integrations' ? 'active' : ''}">
           <i class="nav-icon fas fa-plug"></i>
           <div class="tooltip text-white">Integrations</div>
@@ -636,6 +640,9 @@
           </a>
           <a href="/parameters" onclick={(e) => { e.preventDefault(); handleNavigation('/parameters'); }} class="nav-button mb-4 {currentPath === '/parameters' ? 'active' : ''}">
             <i class="nav-icon fas fa-cog"></i>&nbsp;&nbsp;Vehicle Parameters
+          </a>
+          <a href="/firmware" onclick={(e) => { e.preventDefault(); handleNavigation('/firmware'); }} class="nav-button mb-4 {currentPath === '/firmware' ? 'active' : ''}">
+            <i class="nav-icon fas fa-microchip"></i>&nbsp;&nbsp;Firmware
           </a>
           <a href="/integrations" onclick={(e) => { e.preventDefault(); handleNavigation('/integrations'); }} class="nav-button mb-4 {currentPath === '/integrations' ? 'active' : ''}">
             <i class="nav-icon fas fa-plug"></i>&nbsp;&nbsp;Integrations
