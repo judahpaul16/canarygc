@@ -340,6 +340,7 @@
     .controls > .gamepad-btn {
       width: 2.25rem;
       margin: 0;
+      align-items: center;
     }
 
     .mini-map {

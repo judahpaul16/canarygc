@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, untrack } from 'svelte';
+  import { onMount, onDestroy, untrack } from 'svelte';
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import {
     mapStore,
@@ -311,6 +311,58 @@
     map?.on('zoom', () => {
       mapZoomStore.set(map.getZoom());
     });
+
+    observeContainerResize();
+  });
+
+  // Leaflet does not track its container size the way MapLibre does, so the
+  // full-viewport map keeps a stale tile grid, and paints gray where the
+  // viewport grew, until invalidateSize runs. The rect-driven effect only
+  // fires when the framed window changes size, which a fixed-size mini-map
+  // never does on a viewport resize, so a ResizeObserver on the container is
+  // what actually catches browser resizes, zoom, orientation, and panel
+  // changes. It coalesces bursts to one paint per frame and skips while the
+  // container is hidden (a background page, or the 3D view active).
+  let containerObserver: ResizeObserver | null = null;
+  let settleTimer: ReturnType<typeof setTimeout> | null = null;
+  function repaintForSize() {
+    if (!leafletMap) return;
+    const container = document.querySelector('.map-container') as HTMLElement | null;
+    if (!container || container.offsetWidth === 0 || container.offsetHeight === 0) return;
+    leafletMap.invalidateSize({ pan: false, debounceMoveend: true });
+    get(threeDMapStore)?.resize();
+    centerInWindow(get(mavLocationStore) as L.LatLng, get(mapZoomStore));
+    // Leaflet reads the size synchronously, but flex/grid can settle a frame
+    // later; a trailing pass fills any tiles the first invalidate missed.
+    if (settleTimer) clearTimeout(settleTimer);
+    settleTimer = setTimeout(() => leafletMap?.invalidateSize({ pan: false }), 200);
+  }
+  // The container is fixed full-viewport and always visible (unlike #map, which
+  // is display:none in the 3D view), so observing it catches every viewport
+  // resize, browser zoom, and panel change. A window resize listener backs it
+  // up. Leaflet does not track its own container size the way MapLibre does.
+  let onWindowResize: (() => void) | null = null;
+  function observeContainerResize() {
+    const container = document.querySelector('.map-container');
+    if (!container || typeof ResizeObserver === 'undefined') return;
+    let raf = 0;
+    onWindowResize = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(repaintForSize);
+    };
+    containerObserver = new ResizeObserver(onWindowResize);
+    containerObserver.observe(container);
+    window.addEventListener('resize', onWindowResize);
+  }
+
+  // onDestroy runs during SSR too, where document is undefined, so the DOM
+  // teardown is guarded to the browser.
+  onDestroy(() => {
+    if (typeof document === 'undefined') return;
+    containerObserver?.disconnect();
+    if (onWindowResize) window.removeEventListener('resize', onWindowResize);
+    if (settleTimer) clearTimeout(settleTimer);
+    document.removeEventListener('fullscreenchange', handleFullscreenChange);
   });
 
   function updateZoom(delta: number) {
@@ -1318,10 +1370,12 @@
     void $missionIndexStore;
     untrack(() => updateMarkersAndPolylines());
   });
-  // The window rect changes on every scroll tick; invalidateSize forces a
-  // reflow, so it only runs when the window actually resizes. A resize also
-  // recenters (arriving at a page with a different window); a pure move only
-  // recenters while the view is locked to the vehicle.
+  // The window rect changes on every scroll tick, but the fixed map only needs
+  // invalidateSize and a recenter when the window actually resizes (a page
+  // change, a viewport resize). A pure scroll moves only the CSS frame vars;
+  // recentering the Leaflet view on every scroll frame is what lags native
+  // scroll on mobile, and the vehicle-follow recenter already lives in the
+  // marker update, so scroll is left to reposition the frame alone.
   let trackedWinSize = { width: 0, height: 0 };
   $effect(() => {
     const w = win;
@@ -1334,8 +1388,6 @@
       if (resized) {
         trackedWinSize = { width, height };
         leafletMap.invalidateSize();
-      }
-      if (resized || get(lockViewStore)) {
         centerInWindow(get(mavLocationStore) as L.LatLng, get(mapZoomStore));
       }
     });

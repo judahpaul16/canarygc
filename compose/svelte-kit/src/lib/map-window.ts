@@ -5,15 +5,27 @@ function trackRect(node: HTMLElement, publish: (rect: MapRect | null) => void) {
     const r = node.getBoundingClientRect();
     publish({ top: r.top, left: r.left, width: r.width, height: r.height });
   }
+  // Scroll fires far faster than a frame; coalescing to one publish per frame
+  // stops the fixed map's window frame from thrashing and lagging native
+  // scroll on mobile. Resize and the observer stay immediate.
+  let scheduled = 0;
+  function scheduleUpdate() {
+    if (scheduled) return;
+    scheduled = requestAnimationFrame(() => {
+      scheduled = 0;
+      update();
+    });
+  }
   const observer = new ResizeObserver(update);
   observer.observe(node);
   window.addEventListener('resize', update);
-  window.addEventListener('scroll', update, true);
+  window.addEventListener('scroll', scheduleUpdate, true);
   update();
   return () => {
+    if (scheduled) cancelAnimationFrame(scheduled);
     observer.disconnect();
     window.removeEventListener('resize', update);
-    window.removeEventListener('scroll', update, true);
+    window.removeEventListener('scroll', scheduleUpdate, true);
     publish(null);
   };
 }
