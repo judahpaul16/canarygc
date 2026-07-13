@@ -48,7 +48,14 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_PAT || secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          LATEST_TAG=$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || echo "v0.0.0")
+          # Baseline is the newest tag that already has a release, so a commit
+          # whose release creation failed on an earlier run is reprocessed and
+          # its release backfilled (its tag push having already succeeded).
+          LATEST_TAG=v0.0.0
+          for t in $(git tag --list 'v[0-9]*' --sort=-v:refname); do
+            if gh release view "$t" >/dev/null 2>&1; then LATEST_TAG="$t"; break; fi
+          done
+
           ACCUM=${LATEST_TAG#v}
           MAJOR=$(echo "$ACCUM" | cut -d. -f1)
           MINOR=$(echo "$ACCUM" | cut -d. -f2)
@@ -76,12 +83,19 @@ jobs:
 
             V="v${MAJOR}.${MINOR}.${PATCH}"
 
-            if git rev-parse -q --verify "refs/tags/$V" >/dev/null; then
-              echo "tag $V already exists, skipping"
-            else
+            if ! git rev-parse -q --verify "refs/tags/$V" >/dev/null; then
               git tag "$V" "$SHA"
               git push origin "$V"
-              gh release create "$V" --target "$SHA" --title "$V" --notes "- ${SHA:0:7} ${SUBJECT}"
+            fi
+
+            if ! gh release view "$V" >/dev/null 2>&1; then
+              n=0
+              until gh release create "$V" --target "$SHA" --title "$V" --notes "- ${SHA:0:7} ${SUBJECT}"; do
+                n=$((n + 1))
+                if [ "$n" -ge 5 ]; then echo "release create $V failed after $n attempts" >&2; exit 1; fi
+                echo "release create $V failed, retry $n in ${n}0s" >&2
+                sleep "${n}0"
+              done
             fi
 
             FINAL="$V"
