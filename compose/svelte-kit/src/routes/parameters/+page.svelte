@@ -1,9 +1,10 @@
 <script lang="ts">
     import { darkModeStore } from '../../stores/customizationStore';
-    import { mavlinkParamStore, type Parameter } from '../../stores/mavlinkStore';
+    import { mavlinkParamStore, mavModelStore, type Parameter } from '../../stores/mavlinkStore';
     import { onMount } from 'svelte';
     import { writable, type Writable } from 'svelte/store';
     import { encodeParameterValue } from '../../lib/mavlink-client';
+    import { PARAM_GROUPS, paramInGroup, helpFor, type ParamGroup } from '../../lib/param-groups';
 
     const loading: Writable<boolean> = writable(false);
     const success: Writable<string | null> = writable(null);
@@ -27,12 +28,31 @@
     };
 
     let searchTerm = $state('');
+    let activeGroup = $state<string | null>(null);
+
+    const allParams: Parameter[] = $derived(
+        $mavlinkParamStore ? Array.from(Object.values($mavlinkParamStore)) : []
+    );
+
+    // Only surface a curated group once at least one of its parameters has
+    // arrived, so the chip row matches whichever autopilot is connected.
+    const availableGroups: ParamGroup[] = $derived(
+        PARAM_GROUPS.filter((group) =>
+            allParams.some((param) => paramInGroup(param.param_id, group, $mavModelStore))
+        )
+    );
+
+    const activeGroupDef: ParamGroup | null = $derived(
+        activeGroup ? (PARAM_GROUPS.find((group) => group.key === activeGroup) ?? null) : null
+    );
+
     let filteredParams: Parameter[] = $derived(
-        $mavlinkParamStore
-            ? Array.from(Object.values($mavlinkParamStore)).filter((param) =>
-                param.param_id.toLowerCase().includes(searchTerm.toLowerCase())
-              )
-            : []
+        allParams.filter((param) => {
+            const matchesSearch = param.param_id.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesGroup =
+                !activeGroupDef || paramInGroup(param.param_id, activeGroupDef, $mavModelStore);
+            return matchesSearch && matchesGroup;
+        })
     );
 
     onMount(() => {
@@ -187,9 +207,34 @@
                     </div>
                 </div>
 
+                <!-- Curated quick-config groups -->
+                {#if availableGroups.length > 0}
+                    <div class="mb-3 flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            class="group-chip {activeGroup === null ? 'active' : ''}"
+                            onclick={() => (activeGroup = null)}
+                        >
+                            <i class="fa-solid fa-list"></i> All
+                        </button>
+                        {#each availableGroups as group (group.key)}
+                            <button
+                                type="button"
+                                class="group-chip {activeGroup === group.key ? 'active' : ''}"
+                                onclick={() => (activeGroup = activeGroup === group.key ? null : group.key)}
+                            >
+                                <i class="fa-solid {group.icon}"></i> {group.label}
+                            </button>
+                        {/each}
+                    </div>
+                    {#if activeGroupDef}
+                        <p class="group-blurb mb-4">{activeGroupDef.blurb}</p>
+                    {/if}
+                {/if}
+
                 <!-- Search -->
                 <div class="mb-6">
-                    <input 
+                    <input
                         type="text"
                         bind:value={searchTerm}
                         placeholder="Search parameters..."
@@ -233,7 +278,12 @@
                             {#key mavlinkParamStore}
                                 {#each filteredParams as param (param.param_id)}
                                     <tr class="border-b">
-                                        <td class="p-2 param_id" style="color: var(--fontColor)">{param.param_id}</td>
+                                        <td class="p-2 param_id" style="color: var(--fontColor)">
+                                            {param.param_id}
+                                            {#if helpFor(param.param_id)}
+                                                <span class="param-help">{helpFor(param.param_id)}</span>
+                                            {/if}
+                                        </td>
                                         <td class="p-2">
                                             <input 
                                                 type="number"
@@ -292,6 +342,44 @@
         background-color: var(--tertiaryColor);
         color: var(--fontColor);
         border: 1px solid var(--tertiaryColor);
+    }
+
+    .group-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.35rem 0.8rem;
+        border-radius: 9999px;
+        font-size: 0.85rem;
+        background-color: var(--tertiaryColor);
+        color: var(--fontColor);
+        border: 1px solid transparent;
+        transition: background-color 0.15s, border-color 0.15s;
+    }
+
+    .group-chip:hover {
+        border-color: #3b82f6;
+    }
+
+    .group-chip.active {
+        background-color: #3b82f6;
+        color: #fff;
+    }
+
+    .group-blurb {
+        color: var(--fontColor);
+        opacity: 0.75;
+        font-size: 0.85rem;
+        max-width: 60ch;
+    }
+
+    .param-help {
+        display: block;
+        color: var(--fontColor);
+        opacity: 0.6;
+        font-size: 0.75rem;
+        margin-top: 0.15rem;
+        max-width: 42ch;
     }
 
     tr {
