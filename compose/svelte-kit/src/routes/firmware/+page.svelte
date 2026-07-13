@@ -3,7 +3,7 @@
   import { notify, showModal } from '../../lib/overlays';
   import Select from '../../components/Select.svelte';
 
-  interface FcIdentity { variant: string; firmware: string; version: string; apiVersion: string; }
+  interface FcIdentity { variant: string; firmware: string; version: string; apiVersion: string; boardIdentifier: string; targetName: string; boardName: string; }
   interface BetaflightTarget { target: string; manufacturer: string; mcu: string; }
   interface FirmwareRelease { release: string; type: string; date: string; url: string; }
   interface InavRelease { release: string; tag: string; date: string; url: string; targets: string[]; }
@@ -83,12 +83,36 @@
     try {
       const res = await fetch('/api/msp/detect');
       const data = await res.json();
-      if (res.ok) identity = data;
+      if (res.ok) {
+        identity = data;
+        autoSelectTarget(data);
+      }
       else notify({ title: 'No flight controller', content: data.error ?? 'Could not reach the FC.', type: 'warning' });
     } catch {
       notify({ title: 'Detect failed', content: 'Could not reach the flight controller.', type: 'warning' });
     } finally {
       detecting = false;
+    }
+  }
+
+  // Matches the detected board's target name (falling back to its board name
+  // and 4-char identifier) against the loaded catalog and selects it, so a
+  // detected Betaflight or INAV board fills its own target.
+  function autoSelectTarget(id: FcIdentity) {
+    const candidates = [id.targetName, id.boardName, id.boardIdentifier]
+      .map((s) => (s ?? '').trim())
+      .filter(Boolean);
+    if (candidates.length === 0) return;
+    const eq = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+
+    if (id.firmware === 'INAV') {
+      const match = inavTargets.find((t) => candidates.some((c) => eq(t, c)));
+      if (match) { inavTarget = match; notify({ title: 'Target detected', content: `Selected INAV target ${match}.`, duration: 4000 }); }
+      else notify({ title: 'Board detected', content: `${candidates[0]} has no match in this release. Search and pick the target.`, type: 'info', duration: 5000 });
+    } else if (id.firmware === 'Betaflight') {
+      const match = (betaflight?.targets ?? []).find((t) => candidates.some((c) => eq(t.target, c)));
+      if (match) { bfTarget = match.target; notify({ title: 'Target detected', content: `Selected Betaflight target ${match.target}.`, duration: 4000 }); }
+      else notify({ title: 'Board detected', content: `${candidates[0]} has no cloud target match. Search and pick the target.`, type: 'info', duration: 5000 });
     }
   }
 
@@ -185,7 +209,7 @@
               {#if !configured}
                 <p class="muted">Set <code>MSP_SERIAL_PATH</code> to a Betaflight or INAV board's serial device to enable detection.</p>
               {:else if identity}
-                <p class="muted">{identity.firmware} {identity.version} · variant {identity.variant} · MSP API {identity.apiVersion}</p>
+                <p class="muted">{identity.firmware} {identity.version} · variant {identity.variant} · MSP API {identity.apiVersion}{#if identity.targetName || identity.boardName} · board {identity.boardName || identity.targetName}{/if}</p>
               {:else}
                 <p class="muted">Reads the firmware name and version over the MultiWii Serial Protocol.</p>
               {/if}

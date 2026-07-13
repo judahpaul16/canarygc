@@ -9,6 +9,7 @@ import {
 	decodeApiVersion,
 	decodeFcVariant,
 	decodeFcVersion,
+	decodeBoardInfo,
 	decodeAttitude,
 	decodeRawGps,
 	decodeAnalog,
@@ -170,6 +171,9 @@ export interface FcIdentity {
 	firmware: 'Betaflight' | 'INAV' | 'Cleanflight' | 'Unknown';
 	version: string;
 	apiVersion: string;
+	boardIdentifier: string;
+	targetName: string;
+	boardName: string;
 }
 
 const FIRMWARE_NAMES: Record<string, FcIdentity['firmware']> = {
@@ -184,13 +188,25 @@ export async function detectFc(): Promise<FcIdentity> {
 		request(MSP.FC_VERSION),
 		request(MSP.API_VERSION)
 	]);
+
+	let board = { boardIdentifier: '', targetName: '', boardName: '' };
+	try {
+		const boardFrame = await request(MSP.BOARD_INFO);
+		board = decodeBoardInfo(boardFrame.payload) ?? board;
+	} catch {
+		// Older firmware may not answer BOARD_INFO; identity still resolves.
+	}
+
 	const variant = decodeFcVariant(variantFrame.payload) ?? 'Unknown';
 	const api = decodeApiVersion(apiFrame.payload);
 	return {
 		variant,
 		firmware: FIRMWARE_NAMES[variant] ?? 'Unknown',
 		version: decodeFcVersion(versionFrame.payload) ?? '0.0.0',
-		apiVersion: api ? `${api.major}.${api.minor}` : '0.0'
+		apiVersion: api ? `${api.major}.${api.minor}` : '0.0',
+		boardIdentifier: board.boardIdentifier,
+		targetName: board.targetName,
+		boardName: board.boardName
 	};
 }
 

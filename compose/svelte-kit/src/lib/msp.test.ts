@@ -8,11 +8,20 @@ import {
 	decodeApiVersion,
 	decodeFcVariant,
 	decodeFcVersion,
+	decodeBoardInfo,
 	decodeAttitude,
 	decodeRawGps,
 	decodeAnalog,
 	decodeAltitude
 } from './msp';
+
+function buildBoardInfo(id: string, target: string, board: string): Uint8Array {
+	const enc = new TextEncoder();
+	const t = enc.encode(target);
+	const b = enc.encode(board);
+	const bytes = [...enc.encode(id), 0, 0, 2, 0, t.length, ...t, b.length, ...b];
+	return new Uint8Array(bytes);
+}
 
 describe('MSP framing', () => {
 	it('encodes an empty MSP v1 request with an XOR checksum', () => {
@@ -150,5 +159,25 @@ describe('MSP decoders', () => {
 	it('returns null for short payloads', () => {
 		expect(decodeRawGps(new Uint8Array(4))).toBeNull();
 		expect(decodeAttitude(new Uint8Array(2))).toBeNull();
+	});
+});
+
+describe('decodeBoardInfo', () => {
+	it('reads the identifier, target name, and board name', () => {
+		const info = decodeBoardInfo(buildBoardInfo('SBF4', 'SPEEDYBEEF405', 'SpeedyBee F405'));
+		expect(info).toEqual({
+			boardIdentifier: 'SBF4',
+			targetName: 'SPEEDYBEEF405',
+			boardName: 'SpeedyBee F405'
+		});
+	});
+
+	it('yields the identifier with empty names when the payload carries no strings', () => {
+		const info = decodeBoardInfo(new Uint8Array([0x53, 0x42, 0x46, 0x34, 0, 0]));
+		expect(info).toEqual({ boardIdentifier: 'SBF4', targetName: '', boardName: '' });
+	});
+
+	it('returns null for a payload shorter than the identifier and version', () => {
+		expect(decodeBoardInfo(new Uint8Array(4))).toBeNull();
 	});
 });

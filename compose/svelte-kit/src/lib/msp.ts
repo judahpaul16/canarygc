@@ -156,6 +156,31 @@ export function decodeFcVersion(payload: Uint8Array): string | null {
 	return `${payload[0]}.${payload[1]}.${payload[2]}`;
 }
 
+// MSP_BOARD_INFO: a 4-char board identifier and a U16 board version, then, on
+// modern Betaflight and INAV, a board-type byte, a capabilities byte, and
+// length-prefixed target name, board name, and manufacturer id. The target
+// name is the value that matches a firmware catalog target. Reads defensively
+// so a short or old payload still yields whatever fields it carries.
+export function decodeBoardInfo(
+	payload: Uint8Array
+): { boardIdentifier: string; targetName: string; boardName: string } | null {
+	if (payload.length < 6) return null;
+	const boardIdentifier = String.fromCharCode(...payload.subarray(0, 4)).replace(/\0+$/, '');
+	let offset = 6;
+	const readString = (): string => {
+		if (offset >= payload.length) return '';
+		const len = payload[offset++];
+		if (len === 0 || offset + len > payload.length) return '';
+		const s = String.fromCharCode(...payload.subarray(offset, offset + len));
+		offset += len;
+		return s;
+	};
+	offset += 2; // boardType, targetCapabilities
+	const targetName = readString();
+	const boardName = readString();
+	return { boardIdentifier, targetName, boardName };
+}
+
 export function decodeAttitude(payload: Uint8Array): { rollDeg: number; pitchDeg: number; yawDeg: number } | null {
 	if (payload.length < 6) return null;
 	const v = view(payload);
