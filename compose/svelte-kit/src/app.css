@@ -293,6 +293,17 @@ iframe {
   transform: none;
 }
 
+/* Below the control and hanging inward from its left edge; for controls near a
+   clipping container's left edge (the live-feed view toggle), so the tooltip
+   extends rightward into view instead of off the edge. */
+[data-tip][data-tip-pos='below-right']::after {
+  top: calc(100% + 8px);
+  bottom: auto;
+  left: 0;
+  right: auto;
+  transform: none;
+}
+
 .dashboard {
   opacity: 0;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);

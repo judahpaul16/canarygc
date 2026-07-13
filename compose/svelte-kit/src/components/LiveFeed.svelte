@@ -103,9 +103,14 @@
 </script>
 
 <div id="live-feed-container" class="text-[#ffffff] rounded-2xl h-full relative overflow-hidden">
-  <div class="container w-full h-full relative">
+  <!-- The video, no-signal fallback, and HUD are clipped to the rounded frame
+       so nothing bleeds past the corners; the controls sit outside this clip so
+       their tooltips are not cut off. -->
+  <div class="media">
     {#if showFeed}
-      <img id="no-signal" src="no-signal.gif" alt="No Signal" class="absolute top-0 w-full h-full object-cover z-10" />
+      {#if view === 'feed'}
+        <img id="no-signal" src="no-signal.gif" alt="No Signal" class="absolute top-0 w-full h-full object-cover z-10" />
+      {/if}
       <iframe allowfullscreen id="live-feed" title="Live Feed" src={feedSrc}></iframe>
     {/if}
     {#if showHud}
@@ -113,35 +118,35 @@
         <Hud {compact} transparent={view === 'hybrid'} />
       </div>
     {/if}
-
-    <div class="view-toggle absolute top-2 left-2 z-30" class:small={compact}>
-      {#each VIEWS as v (v.id)}
-        <button
-          class="seg"
-          class:active={view === v.id}
-          aria-label={v.label}
-          aria-pressed={view === v.id}
-          data-tip={v.label}
-          data-tip-pos="below"
-          onclick={() => setFeedView(v.id)}
-        >
-          <i class="fas {v.icon}"></i>
-        </button>
-      {/each}
-    </div>
-
-    {#if !compact}
-      {#if showFeed}
-        <div class="caution-text opacity-[50%] text-md absolute bottom-2 left-2 bg-[#252525cf] px-2 py-1 mr-[0.5em] rounded-full z-20">Use Caution: The feed may be slightly delayed.</div>
-      {/if}
-      <button class="chrome absolute top-2 right-14 p-2 px-[14px] rounded-full z-30 opacity-[60%]" aria-label="Rotate video" data-tip="Rotate video 180°" data-tip-pos="below" onclick={rotateVideo}>
-        <i class="fas fa-sync-alt"></i>
-      </button>
-      <button class="chrome absolute top-2 right-2 p-2 px-[14px] rounded-full z-30 opacity-[60%]" aria-label="Toggle fullscreen" data-tip="Toggle fullscreen" data-tip-pos="below" onclick={handleFullScreen}>
-        <i class="fas fa-expand"></i>
-      </button>
-    {/if}
   </div>
+
+  <div class="view-toggle absolute top-2 left-2 z-30" class:small={compact}>
+    {#each VIEWS as v (v.id)}
+      <button
+        class="seg"
+        class:active={view === v.id}
+        aria-label={v.label}
+        aria-pressed={view === v.id}
+        data-tip={v.label}
+        data-tip-pos="below-right"
+        onclick={() => setFeedView(v.id)}
+      >
+        <i class="fas {v.icon}"></i>
+      </button>
+    {/each}
+  </div>
+
+  {#if !compact}
+    {#if view === 'feed'}
+      <div class="caution-text opacity-[50%] text-md absolute bottom-2 left-2 bg-[#252525cf] px-2 py-1 mr-[0.5em] rounded-full z-20">Use Caution: The feed may be slightly delayed.</div>
+    {/if}
+    <button class="chrome absolute top-2 right-14 p-2 px-[14px] rounded-full z-30 opacity-[60%]" aria-label="Rotate video" data-tip="Rotate video 180°" data-tip-pos="below" onclick={rotateVideo}>
+      <i class="fas fa-sync-alt"></i>
+    </button>
+    <button class="chrome absolute top-2 right-2 p-2 px-[14px] rounded-full z-30 opacity-[60%]" aria-label="Toggle fullscreen" data-tip="Toggle fullscreen" data-tip-pos="below" onclick={handleFullScreen}>
+      <i class="fas fa-expand"></i>
+    </button>
+  {/if}
 </div>
 
 <style>
@@ -157,6 +162,13 @@
 
   #no-signal {
     background-color: var(--primaryColor);
+  }
+
+  .media {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    border-radius: 0.6rem;
   }
 
   .hud-layer {

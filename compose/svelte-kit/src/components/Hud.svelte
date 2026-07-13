@@ -38,11 +38,12 @@
   // every `labelEvery`. y grows downward, so a higher value sits higher up.
   function tape(value: number, step: number, count: number, labelEvery: number) {
     const base = Math.round(value / step) * step;
-    const out: { y: number; label: string | null }[] = [];
+    const out: { v: number; y: number; label: string | null }[] = [];
     for (let i = -count; i <= count; i++) {
       const tickVal = base + i * step;
       const y = CY + (value - tickVal) * (34 / (step * count));
       out.push({
+        v: tickVal,
         y,
         label: tickVal % labelEvery === 0 ? String(Math.round(tickVal)) : null
       });
@@ -71,15 +72,17 @@
 </script>
 
 <div class="hud" class:transparent class:compact>
-  <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Attitude indicator">
+  <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Attitude indicator" class:over-video={transparent}>
     <defs>
       <clipPath id="hud-clip"><rect x="0" y="0" width="320" height="180" /></clipPath>
     </defs>
 
     <g clip-path="url(#hud-clip)">
       <g transform={horizonTransform}>
-        <rect x="-260" y="-620" width="840" height="710" fill="#2f7fd1" />
-        <rect x="-260" y={CY} width="840" height="620" fill="#8a5a2b" />
+        {#if !transparent}
+          <rect x="-260" y="-620" width="840" height="710" fill="#2f7fd1" />
+          <rect x="-260" y={CY} width="840" height="620" fill="#8a5a2b" />
+        {/if}
         <line x1="-260" y1={CY} x2="580" y2={CY} stroke="#fff" stroke-width="1.4" />
         {#each pitchRungs as deg (deg)}
           {@const y = CY - deg * PX_PER_DEG}
@@ -116,8 +119,8 @@
     </g>
 
     <!-- Airspeed tape (left) -->
-    <rect x="0" y="0" width="42" height="180" fill="#0009" />
-    {#each speedTape as t (t.y)}
+    {#if !transparent}<rect x="0" y="0" width="42" height="180" fill="#0009" />{/if}
+    {#each speedTape as t (t.v)}
       <line x1="34" y1={t.y} x2={t.label ? 26 : 30} y2={t.y} stroke="#cbd5e1" stroke-width="0.8" />
       {#if t.label}<text x="24" y={t.y + 3} class="tape" text-anchor="end">{t.label}</text>{/if}
     {/each}
@@ -126,8 +129,8 @@
     <text x="21" y="14" class="unit" text-anchor="middle">m/s</text>
 
     <!-- Altitude tape (right) -->
-    <rect x="278" y="0" width="42" height="180" fill="#0009" />
-    {#each altTape as t (t.y)}
+    {#if !transparent}<rect x="278" y="0" width="42" height="180" fill="#0009" />{/if}
+    {#each altTape as t (t.v)}
       <line x1="286" y1={t.y} x2={t.label ? 294 : 290} y2={t.y} stroke="#cbd5e1" stroke-width="0.8" />
       {#if t.label}<text x="296" y={t.y + 3} class="tape">{t.label}</text>{/if}
     {/each}
@@ -136,7 +139,7 @@
     <text x="299" y="14" class="unit" text-anchor="middle">m AGL</text>
 
     <!-- Heading tape (top) -->
-    <rect x="42" y="0" width="236" height="16" fill="#0009" />
+    {#if !transparent}<rect x="42" y="0" width="236" height="16" fill="#0009" />{/if}
     {#each headingTape as t (t.deg)}
       <line x1={t.x} y1="16" x2={t.x} y2={t.card ? 8 : 11} stroke="#cbd5e1" stroke-width="0.8" />
       {#if t.card}<text x={t.x} y="8" class="tape" text-anchor="middle">{t.card}</text>{/if}
@@ -169,6 +172,11 @@
     width: 100%;
     height: 100%;
     display: block;
+  }
+  /* Over live video the instruments carry only lines and numbers, so a dark
+     halo keeps them legible against a bright or busy frame. */
+  svg.over-video {
+    filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 2px rgba(0, 0, 0, 0.7));
   }
   .rung {
     fill: #fff;
