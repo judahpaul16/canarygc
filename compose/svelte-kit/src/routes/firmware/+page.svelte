@@ -53,6 +53,8 @@
       const res = await fetch('/api/msp/status');
       configured = (await res.json()).configured;
     } catch { configured = false; }
+    // Auto-detect a connected board so it shows on load without a manual click.
+    if (configured) detect();
 
     const results = await Promise.allSettled([
       fetch('/api/firmware/inav'),

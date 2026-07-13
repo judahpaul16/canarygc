@@ -134,6 +134,9 @@
   // An MSP-only dev profile (Betaflight or INAV SITL) carries no MAVLink vehicle,
   // so the heartbeat reports the link disabled and the offline modal stays hidden.
   let mavlinkDisabled = $state(false);
+  // Cached MSP flight-controller identity so the dashboard shows the connected
+  // Betaflight or INAV board rather than an empty MAVLink vehicle.
+  let mspIdentity: { firmware: string; boardName: string; targetName: string; boardIdentifier: string } | null = null;
 
   function setOnline(value: boolean) {
     if (value) {
@@ -157,11 +160,26 @@
       if (response.ok) {
         const data = await response.json();
         if (data && data.disabled) {
-          if (!mavlinkDisabled) {
-            mavlinkDisabled = true;
-            mavModelStore.set('N/A');
-            mavTypeStore.set('N/A');
+          mavlinkDisabled = true;
+          // No MAVLink vehicle: identify the MSP flight controller so the
+          // dashboard shows the connected Betaflight or INAV board.
+          if (!mspIdentity) {
+            try {
+              const fc = await fetch('/api/msp/detect');
+              if (fc.ok) {
+                const id = await fc.json();
+                if (id.firmware && id.firmware !== 'Unknown') {
+                  mspIdentity = id;
+                  mavModelStore.set(id.firmware);
+                  mavTypeStore.set(id.boardName || id.targetName || id.boardIdentifier || 'MSP');
+                }
+              }
+            } catch {
+              // Retry on the next poll.
+            }
           }
+          onlineStore.set(Boolean(mspIdentity));
+          if (!mspIdentity) mavModelStore.set('N/A');
           return;
         }
         mavlinkDisabled = false;
