@@ -10,7 +10,7 @@
     notification?: boolean;
     confirmLabel?: string;
     cancelLabel?: string;
-    inputs?: { type: string; placeholder: string; required: boolean }[] | null;
+    inputs?: { type: string; placeholder: string; required: boolean; label?: string }[] | null;
     onConfirm?: (values: string[]) => void | Promise<void>;
     onCancel?: (values: string[]) => void;
     onClose?: () => void;
@@ -95,28 +95,27 @@
             {@html content}
           {:else}{content}{/if}
           {#if inputs}
-            <div class="text-center gap-2 items-center justify-center w-full">
+            <div class="input-grid">
               {#each inputs as input, i (i)}
-                {#if input.type === 'number'}
-                  <input type="number" step="0.0001"
-                    placeholder={input.placeholder}
-                    bind:value={inputValues[i]}
-                    class="form-input"
-                  required />
-                {:else if input.type === 'text'}
-                  <input type="text"
-                    placeholder={input.placeholder}
-                    bind:value={inputValues[i]}
-                    class="form-input"
-                  required />
-                {:else if input.type === 'checkbox'}
-                  <div class="flex justify-center items-center">
+                {#if input.type === 'checkbox'}
+                  <div class="check-field">
                     <input type="checkbox"
                       id={`modal-checkbox-${i}`}
                       bind:checked={checkboxValues[i]}
-                      class="form-input"
                     />
-                    <label for={`modal-checkbox-${i}`} class="ml-2">{input.placeholder}</label>
+                    <label for={`modal-checkbox-${i}`}>{input.label ?? input.placeholder}</label>
+                  </div>
+                {:else}
+                  <div class="field">
+                    {#if input.label}<label for={`modal-input-${i}`}>{input.label}</label>{/if}
+                    <input
+                      id={`modal-input-${i}`}
+                      type={input.type === 'number' ? 'number' : 'text'}
+                      step={input.type === 'number' ? '0.0001' : undefined}
+                      placeholder={input.placeholder}
+                      bind:value={inputValues[i]}
+                      class="form-input"
+                      required />
                   </div>
                 {/if}
               {/each}
@@ -157,19 +156,50 @@
     transition: background-color 0.3s, color 0.3s;
   }
 
+  /* One or two columns depending on field count; each field is full-width in
+     its cell so placeholders and labels never truncate. */
+  .input-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.75rem;
+    margin-top: 0.9rem;
+    text-align: left;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 0;
+  }
+
+  .field label {
+    font-size: 0.78rem;
+    opacity: 0.75;
+    font-weight: 600;
+  }
+
+  .check-field {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    grid-column: 1 / -1;
+  }
+
   .form-input {
     appearance: none;
-    width: fit-content;
-    max-width: 150px;
-    margin: 0.5em;
-    padding: 0.5rem;
+    width: 100%;
+    padding: 0.5rem 0.7rem;
     border: 2px solid var(--secondaryColor);
-    border-radius: var(--radius-surface);
+    border-radius: var(--radius-control);
     background-color: var(--tertiaryColor);
     color: var(--fontColor);
     font-size: 10pt;
-    transition: border-color 0.3s;
-    transition: background-color 0.3s ease;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+  }
+
+  .form-input::placeholder {
+    color: rgb(from var(--fontColor) r g b / 0.4);
   }
 
   .form-input:focus {

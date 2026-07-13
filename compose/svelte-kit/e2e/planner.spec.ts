@@ -87,9 +87,9 @@ test.describe('mission planner window', () => {
 			await page.waitForTimeout(450);
 		}
 		await page.mouse.dblclick(frame.left + frame.w * 0.45, frame.top + frame.h * 0.5);
-		await page.locator('input[placeholder*="Transect" i]').fill('40');
-		await page.locator('input[placeholder*="Grid angle" i]').fill('90');
-		await page.locator('input[placeholder*="Altitude" i]').fill('35');
+		await page.getByLabel('Transect spacing (m)').fill('40');
+		await page.getByLabel('Grid angle from north (deg)').fill('90');
+		await page.getByLabel('Altitude (m)').fill('35');
 		await page.click('button:has-text("Generate")');
 		await expect
 			.poll(

@@ -655,9 +655,9 @@
         confirmation: true,
         confirmLabel: 'Generate',
         inputs: [
-          { type: 'number', placeholder: 'Transect spacing in meters, e.g. 25', required: true },
-          { type: 'number', placeholder: 'Grid angle in degrees from north, e.g. 0', required: true },
-          { type: 'number', placeholder: 'Altitude in meters, e.g. 40', required: true }
+          { type: 'number', label: 'Transect spacing (m)', placeholder: 'e.g. 25', required: true },
+          { type: 'number', label: 'Grid angle from north (deg)', placeholder: 'e.g. 0', required: true },
+          { type: 'number', label: 'Altitude (m)', placeholder: 'e.g. 40', required: true }
         ],
         onConfirm: (values) => {
           appendPatternWaypoints(
@@ -678,10 +678,10 @@
       confirmation: true,
       confirmLabel: 'Generate',
       inputs: [
-        { type: 'number', placeholder: 'Radius in meters, e.g. 50', required: true },
-        { type: 'number', placeholder: 'Waypoints around the circle, e.g. 12', required: true },
-        { type: 'number', placeholder: 'Altitude in meters, e.g. 30', required: true },
-        { type: 'text', placeholder: 'Direction: cw or ccw', required: true }
+        { type: 'number', label: 'Radius (m)', placeholder: 'e.g. 50', required: true },
+        { type: 'number', label: 'Waypoints around the circle', placeholder: 'e.g. 12', required: true },
+        { type: 'number', label: 'Altitude (m)', placeholder: 'e.g. 30', required: true },
+        { type: 'text', label: 'Direction', placeholder: 'cw or ccw', required: true }
       ],
       onConfirm: (values) => {
         appendPatternWaypoints(

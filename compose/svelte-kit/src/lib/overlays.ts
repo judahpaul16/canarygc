@@ -6,6 +6,9 @@ export interface ModalInput {
   type: string;
   placeholder: string;
   required: boolean;
+  // Shown above the field; the placeholder becomes a short example hint. A
+  // labelled field stays identified when filled and never truncates.
+  label?: string;
 }
 
 export type NotificationType = 'success' | 'warning' | 'error' | 'info';
