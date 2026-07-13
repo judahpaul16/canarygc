@@ -33,11 +33,11 @@ export function registerFailure(state: RateState | undefined, now: number): Rate
 
 const store = new Map<string, RateState>();
 
-export function loginLockedMs(key: string, now = Date.now()): number {
+export function lockedMs(key: string, now = Date.now()): number {
 	return lockedForMs(store.get(key), now);
 }
 
-export function noteLoginFailure(key: string, now = Date.now()): void {
+export function noteFailure(key: string, now = Date.now()): void {
 	store.set(key, registerFailure(store.get(key), now));
 	// Drop entries whose window and lock have both elapsed so the map cannot
 	// grow without bound under a spray of distinct client addresses.
@@ -46,6 +46,6 @@ export function noteLoginFailure(key: string, now = Date.now()): void {
 	}
 }
 
-export function clearLoginFailures(key: string): void {
+export function clearFailures(key: string): void {
 	store.delete(key);
 }

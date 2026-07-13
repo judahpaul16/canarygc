@@ -3,6 +3,7 @@ import { sendMail } from "$lib/server/mailer";
 import { randomBytes, createHash } from "node:crypto";
 import type { RequestHandler } from '@sveltejs/kit';
 import type { DatabaseUser } from "$lib/server/db";
+import { lockedMs, noteFailure } from "$lib/server/rate-limit";
 
 const RESET_TTL_MS = 60 * 60 * 1000;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -15,9 +16,21 @@ function json(message: string, status: number): Response {
 }
 
 export const POST: RequestHandler = async (event): Promise<Response> => {
+    const generic = json("If that email is on file, a reset link is on its way.", 200);
+
+    // Cap reset requests per client so a known operator email cannot be flooded
+    // with reset mail; a rate-limited client gets the same generic reply.
+    let rateKey: string;
+    try {
+        rateKey = `forgot:${event.getClientAddress()}`;
+    } catch {
+        rateKey = "forgot:unknown";
+    }
+    if (lockedMs(rateKey) > 0) return generic;
+    noteFailure(rateKey);
+
     const body = await event.request.json().catch(() => ({}));
     const email = body.email;
-    const generic = json("If that email is on file, a reset link is on its way.", 200);
     if (typeof email !== "string" || !EMAIL_RE.test(email)) return generic;
 
     const result = await db.execute({ sql: "SELECT * FROM user WHERE email = ?", args: [email] });

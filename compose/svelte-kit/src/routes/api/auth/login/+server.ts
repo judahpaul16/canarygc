@@ -2,7 +2,7 @@ import { lucia } from "$lib/server/auth";
 import { verify } from "@node-rs/argon2";
 import { db } from "$lib/server/db";
 import type { RequestHandler } from '@sveltejs/kit';
-import { loginLockedMs, noteLoginFailure, clearLoginFailures } from "$lib/server/rate-limit";
+import { lockedMs, noteFailure, clearFailures } from "$lib/server/rate-limit";
 
 import type { DatabaseUser } from "$lib/server/db";
 
@@ -41,10 +41,10 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
         } catch {
             rateKey = `user:${typeof username === "string" ? username : ""}`;
         }
-        const lockedMs = loginLockedMs(rateKey);
-        if (lockedMs > 0) {
+        const lockMs = lockedMs(`login:${rateKey}`);
+        if (lockMs > 0) {
             return json("Too many failed attempts. Try again later.", 429, {
-                "Retry-After": String(Math.ceil(lockedMs / 1000))
+                "Retry-After": String(Math.ceil(lockMs / 1000))
             });
         }
 
@@ -72,17 +72,17 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
         const result = await db.execute({ sql: "SELECT * FROM user WHERE username = ?", args: [username] });
         const existingUser = result.rows[0] as unknown as DatabaseUser | undefined;
         if (!existingUser) {
-            noteLoginFailure(rateKey);
+            noteFailure(`login:${rateKey}`);
             return json("Incorrect username or password", 400);
         }
 
         const validPassword = await verify(existingUser.password_hash, password, ARGON2_OPTIONS);
         if (!validPassword) {
-            noteLoginFailure(rateKey);
+            noteFailure(`login:${rateKey}`);
             return json("Incorrect username or password", 400);
         }
 
-        clearLoginFailures(rateKey);
+        clearFailures(`login:${rateKey}`);
         const session = await lucia.createSession(existingUser.id, {});
         const sessionCookie = lucia.createSessionCookie(session.id);
         event.cookies.set(sessionCookie.name, sessionCookie.value, {
