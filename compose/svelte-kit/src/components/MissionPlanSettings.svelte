@@ -364,10 +364,14 @@
 </section>
 
 <style>
+    /* Scrolls its own buttons at short viewports instead of overflowing the
+       page grid, which would flip the page scrollbar and shift the map rect. */
     .flight-plan-settings {
         display: flex;
         flex-direction: column;
         gap: 1em;
+        min-height: 0;
+        overflow-y: auto;
         color: var(--fontColor);
         background-color: var(--primaryColor);
     }

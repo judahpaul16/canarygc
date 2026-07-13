@@ -45,11 +45,14 @@
   <style>
     /* Six equal rows keep the section cards aligned: the map spans four rows
        flush with weather plus compass, and the plan card's two rows flush with
-       the settings card. */
+       the settings card. The stable gutter keeps the grid width constant
+       whether or not the page scrollbar shows, so the map window rect the
+       floating controls pin to never drifts by a scrollbar width. */
     .dashboard {
       grid-template-columns: repeat(12, minmax(0, 1fr));
       grid-template-rows: repeat(6, minmax(0, 1fr));
       height: 95vh;
+      scrollbar-gutter: stable;
       background-color: transparent !important;
       box-shadow: none !important;
     }

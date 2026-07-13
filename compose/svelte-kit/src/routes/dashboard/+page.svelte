@@ -47,6 +47,7 @@
   }
 
   .dashboard {
+    scrollbar-gutter: stable;
     background-color: transparent !important;
     box-shadow: none !important;
   }
