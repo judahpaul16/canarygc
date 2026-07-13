@@ -1,10 +1,17 @@
 <script lang="ts">
     import { darkModeStore } from '../../stores/customizationStore';
-    import { mavlinkParamStore, mavModelStore, type Parameter } from '../../stores/mavlinkStore';
+    import {
+        mavlinkParamStore,
+        mavModelStore,
+        mavVibrationStore,
+        mavAttitudeStore,
+        type Parameter
+    } from '../../stores/mavlinkStore';
     import { onMount } from 'svelte';
     import { writable, type Writable } from 'svelte/store';
     import { encodeParameterValue } from '../../lib/mavlink-client';
     import { PARAM_GROUPS, paramInGroup, helpFor, type ParamGroup } from '../../lib/param-groups';
+    import { collectPidParams, type TuningRecommendation, type TuningResult } from '../../lib/pid-tuning';
 
     const loading: Writable<boolean> = writable(false);
     const success: Writable<string | null> = writable(null);
@@ -29,6 +36,10 @@
 
     let searchTerm = $state('');
     let activeGroup = $state<string | null>(null);
+
+    let aiTuning = $state(false);
+    let tuningResult = $state<TuningResult | null>(null);
+    let tuningError = $state<string | null>(null);
 
     const allParams: Parameter[] = $derived(
         $mavlinkParamStore ? Array.from(Object.values($mavlinkParamStore)) : []
@@ -111,6 +122,62 @@
             error.set(`Failed to write parameter ${id}: ${(err as Error).message}`);
             setTimeout(() => error.set(null), 5000);
         }
+    }
+
+    async function aiTunePid() {
+        tuningError = null;
+        tuningResult = null;
+        const pids = collectPidParams(allParams, $mavModelStore);
+        if (pids.length === 0) {
+            tuningError = 'No PID parameters are loaded yet. Refresh parameters and try again.';
+            return;
+        }
+        aiTuning = true;
+        try {
+            const response = await fetch('/api/ai/pid-tune', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                    model: $mavModelStore,
+                    pids,
+                    vibration: $mavVibrationStore,
+                    attitude: $mavAttitudeStore
+                })
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                tuningError = data.message ?? 'The tuning request failed.';
+                return;
+            }
+            tuningResult = data as TuningResult;
+        } catch (err) {
+            tuningError = (err as Error).message;
+        } finally {
+            aiTuning = false;
+        }
+    }
+
+    function applyRecommendation(rec: TuningRecommendation) {
+        const current = Object.values($mavlinkParamStore).find(
+            (p) => p.param_id.replace(/^"|"$/g, '') === rec.param_id
+        );
+        if (!current) {
+            error.set(`Parameter ${rec.param_id} is not loaded, cannot apply.`);
+            return;
+        }
+        writeParameter(rec.param_id, rec.suggested, current.param_type);
+    }
+
+    async function applyAllRecommendations() {
+        if (!tuningResult) return;
+        for (const rec of tuningResult.recommendations) {
+            applyRecommendation(rec);
+        }
+    }
+
+    function closeTuning() {
+        tuningResult = null;
+        tuningError = null;
     }
 
     function handleParameterChange(_event: Event, param_id: string, _param_type: number) {
@@ -196,13 +263,21 @@
                             <i class="fa-solid fa-upload"></i>
                             <span class="tooltip">Import Parameters</span>
                         </button>
-                        <button 
+                        <button
                             class="relative px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                             onclick={requestParameters}
                             disabled={$loading}
                         >
                             <i class="fa-solid fa-sync"></i>
                             <span class="tooltip">Refresh Parameters</span>
+                        </button>
+                        <button
+                            class="relative px-4 py-2 bg-[#8b5cf6] text-white rounded-lg hover:bg-[#7c3aed] transition-colors"
+                            onclick={aiTunePid}
+                            disabled={$loading || aiTuning}
+                        >
+                            <i class="fa-solid {aiTuning ? 'fa-spinner fa-spin' : 'fa-robot'}"></i>
+                            <span class="tooltip">AI PID Tune</span>
                         </button>
                     </div>
                 </div>
@@ -316,6 +391,52 @@
     </div>
 </div>
 
+<svelte:window onkeydown={(e) => { if (e.key === 'Escape' && (tuningResult || tuningError)) closeTuning(); }} />
+
+{#if tuningResult || tuningError}
+    <div
+        class="ai-modal-backdrop"
+        role="presentation"
+        tabindex="-1"
+        onclick={(e) => { if (e.target === e.currentTarget) closeTuning(); }}
+        onkeydown={(e) => { if (e.key === 'Escape') closeTuning(); }}
+    >
+        <div class="ai-modal" role="dialog" aria-modal="true" tabindex="-1">
+            <div class="ai-modal-head">
+                <h3><i class="fa-solid fa-robot"></i> AI PID tuning</h3>
+                <button class="ai-close" aria-label="Close" onclick={closeTuning}><i class="fas fa-xmark"></i></button>
+            </div>
+            {#if tuningError}
+                <p class="ai-error">{tuningError}</p>
+            {:else if tuningResult}
+                {#if tuningResult.summary}
+                    <p class="ai-summary">{tuningResult.summary}</p>
+                {/if}
+                {#if tuningResult.recommendations.length === 0}
+                    <p class="ai-summary">The assistant found no gains worth changing right now.</p>
+                {:else}
+                    <div class="ai-recs">
+                        {#each tuningResult.recommendations as rec (rec.param_id)}
+                            <div class="ai-rec">
+                                <div class="ai-rec-main">
+                                    <span class="ai-rec-id">{rec.param_id}</span>
+                                    <span class="ai-rec-change">{rec.current} <i class="fa-solid fa-arrow-right"></i> {rec.suggested}</span>
+                                    <button class="ai-apply" onclick={() => applyRecommendation(rec)}>Apply</button>
+                                </div>
+                                {#if rec.reason}<p class="ai-rec-reason">{rec.reason}</p>{/if}
+                            </div>
+                        {/each}
+                    </div>
+                    <div class="ai-modal-foot">
+                        <button class="ai-apply-all" onclick={applyAllRecommendations}>Apply all</button>
+                    </div>
+                {/if}
+                <p class="ai-disclaimer">Review each change against your airframe. Re-test in a controlled hover before flying hard.</p>
+            {/if}
+        </div>
+    </div>
+{/if}
+
 <style>
     .dashboard {
         background-color: var(--secondaryColor);
@@ -380,6 +501,145 @@
         font-size: 0.75rem;
         margin-top: 0.15rem;
         max-width: 42ch;
+    }
+
+    .ai-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 60;
+        padding: 1rem;
+    }
+
+    .ai-modal {
+        background: var(--primaryColor);
+        color: var(--fontColor);
+        border-radius: 1rem;
+        width: 100%;
+        max-width: 34rem;
+        max-height: 80vh;
+        overflow-y: auto;
+        padding: 1.25rem 1.5rem 1.5rem;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+    }
+
+    .ai-modal-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+    }
+
+    .ai-modal-head h3 {
+        font-size: 1.15rem;
+        font-weight: 700;
+    }
+
+    .ai-modal-head h3 i {
+        color: #8b5cf6;
+        margin-right: 0.4rem;
+    }
+
+    .ai-close {
+        background: none;
+        color: var(--fontColor);
+        opacity: 0.6;
+        font-size: 1.1rem;
+    }
+
+    .ai-close:hover {
+        opacity: 1;
+    }
+
+    .ai-summary {
+        font-size: 0.9rem;
+        margin-bottom: 0.75rem;
+        line-height: 1.4;
+    }
+
+    .ai-error {
+        color: #f87171;
+        font-size: 0.9rem;
+    }
+
+    .ai-recs {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+    }
+
+    .ai-rec {
+        background: var(--tertiaryColor);
+        border-radius: 0.6rem;
+        padding: 0.6rem 0.75rem;
+    }
+
+    .ai-rec-main {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+    }
+
+    .ai-rec-id {
+        font-weight: 600;
+        font-family: monospace;
+    }
+
+    .ai-rec-change {
+        font-family: monospace;
+        opacity: 0.85;
+    }
+
+    .ai-rec-change i {
+        margin: 0 0.3rem;
+        color: #8b5cf6;
+    }
+
+    .ai-rec-reason {
+        font-size: 0.8rem;
+        opacity: 0.75;
+        margin-top: 0.35rem;
+    }
+
+    .ai-apply {
+        margin-left: auto;
+        padding: 0.25rem 0.75rem;
+        border-radius: 0.5rem;
+        background: #1aac6e;
+        color: #fff;
+        font-size: 0.8rem;
+    }
+
+    .ai-apply:hover {
+        background: #2a7757;
+    }
+
+    .ai-modal-foot {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 0.9rem;
+    }
+
+    .ai-apply-all {
+        padding: 0.4rem 1rem;
+        border-radius: 0.5rem;
+        background: #8b5cf6;
+        color: #fff;
+        font-size: 0.85rem;
+    }
+
+    .ai-apply-all:hover {
+        background: #7c3aed;
+    }
+
+    .ai-disclaimer {
+        font-size: 0.75rem;
+        opacity: 0.6;
+        margin-top: 1rem;
     }
 
     tr {

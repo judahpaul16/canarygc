@@ -24,6 +24,8 @@
     device: '/dev/video0'
   });
   let cameraApplied = $state<boolean | null>(null);
+  let ai = $state<{ baseUrl: string; model: string; apiKey: string }>({ baseUrl: '', model: '', apiKey: '' });
+  let aiKeySet = $state(false);
 
   const CAMERA_KINDS = [
     { value: 'pi', label: 'Raspberry Pi camera' },
@@ -52,7 +54,8 @@
     smtp: 'email smtp mail server host port username password from tls alerts',
     airspace: 'airspace openaip altitude angel api key faa zones no-fly',
     tiles: 'map tiles basemap maptiler key light dark satellite url preset xyz',
-    camera: 'camera video feed source stream live rtsp rtmp srt usb v4l2 capture fpv betaflight mediamtx pi'
+    camera: 'camera video feed source stream live rtsp rtmp srt usb v4l2 capture fpv betaflight mediamtx pi',
+    ai: 'ai assistant pid tuning llm openai litellm ollama api key model base url gpt tune'
   };
 
   function panelVisible(panel: keyof typeof PANEL_KEYWORDS): boolean {
@@ -111,6 +114,7 @@
       });
       tiles = { light: eff.light, dark: eff.dark, satellite: eff.satellite };
       if (data.camera) camera = { kind: data.camera.kind ?? 'pi', url: data.camera.url ?? '', device: data.camera.device ?? '/dev/video0' };
+      if (data.ai) { ai = { baseUrl: data.ai.baseUrl ?? '', model: data.ai.model ?? '', apiKey: '' }; aiKeySet = data.ai.keySet ?? false; }
     } catch {
       notify({ title: 'Load failed', content: 'Could not load integration settings.', type: 'warning' });
     } finally {
@@ -124,13 +128,15 @@
       const res = await fetch('/api/integrations', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email, smtp, openaip, altitudeAngel, maptiler, tiles: tileOverrides(), camera })
+        body: JSON.stringify({ email, smtp, openaip, altitudeAngel, maptiler, tiles: tileOverrides(), camera, ai })
       });
       if (res.ok) {
         const data = await res.json();
         if (smtp.pass) passSet = true;
         if (openaip) openaipSet = true;
         if (altitudeAngel) altitudeAngelSet = true;
+        if (ai.apiKey) aiKeySet = true;
+        ai.apiKey = '';
         smtp.pass = '';
         openaip = '';
         altitudeAngel = '';
@@ -173,7 +179,7 @@
     <div class="panel"><p class="muted">Loading...</p></div>
   {:else}
     <form onsubmit={(e) => { e.preventDefault(); save(); }}>
-      {#if filter.trim() && !panelVisible('operator') && !panelVisible('smtp') && !panelVisible('airspace') && !panelVisible('tiles') && !panelVisible('camera')}
+      {#if filter.trim() && !panelVisible('operator') && !panelVisible('smtp') && !panelVisible('airspace') && !panelVisible('tiles') && !panelVisible('camera') && !panelVisible('ai')}
         <div class="panel"><p class="muted">No settings match "{filter}".</p></div>
       {/if}
       <div class="settings-grid">
@@ -302,6 +308,31 @@
         {#if cameraApplied !== null}
           <p class="hint">{cameraApplied ? 'Applied to the live feed.' : 'Saved. It applies once the camera bridge is reachable.'}</p>
         {/if}
+      </section>
+      {/if}
+
+      {#if panelVisible('ai')}
+      <section class="panel">
+        <div class="panel-head">
+          <span class="icon-chip"><i class="fas fa-robot"></i></span>
+          <div>
+            <h2>AI assistant</h2>
+            <p class="muted">Powers the PID tuning assistant on the Vehicle Parameters page. Any OpenAI-compatible endpoint works (OpenAI, LiteLLM, Ollama).</p>
+          </div>
+        </div>
+        <div class="field">
+          <label for="ai-key">API key {#if aiKeySet}<span class="badge">saved</span>{/if}</label>
+          <input id="ai-key" type="password" bind:value={ai.apiKey} autocomplete="off" placeholder={aiKeySet ? 'Leave blank to keep the saved key' : 'sk-...'} />
+        </div>
+        <div class="field">
+          <label for="ai-base">Base URL</label>
+          <input id="ai-base" bind:value={ai.baseUrl} autocomplete="off" placeholder="https://api.openai.com/v1" />
+          <p class="hint">The OpenAI-compatible base URL. Point it at a LiteLLM proxy or a local Ollama server to use another model.</p>
+        </div>
+        <div class="field">
+          <label for="ai-model">Model</label>
+          <input id="ai-model" bind:value={ai.model} autocomplete="off" placeholder="gpt-4o-mini" />
+        </div>
       </section>
       {/if}
       </div>

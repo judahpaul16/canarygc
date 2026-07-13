@@ -23,6 +23,7 @@
     mavArmedStateStore,
     mavSatelliteStore,
     mavAttitudeStore,
+    mavVibrationStore,
     mavVideoStreamStore,
     type Parameter
   } from '../stores/mavlinkStore';
@@ -287,6 +288,21 @@
       if (!roll && !pitch) return;
       const toDeg = (rad: string) => (rad ? (parseFloat(rad) * 180) / Math.PI : 0);
       mavAttitudeStore.set({ rollDeg: toDeg(roll), pitchDeg: toDeg(pitch) });
+    },
+
+    VIBRATION: (text: string) => {
+      const x = extractValue(text, 'vibrationX');
+      const y = extractValue(text, 'vibrationY');
+      const z = extractValue(text, 'vibrationZ');
+      if (!x && !y && !z) return;
+      mavVibrationStore.set({
+        x: parseFloat(x) || 0,
+        y: parseFloat(y) || 0,
+        z: parseFloat(z) || 0,
+        clip0: parseInt(extractValue(text, 'clipping0')) || 0,
+        clip1: parseInt(extractValue(text, 'clipping1')) || 0,
+        clip2: parseInt(extractValue(text, 'clipping2')) || 0
+      });
     },
 
     VIDEO_STREAM_INFORMATION: (text: string) => {

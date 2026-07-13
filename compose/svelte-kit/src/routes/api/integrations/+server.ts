@@ -46,6 +46,11 @@ export const GET: RequestHandler = async (event) => {
             kind: (await getSetting('camera.kind')) ?? 'pi',
             url: (await getSetting('camera.url')) ?? '',
             device: (await getSetting('camera.device')) ?? '/dev/video0'
+        },
+        ai: {
+            baseUrl: (await getSetting('ai.baseUrl')) ?? '',
+            model: (await getSetting('ai.model')) ?? '',
+            keySet: Boolean((await getSetting('ai.apiKey')) ?? process.env.AI_API_KEY)
         }
     });
 };
@@ -92,6 +97,11 @@ export const POST: RequestHandler = async (event) => {
             device: typeof camera.device === 'string' ? camera.device.trim() : '/dev/video0'
         });
     }
+
+    const ai = body.ai ?? {};
+    if (typeof ai.apiKey === 'string' && ai.apiKey.length > 0) await setSetting('ai.apiKey', ai.apiKey.trim());
+    if (typeof ai.baseUrl === 'string') await setSetting('ai.baseUrl', ai.baseUrl.trim());
+    if (typeof ai.model === 'string') await setSetting('ai.model', ai.model.trim());
 
     return json({ message: 'Saved', cameraApplied });
 };

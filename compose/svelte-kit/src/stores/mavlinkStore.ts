@@ -38,6 +38,16 @@ export const mavAttitudeStore = writable<{ rollDeg: number; pitchDeg: number }>(
     rollDeg: 0,
     pitchDeg: 0
 });
+// Accelerometer vibration levels and clipping counts from the VIBRATION
+// message; the AI PID tuning assistant reads these as a tuning-health signal.
+export const mavVibrationStore = writable<{
+    x: number;
+    y: number;
+    z: number;
+    clip0: number;
+    clip1: number;
+    clip2: number;
+} | null>(null);
 export const mavBatteryStore = writable<number|null>(null);
 // A camera stream the vehicle advertises via VIDEO_STREAM_INFORMATION; its uri
 // is offered as a ready-to-use RTSP source for the live feed.
