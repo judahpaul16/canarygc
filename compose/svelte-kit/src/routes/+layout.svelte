@@ -23,6 +23,7 @@
     mavArmedStateStore,
     mavSatelliteStore,
     mavAttitudeStore,
+    mavVideoStreamStore,
     type Parameter
   } from '../stores/mavlinkStore';
   import {
@@ -41,7 +42,9 @@
   import { callout, initCallouts, stopCallouts } from '../lib/callouts';
   import { initAlerts } from '../lib/alerts';
   import { decodeMode, isArmed } from '../lib/flight-modes';
-  import { decodeParameterValue, requestParameters } from '../lib/mavlink-client';
+  import { decodeParameterValue, requestParameters, sendMavlinkCommand } from '../lib/mavlink-client';
+  import { parseCalStatustext, parseMagCalProgress, parseMagCalReport } from '../lib/calibration';
+  import { calibrationStore } from '../stores/calibrationStore';
   import { upsertTraffic } from '../stores/trafficStore';
 
   let { children } = $props();
@@ -286,6 +289,12 @@
       mavAttitudeStore.set({ rollDeg: toDeg(roll), pitchDeg: toDeg(pitch) });
     },
 
+    VIDEO_STREAM_INFORMATION: (text: string) => {
+      const uri = extractValue(text, 'uri');
+      if (!uri) return;
+      mavVideoStreamStore.set({ uri, name: extractValue(text, 'name') });
+    },
+
     GPS_RAW_INT: (text: string) => {
       const eph = extractValue(text, 'eph');
       const satellites = extractValue(text, 'satellitesVisible');
@@ -377,6 +386,20 @@
 
       if (!severity || !statusText) return;
 
+      // Calibration narration ([cal] lines) drives the calibration page rather
+      // than a toast, so a running routine updates its progress and log inline.
+      const cal = parseCalStatustext(statusText);
+      if (cal) {
+        calibrationStore.update((s) => ({
+          ...s,
+          progress: cal.progress ?? s.progress,
+          orientation: cal.orientation ?? s.orientation,
+          status: cal.failed ? 'failed' : cal.done ? 'done' : s.status,
+          log: [...s.log.slice(-40), cal.text]
+        }));
+        return;
+      }
+
       const severityLevel = parseInt(severity);
       const type: NotificationConfig['type'] =
         severityLevel <= 3 ? 'error' :
@@ -389,6 +412,16 @@
       });
 
       if (severityLevel <= 4) callout(statusText, severityLevel <= 3);
+    },
+
+    MAG_CAL_PROGRESS: (text: string) => {
+      const p = parseMagCalProgress(text);
+      if (p) calibrationStore.update((s) => ({ ...s, progress: p.completionPct }));
+    },
+
+    MAG_CAL_REPORT: (text: string) => {
+      const r = parseMagCalReport(text);
+      if (r) calibrationStore.update((s) => ({ ...s, status: r.failed ? 'failed' : r.done ? 'done' : s.status, progress: r.done ? 100 : s.progress }));
     },
 
     PARAM_VALUE: (text: string) => {
@@ -464,6 +497,9 @@
       if (isNavHidden) return;
       checkLoadedMission();
       requestParameters();
+      // Ask the vehicle whether it advertises a camera stream (message 269);
+      // an advertised uri becomes a one-click RTSP source for the live feed.
+      sendMavlinkCommand('REQUEST_MESSAGE', [269], { cmdLong: true });
     }, STARTUP_SYNC_DELAY_MS);
 
     const checkCookieInterval = setInterval(() => {
@@ -588,6 +624,10 @@
           <i class="nav-icon fas fa-cog"></i>
           <div class="tooltip text-white">Vehicle Parameters</div>
         </a>
+        <a href="/calibration" class="nav-button mb-4 {currentPath === '/calibration' ? 'active' : ''}">
+          <i class="nav-icon fas fa-crosshairs"></i>
+          <div class="tooltip text-white">Sensor Calibration</div>
+        </a>
         <a href="/firmware" class="nav-button mb-4 {currentPath === '/firmware' ? 'active' : ''}">
           <i class="nav-icon fas fa-microchip"></i>
           <div class="tooltip text-white">Firmware</div>
@@ -649,6 +689,9 @@
           </a>
           <a href="/parameters" onclick={(e) => { e.preventDefault(); handleNavigation('/parameters'); }} class="nav-button mb-4 {currentPath === '/parameters' ? 'active' : ''}">
             <i class="nav-icon fas fa-cog"></i>&nbsp;&nbsp;Vehicle Parameters
+          </a>
+          <a href="/calibration" onclick={(e) => { e.preventDefault(); handleNavigation('/calibration'); }} class="nav-button mb-4 {currentPath === '/calibration' ? 'active' : ''}">
+            <i class="nav-icon fas fa-crosshairs"></i>&nbsp;&nbsp;Sensor Calibration
           </a>
           <a href="/firmware" onclick={(e) => { e.preventDefault(); handleNavigation('/firmware'); }} class="nav-button mb-4 {currentPath === '/firmware' ? 'active' : ''}">
             <i class="nav-icon fas fa-microchip"></i>&nbsp;&nbsp;Firmware
