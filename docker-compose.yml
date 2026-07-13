@@ -1,25 +1,41 @@
+# Shared config for the dev app-server faces. The container name is shared, so
+# only one face runs at a time; each profile supplies its own environment.
+x-app-dev: &app-dev
+  build:
+    context: ./compose/svelte-kit
+    dockerfile: Dockerfile.dev
+  ports:
+    - "${APP_DEV_PORT:-5173}:5173"
+  container_name: canarygc_app
+  volumes:
+    - ./compose/svelte-kit:/app
+    - ./.git:/app/.git:ro
+    - /app/node_modules
+  deploy:
+    resources:
+      limits:
+        memory: 700m
+  restart: always
+
 services:
   # Development: Vite dev server with hot reload, talks to the SITL container.
   app-dev:
+    <<: *app-dev
     profiles: ["development", "development-px4"]
-    build:
-      context: ./compose/svelte-kit
-      dockerfile: Dockerfile.dev
-    ports:
-      - "${APP_DEV_PORT:-5173}:5173"
-    container_name: canarygc_app
-    volumes:
-      - ./compose/svelte-kit:/app
-      - ./.git:/app/.git:ro
-      - /app/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true
       - NODE_ENV=development
-    deploy:
-      resources:
-        limits:
-          memory: 700m
-    restart: always
+
+  # Dev server wired to a Betaflight or INAV SITL over MSP for the Firmware tab;
+  # the "msp-sitl" alias resolves to whichever firmware profile is running.
+  app-dev-msp:
+    <<: *app-dev
+    profiles: ["development-betaflight", "development-inav"]
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - NODE_ENV=development
+      - MSP_TCP_HOST=msp-sitl
+      - MSP_TCP_PORT=5761
 
   # Production: built Node server on the Pi, talks to the autopilot over UART.
   app:
@@ -103,6 +119,38 @@ services:
       timeout: 3s
       retries: 6
       start_period: 5s
+
+  # Betaflight firmware built for the host CPU (SITL). The Firmware tab reaches
+  # it over MSP through the shared "msp-sitl" alias, as it would a real board.
+  betaflight-sitl:
+    profiles: ["development-betaflight"]
+    build:
+      context: ./compose/betaflight-sitl
+    container_name: canarygc_betaflight_sitl
+    networks:
+      default:
+        aliases:
+          - msp-sitl
+    ports:
+      - "${MSP_PORT:-5761}:5761"
+    tty: true
+    restart: always
+
+  # INAV firmware built for the host CPU (SITL). UART2 carries MSP on 5761, the
+  # same port the Betaflight SITL uses, so the app wiring is identical.
+  inav-sitl:
+    profiles: ["development-inav"]
+    build:
+      context: ./compose/inav-sitl
+    container_name: canarygc_inav_sitl
+    networks:
+      default:
+        aliases:
+          - msp-sitl
+    ports:
+      - "${MSP_PORT:-5761}:5761"
+    tty: true
+    restart: always
 
   # On-board WebRTC camera bridge (production profile).
   webrtc:

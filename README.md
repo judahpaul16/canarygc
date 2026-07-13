@@ -161,7 +161,7 @@ CanaryGC is designed for **headless, remote-first UAV deployments**:
 
 ## 🧑‍💻 Local Development
 
-The stack is a single `docker-compose.yml` with `development`, `development-px4`, and `production` profiles.
+The stack is a single `docker-compose.yml` with `development`, `development-px4`, `development-betaflight`, `development-inav`, and `production` profiles.
 
 **Development** runs the SvelteKit dev server with hot reload against an ArduPilot SITL container:
 
@@ -178,6 +178,14 @@ docker compose --profile development-px4 up
 ```
 
 This runs headless PX4 SITL (Gazebo) alongside a MAVProxy bridge that presents PX4's MAVLink on the same TCP `5760`, so the app connects identically. Both dev profiles bind `5760`, so run one at a time. PX4 SITL streams telemetry about a minute after Gazebo finishes initializing.
+
+To exercise the **Firmware tab against a Betaflight or INAV flight controller** with no hardware, use the `development-betaflight` or `development-inav` profile:
+
+```bash
+docker compose --profile development-betaflight up   # or development-inav
+```
+
+Each builds the flight-controller firmware for the host CPU (SITL) and serves MSP on TCP `5761`, which the app reaches through the shared `msp-sitl` alias. The Firmware tab detects the board and reads its identity over MSP, as it would a real board on a serial link. These profiles carry no MAVLink autopilot, so the dashboard link stays offline; they cover MSP detection and telemetry.
 
 On first run the database is empty, so open `/register` to create the operator account. To reset it later, wipe the dev database and restart:
 
