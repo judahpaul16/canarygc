@@ -13,11 +13,19 @@ import {
     setPositionLocal,
     newLogs,
     logs,
-    latestHeartbeat
+    latestHeartbeat,
+    forceReconnect
 } from '$lib/server/mavlink';
 
 export const POST: RequestHandler = async (event): Promise<Response> => {
     switch (event.params.type) {
+        case 'reconnect':
+            try {
+                forceReconnect();
+                return new Response('Reconnecting', { status: 200 });
+            } catch (err) {
+                return new Response(`Error: ${(err as Error).message}`, { status: 500 });
+            }
         case 'heartbeat':
             try {
                 const connected = linkAlive();

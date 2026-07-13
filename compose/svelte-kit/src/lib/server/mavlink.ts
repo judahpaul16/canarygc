@@ -127,6 +127,15 @@ export function resumeLink(): void {
     state.suspended = false;
 }
 
+// Drops the current vehicle connection and dials a fresh one immediately, so
+// the operator can recover a flapping link without reloading the app and
+// losing their session state.
+export function forceReconnect(): void {
+    state.suspended = false;
+    teardownConnection();
+    initializePort();
+}
+
 function pushLog(entry: string): void {
     logs.push(entry);
     newLogs.push(entry);

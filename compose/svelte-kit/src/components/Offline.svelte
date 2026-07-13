@@ -1,8 +1,23 @@
 <script lang="ts">
 
   let isMinimized = $state(false);
+  let reconnecting = $state(false);
   function toggleMinimize() {
     isMinimized = !isMinimized;
+  }
+
+  // Forces the server to drop and redial the vehicle link, the usual cause of
+  // a reconnecting fit, without reloading the app and losing session state.
+  // The offline pill clears itself once heartbeats resume.
+  async function reconnect() {
+    reconnecting = true;
+    try {
+      await fetch('/api/mavlink/reconnect', { method: 'POST' });
+    } catch {
+      // The link poll keeps retrying regardless.
+    } finally {
+      setTimeout(() => (reconnecting = false), 2000);
+    }
   }
 </script>
 
@@ -41,11 +56,18 @@
         {#if !isMinimized}
           <div class="px-4 py-2 text-center">
               <p class="text-sm">
-                  You are currently offline. Please check your internet connection and try again.
+                  The vehicle link dropped. Reconnect to redial it, or keep working from the last-known telemetry.
               </p>
           </div>
-          <div class="px-4 py-2 flex justify-center">
-              <button class="px-2 py-1 mb-2 text-center bg-slate-400 hover:bg-[#ff3333] text-white rounded-lg" onclick={() => window.location.reload()}>
+          <div class="px-4 pb-3 pt-1 flex flex-wrap justify-center gap-2">
+              <button class="reconnect px-3 py-1.5 text-white rounded-lg font-semibold disabled:opacity-60" onclick={reconnect} disabled={reconnecting}>
+                  <i class="fas {reconnecting ? 'fa-circle-notch fa-spin' : 'fa-rotate'} mr-1"></i>
+                  {reconnecting ? 'Reconnecting...' : 'Reconnect'}
+              </button>
+              <button class="ghost px-3 py-1.5 rounded-lg" onclick={toggleMinimize}>
+                  Dismiss
+              </button>
+              <button class="ghost px-3 py-1.5 rounded-lg" onclick={() => window.location.reload()}>
                   Refresh Window
               </button>
           </div>
@@ -57,5 +79,22 @@
   .container {
     color: var(--fontColor);
     background-color: var(--primaryColor);
+  }
+
+  .reconnect {
+    background-color: #3290e7;
+  }
+  .reconnect:hover:not(:disabled) {
+    background-color: #4e9ff0;
+  }
+
+  .ghost {
+    color: var(--fontColor);
+    background-color: rgb(from var(--fontColor) r g b / 0.08);
+    border: 1px solid rgb(from var(--fontColor) r g b / 0.15);
+    font-size: 0.85rem;
+  }
+  .ghost:hover {
+    background-color: rgb(from var(--fontColor) r g b / 0.16);
   }
 </style>
