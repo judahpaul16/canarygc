@@ -321,8 +321,11 @@
 
   /* Mobile Styles */
   @media (max-width: 990px) {
+    /* The mini-map spans the full card width here, so the corner button gets
+       its own strip of card above it instead of overlapping the map corner. */
     .controls {
       padding: 1rem;
+      padding-top: 3.5rem;
       display: block;
     }
 

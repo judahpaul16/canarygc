@@ -1831,11 +1831,13 @@
       font-size: 0.75rem;
     }
 
+    /* The attribution bar spans the window bottom at this width, so the
+       location pill rides above it instead of overlapping. */
     #location-display {
       font-size: 0.65rem;
       line-height: 1.35;
-      max-width: min(62vw, calc(var(--ww) - 7rem));
-      bottom: 6px;
+      max-width: min(78vw, calc(var(--ww) - 3rem));
+      bottom: 2.8rem;
       left: 6px;
       padding: 3px 6px;
     }

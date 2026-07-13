@@ -414,13 +414,16 @@
     background-color: var(--secondaryColor);
   }
 
-  /* Mobile Styles */
+  /* Mobile Styles: the card hugs its content, so the plan list sizes itself
+     and the import row sits in flow instead of pinned to a fixed-height card. */
   @media (max-width: 990px) {
     .plans {
+      height: auto;
       max-height: 33vh;
-      margin-bottom: 3.5em;
+      margin-bottom: 0;
     }
     .plans + div {
+      position: static;
       padding-block: 0.5rem;
     }
     .title-container {

@@ -94,13 +94,12 @@
 
       .dashboard > * {
         width: 100%;
-        height: 100%;
+        height: auto;
+        flex: none;
         display: block;
-        overflow-y: auto;
       }
 
       .dashboard > .map {
-        flex: none;
         height: 45vh;
         min-height: 280px;
         overflow: hidden;

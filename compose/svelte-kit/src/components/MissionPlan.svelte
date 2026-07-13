@@ -691,7 +691,8 @@
     border-color: #ff6b6b;
   }
 
-  /* Mobile Styles */
+  /* Mobile Styles: the card hugs its content while the action list caps
+     itself and scrolls internally, so the hint and Add Action stay visible. */
   @media (max-width: 990px) {
     .missionPlan {
       overflow: hidden;
@@ -705,11 +706,18 @@
     a {
       font-size: small;
     }
-    
+
     .container {
-      display: inline-grid;
-      align-items: center;
-      justify-content: center;
+      height: auto;
+    }
+
+    .column {
+      max-height: 45vh;
+      overflow-y: auto;
+    }
+
+    .btn-divider {
+      display: none;
     }
   }
 
