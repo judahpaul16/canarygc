@@ -53,22 +53,39 @@ export async function optimizePath(): Promise<void> {
 	});
 }
 
+// Holds the active-instruction toast open until the pattern capture ends
+// (finished or canceled), then dismisses it and stops watching the store.
+function holdInstruction(close: () => void): void {
+	const unsubscribe = patternCaptureStore.subscribe((capture) => {
+		if (capture) return;
+		close();
+		// Defer so the subscribe callback returns before it detaches itself.
+		queueMicrotask(unsubscribe);
+	});
+}
+
 export function startSurveyCapture(): void {
 	patternCaptureStore.set({ kind: 'survey', corners: [] });
-	notify({
-		title: 'Survey pattern',
-		content: 'Click the survey area corners on the map, then double-click to finish. Escape cancels.',
-		type: 'info'
-	});
+	holdInstruction(
+		notify({
+			title: 'Survey pattern',
+			content: 'Click the survey area corners on the map, then double-click to finish. Escape cancels.',
+			type: 'info',
+			persistent: true
+		})
+	);
 }
 
 export function startOrbitCapture(): void {
 	patternCaptureStore.set({ kind: 'orbit', corners: [] });
-	notify({
-		title: 'Orbit pattern',
-		content: 'Click the orbit center on the map. Escape cancels.',
-		type: 'info'
-	});
+	holdInstruction(
+		notify({
+			title: 'Orbit pattern',
+			content: 'Click the orbit center on the map. Escape cancels.',
+			type: 'info',
+			persistent: true
+		})
+	);
 }
 
 async function removeAllActions(clearLoadedPlan: boolean): Promise<void> {
