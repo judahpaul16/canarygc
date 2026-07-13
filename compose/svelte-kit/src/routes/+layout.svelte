@@ -555,13 +555,13 @@
   </div>
   <div class="flex w-full h-full z-10">
     <!-- Desktop Navigation -->
-    <nav class="desktop-nav w-min h-full p-4 flex flex-col opacity-0 z-20" style:display={isNavHidden ? 'none' : 'flex'}>
+    <nav class="desktop-nav w-min h-full p-4 flex flex-col opacity-0 z-20" style:display={isNavHidden ? 'none' : 'flex'} use:navTooltips>
       <div class="shrink-0 mb-5 flex justify-center">
         <button onclick={(e) => { e.preventDefault(); handleNavigation('/'); }}>
           <img src="/logo.png" alt="Logo" class="w-12 h-12 min-w-[3rem] object-contain">
         </button>
       </div>
-      <div class="nav-scroll flex-1 min-h-0 overflow-y-auto flex flex-col items-center" use:navTooltips>
+      <div class="nav-scroll flex-1 min-h-0 overflow-y-auto flex flex-col items-center">
         {#if loggedIn}
         <a href="/dashboard" class="nav-button mb-4 {currentPath === '/dashboard' ? 'active' : ''}">
           <i class="nav-icon fas fa-tachometer-alt"></i>
@@ -602,17 +602,17 @@
           <div class="tooltip text-white">Login</div>
         </a>
         {/if}
-        <div class="flex flex-col items-center gap-3 mt-auto pt-4">
-          <button class="nav-button" onclick={toggleAudioCallouts}>
-            <i class="nav-icon fas {$audioCalloutsStore ? 'fa-volume-up' : 'fa-volume-mute'}"></i>
-            <div class="tooltip text-white">Toggle Audio Callouts</div>
-          </button>
-          <div class="separator h-[2px] w-[80%] mx-auto mb-2 rounded-2xl"></div>
-          <button class="nav-button" aria-label="Dark Mode" onclick={toggleDarkMode}>
-            <i class="nav-icon fas {darkMode ? 'fa-sun' : 'fa-moon'}"></i>
-            <div class="tooltip text-white">Toggle Dark Mode</div>
-          </button>
-        </div>
+      </div>
+      <div class="nav-footer shrink-0 flex flex-col items-center gap-3 pt-4">
+        <div class="separator h-[2px] w-[80%] mb-1 rounded-2xl"></div>
+        <button class="nav-button" onclick={toggleAudioCallouts}>
+          <i class="nav-icon fas {$audioCalloutsStore ? 'fa-volume-up' : 'fa-volume-mute'}"></i>
+          <div class="tooltip text-white">Toggle Audio Callouts</div>
+        </button>
+        <button class="nav-button" aria-label="Dark Mode" onclick={toggleDarkMode}>
+          <i class="nav-icon fas {darkMode ? 'fa-sun' : 'fa-moon'}"></i>
+          <div class="tooltip text-white">Toggle Dark Mode</div>
+        </button>
       </div>
     </nav>
 
@@ -752,24 +752,28 @@
     font-size: 18px;
   }
 
+  /* Fixed-positioned (JS places it beside the button) so it escapes the
+     scrollable nav's clip, but kept the app tooltip blue and sitting right
+     next to its button, matching the map chrome tooltips. */
   .tooltip {
     position: fixed;
     transform: translateY(-50%);
-    padding: 0.5rem;
+    padding: 0.3rem 0.6rem;
     border-radius: var(--radius-control);
     white-space: nowrap;
-    background-color: rgba(20, 20, 22, 0.92);
+    font-size: 0.8rem;
+    color: #fff;
+    background-color: #3290e7;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s, visibility 0.3s;
-    z-index: 50;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+    z-index: 60;
     pointer-events: none;
   }
 
   .nav-button:hover .tooltip {
     opacity: 1;
     visibility: visible;
-    transform: translateX(50px);
   }
 
   /* Mobile Styles */
