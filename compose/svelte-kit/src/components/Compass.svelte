@@ -3,9 +3,29 @@
 
   interface Props {
     mavLocation?: L.LatLng | { lat: number; lng: number };
+    // The compact variant is the small fullscreen-map dock: dial and heading
+    // only, no coordinate readout.
+    compact?: boolean;
   }
 
-  let { mavLocation = $bindable() }: Props = $props();
+  let { mavLocation = $bindable(), compact = false }: Props = $props();
+
+  const DIRS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  const TICKS = Array.from({ length: 12 }, (_, i) => i * 30);
+  const CARDINALS = [
+    { label: 'N', x: 60, y: 20, north: true },
+    { label: 'E', x: 100, y: 60, north: false },
+    { label: 'S', x: 60, y: 100, north: false },
+    { label: 'W', x: 20, y: 60, north: false }
+  ];
+
+  function norm(deg: number): number {
+    return ((deg % 360) + 360) % 360;
+  }
+
+  function cardinal(deg: number): string {
+    return DIRS[Math.round(norm(deg) / 45) % 8];
+  }
 
   function formatCoordinates(decimalDegree: number, isLatitude: boolean) {
     const absDegree = Math.abs(decimalDegree);
@@ -18,14 +38,9 @@
     return `${degrees}°${minutes}'${seconds}"${direction}`;
   }
 
-  function formatHeading(deg: number) {
-    const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-    const index = Math.round(((deg % 360) / 45) % 8);
-    return `${deg}° ${directions[index] ?? 'N'}`;
-  }
   let location = $derived(mavLocation ?? $mavLocationStore);
-  let headingDeg = $derived($mavHeadingStore);
-  let heading = $derived(formatHeading(headingDeg));
+  let headingDeg = $derived(norm($mavHeadingStore));
+  let heading = $derived(`${Math.round(headingDeg)}° ${cardinal(headingDeg)}`);
   let currentLat = $derived(formatCoordinates(location.lat, true));
   let currentLong = $derived(formatCoordinates(location.lng, false));
 
@@ -45,112 +60,130 @@
   }
 </script>
 
-<div class="compass rounded-2xl flex flex-col items-center justify-center h-full w-full overflow-auto p-4"
->
-  <div id="heading" class="bg-[#62bbff] p-2 text-[#000000] text-xs rounded-full">{heading}</div>
-    <div class="compass-container">
-      <div class="compass-circle">
-        <i class="fas fa-arrow-up compass-arrow" style="transform: translate(-50%, -50%) rotate({headingDeg}deg)"></i>
-      </div>
-      <div class="north">N</div>
-      <div class="east">E</div>
-      <div class="south">S</div>
-      <div class="west">W</div>
-    </div>
-    <div class="mt-2 text-center text-xs">
-      <button
-        type="button"
-        id="lat-long"
-        class="coords"
-        class:copied
-        data-tip="Copy as decimal degrees"
-        aria-label="Copy coordinates as decimal degrees"
-        onclick={copyCoordinates}
-      >
-        {#if copied}
-          <i class="fas fa-check"></i> Copied
-        {:else}
-          {currentLat} {currentLong}
-        {/if}
-      </button>
-    </div>
+<div class="compass" class:compact>
+  <div class="heading-pill">{heading}</div>
+
+  <svg class="dial" viewBox="0 0 120 120" role="img" aria-label="Heading {heading}">
+    <circle cx="60" cy="60" r="55" class="ring" />
+    {#each TICKS as t (t)}
+      <line
+        x1="60"
+        y1="7"
+        x2="60"
+        y2={t % 90 === 0 ? 17 : 13}
+        class="tick"
+        class:major={t % 90 === 0}
+        transform="rotate({t} 60 60)"
+      />
+    {/each}
+    {#each CARDINALS as c (c.label)}
+      <text x={c.x} y={c.y} class="cardinal" class:north={c.north}>{c.label}</text>
+    {/each}
+    <g class="needle" style="transform: rotate({headingDeg}deg); transform-origin: 60px 60px;">
+      <polygon points="60,16 67,60 53,60" class="needle-n" />
+      <polygon points="60,104 67,60 53,60" class="needle-s" />
+    </g>
+    <circle cx="60" cy="60" r="4.5" class="hub" />
+  </svg>
+
+  {#if !compact}
+    <button
+      type="button"
+      id="lat-long"
+      class="coords"
+      class:copied
+      data-tip="Copy as decimal degrees"
+      aria-label="Copy coordinates as decimal degrees"
+      onclick={copyCoordinates}
+    >
+      {#if copied}
+        <i class="fas fa-check"></i> Copied
+      {:else}
+        {currentLat} {currentLong}
+      {/if}
+    </button>
+  {/if}
 </div>
 
 <style>
-  #heading {
-    color: var(--primaryColor);
-  }
-
   .compass {
     color: var(--fontColor);
     background-color: var(--primaryColor);
-  }
-
-  .compass-container {
-    position: relative;
-    width: 100px;
-    height: 100px;
-    margin-bottom: 1.5em;
-    margin-top: 2em;
-    padding: 0.5em;
-  }
-
-  .compass-circle {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    border: 2px dashed rgb(from var(--fontColor) r g b / 0.3);
-    border-radius: 50%;
+    border-radius: 1rem;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
-    margin: auto;
+    justify-content: center;
+    gap: 0.6rem;
+    height: 100%;
+    width: 100%;
+    padding: 1rem;
   }
 
-  .compass-arrow {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    font-size: 2em;
-    color: red;
-    transform: translate(-50%, -50%) rotate(0deg);
-    transform-origin: center;
-    transition: transform 1s cubic-bezier(0.25, 0.1, 0.25, 1);
+  .heading-pill {
+    background-color: #62bbff;
+    color: var(--primaryColor);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.2rem 0.7rem;
+    border-radius: 9999px;
   }
 
-  .north, .east, .south, .west {
-    position: absolute;
-    font-size: 1rem;
-    font-weight: bold;
+  .dial {
+    width: 140px;
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 1;
   }
 
-  .north {
-    top: -20px;
-    left: 50%;
-    transform: translateX(-50%);
+  .ring {
+    fill: none;
+    stroke: rgb(from var(--fontColor) r g b / 0.25);
+    stroke-width: 2;
   }
 
-  .east {
-    top: 50%;
-    right: -20px;
-    transform: translateY(-50%);
+  .tick {
+    stroke: rgb(from var(--fontColor) r g b / 0.35);
+    stroke-width: 1.5;
   }
 
-  .south {
-    bottom: -20px;
-    left: 50%;
-    transform: translateX(-50%);
+  .tick.major {
+    stroke: rgb(from var(--fontColor) r g b / 0.6);
+    stroke-width: 2.5;
   }
 
-  .west {
-    top: 50%;
-    left: -20px;
-    transform: translateY(-50%);
+  .cardinal {
+    fill: var(--fontColor);
+    font-size: 11px;
+    font-weight: 700;
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+
+  .cardinal.north {
+    fill: #ef4444;
+  }
+
+  .needle {
+    transition: transform 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+
+  .needle-n {
+    fill: #ef4444;
+  }
+
+  .needle-s {
+    fill: rgb(from var(--fontColor) r g b / 0.55);
+  }
+
+  .hub {
+    fill: var(--fontColor);
   }
 
   .coords {
     color: var(--fontColor);
     cursor: pointer;
+    font-size: 0.75rem;
     border-radius: var(--radius-control);
     padding: 0.15rem 0.4rem;
     transition: color 0.15s ease, background-color 0.15s ease;
@@ -162,5 +195,27 @@
 
   .coords.copied {
     color: #61cd89;
+  }
+
+  /* The small fullscreen-map dock: a compact floating dial, sized to content
+     with a translucent backdrop rather than a full panel surface. */
+  .compass.compact {
+    width: auto;
+    height: auto;
+    padding: 0.55rem;
+    gap: 0.35rem;
+    background-color: rgb(from var(--primaryColor) r g b / 0.85);
+    border: 1px solid rgb(from var(--secondaryColor) r g b / 0.9);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .compass.compact .dial {
+    width: 84px;
+  }
+
+  .compass.compact .heading-pill {
+    font-size: 0.68rem;
+    padding: 0.12rem 0.55rem;
   }
 </style>

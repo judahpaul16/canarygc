@@ -23,6 +23,8 @@
   import DPad from './DPad.svelte';
   import LiveFeed from './LiveFeed.svelte';
   import Stats from './Stats.svelte';
+  import Compass from './Compass.svelte';
+  import { draggable, type Point } from '../lib/draggable';
   import {
     missionPlanActionsStore,
     type MissionPlanActions,
@@ -175,6 +177,22 @@
   let feedDockOpen = $state(true);
   let controlDockOpen = $state(true);
   let statsDockOpen = $state(true);
+
+  // Each fullscreen dock remembers where it was dragged for the session; an
+  // untouched dock keeps its CSS default corner.
+  function panelPos(key: string): Point | null {
+    if (typeof sessionStorage === 'undefined') return null;
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const [l, t] = raw.split(',').map(Number);
+    return Number.isFinite(l) && Number.isFinite(t) ? { left: l, top: t } : null;
+  }
+
+  function savePanelPos(key: string, pos: Point) {
+    if (typeof sessionStorage === 'undefined') return;
+    sessionStorage.setItem(key, `${Math.round(pos.left)},${Math.round(pos.top)}`);
+  }
+
   let lockPulse = $state(false);
   let lockPulseTimer: ReturnType<typeof setTimeout> | undefined;
   // A recenter closer than this is telemetry jitter, not a snap worth signaling.
@@ -215,6 +233,7 @@
       controlDockOpen = false;
     }
   }
+
 
   function handleFullscreenChange() {
     isFullscreen = Boolean(document.fullscreenElement);
@@ -1794,16 +1813,45 @@
     z-index: 1000;
   }
 
+  /* An overlay layer that passes clicks through to the map except where a dock
+     sits, so each dock floats and drags independently. */
   .docks {
     position: absolute;
-    left: 0.75rem;
-    bottom: 3rem;
+    inset: 0;
     z-index: 1001;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.6rem;
+    pointer-events: none;
     color: var(--fontColor);
+  }
+
+  .dock-slot {
+    position: absolute;
+    pointer-events: auto;
+  }
+
+  /* Default positions; a dragged dock overrides these with an inline position
+     that persists for the session. The live feed and manual control sit down
+     the left, the small compass sits just right of the manual control, and
+     stats sits on the right. */
+  .dock-feed { left: 0.75rem; top: 4.5rem; }
+  .dock-control { left: 0.75rem; bottom: 3rem; }
+  .dock-compass { left: 21.5rem; bottom: 3rem; }
+  .dock-stats { right: 0.75rem; top: 4.5rem; }
+
+  .dock-slot .dock-head {
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+  }
+
+  /* The compass has no header, so the whole dial is its drag handle. */
+  .dock-compass {
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .dock-slot:global(.dragging),
+  .dock-slot:global(.dragging) .dock-head {
+    cursor: grabbing;
   }
 
   /* The panel itself never clips (tooltips escape its edges); the bodies clip
@@ -1954,10 +2002,12 @@
   }
 
   @media (max-width: 990px) {
-    .docks {
-      bottom: 4.5rem;
-      right: 0.75rem;
-    }
+    /* Narrow screens sit the docks clear of the bottom map controls; each
+       stays draggable from here. */
+    .dock-feed { left: 0.75rem; top: 4.5rem; }
+    .dock-control { left: 0.75rem; bottom: 4.5rem; }
+    .dock-compass { right: 0.75rem; bottom: 4.5rem; }
+    .dock-stats { right: 0.75rem; top: 4.5rem; }
 
     .dock-panel {
       width: min(300px, calc(100vw - 1.5rem));
@@ -2076,81 +2126,91 @@
 
   {#if isFullscreen}
     <div class="docks">
-      {#if statsDockOpen}
-        <div class="dock-panel">
-          <div class="dock-head">
-            <span><i class="fas fa-gauge-high"></i>Stats</span>
-            <button class="dock-min" aria-label="Minimize stats" data-tip="Minimize" data-tip-pos="left" onclick={() => (statsDockOpen = false)}>
-              <i class="fas fa-chevron-down"></i>
-            </button>
-          </div>
-          <div class="stats-body"><Stats /></div>
-        </div>
-      {:else}
-        <button class="dock-pill" aria-label="Show stats" onclick={openStatsDock}>
-          <i class="fas fa-gauge-high"></i><span>Stats</span><i class="fas fa-chevron-up chev"></i>
-        </button>
-      {/if}
-
-      {#if feedDockOpen}
-        <div class="dock-panel">
-          <div class="dock-head">
-            <span><i class="fas fa-video"></i>Live feed</span>
-            <button class="dock-min" aria-label="Minimize live feed" data-tip="Minimize" data-tip-pos="left" onclick={() => (feedDockOpen = false)}>
-              <i class="fas fa-chevron-down"></i>
-            </button>
-          </div>
-          <div class="feed-body"><LiveFeed compact /></div>
-        </div>
-      {:else}
-        <button class="dock-pill" aria-label="Show live feed" onclick={openFeedDock}>
-          <i class="fas fa-video"></i><span>Live feed</span><i class="fas fa-chevron-up chev"></i>
-        </button>
-      {/if}
-
-      {#if controlDockOpen}
-        <div class="dock-panel">
-          <div class="dock-head">
-            <span><i class="fas fa-gamepad"></i>Manual control</span>
-            <div class="flex items-center gap-1">
-              <button
-                class="dock-min"
-                aria-label="Toggle gamepad flight"
-                data-tip={gamepadActive ? 'Stop gamepad flight' : 'Fly with a gamepad (MANUAL_CONTROL)'}
-                onclick={toggleGamepad}
-              >
-                <i class="fas fa-gamepad {gamepadActive ? 'text-[#61cd89]' : ''}"></i>
-              </button>
-              <button class="dock-min" aria-label="Minimize manual control" data-tip="Minimize" data-tip-pos="left" onclick={() => (controlDockOpen = false)}>
+      <div class="dock-slot dock-stats" use:draggable={{ handle: '.dock-head', initial: panelPos('dock.stats'), onEnd: (p) => savePanelPos('dock.stats', p) }}>
+        {#if statsDockOpen}
+          <div class="dock-panel">
+            <div class="dock-head">
+              <span><i class="fas fa-gauge-high"></i>Stats</span>
+              <button class="dock-min" aria-label="Minimize stats" data-tip="Minimize" data-tip-pos="left" onclick={() => (statsDockOpen = false)}>
                 <i class="fas fa-chevron-down"></i>
               </button>
             </div>
+            <div class="stats-body"><Stats /></div>
           </div>
-          <div class="control-body">
-            <div class="control-col">
-              <button class="ctl-btn" aria-label="Altitude up" data-tip="Climb {ALTITUDE_STEP_M} m" data-tip-pos="right" onclick={() => nudgeAltitude(1)}>
-                <i class="fas fa-arrow-up"></i>
-              </button>
-              <button class="ctl-btn" aria-label="Altitude down" data-tip="Descend {ALTITUDE_STEP_M} m" data-tip-pos="right" onclick={() => nudgeAltitude(-1)}>
-                <i class="fas fa-arrow-down"></i>
+        {:else}
+          <button class="dock-pill" aria-label="Show stats" onclick={openStatsDock}>
+            <i class="fas fa-gauge-high"></i><span>Stats</span><i class="fas fa-chevron-up chev"></i>
+          </button>
+        {/if}
+      </div>
+
+      <div class="dock-slot dock-feed" use:draggable={{ handle: '.dock-head', initial: panelPos('dock.feed'), onEnd: (p) => savePanelPos('dock.feed', p) }}>
+        {#if feedDockOpen}
+          <div class="dock-panel">
+            <div class="dock-head">
+              <span><i class="fas fa-video"></i>Live feed</span>
+              <button class="dock-min" aria-label="Minimize live feed" data-tip="Minimize" data-tip-pos="left" onclick={() => (feedDockOpen = false)}>
+                <i class="fas fa-chevron-down"></i>
               </button>
             </div>
-            <DPad />
-            <div class="control-col">
-              <button class="ctl-btn" aria-label="Rotate left" data-tip="Yaw left {YAW_STEP_DEG}°" data-tip-pos="left" onclick={() => rotate(-1)}>
-                <i class="fas fa-rotate-left"></i>
-              </button>
-              <button class="ctl-btn" aria-label="Rotate right" data-tip="Yaw right {YAW_STEP_DEG}°" data-tip-pos="left" onclick={() => rotate(1)}>
-                <i class="fas fa-rotate-right"></i>
-              </button>
+            <div class="feed-body"><LiveFeed compact /></div>
+          </div>
+        {:else}
+          <button class="dock-pill" aria-label="Show live feed" onclick={openFeedDock}>
+            <i class="fas fa-video"></i><span>Live feed</span><i class="fas fa-chevron-up chev"></i>
+          </button>
+        {/if}
+      </div>
+
+      <div class="dock-slot dock-control" use:draggable={{ handle: '.dock-head', initial: panelPos('dock.control'), onEnd: (p) => savePanelPos('dock.control', p) }}>
+        {#if controlDockOpen}
+          <div class="dock-panel">
+            <div class="dock-head">
+              <span><i class="fas fa-gamepad"></i>Manual control</span>
+              <div class="flex items-center gap-1">
+                <button
+                  class="dock-min"
+                  aria-label="Toggle gamepad flight"
+                  data-tip={gamepadActive ? 'Stop gamepad flight' : 'Fly with a gamepad (MANUAL_CONTROL)'}
+                  onclick={toggleGamepad}
+                >
+                  <i class="fas fa-gamepad {gamepadActive ? 'text-[#61cd89]' : ''}"></i>
+                </button>
+                <button class="dock-min" aria-label="Minimize manual control" data-tip="Minimize" data-tip-pos="left" onclick={() => (controlDockOpen = false)}>
+                  <i class="fas fa-chevron-down"></i>
+                </button>
+              </div>
+            </div>
+            <div class="control-body">
+              <div class="control-col">
+                <button class="ctl-btn" aria-label="Altitude up" data-tip="Climb {ALTITUDE_STEP_M} m" data-tip-pos="right" onclick={() => nudgeAltitude(1)}>
+                  <i class="fas fa-arrow-up"></i>
+                </button>
+                <button class="ctl-btn" aria-label="Altitude down" data-tip="Descend {ALTITUDE_STEP_M} m" data-tip-pos="right" onclick={() => nudgeAltitude(-1)}>
+                  <i class="fas fa-arrow-down"></i>
+                </button>
+              </div>
+              <DPad />
+              <div class="control-col">
+                <button class="ctl-btn" aria-label="Rotate left" data-tip="Yaw left {YAW_STEP_DEG}°" data-tip-pos="left" onclick={() => rotate(-1)}>
+                  <i class="fas fa-rotate-left"></i>
+                </button>
+                <button class="ctl-btn" aria-label="Rotate right" data-tip="Yaw right {YAW_STEP_DEG}°" data-tip-pos="left" onclick={() => rotate(1)}>
+                  <i class="fas fa-rotate-right"></i>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      {:else}
-        <button class="dock-pill" aria-label="Show manual control" onclick={openControlDock}>
-          <i class="fas fa-gamepad"></i><span>Manual control</span><i class="fas fa-chevron-up chev"></i>
-        </button>
-      {/if}
+        {:else}
+          <button class="dock-pill" aria-label="Show manual control" onclick={openControlDock}>
+            <i class="fas fa-gamepad"></i><span>Manual control</span><i class="fas fa-chevron-up chev"></i>
+          </button>
+        {/if}
+      </div>
+
+      <div class="dock-slot dock-compass" use:draggable={{ initial: panelPos('dock.compass'), onEnd: (p) => savePanelPos('dock.compass', p) }}>
+        <Compass compact />
+      </div>
     </div>
   {/if}
     </div>
