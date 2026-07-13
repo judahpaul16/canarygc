@@ -2,7 +2,7 @@ import type { RequestHandler } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { getSetting, getSettings, setSetting } from '$lib/server/settings';
 import { applyCameraSource } from '$lib/server/mediamtx';
-import { refreshSigningConfig } from '$lib/server/mavlink';
+import { refreshSigningConfig, provisionVehicleSigning } from '$lib/server/mavlink';
 import type { CameraSourceKind } from '$lib/camera-source';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -114,9 +114,11 @@ export const POST: RequestHandler = async (event) => {
     // the change takes effect without a restart.
     const mavlink = body.mavlink ?? {};
     let mavlinkChanged = false;
+    let signingKeySet = false;
     if (typeof mavlink.signingKey === 'string' && mavlink.signingKey.length > 0) {
         await setSetting('mavlink.signingKey', mavlink.signingKey.trim());
         mavlinkChanged = true;
+        signingKeySet = true;
     }
     if (mavlink.signingLinkId !== undefined) {
         await setSetting('mavlink.signingLinkId', String(mavlink.signingLinkId));
@@ -131,6 +133,8 @@ export const POST: RequestHandler = async (event) => {
         mavlinkChanged = true;
     }
     if (mavlinkChanged) await refreshSigningConfig();
+    // Push the new key to the connected vehicle so both ends share it from one save.
+    const signingPushed = signingKeySet ? await provisionVehicleSigning() : null;
 
-    return json({ message: 'Saved', cameraApplied });
+    return json({ message: 'Saved', cameraApplied, signingPushed });
 };

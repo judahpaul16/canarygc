@@ -153,11 +153,17 @@
         ai.apiKey = '';
         if (mavlink.signingKey) mavlinkKeySet = true;
         mavlink.signingKey = '';
+        mavKeyVisible = false;
         smtp.pass = '';
         openaip = '';
         altitudeAngel = '';
         cameraApplied = data.cameraApplied ?? null;
         notify({ title: 'Integrations saved', content: 'Your integration settings have been updated.', duration: 3000 });
+        if (data.signingPushed && !data.signingPushed.ok) {
+          notify({ title: 'Vehicle not keyed yet', content: data.signingPushed.message, type: 'warning', duration: 5000 });
+        } else if (data.signingPushed) {
+          notify({ title: 'Vehicle keyed', content: data.signingPushed.message, duration: 4000 });
+        }
       } else {
         const data = await res.json();
         notify({ title: 'Save failed', content: data.message ?? 'Could not save settings.', type: 'warning' });
@@ -380,7 +386,7 @@
           <span class="icon-chip"><i class="fas fa-shield-halved"></i></span>
           <div>
             <h2>MAVLink signing</h2>
-            <p class="muted">Authenticates the link with a shared passphrase so only a party that holds it can command the vehicle, and forged or replayed messages are rejected. Set the same passphrase on the autopilot.</p>
+            <p class="muted">Authenticates the link with a shared passphrase so only a party that holds it can command the vehicle, and forged or replayed messages are rejected. Saving pushes the key to the connected vehicle, so one passphrase secures both ends.</p>
           </div>
         </div>
         <div class="field">

@@ -197,6 +197,27 @@ export async function refreshSigningConfig(): Promise<void> {
     state.signingStrict = (s['mavlink.signingStrict'] ?? 'false') === 'true';
 }
 
+// Pushes the signing key to the vehicle with SETUP_SIGNING so one passphrase set
+// in the app keys both ends. The vehicle has to be connected to receive it; it
+// is re-sent automatically whenever the link comes up while a key is set.
+export async function provisionVehicleSigning(): Promise<{ ok: boolean; message: string }> {
+    const key = state.signingKey;
+    if (!key) return { ok: false, message: 'No signing passphrase is set.' };
+    if (!linkAlive() || !state.port) {
+        return { ok: false, message: 'Vehicle offline; its key is set automatically when the link comes up.' };
+    }
+    const msg = new common.SetupSigning();
+    msg.targetSystem = 1;
+    msg.targetComponent = 1;
+    msg.secretKey = Array.from(key);
+    const ts = nextSigningTimestamp(Date.now(), state.lastSignAt);
+    state.lastSignAt = ts;
+    msg.initialTimestamp = BigInt(ts);
+    await sendMsg(state.port, msg);
+    pushLog('MAVLink signing: pushed the key to the vehicle (SETUP_SIGNING)');
+    return { ok: true, message: 'Signing key pushed to the vehicle.' };
+}
+
 // Sends a message signed when a key is configured, plain otherwise. The
 // timestamp is forced strictly upward so a burst inside one millisecond still
 // satisfies the receiver's replay check.
@@ -298,12 +319,14 @@ function setupPacketReader(): void {
                 return;
             }
         }
-        if (state.lastPacketAt === 0) {
+        const firstPacket = state.lastPacketAt === 0;
+        if (firstPacket) {
             state.lastErrorMessage = '';
             pushLog('MAVLink connection initialized');
         }
         state.online = true;
         state.lastPacketAt = Date.now();
+        if (firstPacket && state.signingKey) provisionVehicleSigning().catch(() => {});
         const clazz = REGISTRY[packet.header.msgid];
         if (clazz) {
             const data = packet.protocol.data(packet.payload, clazz);
