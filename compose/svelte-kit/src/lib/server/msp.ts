@@ -14,6 +14,7 @@ import {
 	decodeRawGps,
 	decodeAnalog,
 	decodeAltitude,
+	decodeStatus,
 	type MspFrame
 } from '../msp';
 
@@ -58,6 +59,10 @@ export function mspConfigured(): boolean {
 	return Boolean(SERIAL_PATH || (TCP_HOST && TCP_PORT));
 }
 
+// A board with no GPS times out the RAW_GPS read; once it does, telemetry stops
+// probing GPS so later polls stay fast. Reset when the link is torn down.
+let gpsPresent = true;
+
 function teardown(err?: Error): void {
 	if (state.pending) {
 		clearTimeout(state.pending.timer);
@@ -76,6 +81,7 @@ function teardown(err?: Error): void {
 		state.port = null;
 	}
 	state.parser = new MspParser();
+	gpsPresent = true;
 }
 
 function open(): Promise<void> {
@@ -215,16 +221,29 @@ export interface FcTelemetry {
 	gps: ReturnType<typeof decodeRawGps>;
 	analog: ReturnType<typeof decodeAnalog>;
 	altitude: ReturnType<typeof decodeAltitude>;
+	status: ReturnType<typeof decodeStatus>;
 }
 
 export async function readTelemetry(): Promise<FcTelemetry> {
-	const [attitude, gps, analog, altitude] = await Promise.all([
-		request(MSP.ATTITUDE).then((f) => decodeAttitude(f.payload)),
-		request(MSP.RAW_GPS).then((f) => decodeRawGps(f.payload)),
-		request(MSP.ANALOG).then((f) => decodeAnalog(f.payload)),
-		request(MSP.ALTITUDE).then((f) => decodeAltitude(f.payload))
+	// A sensor the board lacks (GPS on a bench flight controller) times out, so
+	// each command is read on its own; a missing one returns null instead of
+	// failing every other reading.
+	const read = async <T>(cmd: number, decode: (p: Uint8Array) => T): Promise<T | null> => {
+		try {
+			return decode((await request(cmd)).payload);
+		} catch {
+			return null;
+		}
+	};
+	const [attitude, gps, analog, altitude, status] = await Promise.all([
+		read(MSP.ATTITUDE, decodeAttitude),
+		gpsPresent ? read(MSP.RAW_GPS, decodeRawGps) : Promise.resolve(null),
+		read(MSP.ANALOG, decodeAnalog),
+		read(MSP.ALTITUDE, decodeAltitude),
+		read(MSP.STATUS, decodeStatus)
 	]);
-	return { attitude, gps, analog, altitude };
+	if (gpsPresent && gps === null) gpsPresent = false;
+	return { attitude, gps, analog, altitude, status };
 }
 
 // Drops the FC into its ROM bootloader so a DFU flash can follow. The FC

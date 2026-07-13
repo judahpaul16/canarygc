@@ -137,6 +137,42 @@
   // Cached MSP flight-controller identity so the dashboard shows the connected
   // Betaflight or INAV board rather than an empty MAVLink vehicle.
   let mspIdentity: { firmware: string; boardName: string; targetName: string; boardIdentifier: string } | null = null;
+  let mspTelemetryInFlight = false;
+
+  function mspVoltageToPercent(v: number): number {
+    if (v <= 0) return 0;
+    const cells = Math.max(1, Math.ceil(v / 4.3));
+    return Math.max(0, Math.min(100, Math.round(((v / cells - 3.3) / 0.9) * 100)));
+  }
+
+  // Feeds MSP flight-controller telemetry into the same stores the MAVLink path
+  // uses, so a Betaflight or INAV board drives the dashboard gauges.
+  function applyMspTelemetry(t: {
+    attitude?: { rollDeg: number; pitchDeg: number; yawDeg: number } | null;
+    gps?: { fix: number; numSat: number; lat: number; lon: number; speedMs: number; hdop: number | null } | null;
+    altitude?: { altM: number } | null;
+    analog?: { voltageV: number } | null;
+    status?: { armed: boolean } | null;
+  }) {
+    if (t.attitude) {
+      mavAttitudeStore.set({ rollDeg: t.attitude.rollDeg, pitchDeg: t.attitude.pitchDeg });
+      mavHeadingStore.set(t.attitude.yawDeg);
+    }
+    if (t.gps) {
+      mavSatelliteStore.set({ total: t.gps.numSat, hdop: t.gps.hdop ?? 999 });
+      if (t.gps.fix > 0) {
+        mavLocationStore.set({ lat: t.gps.lat, lng: t.gps.lon });
+        mavSpeedStore.set(t.gps.speedMs);
+      }
+    }
+    if (t.altitude) mavAltitudeStore.set(t.altitude.altM);
+    if (t.analog) mavBatteryStore.set(mspVoltageToPercent(t.analog.voltageV));
+    if (t.status) {
+      mavArmedStateStore.set(t.status.armed);
+      mavModeStore.set(t.status.armed ? 'Armed' : 'Disarmed');
+      mavStateStore.set('Active');
+    }
+  }
 
   function setOnline(value: boolean) {
     if (value) {
@@ -179,7 +215,18 @@
             }
           }
           onlineStore.set(Boolean(mspIdentity));
-          if (!mspIdentity) mavModelStore.set('N/A');
+          if (!mspIdentity) {
+            mavModelStore.set('N/A');
+            return;
+          }
+          if (!mspTelemetryInFlight) {
+            mspTelemetryInFlight = true;
+            fetch('/api/msp/telemetry')
+              .then((r) => (r.ok ? r.json() : null))
+              .then((t) => { if (t) applyMspTelemetry(t); })
+              .catch(() => {})
+              .finally(() => { mspTelemetryInFlight = false; });
+          }
           return;
         }
         mavlinkDisabled = false;

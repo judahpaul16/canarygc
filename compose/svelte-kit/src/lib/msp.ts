@@ -239,3 +239,12 @@ export function decodeAltitude(payload: Uint8Array): { altM: number; varioMs: nu
 	const v = view(payload);
 	return { altM: v.getInt32(0, true) / 100, varioMs: v.getInt16(4, true) / 100 };
 }
+
+// MSP_STATUS: cycle time, I2C errors, and a sensor bitmask, then a U32 of active
+// mode-box flags whose lowest bit is the ARM box. Only the armed state is read;
+// full flight-mode names need the box-name table, which the dashboard does not
+// use.
+export function decodeStatus(payload: Uint8Array): { armed: boolean } | null {
+	if (payload.length < 10) return null;
+	return { armed: (view(payload).getUint32(6, true) & 1) !== 0 };
+}

@@ -12,7 +12,8 @@ import {
 	decodeAttitude,
 	decodeRawGps,
 	decodeAnalog,
-	decodeAltitude
+	decodeAltitude,
+	decodeStatus
 } from './msp';
 
 function buildBoardInfo(id: string, target: string, board: string): Uint8Array {
@@ -165,6 +166,14 @@ describe('MSP decoders', () => {
 		v.setInt32(0, 1250, true); // 12.5 m
 		v.setInt16(4, -40, true); // -0.4 m/s
 		expect(decodeAltitude(payload)).toEqual({ altM: 12.5, varioMs: -0.4 });
+	});
+
+	it('reads the armed flag from the status mode-box bits', () => {
+		const disarmed = new Uint8Array(10);
+		expect(decodeStatus(disarmed)!.armed).toBe(false);
+		const armed = new Uint8Array(10);
+		new DataView(armed.buffer).setUint32(6, 1, true); // ARM box bit
+		expect(decodeStatus(armed)!.armed).toBe(true);
 	});
 
 	it('returns null for short payloads', () => {
