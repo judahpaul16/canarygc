@@ -139,6 +139,7 @@
     text-align: center;
     display: flex;
     flex-direction: column;
+    justify-content: center;
   }
 
   .weather > img {

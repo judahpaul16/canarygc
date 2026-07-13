@@ -1,7 +1,9 @@
 import { get } from 'svelte/store';
 import { mavModelStore, mavTypeStore } from '../stores/mavlinkStore';
 
-export type FlightMode = 'GUIDED' | 'AUTO' | 'RTL' | 'LOITER' | 'LAND';
+// POSCTL is the app's stick-flying intent: each stack resolves it to its
+// native pilot position mode (PX4 Position, ArduPilot Loiter).
+export type FlightMode = 'GUIDED' | 'AUTO' | 'RTL' | 'LOITER' | 'LAND' | 'POSCTL';
 
 export const MAV_MODE_FLAG_SAFETY_ARMED = 128;
 export const MAV_MODE_FLAG_CUSTOM_MODE_ENABLED = 1;
@@ -14,7 +16,7 @@ interface AutopilotStrategy {
 }
 
 // ArduPilot Copter custom modes (mavlink-mappings ardupilotmega CopterMode)
-const COPTER_MODE: Record<FlightMode, number> = {
+const COPTER_MODE: Record<Exclude<FlightMode, 'POSCTL'>, number> = {
   AUTO: 3,
   GUIDED: 4,
   LOITER: 5,
@@ -51,7 +53,8 @@ const PX4_AUTO_SUB_NAMES: Record<number, string> = {
 
 const arduPilotStrategy: AutopilotStrategy = {
   setModeParams(mode) {
-    return [MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, COPTER_MODE[mode], 0];
+    const resolved = mode === 'POSCTL' ? 'LOITER' : mode;
+    return [MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, COPTER_MODE[resolved], 0];
   },
   decodeCustomMode(customMode) {
     return COPTER_MODE_NAMES[customMode] ?? `MODE(${customMode})`;
@@ -62,6 +65,8 @@ const arduPilotStrategy: AutopilotStrategy = {
 const px4Strategy: AutopilotStrategy = {
   setModeParams(mode) {
     switch (mode) {
+      case 'POSCTL':
+        return [MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, PX4_MAIN.POSCTL, 0];
       case 'GUIDED':
       case 'LOITER':
         return [MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, PX4_MAIN.AUTO, PX4_AUTO_SUB.LOITER];

@@ -14,6 +14,7 @@
   import { isAutoLabel, isGuidedLabel, isPX4 } from '../lib/flight-modes';
   import { ACTION_TYPES } from '../lib/mission-icons';
   import { preflightCheck } from '../lib/preflight';
+  import { optimizePath, startSurveyCapture, startOrbitCapture } from '../lib/plan-actions';
 
   const GRIPPER_SERVO_CHANNEL = 9;
   const GRIPPER_OPEN_PWM_US = 1050;
@@ -313,13 +314,27 @@
 <div
   class="elevated-surface missionPlan p-4 rounded-2xl space-x-4 items-center h-full"
 >
-  <div class="container block">
-    <input type="text" class="text-md font-bold mb-2 ml-4 focus:outline-none" placeholder="Untitled Mission" id="mission-plan-title" bind:value={title} oninput={(event) => updateTitle(event)} />
-    <div class="mission-btns flex items-center gap-2 float-right text-sm">
+  <div class="container">
+    <div class="head">
+    <input type="text" class="text-md font-bold ml-4 focus:outline-none" placeholder="Untitled Mission" id="mission-plan-title" bind:value={title} oninput={(event) => updateTitle(event)} />
+    <div class="mission-btns flex items-center gap-2 text-sm">
       <a href="https://ardupilot.org/planner/docs/common-planning-a-mission-with-waypoints-and-events.html" target="_blank" class="text-[#61cd89] hover:underline mr-2">
         <i class="fas fa-question-circle"></i>
         How do I create a mission plan?
       </a>
+      <button class="px-2 py-1 bg-[#d9a21b] rounded-lg hover:bg-[#f5c518]" aria-label="Survey pattern" onclick={startSurveyCapture}>
+        <i class="fas fa-vector-square"></i>
+        <div class="tooltip">Survey Pattern</div>
+      </button>
+      <button class="px-2 py-1 bg-[#38bdf8] rounded-lg hover:bg-[#6fd1ff]" aria-label="Orbit pattern" onclick={startOrbitCapture}>
+        <i class="fas fa-circle-notch"></i>
+        <div class="tooltip">Orbit Pattern</div>
+      </button>
+      <button class="px-2 py-1 bg-[#a06be0] rounded-lg hover:bg-[#c07bff]" aria-label="Optimize path" onclick={optimizePath}>
+        <i class="fas fa-wand-magic-sparkles"></i>
+        <div class="tooltip">Optimize Path</div>
+      </button>
+      <span class="btn-divider"></span>
       <button class="px-2 py-1 bg-[#588ae7] rounded-lg hover:bg-[#6f9ff9]" onclick={() => {releasePayload()}}>
           <i class="fas fa-parachute-box"></i>
           <div class="tooltip">Release Payload</div>
@@ -348,6 +363,7 @@
         <i class="fas fa-stop"></i>
         <div class="tooltip">Stop Mission (RTL)</div>
       </button>
+    </div>
     </div>
     <p class="hint">
       <i class="fas fa-circle-info"></i>
@@ -471,8 +487,27 @@
 </div>
 
 <style>
+  /* The card is a fixed grid cell, so the header and hint take their natural
+     height and the action list flexes to the remainder, scrolling internally
+     instead of spilling past the card edge. */
+  .container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
   .column {
     flex: 1;
+    min-height: 0;
     padding: 0 1rem;
   }
 
@@ -480,7 +515,6 @@
     margin: 0.25rem 0 0.5rem 1rem;
     font-size: 8.5pt;
     opacity: 0.6;
-    clear: both;
   }
 
   .hint i {
@@ -609,8 +643,14 @@
     color: white;
   }
 
-  #mission-plan-actions {
-    max-height: 215px;
+  .mission-btns {
+    flex-wrap: wrap;
+  }
+
+  .btn-divider {
+    width: 1px;
+    height: 1.25rem;
+    background-color: rgb(from var(--fontColor) r g b / 0.25);
   }
 
   .missionPlan {
@@ -662,10 +702,6 @@
       margin-inline: 0;
     }
 
-    .float-right {
-      display: block;
-      margin-bottom: 1em;
-    }
     a {
       font-size: small;
     }
@@ -677,21 +713,4 @@
     }
   }
 
-  @media (max-width: 1320px) {
-    #mission-plan-actions {
-      max-height: 260px;
-    }
-  }
-  @media (max-width: 1060px) {
-    #mission-plan-actions {
-      max-height: 270px;
-    }
-  }
-  @media (max-width: 1500px) {
-    @media (min-width: 1300px) {
-      #mission-plan-actions {
-        max-height: 240px;
-      }
-    }
-  }
 </style>

@@ -5,6 +5,7 @@
   import { mavModeStore, mavAltitudeStore, mavLocationStore, mavSatelliteStore } from '../stores/mavlinkStore';
   import { sendMavlinkCommand, setFlightMode, setPositionLocal } from '../lib/mavlink-client';
   import { isGuidedLabel } from '../lib/flight-modes';
+  import { gamepadActiveStore, toggleGamepad } from '../lib/gamepad-session';
 
   const SPEED_TYPE_GROUNDSPEED = 1;
   const YAW_STEP_DEG = 10;
@@ -21,6 +22,7 @@
   }  let mavMode = $derived($mavModeStore);
   let mavLocation = $derived($mavLocationStore);
   let mavSatellite = $derived($mavSatelliteStore);
+  let gamepadActive = $derived($gamepadActiveStore);
 
 
 </script>
@@ -28,6 +30,15 @@
 <div class="controls px-10 rounded-2xl h-full flex items-center overflow-x-auto overflow-y-hidden gap-4"
   use:mapPanel
   >
+  <button
+    class="gamepad-btn"
+    aria-label="Toggle gamepad flight"
+    data-tip={gamepadActive ? 'Stop gamepad flight' : 'Fly with a gamepad (MANUAL_CONTROL)'}
+    data-tip-pos="left"
+    onclick={toggleGamepad}
+  >
+    <i class="fas fa-gamepad {gamepadActive ? 'text-[#61cd89]' : ''}"></i>
+  </button>
   <div class="mini-col flex flex-col">
     <div class="mini-map flex-shrink-0 h-48 w-48" use:mapWindow={{ overlay: false }}></div>
     <div class="hdop-strip flex justify-between w-full px-2 pt-2">
@@ -265,7 +276,32 @@
   }
 
   .controls {
+    position: relative;
     color: var(--fontColor);
+  }
+
+  /* Pinned to the card's inner corner: absolute against the component root,
+     out of flow, so the flex row of control columns never shifts. Sits above
+     the D-pad's own tooltip layer so its tooltip is never covered. */
+  .gamepad-btn {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 65;
+    width: 2.25rem;
+    height: 2.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--fontColor);
+    background-color: var(--secondaryColor);
+    border: 2px solid var(--tertiaryColor);
+    border-radius: 9999px;
+    cursor: pointer;
+  }
+
+  .gamepad-btn:hover {
+    filter: brightness(1.2);
   }
 
   /* :global reaches child-component roots (the D-pad); the scoped universal
@@ -296,6 +332,11 @@
       justify-content: center;
       width: 100%;
       margin: auto;
+    }
+
+    .controls > .gamepad-btn {
+      width: 2.25rem;
+      margin: 0;
     }
 
     .mini-map {

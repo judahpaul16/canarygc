@@ -35,7 +35,7 @@ const NOTIFY_DURATION_MS = 10_000;
 
 // The Fullscreen API renders only the fullscreen element's subtree, so
 // overlays mount inside it while the map is fullscreen.
-function overlayTarget(): HTMLElement {
+export function overlayTarget(): HTMLElement {
   return (document.fullscreenElement as HTMLElement | null) ?? document.body;
 }
 

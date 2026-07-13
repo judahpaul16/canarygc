@@ -282,6 +282,17 @@ iframe {
   transform: translateY(-50%);
 }
 
+/* Below the control and hanging inward from its right edge; for controls
+   whose upward or sideways tooltip would leave a clipping container or slip
+   under page chrome. */
+[data-tip][data-tip-pos='below']::after {
+  top: calc(100% + 8px);
+  bottom: auto;
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
 .dashboard {
   opacity: 0;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);

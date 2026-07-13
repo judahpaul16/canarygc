@@ -36,6 +36,7 @@ interface MavlinkState {
     connectedAt: number;
     logs: string[];
     newLogs: string[];
+    latestHeartbeat: string;
     supervisor: ReturnType<typeof setInterval> | null;
     gcsBeat: ReturnType<typeof setInterval> | null;
     lastErrorMessage: string;
@@ -55,6 +56,7 @@ const state: MavlinkState = (g.__canarygcMavlink ??= {
     connectedAt: 0,
     logs: [],
     newLogs: [],
+    latestHeartbeat: '',
     supervisor: null,
     gcsBeat: null,
     lastErrorMessage: '',
@@ -105,6 +107,10 @@ if (!building) {
 
 const logs = state.logs;
 const newLogs = state.newLogs;
+
+export function latestHeartbeat(): string {
+    return state.latestHeartbeat;
+}
 
 function pushLog(entry: string): void {
     logs.push(entry);
@@ -185,6 +191,14 @@ function setupPacketReader(): void {
             const timestamp = new Date().toISOString();
             const logEntry = `${clazz.MSG_NAME}(${clazz.MAGIC_NUMBER})::${timestamp}::${JSON.stringify(sanitizedData)}`;
             pushLog(logEntry);
+            // The vehicle heartbeat arrives at 1 Hz while attitude and position
+            // stream far faster, so it can rotate out of the capped ring between
+            // client polls; the newest one is kept aside so every poll sees it.
+            // Type 6 is MAV_TYPE_GCS: a bridge such as MAVProxy beats too, and
+            // its heartbeat must never shadow the vehicle's.
+            if (clazz.MSG_NAME === 'HEARTBEAT' && (sanitizedData as { type?: number }).type !== 6) {
+                state.latestHeartbeat = logEntry;
+            }
             if (logEntry.includes('_ACK') && !logEntry.includes('"command":512')) console.log(logEntry);
         }
     });
@@ -305,6 +319,24 @@ async function sendMavlinkCommand(command: string, params: number[], useCmdLong 
     await send(state.port, commandMsg);
 }
 
+// One frame of the gamepad stream; axes arrive pre-normalized to the
+// MANUAL_CONTROL -1000..1000 ranges.
+async function sendManualControl(x: number, y: number, z: number, r: number, buttons: number) {
+    if (!state.port || !state.reader) {
+        state.online = false;
+        return;
+    }
+
+    const msg = new common.ManualControl();
+    msg.target = 1;
+    msg.x = x;
+    msg.y = y;
+    msg.z = z;
+    msg.r = r;
+    msg.buttons = buttons;
+    await send(state.port, msg);
+}
+
 async function setMissionCount(numItems: number) {
     if (!state.port || !state.reader) {
         state.online = false;
@@ -409,6 +441,7 @@ export {
     requestParameters,
     writeParameter,
     sendMavlinkCommand,
+    sendManualControl,
     setMissionCount,
     loadMissionItem,
     clearAllMissionItems,

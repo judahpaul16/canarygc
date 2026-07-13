@@ -27,6 +27,28 @@ export async function sendMavlinkCommand(
   return response.ok;
 }
 
+// Gamepad flight: one MANUAL_CONTROL frame per tick of the client-side loop.
+export async function sendManualControl(frame: {
+  x: number;
+  y: number;
+  z: number;
+  r: number;
+  buttons: number;
+}): Promise<boolean> {
+  const response = await fetch('/api/mavlink/manual_control', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      x: `${frame.x}`,
+      y: `${frame.y}`,
+      z: `${frame.z}`,
+      r: `${frame.r}`,
+      buttons: `${frame.buttons}`
+    }
+  });
+  return response.ok;
+}
+
 const DO_REPOSITION_CHANGE_MODE = 1;
 const M_PER_DEG_LAT = 111320;
 

@@ -6,12 +6,14 @@ import {
     requestParameters,
     writeParameter,
     sendMavlinkCommand,
+    sendManualControl,
     setMissionCount,
     loadMissionItem,
     clearAllMissionItems,
     setPositionLocal,
     newLogs,
-    logs
+    logs,
+    latestHeartbeat
 } from '$lib/server/mavlink';
 
 export const POST: RequestHandler = async (event): Promise<Response> => {
@@ -25,6 +27,13 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
                 if (logs.length > 0) {
                     const logsToSend = newLogs.slice();
                     newLogs.length = 0; // Clear newLogs
+                    // High-rate telemetry can evict the 1 Hz vehicle heartbeat
+                    // from the ring between polls; the newest one always rides
+                    // along so mode, state, and model stores never go stale.
+                    const heartbeat = latestHeartbeat();
+                    if (heartbeat && !logsToSend.some((entry) => entry.startsWith('HEARTBEAT('))) {
+                        logsToSend.unshift(heartbeat);
+                    }
                     return new Response(JSON.stringify(logsToSend), { status: 200, headers: {
                         'Content-Type': 'application/json',
                         'isProduction': `${process.env.NODE_ENV === 'production'}`,
@@ -53,6 +62,21 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
                 } else {
                     return new Response('Command not provided', { status: 400 });
                 }
+            } catch (err) {
+                console.error(err);
+                return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
+            }
+        }
+        case 'manual_control': {
+            const axes = ['x', 'y', 'z', 'r', 'buttons'].map((k) =>
+                parseInt(event.request.headers.get(k) ?? '0')
+            );
+            if (axes.some((v) => !Number.isFinite(v))) {
+                return new Response('Invalid manual control frame', { status: 400 });
+            }
+            try {
+                await sendManualControl(axes[0], axes[1], axes[2], axes[3], axes[4]);
+                return new Response('Manual control frame sent', { status: 200 });
             } catch (err) {
                 console.error(err);
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });

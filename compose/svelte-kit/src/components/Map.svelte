@@ -17,6 +17,9 @@
   import { isGuidedLabel, isAirVehicle, isPX4 } from '../lib/flight-modes';
   import { missionSegmentPaths, stopsAt, type PathNode, type PathPoint } from '../lib/spline-path';
   import { hasSessionValue } from '../lib/session-persisted';
+  import { surveyGrid, orbit, type PatternPoint } from '../lib/mission-patterns';
+  import { patternCaptureStore } from '../stores/patternStore';
+  import { gamepadActiveStore, toggleGamepad } from '../lib/gamepad-session';
   import DPad from './DPad.svelte';
   import LiveFeed from './LiveFeed.svelte';
   import Stats from './Stats.svelte';
@@ -26,7 +29,7 @@
     missionIndexStore
   } from '../stores/missionPlanStore';
   import { get } from 'svelte/store';
-  import { showModal } from '../lib/overlays';
+  import { showModal, notify } from '../lib/overlays';
   import {
     airspaceZonesStore,
     showAirspaceStore,
@@ -222,6 +225,21 @@
     }, 300);
   }
 
+  // Escape cancels an in-progress pattern capture; leaving the planner does
+  // the same, since capture clicks only exist on the interactive window.
+  $effect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') cancelPatternCapture();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  });
+  $effect(() => {
+    if (hideOverlay) untrack(() => cancelPatternCapture());
+  });
+
+  let gamepadActive = $derived($gamepadActiveStore);
+
   async function ensureGuided() {
     if (!isGuidedLabel(get(mavModeStore))) await setFlightMode('GUIDED');
   }
@@ -398,6 +416,10 @@
       if (mapClickTimer) clearTimeout(mapClickTimer);
       mapClickTimer = setTimeout(() => {
         mapClickTimer = null;
+        if (get(patternCaptureStore)) {
+          addPatternPoint(e.latlng);
+          return;
+        }
         openCombinedPopup(e.latlng);
       }, MAP_CLICK_DELAY_MS);
     });
@@ -405,6 +427,10 @@
       if (mapClickTimer) {
         clearTimeout(mapClickTimer);
         mapClickTimer = null;
+      }
+      if (get(patternCaptureStore)) {
+        finishPatternCapture();
+        return;
       }
       addWaypoint(e.latlng);
     });
@@ -431,10 +457,12 @@
   // "current altitude" and never climb.
   const DEFAULT_TAKEOFF_ALT_M = 10;
 
-  // Adding a waypoint seeds a takeoff at the vehicle's location first when the
-  // mission has none, since nearly every ArduPilot and PX4 mission must begin
-  // with a takeoff. The waypoint lands at the double-clicked point.
-  function addWaypoint(latlng: L.LatLng) {
+  // Appending to the plan seeds a takeoff at the vehicle's location first
+  // when the mission has none, since nearly every ArduPilot and PX4 mission
+  // must begin with a takeoff. Index 0 is the hidden home slot (the panel and
+  // the markers skip it), so the plan needs one, and the takeoff check only
+  // counts the visible rows.
+  function appendToPlan(items: MissionPlanActions[number][], anchor: L.LatLng) {
     const current = get(missionPlanActionsStore);
     const ordered = Object.keys(current)
       .map(Number)
@@ -443,24 +471,178 @@
     const blank = { notes: '', param1: null, param2: null, param3: null, param4: null };
 
     const mav = get(mavLocationStore);
-    const lat = mav && 'lat' in mav && mav.lat !== 0 ? mav.lat : latlng.lat;
-    const lon = mav && 'lng' in mav && mav.lng !== 0 ? mav.lng : latlng.lng;
+    const lat = mav && 'lat' in mav && mav.lat !== 0 ? mav.lat : anchor.lat;
+    const lon = mav && 'lng' in mav && mav.lng !== 0 ? mav.lng : anchor.lng;
     const takeoff = () => ({ type: 'NAV_TAKEOFF', lat, lon, alt: DEFAULT_TAKEOFF_ALT_M, ...blank });
 
-    // Index 0 is the hidden home slot (the panel and the markers skip it), so
-    // the plan needs one, and the takeoff check only counts the visible rows.
     if (ordered.length === 0) ordered.push(takeoff());
     const hasTakeoff = ordered
       .slice(1)
       .some((a) => a.type === 'NAV_TAKEOFF' || a.type === 'NAV_VTOL_TAKEOFF');
     if (!hasTakeoff) ordered.splice(1, 0, takeoff());
-    ordered.push({ type: 'NAV_WAYPOINT', lat: latlng.lat, lon: latlng.lng, alt: null, ...blank });
+    ordered.push(...items);
 
     const next: MissionPlanActions = {};
     ordered.forEach((item, i) => {
       next[i] = item;
     });
     missionPlanActionsStore.set(next);
+  }
+
+  function addWaypoint(latlng: L.LatLng) {
+    appendToPlan(
+      [
+        {
+          type: 'NAV_WAYPOINT',
+          lat: latlng.lat,
+          lon: latlng.lng,
+          alt: null,
+          notes: '',
+          param1: null,
+          param2: null,
+          param3: null,
+          param4: null
+        }
+      ],
+      latlng
+    );
+  }
+
+  // Pattern capture: the planner collects corner clicks (survey polygon, or
+  // the single orbit center), then a parameter prompt generates waypoints.
+  let patternPreviewLayer: L.LayerGroup | null = null;
+
+  function drawPatternPreview(corners: { lat: number; lon: number }[]) {
+    if (!L || !leafletMap) return;
+    patternPreviewLayer?.remove();
+    const renderer = paneRenderer('mission', '590');
+    const group = L.layerGroup();
+    for (const c of corners) {
+      L.circleMarker([c.lat, c.lon], {
+        radius: 5,
+        color: '#f5c518',
+        weight: 2,
+        fillOpacity: 0.9,
+        ...(renderer ? { renderer } : {})
+      }).addTo(group);
+    }
+    if (corners.length >= 2) {
+      L.polyline(
+        corners.map((c) => [c.lat, c.lon] as [number, number]),
+        { color: '#f5c518', dashArray: '6 6', weight: 2, ...(renderer ? { renderer } : {}) }
+      ).addTo(group);
+    }
+    group.addTo(leafletMap);
+    patternPreviewLayer = group;
+  }
+
+  function clearPatternPreview() {
+    patternPreviewLayer?.remove();
+    patternPreviewLayer = null;
+  }
+
+  function addPatternPoint(latlng: L.LatLng) {
+    const capture = get(patternCaptureStore);
+    if (!capture) return;
+    const corners = [...capture.corners, { lat: latlng.lat, lon: latlng.lng }];
+    patternCaptureStore.set({ ...capture, corners });
+    drawPatternPreview(corners);
+    if (capture.kind === 'orbit') finishPatternCapture();
+  }
+
+  function cancelPatternCapture() {
+    if (!get(patternCaptureStore)) return;
+    patternCaptureStore.set(null);
+    clearPatternPreview();
+    notify({ title: 'Pattern canceled', content: 'No waypoints were added.', type: 'info' });
+  }
+
+  function appendPatternWaypoints(points: PatternPoint[]) {
+    if (!points.length) {
+      notify({
+        title: 'Pattern',
+        content: 'Those parameters produce no waypoints; check the spacing against the area size.',
+        type: 'warning'
+      });
+      return;
+    }
+    appendToPlan(
+      points.map((p) => ({
+        type: 'NAV_WAYPOINT',
+        lat: p.lat,
+        lon: p.lon,
+        alt: p.alt,
+        notes: '',
+        param1: null,
+        param2: null,
+        param3: null,
+        param4: null
+      })),
+      L.latLng(points[0].lat, points[0].lon)
+    );
+    notify({ title: 'Pattern added', content: `${points.length} waypoints appended to the plan.`, type: 'success' });
+  }
+
+  function finishPatternCapture() {
+    const capture = get(patternCaptureStore);
+    patternCaptureStore.set(null);
+    clearPatternPreview();
+    if (!capture) return;
+    if (capture.kind === 'survey') {
+      if (capture.corners.length < 3) {
+        notify({
+          title: 'Survey pattern',
+          content: 'A survey area needs at least three corners.',
+          type: 'warning'
+        });
+        return;
+      }
+      showModal({
+        title: 'Survey pattern',
+        content: 'Serpentine transects across the drawn area.',
+        confirmation: true,
+        confirmLabel: 'Generate',
+        inputs: [
+          { type: 'number', placeholder: 'Transect spacing in meters, e.g. 25', required: true },
+          { type: 'number', placeholder: 'Grid angle in degrees from north, e.g. 0', required: true },
+          { type: 'number', placeholder: 'Altitude in meters, e.g. 40', required: true }
+        ],
+        onConfirm: (values) => {
+          appendPatternWaypoints(
+            surveyGrid({
+              polygon: capture.corners,
+              spacingM: Number(values[0]),
+              angleDeg: Number(values[1]),
+              altM: Number(values[2])
+            })
+          );
+        }
+      });
+      return;
+    }
+    showModal({
+      title: 'Orbit pattern',
+      content: 'A ring of waypoints around the clicked center.',
+      confirmation: true,
+      confirmLabel: 'Generate',
+      inputs: [
+        { type: 'number', placeholder: 'Radius in meters, e.g. 50', required: true },
+        { type: 'number', placeholder: 'Waypoints around the circle, e.g. 12', required: true },
+        { type: 'number', placeholder: 'Altitude in meters, e.g. 30', required: true },
+        { type: 'text', placeholder: 'Direction: cw or ccw', required: true }
+      ],
+      onConfirm: (values) => {
+        appendPatternWaypoints(
+          orbit({
+            center: capture.corners[0],
+            radiusM: Number(values[0]),
+            points: Number(values[1]),
+            altM: Number(values[2]),
+            clockwise: values[3].trim().toLowerCase() !== 'ccw'
+          })
+        );
+      }
+    });
   }
 
   // Refetch overlays for the visible area as the operator pans; debounced, and
@@ -1313,6 +1495,17 @@
     font-size: small;
   }
 
+  /* The map layer stacks below the page chrome, so a mini-window tooltip
+     hanging past the window edge slips under the nav and cards; in the mini
+     state tooltips drop below the buttons and hang inward instead. */
+  .map-container.mini .map-btn[data-tip]::after {
+    top: calc(100% + 8px);
+    bottom: auto;
+    left: auto;
+    right: 0;
+    transform: none;
+  }
+
   .map-container :global(.leaflet-control-container),
   .map-container :global(.maplibregl-control-container) {
     position: absolute;
@@ -1396,9 +1589,14 @@
     transition: opacity 0.15s ease, transform 0.15s ease;
   }
 
-  .map-btn:hover {
+  /* Each button's sub-1 opacity makes it a stacking context, so a DOM-later
+     sibling would paint over the hovered button's tooltip; the raise keeps
+     the tooltip above the rest of the stack. */
+  .map-btn:hover,
+  .map-btn:focus-visible {
     opacity: 0.75;
     transform: scale(1.05);
+    z-index: 65;
   }
 
   /* The ring pairs white with a dark halo and the button flashes solid yellow
@@ -1469,6 +1667,27 @@
     max-height: 46vh;
     overflow-y: auto;
     border-radius: 0 0 var(--radius-surface) var(--radius-surface);
+  }
+
+  /* The scrolling body clips horizontally, so the edge buttons' tooltips
+     anchor to their inner side instead of centering past the panel. */
+  .stats-body :global(.button-container > div:first-child .tooltip) {
+    left: 0;
+    transform: none;
+  }
+
+  .stats-body :global(.button-container > div:first-child .circular-button:hover .tooltip) {
+    transform: translateY(-0.5rem);
+  }
+
+  .stats-body :global(.button-container > div:last-child .tooltip) {
+    left: auto;
+    right: 0;
+    transform: none;
+  }
+
+  .stats-body :global(.button-container > div:last-child .circular-button:hover .tooltip) {
+    transform: translateY(-0.5rem);
   }
 
   .stats-body :global(.stats) {
@@ -1735,9 +1954,19 @@
         <div class="dock-panel">
           <div class="dock-head">
             <span><i class="fas fa-gamepad"></i>Manual control</span>
-            <button class="dock-min" aria-label="Minimize manual control" data-tip="Minimize" data-tip-pos="left" onclick={() => (controlDockOpen = false)}>
-              <i class="fas fa-chevron-down"></i>
-            </button>
+            <div class="flex items-center gap-1">
+              <button
+                class="dock-min"
+                aria-label="Toggle gamepad flight"
+                data-tip={gamepadActive ? 'Stop gamepad flight' : 'Fly with a gamepad (MANUAL_CONTROL)'}
+                onclick={toggleGamepad}
+              >
+                <i class="fas fa-gamepad {gamepadActive ? 'text-[#61cd89]' : ''}"></i>
+              </button>
+              <button class="dock-min" aria-label="Minimize manual control" data-tip="Minimize" data-tip-pos="left" onclick={() => (controlDockOpen = false)}>
+                <i class="fas fa-chevron-down"></i>
+              </button>
+            </div>
           </div>
           <div class="control-body">
             <div class="control-col">

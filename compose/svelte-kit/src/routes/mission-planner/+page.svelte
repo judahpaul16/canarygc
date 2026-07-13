@@ -21,7 +21,7 @@
   </sveltekit:head>
 
   <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">
-    <div class="dashboard w-full grid grid-cols-12 grid-rows-7 gap-4 p-5 rounded-3xl rounded-l-none overflow-auto max-h-[90vh]"
+    <div class="dashboard w-full grid grid-cols-12 gap-4 p-5 rounded-3xl rounded-l-none overflow-auto max-h-[90vh]"
       use:mapShell
     >
       <div class="map col-span-10 row-span-4 rounded-2xl" use:mapWindow={{ overlay: true }}></div>
@@ -43,9 +43,12 @@
   </div>
   
   <style>
+    /* Six equal rows keep the section cards aligned: the map spans four rows
+       flush with weather plus compass, and the plan card's two rows flush with
+       the settings card. */
     .dashboard {
       grid-template-columns: repeat(12, minmax(0, 1fr));
-      grid-template-rows: repeat(2, 1fr);
+      grid-template-rows: repeat(6, minmax(0, 1fr));
       height: 95vh;
       background-color: transparent !important;
       box-shadow: none !important;

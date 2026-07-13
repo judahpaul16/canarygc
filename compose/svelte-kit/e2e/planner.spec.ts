@@ -67,6 +67,39 @@ test.describe('mission planner window', () => {
 		expect([...seen].sort()).toEqual(['3D Buildings', 'Satellite', 'Streets']);
 	});
 
+	test('survey pattern generates serpentine waypoints from clicked corners', async ({ page }) => {
+		const before = await page.evaluate(
+			() => document.querySelectorAll('.leaflet-marker-pane img').length
+		);
+		await page.click('button:has-text("Survey Pattern")');
+		await page.waitForTimeout(500);
+		const frame = await page.evaluate(() => {
+			const r = document.querySelector('.window-frame')!.getBoundingClientRect();
+			return { left: r.left, top: r.top, w: r.width, h: r.height };
+		});
+		for (const [fx, fy] of [
+			[0.3, 0.35],
+			[0.6, 0.35],
+			[0.6, 0.65],
+			[0.3, 0.65]
+		]) {
+			await page.mouse.click(frame.left + frame.w * fx, frame.top + frame.h * fy);
+			await page.waitForTimeout(450);
+		}
+		await page.mouse.dblclick(frame.left + frame.w * 0.45, frame.top + frame.h * 0.5);
+		await page.locator('input[placeholder*="Transect" i]').fill('40');
+		await page.locator('input[placeholder*="Grid angle" i]').fill('90');
+		await page.locator('input[placeholder*="Altitude" i]').fill('35');
+		await page.click('button:has-text("Generate")');
+		await expect
+			.poll(
+				async () =>
+					page.evaluate(() => document.querySelectorAll('.leaflet-marker-pane img').length),
+				{ timeout: 10_000 }
+			)
+			.toBeGreaterThan(before + 3);
+	});
+
 	test('overlay toggles persist across a reload', async ({ page }) => {
 		const airspace = page.locator('.map-btn[aria-label="Toggle airspace overlay"] i');
 		const wasOn = (await airspace.getAttribute('class'))?.includes('text-') ?? false;
