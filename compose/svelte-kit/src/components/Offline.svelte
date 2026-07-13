@@ -64,9 +64,6 @@
                   <i class="fas {reconnecting ? 'fa-circle-notch fa-spin' : 'fa-rotate'} mr-1"></i>
                   {reconnecting ? 'Reconnecting...' : 'Reconnect'}
               </button>
-              <button class="ghost px-3 py-1.5 rounded-lg" onclick={toggleMinimize}>
-                  Dismiss
-              </button>
               <button class="ghost px-3 py-1.5 rounded-lg" onclick={() => window.location.reload()}>
                   Refresh Window
               </button>
