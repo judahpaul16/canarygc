@@ -48,6 +48,9 @@ export const mavVibrationStore = writable<{
     clip1: number;
     clip2: number;
 } | null>(null);
+// Per-output servo/motor PWM (microseconds) from SERVO_OUTPUT_RAW; the
+// calibration page shows these live during an ESC or motor test.
+export const mavServoOutputStore = writable<number[]>([]);
 export const mavBatteryStore = writable<number|null>(null);
 // A camera stream the vehicle advertises via VIDEO_STREAM_INFORMATION; its uri
 // is offered as a ready-to-use RTSP source for the live feed.

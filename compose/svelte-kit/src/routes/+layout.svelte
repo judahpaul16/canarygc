@@ -24,6 +24,7 @@
     mavSatelliteStore,
     mavAttitudeStore,
     mavVibrationStore,
+    mavServoOutputStore,
     mavVideoStreamStore,
     type Parameter
   } from '../stores/mavlinkStore';
@@ -288,6 +289,15 @@
       if (!roll && !pitch) return;
       const toDeg = (rad: string) => (rad ? (parseFloat(rad) * 180) / Math.PI : 0);
       mavAttitudeStore.set({ rollDeg: toDeg(roll), pitchDeg: toDeg(pitch) });
+    },
+
+    SERVO_OUTPUT_RAW: (text: string) => {
+      const servos: number[] = [];
+      for (let i = 1; i <= 8; i++) {
+        const v = extractValue(text, `servo${i}Raw`);
+        servos.push(v ? parseInt(v) : 0);
+      }
+      mavServoOutputStore.set(servos);
     },
 
     VIBRATION: (text: string) => {

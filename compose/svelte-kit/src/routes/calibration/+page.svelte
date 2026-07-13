@@ -10,6 +10,19 @@
   import { isPX4 } from '../../lib/flight-modes';
   import { sendMavlinkCommand, writeParameter } from '../../lib/mavlink-client';
   import { notify } from '../../lib/overlays';
+  import MotorOutput from '../../components/MotorOutput.svelte';
+  import { onMount } from 'svelte';
+
+  // SERVO_OUTPUT_RAW is message 36; ask the autopilot to stream it at 10 Hz
+  // while the page is open so the motor-output bars update live, then restore
+  // the default rate on the way out.
+  const SERVO_OUTPUT_RAW_ID = 36;
+  onMount(() => {
+    sendMavlinkCommand('SET_MESSAGE_INTERVAL', [SERVO_OUTPUT_RAW_ID, 100000], { cmdLong: true });
+    return () => {
+      sendMavlinkCommand('SET_MESSAGE_INTERVAL', [SERVO_OUTPUT_RAW_ID, 0], { cmdLong: true });
+    };
+  });
 
   const armed = $derived($mavArmedStateStore);
   const cal = $derived($calibrationStore);
@@ -157,6 +170,7 @@
             </section>
           {/each}
 
+          <div class="esc-row">
           <section class="panel esc {armed ? 'bad' : ''}">
             <div class="panel-head">
               <span class="icon-chip"><i class="fas fa-plug-circle-bolt"></i></span>
@@ -201,6 +215,18 @@
               <button class="cta" disabled={armed} onclick={enableEscCal}><i class="fas fa-bolt"></i> Arm semi-automatic mode</button>
             {/if}
           </section>
+
+          <section class="panel motors-panel">
+            <div class="panel-head">
+              <span class="icon-chip"><i class="fas fa-fan"></i></span>
+              <div>
+                <h2>Motor output</h2>
+                <p class="muted">Live PWM per output.</p>
+              </div>
+            </div>
+            <MotorOutput />
+          </section>
+          </div>
         </div>
 
         <section class="panel log-panel">
@@ -300,7 +326,22 @@
   .log-line { white-space: pre-wrap; overflow-wrap: anywhere; }
 
   /* ESC calibration card */
-  .esc { grid-column: 1 / -1; }
+  .esc-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .motors-panel {
+    display: flex;
+    flex-direction: column;
+  }
+
+  @media (max-width: 760px) {
+    .esc-row { grid-template-columns: 1fr; }
+  }
   .esc-warn {
     display: flex; align-items: center; gap: 0.5rem;
     background: rgba(214, 41, 41, 0.12); border: 1px solid rgba(214, 41, 41, 0.45);
