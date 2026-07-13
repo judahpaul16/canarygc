@@ -11,6 +11,11 @@ x-app-dev: &app-dev
     - ./compose/svelte-kit:/app
     - ./.git:/app/.git:ro
     - /app/node_modules
+  # App config (API keys, SMTP, MSP) is read from compose/svelte-kit/.env when it
+  # exists; the Integrations page overrides any of it at runtime.
+  env_file:
+    - path: ./compose/svelte-kit/.env
+      required: false
   deploy:
     resources:
       limits:
@@ -55,6 +60,9 @@ services:
     environment:
       - NODE_ENV=production
       - MEDIAMTX_API_URL=${MEDIAMTX_API_URL:-http://host.docker.internal:9997}
+    env_file:
+      - path: ./compose/svelte-kit/.env
+        required: false
     extra_hosts:
       - "host.docker.internal:host-gateway"
     deploy:
