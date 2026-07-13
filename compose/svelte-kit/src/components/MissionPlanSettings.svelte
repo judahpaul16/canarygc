@@ -13,7 +13,7 @@
     import { setFlightMode, sendMavlinkCommand } from '../lib/mavlink-client';
     import { optimizePath, confirmClear } from '../lib/plan-actions';
     import { normalizeMission } from '../lib/mission-commands';
-    import { parseMissionFile } from '../lib/mission-import';
+    import { readMissionFile } from '../lib/mission-import';
     import { isPX4 } from '../lib/flight-modes';
     import { mavModelStore } from '../stores/mavlinkStore';
 
@@ -241,29 +241,25 @@
     async function importPlan() {
         const input = document.createElement("input");
         input.type = "file";
-        input.accept = ".json,.plan,.waypoints,.txt,.mission";
+        input.accept = ".json,.plan,.waypoints,.txt,.mission,.kml,.kmz,.csv";
         input.onchange = async (e) => {
             const file = (e.target as HTMLInputElement).files?.[0];
             if (!file) return;
-            const reader = new FileReader();
-            reader.onload = async (ev) => {
-                try {
-                    const { title, actions: imported } = parseMissionFile(file.name, ev.target?.result as string);
-                    await handleSave(title, imported);
-                    notify({
-                        title: "Mission Imported",
-                        content: `Loaded ${Object.keys(imported).length} items from ${file.name}.`,
-                        duration: SAVE_FEEDBACK_MS,
-                    });
-                } catch (err) {
-                    showModal({
-                        title: "Import Failed",
-                        content: (err as Error).message,
-                        notification: true,
-                    });
-                }
-            };
-            reader.readAsText(file);
+            try {
+                const { title, actions: imported } = await readMissionFile(file);
+                await handleSave(title, imported);
+                notify({
+                    title: "Mission Imported",
+                    content: `Loaded ${Object.keys(imported).length} items from ${file.name}.`,
+                    duration: SAVE_FEEDBACK_MS,
+                });
+            } catch (err) {
+                showModal({
+                    title: "Import Failed",
+                    content: (err as Error).message,
+                    notification: true,
+                });
+            }
         };
         input.click();
     }

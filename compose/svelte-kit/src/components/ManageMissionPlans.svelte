@@ -7,6 +7,7 @@
   } from "../stores/missionPlanStore";
   import { showModal, notify } from "../lib/overlays";
   import { setFlightMode } from "../lib/mavlink-client";
+  import { readMissionFile } from "../lib/mission-import";
   import { onMount } from "svelte";
 
   interface Props {
@@ -224,19 +225,24 @@
   async function importPlan() {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = ".json";
+    input.accept = ".json,.plan,.waypoints,.txt,.mission,.kml,.kmz,.csv";
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-          const data = e.target?.result;
-          const plan = JSON.parse(data as string);
-          const title = file.name.replace(".json", "").replace(/_/g, " ");
-          await handleSave(title, plan);
-          await getMissionPlans();
-        };
-        reader.readAsText(file);
+      if (!file) return;
+      try {
+        const { title, actions: imported } = await readMissionFile(file);
+        await handleSave(title, imported);
+        await getMissionPlans();
+        notify({
+          title: "Mission Imported",
+          content: `Loaded ${Object.keys(imported).length} items from ${file.name}.`,
+        });
+      } catch (err) {
+        showModal({
+          title: "Import Failed",
+          content: (err as Error).message,
+          notification: true,
+        });
       }
     };
     input.click();
