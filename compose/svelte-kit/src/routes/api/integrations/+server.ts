@@ -2,6 +2,7 @@ import type { RequestHandler } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { getSetting, getSettings, setSetting } from '$lib/server/settings';
 import { applyCameraSource } from '$lib/server/mediamtx';
+import { refreshSigningConfig } from '$lib/server/mavlink';
 import type { CameraSourceKind } from '$lib/camera-source';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -51,6 +52,11 @@ export const GET: RequestHandler = async (event) => {
             baseUrl: (await getSetting('ai.baseUrl')) ?? '',
             model: (await getSetting('ai.model')) ?? '',
             keySet: Boolean((await getSetting('ai.apiKey')) ?? process.env.AI_API_KEY)
+        },
+        mavlink: {
+            signingKeySet: Boolean((await getSetting('mavlink.signingKey')) ?? process.env.MAVLINK_SIGNING_KEY),
+            signingLinkId: (await getSetting('mavlink.signingLinkId')) ?? '1',
+            signingStrict: (await getSetting('mavlink.signingStrict')) === 'true'
         }
     });
 };
@@ -102,6 +108,29 @@ export const POST: RequestHandler = async (event) => {
     if (typeof ai.apiKey === 'string' && ai.apiKey.length > 0) await setSetting('ai.apiKey', ai.apiKey.trim());
     if (typeof ai.baseUrl === 'string') await setSetting('ai.baseUrl', ai.baseUrl.trim());
     if (typeof ai.model === 'string') await setSetting('ai.model', ai.model.trim());
+
+    // MAVLink signing: the passphrase is a secret (blank keeps the stored one),
+    // link id and strict flag are plain config. Reload the live link config so
+    // the change takes effect without a restart.
+    const mavlink = body.mavlink ?? {};
+    let mavlinkChanged = false;
+    if (typeof mavlink.signingKey === 'string' && mavlink.signingKey.length > 0) {
+        await setSetting('mavlink.signingKey', mavlink.signingKey.trim());
+        mavlinkChanged = true;
+    }
+    if (mavlink.signingLinkId !== undefined) {
+        await setSetting('mavlink.signingLinkId', String(mavlink.signingLinkId));
+        mavlinkChanged = true;
+    }
+    if (mavlink.signingStrict !== undefined) {
+        await setSetting('mavlink.signingStrict', mavlink.signingStrict ? 'true' : 'false');
+        mavlinkChanged = true;
+    }
+    if (typeof mavlink.clearSigningKey === 'boolean' && mavlink.clearSigningKey) {
+        await setSetting('mavlink.signingKey', '');
+        mavlinkChanged = true;
+    }
+    if (mavlinkChanged) await refreshSigningConfig();
 
     return json({ message: 'Saved', cameraApplied });
 };

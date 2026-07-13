@@ -6,11 +6,14 @@ import {
     common,
     ardupilotmega,
     minimal,
-    send
+    send,
+    sendSigned
 } from 'node-mavlink';
 
 import { building } from '$app/environment';
 import { REGISTRY } from '$lib/mavlink-registry'
+import { getSettings } from '$lib/server/settings';
+import { deriveSigningKey, nextSigningTimestamp } from '$lib/server/mavlink-signing';
 
 // Once telemetry has flowed, silence beyond this window means a stalled link
 // and the connection recycles. Before the first packet the connection just
@@ -27,6 +30,9 @@ const MAX_LOG_ENTRIES = 5000;
 
 const SUPERVISOR_INTERVAL_MS = 2000;
 const GCS_HEARTBEAT_MS = 1000;
+// A stream of rejected signatures logs at most once per window so a flood of
+// forged or wrong-key packets cannot fill the event log.
+const SIG_WARN_INTERVAL_MS = 5000;
 
 interface MavlinkState {
     port: SerialPort | Socket | null;
@@ -42,6 +48,15 @@ interface MavlinkState {
     lastErrorMessage: string;
     wasAlive: boolean;
     suspended: boolean;
+    // MAVLink 2 signing: a null key sends and accepts unsigned traffic. With a
+    // key set, outbound messages are signed and inbound signed messages are
+    // verified; strict mode additionally rejects any unsigned inbound message.
+    signingKey: Buffer | null;
+    signingLinkId: number;
+    signingStrict: boolean;
+    lastSignAt: number;
+    sigRejects: number;
+    lastSigWarnAt: number;
 }
 
 // The link state lives on globalThis so a dev-server module reload reuses the
@@ -62,7 +77,13 @@ const state: MavlinkState = (g.__canarygcMavlink ??= {
     gcsBeat: null,
     lastErrorMessage: '',
     wasAlive: false,
-    suspended: false
+    suspended: false,
+    signingKey: null,
+    signingLinkId: 1,
+    signingStrict: false,
+    lastSignAt: 0,
+    sigRejects: 0,
+    lastSigWarnAt: 0
 });
 
 function superviseLink(): void {
@@ -89,6 +110,10 @@ function superviseLink(): void {
 // are recreated on module load so a dev reload runs the current logic, and
 // prerendering during the build loads this module too, so they stay off there.
 if (!building) {
+    // Load the signing key once the DB is reachable; a failure here leaves the
+    // link unsigned until the operator saves the setting, which reloads it.
+    refreshSigningConfig().catch(() => {});
+
     if (state.supervisor) clearInterval(state.supervisor);
     state.supervisor = setInterval(superviseLink, SUPERVISOR_INTERVAL_MS);
 
@@ -104,7 +129,7 @@ if (!building) {
         heartbeat.customMode = 0;
         heartbeat.systemStatus = minimal.MavState.ACTIVE;
         heartbeat.mavlinkVersion = 3;
-        send(state.port, heartbeat).catch(() => {});
+        sendMsg(state.port, heartbeat).catch(() => {});
     }, GCS_HEARTBEAT_MS);
 }
 
@@ -149,12 +174,50 @@ function linkAlive(): boolean {
     );
 }
 
+// Loads the signing passphrase, link id, and strict flag from settings (env as
+// a fallback) and caches the derived 32-byte key. Called at startup and each
+// time the operator saves the setting, so a key change takes effect without a
+// restart.
+export async function refreshSigningConfig(): Promise<void> {
+    const s = await getSettings('mavlink.');
+    const passphrase = s['mavlink.signingKey'] ?? process.env.MAVLINK_SIGNING_KEY ?? '';
+    state.signingKey = deriveSigningKey(passphrase);
+    const linkId = Math.trunc(Number(s['mavlink.signingLinkId'] ?? 1));
+    state.signingLinkId = Number.isFinite(linkId) ? Math.min(255, Math.max(0, linkId)) : 1;
+    state.signingStrict = (s['mavlink.signingStrict'] ?? 'false') === 'true';
+}
+
+// Sends a message signed when a key is configured, plain otherwise. The
+// timestamp is forced strictly upward so a burst inside one millisecond still
+// satisfies the receiver's replay check.
+function sendMsg(
+    stream: Parameters<typeof send>[0],
+    msg: Parameters<typeof send>[1]
+): Promise<unknown> {
+    if (!state.signingKey) return send(stream, msg);
+    const ts = nextSigningTimestamp(Date.now(), state.lastSignAt);
+    state.lastSignAt = ts;
+    return sendSigned(stream, msg, state.signingKey, state.signingLinkId, undefined, undefined, ts);
+}
+
+function noteSignatureReject(reason: string): void {
+    state.sigRejects++;
+    const now = Date.now();
+    if (now - state.lastSigWarnAt > SIG_WARN_INTERVAL_MS) {
+        state.lastSigWarnAt = now;
+        pushLog(`MAVLink signing: dropped a message (${reason}); ${state.sigRejects} rejected so far`);
+    }
+}
+
 // Opens the connection and starts listening; the link counts as alive once the
 // first packet arrives. Safe to call repeatedly, it only dials when no
 // connection exists.
 function initializePort(): void {
     if (state.port || state.suspended) return;
     try {
+        // Reload signing config on every dial so a fresh link always picks up
+        // the current key, self-healing a startup that raced the DB.
+        refreshSigningConfig().catch(() => {});
         openConnection();
         setupPacketReader();
         setupPortListeners();
@@ -202,6 +265,20 @@ function setupPacketReader(): void {
         .pipe(new MavLinkPacketParser());
 
     state.reader.on('data', (packet) => {
+        // With signing on, a signed message must verify against the key, and a
+        // dropped packet never counts as link traffic, so a wrong key or a
+        // forged stream surfaces as a down link rather than trusted telemetry.
+        if (state.signingKey) {
+            if (packet.signature) {
+                if (!packet.signature.matches(state.signingKey)) {
+                    noteSignatureReject('invalid signature');
+                    return;
+                }
+            } else if (state.signingStrict) {
+                noteSignatureReject('unsigned message');
+                return;
+            }
+        }
         if (state.lastPacketAt === 0) {
             state.lastErrorMessage = '';
             pushLog('MAVLink connection initialized');
@@ -259,28 +336,28 @@ async function requestStatus() {
     request.targetComponent = 1;
     request.messageId = common.GlobalPositionInt.MSG_ID;
     request.responseTarget = 1;
-    await send(state.port, request);
+    await sendMsg(state.port, request);
 
     request = new common.RequestMessageCommand();
     request.targetSystem = 1;
     request.targetComponent = 1;
     request.messageId = common.GpsRawInt.MSG_ID;
     request.responseTarget = 1;
-    await send(state.port, request);
+    await sendMsg(state.port, request);
 
     request = new common.RequestMessageCommand();
     request.targetSystem = 1;
     request.targetComponent = 1;
     request.messageId = common.MissionCurrent.MSG_ID;
     request.responseTarget = 1;
-    await send(state.port, request);
+    await sendMsg(state.port, request);
 
     request = new common.RequestMessageCommand();
     request.targetSystem = 1;
     request.targetComponent = 1;
     request.messageId = common.BatteryStatus.MSG_ID;
     request.responseTarget = 1;
-    await send(state.port, request);
+    await sendMsg(state.port, request);
 }
 
 async function requestParameters() {
@@ -292,7 +369,7 @@ async function requestParameters() {
     const request = new common.ParamRequestList();
     request.targetSystem = 1;
     request.targetComponent = 1;
-    await send(state.port, request);
+    await sendMsg(state.port, request);
 }
 
 async function writeParameter(id: string, value: number, type: number) {
@@ -307,7 +384,7 @@ async function writeParameter(id: string, value: number, type: number) {
     request.paramId = id;
     request.paramValue = value;
     request.paramType = type;
-    await send(state.port, request);
+    await sendMsg(state.port, request);
 }
 
 async function sendMavlinkCommand(command: string, params: number[], useCmdLong = false, useArduPilotMega = false) {
@@ -340,7 +417,7 @@ async function sendMavlinkCommand(command: string, params: number[], useCmdLong 
     if (params[4] !== undefined) commandMsg._param5 = params[4];
     if (params[5] !== undefined) commandMsg._param6 = params[5];
     if (params[6] !== undefined) commandMsg._param7 = params[6];
-    await send(state.port, commandMsg);
+    await sendMsg(state.port, commandMsg);
 }
 
 // One frame of the gamepad stream; axes arrive pre-normalized to the
@@ -358,7 +435,7 @@ async function sendManualControl(x: number, y: number, z: number, r: number, but
     msg.z = z;
     msg.r = r;
     msg.buttons = buttons;
-    await send(state.port, msg);
+    await sendMsg(state.port, msg);
 }
 
 async function setMissionCount(numItems: number) {
@@ -372,7 +449,7 @@ async function setMissionCount(numItems: number) {
     count.targetComponent = 1;
     count.count = numItems;
     count.opaqueId = 0;
-    await send(state.port, count);
+    await sendMsg(state.port, count);
     await new Promise((resolve) => setTimeout(resolve, 250)); // Wait for 250 ms
 }
 
@@ -410,7 +487,7 @@ async function loadMissionItem(item: MissionItemInput, index: number) {
     msg.y = Number((item.lon * 1e7).toFixed(0));
     msg.z = item.alt;
     msg.missionType = 0;
-    await send(state.port, msg);
+    await sendMsg(state.port, msg);
 }
 
 async function clearAllMissionItems() {
@@ -422,7 +499,7 @@ async function clearAllMissionItems() {
     const msg = new common.MissionClearAll();
     msg.targetSystem = 1;
     msg.targetComponent = 1;
-    await send(state.port, msg);
+    await sendMsg(state.port, msg);
 }
 
 async function setPositionLocal(x: number, y: number, z: number) {
@@ -442,7 +519,7 @@ async function setPositionLocal(x: number, y: number, z: number) {
     msg.y = y;
     msg.z = z;
     msg.yawRate = 0;
-    await send(state.port, msg);
+    await sendMsg(state.port, msg);
   }
 
 function convertBigIntToNumber(obj: unknown): unknown {

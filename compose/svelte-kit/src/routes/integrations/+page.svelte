@@ -26,6 +26,8 @@
   let cameraApplied = $state<boolean | null>(null);
   let ai = $state<{ baseUrl: string; model: string; apiKey: string }>({ baseUrl: '', model: '', apiKey: '' });
   let aiKeySet = $state(false);
+  let mavlink = $state<{ signingKey: string; signingLinkId: string; signingStrict: boolean }>({ signingKey: '', signingLinkId: '1', signingStrict: false });
+  let mavlinkKeySet = $state(false);
 
   const CAMERA_KINDS = [
     { value: 'pi', label: 'Raspberry Pi camera' },
@@ -55,7 +57,8 @@
     airspace: 'airspace openaip altitude angel api key faa zones no-fly',
     tiles: 'map tiles basemap maptiler key light dark satellite url preset xyz',
     camera: 'camera video feed source stream live rtsp rtmp srt usb v4l2 capture fpv betaflight mediamtx pi',
-    ai: 'ai assistant pid tuning llm openai litellm ollama api key model base url gpt tune'
+    ai: 'ai assistant pid tuning llm openai litellm ollama api key model base url gpt tune',
+    mavlink: 'mavlink signing security authentication key passphrase sign verify replay tamper link id strict command injection'
   };
 
   function panelVisible(panel: keyof typeof PANEL_KEYWORDS): boolean {
@@ -115,6 +118,7 @@
       tiles = { light: eff.light, dark: eff.dark, satellite: eff.satellite };
       if (data.camera) camera = { kind: data.camera.kind ?? 'pi', url: data.camera.url ?? '', device: data.camera.device ?? '/dev/video0' };
       if (data.ai) { ai = { baseUrl: data.ai.baseUrl ?? '', model: data.ai.model ?? '', apiKey: '' }; aiKeySet = data.ai.keySet ?? false; }
+      if (data.mavlink) { mavlink = { signingKey: '', signingLinkId: String(data.mavlink.signingLinkId ?? '1'), signingStrict: Boolean(data.mavlink.signingStrict) }; mavlinkKeySet = data.mavlink.signingKeySet ?? false; }
     } catch {
       notify({ title: 'Load failed', content: 'Could not load integration settings.', type: 'warning' });
     } finally {
@@ -128,7 +132,7 @@
       const res = await fetch('/api/integrations', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email, smtp, openaip, altitudeAngel, maptiler, tiles: tileOverrides(), camera, ai })
+        body: JSON.stringify({ email, smtp, openaip, altitudeAngel, maptiler, tiles: tileOverrides(), camera, ai, mavlink })
       });
       if (res.ok) {
         const data = await res.json();
@@ -137,6 +141,8 @@
         if (altitudeAngel) altitudeAngelSet = true;
         if (ai.apiKey) aiKeySet = true;
         ai.apiKey = '';
+        if (mavlink.signingKey) mavlinkKeySet = true;
+        mavlink.signingKey = '';
         smtp.pass = '';
         openaip = '';
         altitudeAngel = '';
@@ -145,6 +151,28 @@
       } else {
         const data = await res.json();
         notify({ title: 'Save failed', content: data.message ?? 'Could not save settings.', type: 'warning' });
+      }
+    } catch {
+      notify({ title: 'Save failed', content: 'Network error while saving.', type: 'warning' });
+    } finally {
+      saving = false;
+    }
+  }
+
+  async function disableSigning() {
+    saving = true;
+    try {
+      const res = await fetch('/api/integrations', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ mavlink: { clearSigningKey: true, signingStrict: false } })
+      });
+      if (res.ok) {
+        mavlinkKeySet = false;
+        mavlink = { signingKey: '', signingLinkId: mavlink.signingLinkId, signingStrict: false };
+        notify({ title: 'Signing disabled', content: 'MAVLink messages are sent and accepted unsigned.', duration: 3000 });
+      } else {
+        notify({ title: 'Save failed', content: 'Could not disable signing.', type: 'warning' });
       }
     } catch {
       notify({ title: 'Save failed', content: 'Network error while saving.', type: 'warning' });
@@ -179,7 +207,7 @@
     <div class="panel"><p class="muted">Loading...</p></div>
   {:else}
     <form onsubmit={(e) => { e.preventDefault(); save(); }}>
-      {#if filter.trim() && !panelVisible('operator') && !panelVisible('smtp') && !panelVisible('airspace') && !panelVisible('tiles') && !panelVisible('camera') && !panelVisible('ai')}
+      {#if filter.trim() && !panelVisible('operator') && !panelVisible('smtp') && !panelVisible('airspace') && !panelVisible('tiles') && !panelVisible('camera') && !panelVisible('ai') && !panelVisible('mavlink')}
         <div class="panel"><p class="muted">No settings match "{filter}".</p></div>
       {/if}
       <div class="settings-grid">
@@ -333,6 +361,39 @@
           <label for="ai-model">Model</label>
           <input id="ai-model" bind:value={ai.model} autocomplete="off" placeholder="gpt-4o-mini" />
         </div>
+      </section>
+      {/if}
+
+      {#if panelVisible('mavlink')}
+      <section class="panel">
+        <div class="panel-head">
+          <span class="icon-chip"><i class="fas fa-shield-halved"></i></span>
+          <div>
+            <h2>MAVLink signing</h2>
+            <p class="muted">Authenticates the link with a shared passphrase so only a party that holds it can command the vehicle, and forged or replayed messages are rejected. Set the same passphrase on the autopilot.</p>
+          </div>
+        </div>
+        <div class="field">
+          <label for="mav-key">Signing passphrase {#if mavlinkKeySet}<span class="badge">active</span>{/if}</label>
+          <input id="mav-key" type="password" bind:value={mavlink.signingKey} autocomplete="off" placeholder={mavlinkKeySet ? 'Leave blank to keep the active key' : 'Shared secret passphrase'} />
+          <p class="hint">Hashed to the 32-byte key with SHA-256, the same way QGroundControl and Mission Planner derive it.</p>
+        </div>
+        <div class="field">
+          <label for="mav-link">Link ID</label>
+          <input id="mav-link" type="number" min="0" max="255" bind:value={mavlink.signingLinkId} autocomplete="off" placeholder="1" />
+          <p class="hint">Identifies this ground station's channel to the vehicle. Leave at 1 unless another link already uses it.</p>
+        </div>
+        <div class="field toggle-field">
+          <span class="toggle-label">Reject unsigned messages (strict)</span>
+          <label class="switch">
+            <input type="checkbox" bind:checked={mavlink.signingStrict} />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <p class="hint">On: any unsigned message is dropped. Off: unsigned messages still pass, which keeps the link up while the autopilot is being set up.</p>
+        {#if mavlinkKeySet}
+          <button type="button" class="mini" onclick={disableSigning} disabled={saving}>Turn off signing</button>
+        {/if}
       </section>
       {/if}
       </div>
