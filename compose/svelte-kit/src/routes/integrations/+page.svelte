@@ -450,13 +450,12 @@
         </div>
       </section>
       {/if}
-      </div>
-      </div>
-
       <div class="actions">
         <button type="submit" class="cta" disabled={saving}>
           <i class="fas fa-floppy-disk"></i> {saving ? 'Saving...' : 'Save integrations'}
         </button>
+      </div>
+      </div>
       </div>
     </form>
   {/if}
@@ -499,6 +498,14 @@
     min-width: 0;
   }
 
+  /* The short right column follows the viewport while the settings scroll, so
+     Save stays reachable without scrolling back to the bottom. */
+  .col-side {
+    position: sticky;
+    top: 1rem;
+    align-self: start;
+  }
+
   .settings-grid .panel {
     margin-bottom: 0;
   }
@@ -506,6 +513,9 @@
   @media (max-width: 900px) {
     .settings-grid {
       grid-template-columns: 1fr;
+    }
+    .col-side {
+      position: static;
     }
   }
 
@@ -815,15 +825,16 @@
 
   .actions {
     display: flex;
-    justify-content: flex-end;
-    margin-top: 1.75rem;
-    padding-top: 1.1rem;
+    margin-top: 0.25rem;
+    padding-top: 1rem;
     border-top: 1px solid rgb(from var(--fontColor) r g b / 0.08);
   }
 
   .cta {
     display: inline-flex;
+    width: 100%;
     align-items: center;
+    justify-content: center;
     gap: 0.5rem;
     background: #f5c518;
     color: #1c1c1e;
