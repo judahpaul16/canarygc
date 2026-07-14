@@ -60,6 +60,22 @@ describe('mode encoding', () => {
 		expect(decodeMode(4, 'ArduPilot')).toBe('GUIDED');
 		expect(decodeMode(4, 'PX4')).not.toBe('GUIDED');
 	});
+
+	it('encodes each ArduPilot vehicle with its own mode numbers', () => {
+		expect(strategyFor('ArduPilot', 'Fixed Wing').setModeParams('GUIDED')[1]).toBe(15);
+		expect(strategyFor('ArduPilot', 'Fixed Wing').setModeParams('AUTO')[1]).toBe(10);
+		expect(strategyFor('ArduPilot', 'Fixed Wing').setModeParams('RTL')[1]).toBe(11);
+		expect(strategyFor('ArduPilot', 'Ground Rover').setModeParams('GUIDED')[1]).toBe(15);
+		expect(strategyFor('ArduPilot', 'Submarine').setModeParams('GUIDED')[1]).toBe(4);
+		expect(strategyFor('ArduPilot', 'Submarine').setModeParams('RTL')[1]).toBe(9);
+	});
+
+	it('decodes a mode number against the connected vehicle table', () => {
+		expect(decodeMode(15, 'ArduPilot', 'Fixed Wing')).toBe('GUIDED');
+		expect(decodeMode(5, 'ArduPilot', 'Fixed Wing')).toBe('FBWA');
+		expect(decodeMode(4, 'ArduPilot', 'Fixed Wing')).toBe('ACRO');
+		expect(decodeMode(9, 'ArduPilot', 'Submarine')).toBe('SURFACE');
+	});
 });
 
 describe('flag helpers', () => {
