@@ -5,6 +5,7 @@ import {
 	readTelemetry,
 	rebootToBootloader,
 	uploadMissionMsp,
+	mspCalibrate,
 	type MspMissionItem
 } from '$lib/server/msp';
 import {
@@ -81,6 +82,14 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
 				return json({ error: (err as Error).message }, { status: 503 });
 			}
 		}
+		case 'calibrate':
+			try {
+				const body = (await event.request.json()) as { kind: string };
+				const result = await mspCalibrate(body.kind);
+				return json(result, { status: result.ok ? 200 : 400 });
+			} catch (err) {
+				return json({ error: (err as Error).message }, { status: 503 });
+			}
 		case 'guidance_stop':
 			stopGuidance();
 			return json({ ok: true });

@@ -75,12 +75,22 @@ export const POST: RequestHandler = async (event) => {
     if (!(await isSmtpConfigured())) return json({ skipped: 'smtp not configured' }, 200);
 
     const { subject, text, html } = buildEmail(meta.label, payload.description, payload.telemetry);
-    try {
-        await sendMail({ to, subject, text, html });
-    } catch (e) {
-        console.error('Alert email failed:', (e as Error).message);
-        return json({ message: 'send failed' }, 500);
-    }
 
-    return json({ sent: true }, 200);
+    // Retry with backoff so a transient uplink drop (common on a cellular link)
+    // does not lose the alert. Crash and failsafe alerts are worth a few seconds.
+    const MAX_ATTEMPTS = 4;
+    let lastError: Error | null = null;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        try {
+            await sendMail({ to, subject, text, html });
+            return json({ sent: true, attempts: attempt }, 200);
+        } catch (e) {
+            lastError = e as Error;
+            if (attempt < MAX_ATTEMPTS) {
+                await new Promise((resolve) => setTimeout(resolve, 1000 * 2 ** (attempt - 1)));
+            }
+        }
+    }
+    console.error('Alert email failed after retries:', lastError?.message);
+    return json({ message: 'send failed after retries' }, 500);
 };

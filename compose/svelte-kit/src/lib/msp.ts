@@ -20,6 +20,8 @@ export const MSP = {
 	ANALOG: 110,
 	WP: 118,
 	SET_RAW_RC: 200,
+	ACC_CALIBRATION: 205,
+	MAG_CALIBRATION: 206,
 	SET_WP: 209
 } as const;
 

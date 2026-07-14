@@ -88,10 +88,22 @@ export function initAlerts(): () => void {
   let gpsOk = true;
   let prevComplete = true;
   let batteryFloor = 100;
+  // Crash heuristic: the craft climbed above a few meters while armed, then
+  // disarmed while still showing altitude, which an intact landing never does.
+  let wasAirborne = false;
+  const CRASH_MIN_ALT_M = 3;
 
   const subs = [
+    mavAltitudeStore.subscribe((alt) => {
+      if (get(mavArmedStateStore) && alt > CRASH_MIN_ALT_M) wasAirborne = true;
+    }),
+
     mavArmedStateStore.subscribe((armed) => {
       if (!armedInit) return void (armedInit = true);
+      if (!armed && wasAirborne && get(mavAltitudeStore) > CRASH_MIN_ALT_M) {
+        dispatch('crash', `Unexpected disarm at ${get(mavAltitudeStore).toFixed(0)} m; a crash is likely.`);
+      }
+      if (!armed) wasAirborne = false;
       dispatch(armed ? 'armed' : 'disarmed', armed ? 'The vehicle armed.' : 'The vehicle disarmed.');
     }),
 

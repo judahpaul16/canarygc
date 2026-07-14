@@ -347,6 +347,25 @@ export async function uploadMissionMsp(
 	return { ok: true, message: `Uploaded ${waypoints.length} waypoints to the flight controller.`, count: waypoints.length };
 }
 
+// Runs the sensor calibration MSP boards support: accelerometer (a single level
+// calibration, so the board is held flat) and magnetometer (the board collects
+// while it is rotated through all axes). Gyro calibrates itself at power-on.
+export async function mspCalibrate(kind: string): Promise<{ ok: boolean; message: string }> {
+	try {
+		if (kind === 'compass') {
+			await request(MSP.MAG_CALIBRATION);
+			return { ok: true, message: 'Compass calibration started. Rotate the craft through all axes.' };
+		}
+		if (kind === 'gyro') {
+			return { ok: true, message: 'The gyro calibrates automatically at power-on; keep the craft still.' };
+		}
+		await request(MSP.ACC_CALIBRATION);
+		return { ok: true, message: 'Accelerometer calibrated at the level position.' };
+	} catch (err) {
+		return { ok: false, message: (err as Error).message };
+	}
+}
+
 // Drops the FC into its ROM bootloader so a DFU flash can follow. The FC
 // disconnects as it reboots, so a lack of response is the success case.
 export async function rebootToBootloader(): Promise<void> {

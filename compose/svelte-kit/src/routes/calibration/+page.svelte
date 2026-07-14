@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { mavArmedStateStore, mavModelStore, mavlinkParamStore } from '../../stores/mavlinkStore';
+  import { mavArmedStateStore, mavModelStore, mavlinkParamStore, fcProtocolStore } from '../../stores/mavlinkStore';
+  import { get } from 'svelte/store';
   import { calibrationStore, resetCalibration } from '../../stores/calibrationStore';
   import {
     calCommand,
@@ -57,6 +58,27 @@
     }
     resetCalibration();
     calibrationStore.update((s) => ({ ...s, active: kind, status: 'running', progress: 0, log: [] }));
+    if (get(fcProtocolStore) === 'msp') {
+      try {
+        const res = await fetch('/api/msp/calibrate', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ kind })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          notify({ title: 'Calibration', content: data.message });
+          calibrationStore.update((s) => ({ ...s, progress: 100, status: 'done' }));
+        } else {
+          calibrationStore.update((s) => ({ ...s, status: 'failed' }));
+          notify({ title: 'Could not start', content: data.message ?? data.error, type: 'error' });
+        }
+      } catch (error) {
+        calibrationStore.update((s) => ({ ...s, status: 'failed' }));
+        notify({ title: 'Could not start', content: (error as Error).message, type: 'error' });
+      }
+      return;
+    }
     const c = calCommand(kind, $mavModelStore);
     const ok = await sendMavlinkCommand(c.command, c.params, { cmdLong: c.cmdLong });
     if (!ok) {

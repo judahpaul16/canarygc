@@ -14,6 +14,7 @@ export const ALERT_TYPES: AlertType[] = [
   { id: 'mission_complete', label: 'Mission complete', icon: 'fa-flag-checkered', description: 'The mission finished.' },
   { id: 'failsafe', label: 'Failsafe', icon: 'fa-triangle-exclamation', description: 'The vehicle entered a failsafe state.' },
   { id: 'emergency', label: 'Emergency', icon: 'fa-burst', description: 'The vehicle reported an emergency.' },
+  { id: 'crash', label: 'Crash detected', icon: 'fa-plane-circle-exclamation', description: 'A likely crash: the vehicle disarmed while still airborne.' },
   { id: 'battery_low', label: 'Battery low', icon: 'fa-battery-quarter', description: 'Battery dropped to the low threshold.' },
   { id: 'battery_critical', label: 'Battery critical', icon: 'fa-battery-empty', description: 'Battery reached the critical threshold.' },
   { id: 'gps_lost', label: 'GPS signal lost', icon: 'fa-satellite-dish', description: 'GPS dropped below a usable fix.' },
