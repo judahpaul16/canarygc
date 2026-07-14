@@ -148,9 +148,13 @@
     <rect x={CX - 16} y="0" width="32" height="12" fill="#111c" />
     <text x={CX} y="9" class="readout" text-anchor="middle">{heading.toString().padStart(3, '0')}</text>
 
-    <!-- Status chips (bottom) -->
+    <!-- Status chips (bottom). The mode chip is dropped when it carries nothing
+         beyond the arm state: an MSP board reports only armed/disarmed, not a
+         separate flight mode, so it would otherwise repeat the arm chip. -->
     <text x="46" y="172" class="chip" fill={armed ? '#f87171' : '#4ade80'}>{armed ? 'ARMED' : 'DISARMED'}</text>
-    <text x={CX} y="172" class="chip" text-anchor="middle" fill="#e5e7eb">{mode}</text>
+    {#if mode && mode !== 'Unknown' && mode !== 'Armed' && mode !== 'Disarmed'}
+      <text x={CX} y="172" class="chip" text-anchor="middle" fill="#e5e7eb">{mode}</text>
+    {/if}
     <text x="274" y="172" class="chip" text-anchor="end" fill={batteryColor}>
       {battery === null ? 'BATT --' : `BATT ${battery}%`} · {sats.total} SAT
     </text>
