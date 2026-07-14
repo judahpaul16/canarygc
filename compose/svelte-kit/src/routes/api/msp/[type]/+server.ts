@@ -8,6 +8,7 @@ import {
 	mspCalibrate,
 	readModeConfig,
 	readMotors,
+	sendMspCommand,
 	type MspMissionItem
 } from '$lib/server/msp';
 import {
@@ -104,6 +105,14 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
 		case 'manual_stop':
 			await stopMspManual();
 			return json({ ok: true });
+		case 'command':
+			try {
+				const body = (await event.request.json()) as { code: number; payload?: number[]; v2?: boolean };
+				if (typeof body.code !== 'number') return json({ error: 'A numeric MSP code is required' }, { status: 400 });
+				return json(await sendMspCommand(body.code, body.payload ?? [], !!body.v2));
+			} catch (err) {
+				return json({ error: (err as Error).message }, { status: 503 });
+			}
 		case 'manual_control': {
 			const h = event.request.headers;
 			const num = (k: string, d = 0) => {

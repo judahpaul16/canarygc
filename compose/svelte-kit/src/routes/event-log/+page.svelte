@@ -3,10 +3,11 @@
     import { showModal } from '../../lib/overlays';
     import { sendMavlinkCommand } from '../../lib/mavlink-client';
     import { commandCatalog, paramHint, parseConsoleInput } from '../../lib/mav-console';
+    import { mspCommandCatalog, mspParamHint, parseMspConsoleInput, describeMspResponse } from '../../lib/msp-console';
 
     // A Betaflight or INAV board speaks MSP, not MAVLink, so it carries no MAVLink
-    // heartbeat and takes no MAVLink console command; the log shows its own MSP
-    // connection and arm events instead.
+    // heartbeat; the console below sends MSP commands to it instead of MAVLink
+    // commands, and the log shows its MSP responses and connection events.
     let fcIsMsp = $derived($fcProtocolStore === 'msp');
 
     const HEARTBEAT_FLASH_MS = 2000;
@@ -96,6 +97,7 @@
             return '#4ade80';
         }
         if (name.startsWith('MAVLink connection')) return name.includes('error') ? '#ff6b6b' : '#4ade80';
+        if (name.startsWith('MSP_')) return body.startsWith('error') ? '#ff6b6b' : '#7dd3fc';
         if (name === 'HEARTBEAT') return '#4ade80';
         if (name.endsWith('ACK')) return '#c084fc';
         if (name.startsWith('COMMAND')) return '#a78bfa';
@@ -167,20 +169,43 @@
     let historyPos = -1;
 
     let mavModel = $derived($mavModelStore);
+
+    interface Suggestion { name: string; tag?: string; }
+
     // Suggestions apply to the command token only; params take over after it.
-    let suggestions = $derived.by(() => {
+    // The catalog follows the connected protocol: MSP for a Betaflight or INAV
+    // board, the autopilot's MAVLink command set otherwise.
+    let suggestions = $derived.by<Suggestion[]>(() => {
         if (consoleInput.includes(' ')) return [];
-        const token = consoleInput.trim().toUpperCase().replace(/^MAV_CMD_/, '');
-        if (!token) return [];
+        const raw = consoleInput.trim().toUpperCase();
+        if (!raw) return [];
+        if (fcIsMsp) {
+            const token = raw.replace(/^MSP_?/, '');
+            const bare = (name: string) => name.replace(/^MSP_/, '');
+            return mspCommandCatalog()
+                .filter((c) => bare(c.name).includes(token))
+                .sort((a, b) => Number(bare(b.name).startsWith(token)) - Number(bare(a.name).startsWith(token)))
+                .slice(0, SUGGESTION_LIMIT)
+                .map((c) => ({ name: c.name, tag: c.write ? 'write' : undefined }));
+        }
+        const token = raw.replace(/^MAV_CMD_/, '');
         return commandCatalog(mavModel)
             .filter((c) => c.name.includes(token))
             .sort((a, b) => Number(b.name.startsWith(token)) - Number(a.name.startsWith(token)))
-            .slice(0, SUGGESTION_LIMIT);
+            .slice(0, SUGGESTION_LIMIT)
+            .map((c) => ({ name: c.name, tag: c.ardu ? 'ArduPilot' : undefined }));
     });
     let hintLine = $derived.by(() => {
-        const first = consoleInput.trim().split(/\s+/)[0]?.toUpperCase().replace(/^MAV_CMD_/, '') ?? '';
-        const known = first && commandCatalog(mavModel).some((c) => c.name === first);
-        if (known) return `${mavModel || 'Autopilot'} · ${first}: ${paramHint(first)}`;
+        const first = consoleInput.trim().split(/\s+/)[0]?.toUpperCase() ?? '';
+        if (fcIsMsp) {
+            const name = first.replace(/^MSP_?/, 'MSP_');
+            const known = mspCommandCatalog().some((c) => c.name === name);
+            if (known) return `MSP · ${name}: ${mspParamHint(name)}`;
+            return 'MSP commands · type to search, Tab completes, Enter sends';
+        }
+        const name = first.replace(/^MAV_CMD_/, '');
+        const known = name && commandCatalog(mavModel).some((c) => c.name === name);
+        if (known) return `${mavModel || 'Autopilot'} · ${name}: ${paramHint(name)}`;
         return `${mavModel || 'Autopilot'} commands · type to search, Tab completes, Enter sends`;
     });
 
@@ -191,7 +216,21 @@
         document.getElementById('mav-console-input')?.focus();
     }
 
+    function appendLog(line: string) {
+        mavlinkLogStore.update((l) => [...l, line]);
+    }
+
+    function recordHistory() {
+        history = [consoleInput, ...history.filter((h) => h !== consoleInput)].slice(0, HISTORY_LIMIT);
+        historyPos = -1;
+        consoleInput = '';
+    }
+
     async function sendConsole() {
+        if (fcIsMsp) {
+            await sendMspConsole();
+            return;
+        }
         const parsed = parseConsoleInput(consoleInput, mavModel);
         if (!parsed.ok) {
             consoleError = parsed.error ?? 'Invalid command';
@@ -204,10 +243,38 @@
         });
         sending = false;
         consoleError = ok ? '' : 'Send failed; the server rejected the command';
-        if (ok) {
-            history = [consoleInput, ...history.filter((h) => h !== consoleInput)].slice(0, HISTORY_LIMIT);
-            historyPos = -1;
-            consoleInput = '';
+        if (ok) recordHistory();
+    }
+
+    async function sendMspConsole() {
+        const parsed = parseMspConsoleInput(consoleInput);
+        if (!parsed.ok) {
+            consoleError = parsed.error ?? 'Invalid command';
+            return;
+        }
+        sending = true;
+        const time = new Date().toLocaleTimeString();
+        try {
+            const res = await fetch('/api/msp/command', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ code: parsed.code, payload: parsed.payload, v2: parsed.v2 })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                consoleError = data.error ?? `Send failed (${res.status})`;
+                appendLog(`${parsed.name}::${time}::error: ${consoleError}`);
+            } else if (data.error) {
+                appendLog(`${parsed.name}::${time}::flight controller returned an error frame`);
+                recordHistory();
+            } else {
+                appendLog(`${parsed.name}::${time}::${describeMspResponse(parsed.code!, data.payload ?? [])}`);
+                recordHistory();
+            }
+        } catch (e) {
+            consoleError = (e as Error).message;
+        } finally {
+            sending = false;
         }
     }
 
@@ -266,6 +333,10 @@
                 <h2 class="text-xl">{fcIsMsp ? 'Flight Controller Events' : 'MAVLink Events'}</h2>
                 <div class="filters flex gap-4 justify-center items-center">
                     <input type="text" class="form-input" placeholder="Search" bind:value={searchTerm}/>
+                    <!-- These toggles hide high-rate MAVLink message types. A
+                         Betaflight or INAV board logs only low-rate state events,
+                         so the MSP path shows none of these. -->
+                    {#if !fcIsMsp}
                     <div class="form-checkbox gap-2">
                         <input type="checkbox" class="form-checkbox" name="Toggle TIMESYNC" bind:checked={showTimeSync}>
                         <label for="Toggle TIMESYNC" class="mr-2">TIMESYNC</label>
@@ -276,6 +347,7 @@
                         <input type="checkbox" class="form-checkbox" name="Toggle BATTERY_STATUS" bind:checked={showSysStatus}>
                         <label for="Toggle BATTERY_STATUS">BATTERY_STATUS</label>
                     </div>
+                    {/if}
                     <div class="btns flex gap-4">
                         <button class="btn btn-primary bg-red-400 hover:bg-red-500 relative" onclick={confirmClear}>
                             <i class="fas fa-trash-alt"></i>
@@ -315,7 +387,6 @@
                     </div>
                 {/if}
             </div>
-            {#if !fcIsMsp}
             <div class="console">
                 {#if suggestions.length}
                     <ul class="console-suggestions">
@@ -323,7 +394,7 @@
                             <li>
                                 <button type="button" class:active={i === selIndex} onclick={() => completeSuggestion(s.name)}>
                                     <span>{s.name}</span>
-                                    {#if s.ardu}<span class="cs-tag">ArduPilot</span>{/if}
+                                    {#if s.tag}<span class="cs-tag" class:cs-write={s.tag === 'write'}>{s.tag}</span>{/if}
                                 </button>
                             </li>
                         {/each}
@@ -334,7 +405,9 @@
                     <input
                         id="mav-console-input"
                         class="console-input"
-                        placeholder="MAV_CMD name + params, e.g. NAV_TAKEOFF 0 0 0 NaN NaN NaN 10"
+                        placeholder={fcIsMsp
+                            ? 'MSP command, e.g. MSP_STATUS or MSP_RAW_GPS'
+                            : 'MAV_CMD name + params, e.g. NAV_TAKEOFF 0 0 0 NaN NaN NaN 10'}
                         bind:value={consoleInput}
                         onkeydown={onConsoleKeydown}
                         spellcheck="false"
@@ -344,7 +417,6 @@
                 </div>
                 <div class="console-hint" class:console-error={consoleError !== ''}>{consoleError || hintLine}</div>
             </div>
-            {/if}
         </div>
     </div>
 </div>
@@ -413,6 +485,13 @@
         border: 1px solid rgb(from #f5c518 r g b / 0.5);
         border-radius: 9999px;
         padding: 0 0.4rem;
+    }
+
+    /* A write command mutates the board (calibration, reboot, RC override), so
+       its suggestion is tagged in a warning color. */
+    .cs-write {
+        color: #fca5a5;
+        border-color: rgb(from #fca5a5 r g b / 0.5);
     }
 
     .console-row {

@@ -203,6 +203,17 @@ async function request(cmd: number, payload: number[] = [], v2 = false): Promise
 	});
 }
 
+// Sends one arbitrary MSP command for the event-log console and returns its
+// response frame as plain data. The console decides how to render the payload.
+export async function sendMspCommand(
+	code: number,
+	payload: number[] = [],
+	v2 = false
+): Promise<{ cmd: number; version: number; error: boolean; payload: number[] }> {
+	const frame = await request(code, payload, v2);
+	return { cmd: frame.cmd, version: frame.version, error: frame.error, payload: Array.from(frame.payload) };
+}
+
 export interface FcIdentity {
 	variant: string;
 	firmware: 'Betaflight' | 'INAV' | 'Cleanflight' | 'Unknown';
