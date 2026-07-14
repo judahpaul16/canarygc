@@ -164,17 +164,25 @@ export function buildManualRcFrame(opts: {
 	return ch;
 }
 
-// Builds one MSP_SET_RAW_RC frame that holds the plan's arm and NAV WP channels
-// inside their windows (when armed) with sticks centered and throttle low; NAV WP
-// governs throttle once INAV is navigating. Disarmed, both channels rest low so
-// nothing engages by accident.
-export function buildInavRcFrame(plan: InavEngagePlan, armed: boolean): number[] {
+// Builds one MSP_SET_RAW_RC frame that drives the plan's arm and NAV WP channels
+// with sticks centered. The channels rise in sequence like a transmitter: arm
+// first with the nav channel low and throttle low (INAV refuses to arm with a
+// nav mode engaged or throttle up), then NAV WP once armed. The throttle then
+// carries the takeoff: raised until the craft is airborne, and mid-stick after,
+// where INAV's navigation holds altitude itself. Both aux channels rest low when
+// disarmed.
+export function buildInavRcFrame(
+	plan: InavEngagePlan,
+	armed: boolean,
+	nav = armed,
+	throttleUs = REST_US
+): number[] {
 	const ch = new Array<number>(plan.channelCount).fill(REST_US);
 	ch[ROLL] = CENTER_US;
 	ch[PITCH] = CENTER_US;
 	ch[YAW] = CENTER_US;
-	ch[THROTTLE] = REST_US;
+	ch[THROTTLE] = throttleUs;
 	ch[AUX_BASE + plan.armAux] = armed ? plan.armUs : REST_US;
-	ch[AUX_BASE + plan.navAux] = armed ? plan.navUs : REST_US;
+	ch[AUX_BASE + plan.navAux] = armed && nav ? plan.navUs : REST_US;
 	return ch;
 }

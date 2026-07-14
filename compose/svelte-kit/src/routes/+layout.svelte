@@ -233,7 +233,13 @@
                 if (id.firmware && id.firmware !== 'Unknown') {
                   mspIdentity = id;
                   mavModelStore.set(id.firmware);
-                  mavTypeStore.set(id.boardName || id.targetName || id.boardIdentifier || 'MSP');
+                  // Name the airframe class (Multirotor, Airplane, Rover, Boat),
+                  // with the board in parentheses, so the label reads like the
+                  // MAVLink vehicle type rather than the bare target name.
+                  {
+                    const board = id.boardName || id.targetName || id.boardIdentifier;
+                    mavTypeStore.set(id.platform ? (board ? `${id.platform} (${board})` : id.platform) : board || 'MSP');
+                  }
                   fcFirmwareStore.set(id.firmware);
                   pushMspEvent(`CONNECTED ${id.firmware} ${id.boardName || id.targetName || 'flight controller'}`);
                 }

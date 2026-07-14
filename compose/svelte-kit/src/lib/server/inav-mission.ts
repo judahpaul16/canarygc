@@ -16,12 +16,29 @@ import {
 	sendRawRc,
 	uploadMissionMsp,
 	mspConfigured,
+	ensureMspReceiver,
 	type MspMissionItem
 } from './msp';
 import { planInavEngage, buildInavRcFrame, type InavEngagePlan } from '../inav-mission';
 
 const LOOP_MS = 100; // 10 Hz keepalive: INAV failsafes if RC frames stop
 const DEADMAN_MS = 2500; // release if the station stops confirming it is watching
+// The channels follow a transmitter's takeoff sequence, phased purely on time so
+// the tick only ever writes the RC frame and never reads on the same link (a
+// read interleaved with the override stream corrupts the frame cadence and INAV
+// drops the mode): everything low first so the flight controller sees the arm
+// switch transition (it refuses a switch that was already high when RC
+// appeared), then arm with the nav channel low and throttle low (it refuses to
+// arm with a nav mode engaged or throttle up), then an open throttle climb with
+// nav still off (a multirotor does not auto-launch under nav; it must reach a
+// hover first), and finally NAV WP with mid throttle, where navigation owns
+// altitude to each waypoint's setpoint.
+const ARM_SETTLE_MS = 1500;
+const CLIMB_START_MS = 3000;
+const NAV_ENGAGE_MS = 8000; // climb ~5 s to a safe hover, then hand to navigation
+const THROTTLE_LOW_US = 1000;
+const THROTTLE_CLIMB_US = 1650;
+const THROTTLE_MID_US = 1500;
 
 export type InavPhase = 'idle' | 'engaged' | 'failsafe';
 
@@ -34,6 +51,7 @@ interface InavSession {
 	lastHeartbeat: number;
 	lastError: string | null;
 	inTick: boolean;
+	startedAt: number;
 }
 
 const g = globalThis as typeof globalThis & { __canarygcInavMission?: InavSession };
@@ -45,7 +63,8 @@ const session: InavSession = (g.__canarygcInavMission ??= {
 	timer: null,
 	lastHeartbeat: 0,
 	lastError: null,
-	inTick: false
+	inTick: false,
+	startedAt: 0,
 });
 
 function release(phase: InavPhase, reason: string | null): void {
@@ -68,7 +87,12 @@ async function tick(): Promise<void> {
 			return;
 		}
 		try {
-			await sendRawRc(buildInavRcFrame(session.plan, true));
+			const elapsed = Date.now() - session.startedAt;
+			const armed = elapsed >= ARM_SETTLE_MS;
+			const nav = elapsed >= NAV_ENGAGE_MS;
+			const climbing = armed && !nav && elapsed >= CLIMB_START_MS;
+			const throttle = nav ? THROTTLE_MID_US : climbing ? THROTTLE_CLIMB_US : THROTTLE_LOW_US;
+			await sendRawRc(buildInavRcFrame(session.plan, armed, nav, throttle));
 		} catch {
 			release('failsafe', 'RC override write failed; released to the flight controller failsafe.');
 		}
@@ -83,6 +107,11 @@ async function tick(): Promise<void> {
 async function engage(context: string): Promise<{ ok: boolean; message: string }> {
 	if (building || !mspConfigured()) return { ok: false, message: 'No flight controller is configured.' };
 	if (session.running) return { ok: false, message: 'A mission is already running.' };
+
+	// The engage drives the arm and NAV WP channels over MSP RC override, which
+	// the flight controller only applies when its receiver is MSP.
+	const rx = await ensureMspReceiver();
+	if (!rx.ok) return { ok: false, message: rx.message };
 
 	let nav;
 	try {
@@ -111,6 +140,7 @@ async function engage(context: string): Promise<{ ok: boolean; message: string }
 	session.assigned = plan.assignments.length;
 	session.lastError = null;
 	session.lastHeartbeat = Date.now();
+	session.startedAt = Date.now();
 	session.phase = 'engaged';
 	session.running = true;
 	session.timer = setInterval(() => void tick(), LOOP_MS);

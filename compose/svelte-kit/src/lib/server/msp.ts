@@ -75,8 +75,12 @@ export function mspConfigured(): boolean {
 }
 
 // A board with no GPS times out the RAW_GPS read; once it does, telemetry stops
-// probing GPS so later polls stay fast. Reset when the link is torn down.
+// probing GPS so later polls stay fast. One timeout on a busy link must not
+// hide a live GPS forever, so the probe retries after a pause. Reset when the
+// link is torn down.
 let gpsPresent = true;
+let gpsRetryAt = 0;
+const GPS_RETRY_MS = 10_000;
 
 function teardown(err?: Error): void {
 	if (state.pending) {
@@ -197,6 +201,22 @@ export interface FcIdentity {
 	boardIdentifier: string;
 	targetName: string;
 	boardName: string;
+	platform: string; // the airframe class: Multirotor, Airplane, Rover, Boat
+}
+
+// INAV's flying-platform classes, in the enum order the platform_type setting
+// reports. Betaflight has no such setting; it flies multirotors only.
+const INAV_PLATFORMS = ['Multirotor', 'Airplane', 'Helicopter', 'Tricopter', 'Rover', 'Boat'];
+
+async function readPlatform(firmware: FcIdentity['firmware']): Promise<string> {
+	if (firmware === 'Betaflight') return 'Multirotor';
+	if (firmware !== 'INAV') return '';
+	try {
+		const raw = await getSetting('platform_type');
+		return raw.length ? (INAV_PLATFORMS[raw[0]] ?? 'Multirotor') : 'Multirotor';
+	} catch {
+		return '';
+	}
 }
 
 const FIRMWARE_NAMES: Record<string, FcIdentity['firmware']> = {
@@ -222,14 +242,16 @@ export async function detectFc(): Promise<FcIdentity> {
 
 	const variant = decodeFcVariant(variantFrame.payload) ?? 'Unknown';
 	const api = decodeApiVersion(apiFrame.payload);
+	const firmware = FIRMWARE_NAMES[variant] ?? 'Unknown';
 	return {
 		variant,
-		firmware: FIRMWARE_NAMES[variant] ?? 'Unknown',
+		firmware,
 		version: decodeFcVersion(versionFrame.payload) ?? '0.0.0',
 		apiVersion: api ? `${api.major}.${api.minor}` : '0.0',
 		boardIdentifier: board.boardIdentifier,
 		targetName: board.targetName,
-		boardName: board.boardName
+		boardName: board.boardName,
+		platform: await readPlatform(firmware)
 	};
 }
 
@@ -252,6 +274,7 @@ export async function readTelemetry(): Promise<FcTelemetry> {
 			return null;
 		}
 	};
+	if (!gpsPresent && Date.now() >= gpsRetryAt) gpsPresent = true;
 	const [attitude, gps, analog, altitude, status] = await Promise.all([
 		read(MSP.ATTITUDE, decodeAttitude),
 		gpsPresent ? read(MSP.RAW_GPS, decodeRawGps) : Promise.resolve(null),
@@ -259,7 +282,10 @@ export async function readTelemetry(): Promise<FcTelemetry> {
 		read(MSP.ALTITUDE, decodeAltitude),
 		read(MSP.STATUS, decodeStatus)
 	]);
-	if (gpsPresent && gps === null) gpsPresent = false;
+	if (gpsPresent && gps === null) {
+		gpsPresent = false;
+		gpsRetryAt = Date.now() + GPS_RETRY_MS;
+	}
 	return { attitude, gps, analog, altitude, status };
 }
 
