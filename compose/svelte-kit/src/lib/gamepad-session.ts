@@ -99,7 +99,7 @@ function start(): boolean {
 	if (msp) {
 		notify({
 			title: 'Gamepad flight active',
-			content: 'Sticks fly the craft directly over MSP; no GPS needed. Confirm channel directions on a bench before flight.',
+			content: 'Sticks stream to the flight controller over MSP; no GPS needed. The craft must be armed to respond. Confirm channel directions on a bench first.',
 			type: 'info'
 		});
 		return true;
