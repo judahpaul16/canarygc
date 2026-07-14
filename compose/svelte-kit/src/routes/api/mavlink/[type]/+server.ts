@@ -11,6 +11,7 @@ import {
     uploadMission,
     clearAllMissionItems,
     setPositionLocal,
+    setDepthGlobal,
     setGlobalOrigin,
     newLogs,
     logs,
@@ -146,6 +147,19 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
             try {
                 await setPositionLocal(x, y, z);
                 return new Response(`Local position set manually: x: ${x}, y: ${y}, z: ${z}`, { status: 200 });
+            } catch (err) {
+                console.error(err);
+                return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
+            }
+        }
+        case 'set_depth': {
+            const depth: number = parseFloat(event.request.headers.get('depth')!);
+            if (isNaN(depth)) {
+                return new Response('Invalid depth', { status: 400 });
+            }
+            try {
+                await setDepthGlobal(depth);
+                return new Response(`Depth set to ${depth} m below surface`, { status: 200 });
             } catch (err) {
                 console.error(err);
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });

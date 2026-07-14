@@ -4,8 +4,10 @@ import {
 	isAirVehicle,
 	isArmed,
 	isAutoLabel,
+	isGroundOrSurface,
 	isGuidedLabel,
 	isPX4,
+	isSubmarine,
 	strategyFor,
 	MAV_MODE_FLAG_SAFETY_ARMED
 } from './flight-modes';
@@ -25,6 +27,19 @@ describe('autopilot detection', () => {
 		expect(isAirVehicle('Surface Boat')).toBe(false);
 		expect(isAirVehicle('Submarine')).toBe(false);
 		expect(isAirVehicle('')).toBe(false);
+	});
+
+	it('identifies submarines for the depth control', () => {
+		expect(isSubmarine('Submarine')).toBe(true);
+		expect(isSubmarine('Ground Rover')).toBe(false);
+		expect(isSubmarine('Quadrotor')).toBe(false);
+	});
+
+	it('identifies rovers and boats as ground or surface vehicles', () => {
+		expect(isGroundOrSurface('Ground Rover')).toBe(true);
+		expect(isGroundOrSurface('Surface Boat')).toBe(true);
+		expect(isGroundOrSurface('Submarine')).toBe(false);
+		expect(isGroundOrSurface('Quadrotor')).toBe(false);
 	});
 });
 

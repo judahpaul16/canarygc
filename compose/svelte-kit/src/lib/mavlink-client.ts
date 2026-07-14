@@ -113,6 +113,21 @@ export async function setPositionLocal(x: number | string, y: number | string, z
   return response.ok;
 }
 
+// Commands a submarine's depth-hold target in meters below the surface. A
+// positive depth dives; the server masks out lat/lon so the sub holds depth on
+// its barometer without needing a horizontal position lock.
+export async function setDepthGlobal(depthM: number | string): Promise<boolean> {
+  const response = await fetch('/api/mavlink/set_depth', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      depth: `${depthM}`
+    }
+  });
+  if (!response.ok) console.error('Failed to set depth');
+  return response.ok;
+}
+
 // MAV_PARAM_TYPE numeric ranges (https://mavlink.io/en/messages/common.html#MAV_PARAM_TYPE)
 const PARAM_RANGES: Record<number, { min: number; max: number; integer: boolean }> = {
   1: { min: 0, max: 255, integer: true },

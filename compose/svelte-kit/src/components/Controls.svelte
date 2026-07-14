@@ -2,12 +2,16 @@
   import DPad from './DPad.svelte';
   import { mapWindow, mapPanel } from '../lib/map-window';
   import Weather from './Weather.svelte';
-  import { mavModeStore, mavAltitudeStore, mavLocationStore, mavSatelliteStore } from '../stores/mavlinkStore';
-  import { sendMavlinkCommand, setFlightMode, setPositionLocal } from '../lib/mavlink-client';
-  import { isGuidedLabel } from '../lib/flight-modes';
+  import { mavModeStore, mavAltitudeStore, mavLocationStore, mavSatelliteStore, mavTypeStore } from '../stores/mavlinkStore';
+  import { sendMavlinkCommand, setFlightMode, setPositionLocal, setDepthGlobal } from '../lib/mavlink-client';
+  import { isGuidedLabel, isSubmarine, isGroundOrSurface } from '../lib/flight-modes';
   import { gamepadActiveStore, toggleGamepad } from '../lib/gamepad-session';
 
   const SPEED_TYPE_GROUNDSPEED = 1;
+  const THROTTLE_NO_CHANGE = -1;
+  const SPEED_ABSOLUTE = 0;
+  const MAV_MODE_FLAG_CUSTOM_MODE_ENABLED = 1;
+  const SUB_DEPTH_HOLD_MODE = 2; // ArduSub ALT_HOLD (depth hold)
   const YAW_STEP_DEG = 10;
   const YAW_RATE_DEG_PER_S = 10;
   const YAW_RELATIVE_OFFSET = 1;
@@ -17,12 +21,59 @@
   let maxSpeed: string = $state('');
   let altitudeSetPoint: string = $state('');
 
-  async function ensureGuided() {
-    if (!isGuidedLabel(mavMode)) await setFlightMode('GUIDED');
-  }  let mavMode = $derived($mavModeStore);
+  let mavMode = $derived($mavModeStore);
   let mavLocation = $derived($mavLocationStore);
   let mavSatellite = $derived($mavSatelliteStore);
   let gamepadActive = $derived($gamepadActiveStore);
+  // A submarine commands depth (a positive value dives, so the NED-down z is
+  // positive); a rover or boat has no vertical axis and hides the control.
+  let submarine = $derived(isSubmarine($mavTypeStore));
+  let surface = $derived(isGroundOrSurface($mavTypeStore));
+
+  async function ensureGuided() {
+    if (!isGuidedLabel(mavMode)) await setFlightMode('GUIDED');
+  }
+
+  // ArduSub holds depth in ALT_HOLD (depth hold), which needs only a depth
+  // sensor and so works on a sub with no horizontal position source. Depth
+  // setpoints are ignored in modes that do not hold depth.
+  async function ensureDepthHold() {
+    if (mavMode !== 'ALT_HOLD')
+      await sendMavlinkCommand('DO_SET_MODE', [MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, SUB_DEPTH_HOLD_MODE, 0], {
+        cmdLong: true
+      });
+  }
+
+  async function setSpeedAndVertical() {
+    const speed = parseFloat(maxSpeed);
+    if (!isNaN(speed))
+      sendMavlinkCommand('DO_CHANGE_SPEED', [SPEED_TYPE_GROUNDSPEED, speed, THROTTLE_NO_CHANGE, SPEED_ABSOLUTE]);
+    const vertical = parseFloat(altitudeSetPoint);
+    if (!isNaN(vertical)) {
+      if (submarine) {
+        await ensureDepthHold();
+        setDepthGlobal(vertical);
+      } else {
+        await ensureGuided();
+        setPositionLocal(0, 0, -vertical);
+      }
+    }
+  }
+
+  // The up arrow climbs (air) or ascends toward the surface (sub); the down
+  // arrow descends. A submarine's depth is a positive number of meters below
+  // the surface, floored at 0 so ascending never commands a target above it.
+  async function verticalStep(up: boolean) {
+    if (submarine) {
+      await ensureDepthHold();
+      const currentDepth = Math.max(0, -altitude);
+      const target = up ? Math.max(0, currentDepth - ALTITUDE_STEP_M) : currentDepth + ALTITUDE_STEP_M;
+      setDepthGlobal(target);
+    } else {
+      await ensureGuided();
+      setPositionLocal(0, 0, -(altitude + (up ? ALTITUDE_STEP_M : -ALTITUDE_STEP_M)));
+    }
+  }
 
 
 </script>
@@ -75,41 +126,40 @@
           <div class="label text-sm mb-1">Max Speed<span class="text-xs text-gray-400 mt-1 ml-1">(m/s)</span></div>
           <input type="number" min="0" class="form-input mb-2" placeholder="10 m/s" bind:value={maxSpeed} />
         </div>
-        <div class="flex flex-col items-center justify-center">
-          <div class="label text-sm mb-1">Go to Altitude<span class="text-xs text-gray-400 mt-1 ml-1">(m)</span></div>
-          <input type="number" min="0" max="100" class="form-input" placeholder="100 m" bind:value={altitudeSetPoint} />
-        </div>
+        {#if !surface}
+          <div class="flex flex-col items-center justify-center">
+            <div class="label text-sm mb-1">
+              {submarine ? 'Go to Depth' : 'Go to Altitude'}<span class="text-xs text-gray-400 mt-1 ml-1">(m)</span>
+            </div>
+            <input type="number" min="0" max="100" class="form-input" placeholder="100 m" bind:value={altitudeSetPoint} />
+          </div>
+        {/if}
         <button class="set-btn text-[8pt] rounded-full py-1 px-3 mt-2"
           onclick={(e) => {
             e.preventDefault();
-            if (!isNaN(parseInt(maxSpeed))) sendMavlinkCommand('DO_CHANGE_SPEED', [SPEED_TYPE_GROUNDSPEED, maxSpeed]);
-            if (!isNaN(parseInt(altitudeSetPoint))) setPositionLocal(0, 0, -parseInt(altitudeSetPoint));
+            setSpeedAndVertical();
           }}>
           Set
         </button>
       </form>
     </div>
-    <div class="separator"></div>
-    <div class="alt-btns column flex flex-col items-center justify-center text-center space-y-4">
-      <div class="flex flex-col items-center">
-        <div class="label text-sm mb-1" title="Altitude Up">Altitude Up</div>
-        <button class="alt-button rounded-full" aria-label="Altitude up" onclick={async () => {
-          await ensureGuided();
-          setPositionLocal(0, 0, -(altitude + ALTITUDE_STEP_M));
-        }}>
-          <i class="alt-up fas fa-arrow-up"></i>
-        </button>
+    {#if !surface}
+      <div class="separator"></div>
+      <div class="alt-btns column flex flex-col items-center justify-center text-center space-y-4">
+        <div class="flex flex-col items-center">
+          <div class="label text-sm mb-1" title={submarine ? 'Ascend' : 'Altitude Up'}>{submarine ? 'Ascend' : 'Altitude Up'}</div>
+          <button class="alt-button rounded-full" aria-label={submarine ? 'Ascend' : 'Altitude up'} onclick={() => verticalStep(true)}>
+            <i class="alt-up fas fa-arrow-up"></i>
+          </button>
+        </div>
+        <div class="flex flex-col items-center justify-center">
+          <div class="label text-sm mb-1" title={submarine ? 'Descend' : 'Altitude Down'}>{submarine ? 'Descend' : 'Altitude Down'}</div>
+          <button class="alt-button rounded-full" aria-label={submarine ? 'Descend' : 'Altitude down'} onclick={() => verticalStep(false)}>
+              <i class="alt-down fas fa-arrow-down"></i>
+          </button>
+        </div>
       </div>
-      <div class="flex flex-col items-center justify-center">
-        <div class="label text-sm mb-1" title="Altitude Down">Altitude Down</div>
-        <button class="alt-button rounded-full" aria-label="Altitude down" onclick={async () => {
-            await ensureGuided();
-            setPositionLocal(0, 0, -(altitude - ALTITUDE_STEP_M));
-          }}>
-            <i class="alt-down fas fa-arrow-down"></i>
-        </button>
-      </div>
-    </div>
+    {/if}
     <div class="separator"></div>
     <div class="rotate-btns column flex flex-col items-center justify-center text-center space-y-4">
       <div id="rotate-left-button" class="flex flex-col items-center">

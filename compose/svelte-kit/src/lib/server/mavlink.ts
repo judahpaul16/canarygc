@@ -633,6 +633,29 @@ async function setPositionLocal(x: number, y: number, z: number) {
     await sendMsg(state.port, msg);
   }
 
+// Commands a submarine's depth-hold target. Depth is an altitude below the
+// surface, so it goes as a global setpoint with lat/lon masked out: the sub
+// holds the commanded depth on its barometer without needing a horizontal
+// position. A positive depthM dives that many meters below the surface.
+async function setDepthGlobal(depthM: number) {
+    if (!state.port || !state.reader) {
+        state.online = false;
+        return;
+    }
+    const msg = new common.SetPositionTargetGlobalInt();
+    msg.timeBootMs = 0;
+    msg.targetSystem = 1;
+    msg.targetComponent = 1;
+    msg.coordinateFrame = 5; // MAV_FRAME_GLOBAL_INT
+    // @ts-expect-error typeMask is declared readonly upstream but must be set per message
+    msg.typeMask = 0b110111111011; // ignore all but altitude (depth)
+    msg.latInt = 0;
+    msg.lonInt = 0;
+    msg.alt = -depthM; // negative meters below the surface
+    msg.yawRate = 0;
+    await sendMsg(state.port, msg);
+  }
+
 // Establishes the vehicle's global origin so a vehicle with no GPS can hold a
 // local position referenced to a manual start point, and sets home to the same
 // point. This gives the local-NED moves and the map one shared reference instead
@@ -675,6 +698,7 @@ export {
     uploadMission,
     clearAllMissionItems,
     setPositionLocal,
+    setDepthGlobal,
     setGlobalOrigin,
     linkAlive,
     logs,

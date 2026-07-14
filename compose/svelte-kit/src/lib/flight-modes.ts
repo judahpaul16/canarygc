@@ -92,6 +92,18 @@ export function isAirVehicle(type: string = get(mavTypeStore)): boolean {
   return !!type && !/rover|boat|submarine/i.test(type);
 }
 
+// Submarines move through a depth axis instead of altitude; the go-to control
+// commands depth (below the surface) rather than height above it.
+export function isSubmarine(type: string = get(mavTypeStore)): boolean {
+  return /submarine/i.test(type);
+}
+
+// Rovers and boats move only in the surface plane, so a vertical go-to control
+// has no meaning for them.
+export function isGroundOrSurface(type: string = get(mavTypeStore)): boolean {
+  return /rover|boat/i.test(type);
+}
+
 export function isPX4(model: string = get(mavModelStore)): boolean {
   return model.toUpperCase().includes('PX4');
 }
