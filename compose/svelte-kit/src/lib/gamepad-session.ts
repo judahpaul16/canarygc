@@ -1,7 +1,8 @@
 import { get, writable } from 'svelte/store';
 import { mount, unmount } from 'svelte';
 import { firstGamepad, startGamepadLoop } from './gamepad-control';
-import { sendManualControl, setFlightMode } from './mavlink-client';
+import { setFlightMode } from './mavlink-client';
+import { sendManualFrame, manualTransportIsMsp } from './manual-transport';
 import { isPX4 } from './flight-modes';
 import { mavArmedStateStore } from '../stores/mavlinkStore';
 import { notify, overlayTarget } from './overlays';
@@ -52,44 +53,67 @@ async function enterStickMode(attempt = 1): Promise<void> {
 // never sits in a pilot mode waiting for frames that stopped: Hold on PX4,
 // GUIDED position hold on ArduPilot. A paused mission stays paused until
 // Start/Resume relaunches it.
-async function settleAfterStream(reason: 'stopped' | 'disconnected'): Promise<void> {
-	if (inFlight()) {
+async function settleAfterStream(reason: 'stopped' | 'disconnected', msp: boolean): Promise<void> {
+	if (!msp && inFlight()) {
 		await setFlightMode(isPX4() ? 'LOITER' : 'GUIDED');
 		notify({
 			title: 'Gamepad flight stopped',
 			content: 'The vehicle is holding position; fly from the app controls or resume the mission.',
 			type: 'info'
 		});
+	} else if (msp) {
+		notify({ title: 'Gamepad flight stopped', content: 'Sticks released to the flight controller.', type: 'info' });
 	}
 	if (reason === 'disconnected') {
-		notify({
-			title: 'Gamepad disconnected',
-			content: 'The MANUAL_CONTROL stream stopped.',
-			type: 'warning'
-		});
+		notify({ title: 'Gamepad disconnected', content: 'The stick stream stopped.', type: 'warning' });
 	}
+}
+
+// On MAVLink, engage the stick-flying mode the moment the vehicle arms, so the
+// operator does not re-toggle the gamepad after takeoff.
+let unwatchArm: (() => void) | null = null;
+function watchArmForStickMode(): void {
+	let prevArmed = get(mavArmedStateStore);
+	unwatchArm = mavArmedStateStore.subscribe((armed) => {
+		if (armed && !prevArmed && get(gamepadActiveStore)) {
+			setTimeout(() => void enterStickMode(), MODE_SWITCH_DELAY_MS);
+		}
+		prevArmed = armed;
+	});
 }
 
 function start(): boolean {
 	if (!firstGamepad()) return false;
 	gamepadActiveStore.set(true);
+	const msp = manualTransportIsMsp();
 	stop = startGamepadLoop(
-		(frame) => void sendManualControl(frame),
+		(frame) => void sendManualFrame(frame),
 		(reason) => {
 			gamepadActiveStore.set(false);
 			stop = null;
-			void settleAfterStream(reason);
+			unwatchArm?.();
+			unwatchArm = null;
+			void settleAfterStream(reason, msp);
 		}
 	);
+	if (msp) {
+		notify({
+			title: 'Gamepad flight active',
+			content: 'Sticks fly the craft directly over MSP; no GPS needed. Confirm channel directions on a bench before flight.',
+			type: 'info'
+		});
+		return true;
+	}
 	if (inFlight()) {
 		setTimeout(() => void enterStickMode(), MODE_SWITCH_DELAY_MS);
 	} else {
 		notify({
 			title: 'Gamepad streaming',
-			content: 'Input is reaching the vehicle. After takeoff, toggle gamepad flight off and on to fly by stick.',
+			content: 'Input is reaching the vehicle. Stick flying engages automatically once it is armed.',
 			type: 'info'
 		});
 	}
+	watchArmForStickMode();
 	return true;
 }
 

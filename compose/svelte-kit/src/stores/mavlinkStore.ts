@@ -19,6 +19,10 @@ export interface ParameterMeta {
 }
 
 export const onlineStore = writable<boolean>(false);
+// Which protocol the connected flight controller speaks. A Betaflight or INAV
+// board is 'msp' and answers none of the autonomous MAVLink commands (takeoff,
+// land, missions, parameters), so the dashboard gates those controls on it.
+export const fcProtocolStore = writable<'mavlink' | 'msp' | null>(null);
 export const mavModelStore = writable<string>('UNKNOWN');
 export const mavTypeStore = writable<string>('Unknown');
 export const mavArmedStateStore = writable<boolean>(false);

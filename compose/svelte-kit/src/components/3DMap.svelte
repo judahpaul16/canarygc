@@ -117,7 +117,9 @@
       if (index === 0) continue;
       const action = actions[index];
       const src = action ? actionMarkerSrc(action.type) : null;
+      // A location-less command (return-to-launch, at 0/0) carries no marker.
       if (!action || !src || isNaN(action.lat) || isNaN(action.lon)) continue;
+      if (action.lat === 0 && action.lon === 0) continue;
       live.add(index);
       let marker = missionMarkers.get(index);
       if (!marker) {

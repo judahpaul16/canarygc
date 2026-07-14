@@ -14,6 +14,10 @@ export interface SafetyViolation {
   severity: Severity;
   index: number | null;
   message: string;
+  // When many waypoints trip the same predicate (all inside one airspace, all
+  // in a 0 ft grid), they share a group so the summary collapses them into a
+  // single line with the waypoint range instead of one line each.
+  group?: { key: string; noun: string };
 }
 
 export interface AirspaceZone {
@@ -116,7 +120,11 @@ export function validateMission(
       violations.push({
         severity: zone.restricted ? 'error' : 'warning',
         index: i,
-        message: `Waypoint ${i} is inside ${zone.restricted ? 'restricted' : 'controlled'} airspace: ${zone.name}.`
+        message: `Waypoint ${i} is inside ${zone.restricted ? 'restricted' : 'controlled'} airspace: ${zone.name}.`,
+        group: {
+          key: `airspace:${zone.restricted ? 'restricted' : 'controlled'}:${zone.name}`,
+          noun: `inside ${zone.restricted ? 'restricted' : 'controlled'} airspace: ${zone.name}`
+        }
       });
     }
 
@@ -127,7 +135,11 @@ export function validateMission(
         violations.push({
           severity: 'warning',
           index: i,
-          message: `Waypoint ${i} sits in a 0 ft LAANC grid square${cell.airport ? ` (${cell.airport})` : ''}; flying here needs manual FAA authorization.`
+          message: `Waypoint ${i} sits in a 0 ft LAANC grid square${cell.airport ? ` (${cell.airport})` : ''}; flying here needs manual FAA authorization.`,
+          group: {
+            key: `laanc-zero:${cell.airport ?? ''}`,
+            noun: `in a 0 ft LAANC grid square${cell.airport ? ` (${cell.airport})` : ''}; flying here needs manual FAA authorization`
+          }
         });
       } else if (alt > ceilingM) {
         violations.push({
@@ -214,8 +226,55 @@ export function hasBlockingViolation(violations: SafetyViolation[]): boolean {
   return violations.some((v) => v.severity === 'error');
 }
 
+// Collapses a sorted index list into compact ranges: [7,8,9,12] => "7-9, 12".
+function formatIndexRanges(indices: number[]): string {
+  const sorted = [...new Set(indices)].sort((a, b) => a - b);
+  const parts: string[] = [];
+  let start = sorted[0];
+  let prev = sorted[0];
+  for (let n = 1; n <= sorted.length; n++) {
+    const value = sorted[n];
+    if (value === prev + 1) {
+      prev = value;
+      continue;
+    }
+    parts.push(start === prev ? `${start}` : `${start}-${prev}`);
+    start = value;
+    prev = value;
+  }
+  return parts.join(', ');
+}
+
 export function formatViolations(violations: SafetyViolation[]): string {
-  return violations
-    .map((v) => `${v.severity === 'error' ? '⛔' : '⚠'} ${v.message}`)
+  const icon = (severity: Severity) => (severity === 'error' ? '⛔' : '⚠');
+  const groups = new Map<string, { severity: Severity; noun: string; indices: number[] }>();
+  const lines: string[] = [];
+
+  for (const v of violations) {
+    if (v.group) {
+      let group = groups.get(v.group.key);
+      if (!group) {
+        group = { severity: v.severity, noun: v.group.noun, indices: [] };
+        groups.set(v.group.key, group);
+        // Reserve this group's slot in output order at its first occurrence.
+        lines.push(` ${v.group.key}`);
+      }
+      if (v.severity === 'error') group.severity = 'error';
+      if (v.index !== null) group.indices.push(v.index);
+    } else {
+      lines.push(`${icon(v.severity)} ${v.message}`);
+    }
+  }
+
+  return lines
+    .map((line) => {
+      if (!line.startsWith(' ')) return line;
+      const group = groups.get(line.slice(1))!;
+      const label =
+        group.indices.length === 1
+          ? `Waypoint ${group.indices[0]}`
+          : `Waypoints ${formatIndexRanges(group.indices)}`;
+      return `${icon(group.severity)} ${label} ${group.noun}.`;
+    })
     .join('\n');
 }

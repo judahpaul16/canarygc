@@ -33,7 +33,7 @@
   <button
     class="gamepad-btn"
     aria-label="Toggle gamepad flight"
-    data-tip={gamepadActive ? 'Stop gamepad flight' : 'Fly with a gamepad (MANUAL_CONTROL)'}
+    data-tip={gamepadActive ? 'Stop gamepad flight' : 'Fly with a gamepad'}
     data-tip-pos="left"
     onclick={toggleGamepad}
   >

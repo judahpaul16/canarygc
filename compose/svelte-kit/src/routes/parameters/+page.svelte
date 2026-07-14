@@ -5,6 +5,7 @@
         mavModelStore,
         mavVibrationStore,
         mavAttitudeStore,
+        fcProtocolStore,
         type Parameter
     } from '../../stores/mavlinkStore';
     import { onMount } from 'svelte';
@@ -36,6 +37,11 @@
 
     let searchTerm = $state('');
     let activeGroup = $state<string | null>(null);
+
+    // Betaflight and INAV expose their settings over MSP and the CLI, not the
+    // MAVLink parameter protocol this page speaks, so the table stays empty on
+    // them and a note stands in for it.
+    const fcIsMsp = $derived($fcProtocolStore === 'msp');
 
     let aiTuning = $state(false);
     let tuningResult = $state<TuningResult | null>(null);
@@ -71,6 +77,7 @@
     });
 
     async function requestParameters() {
+        if (fcIsMsp) return;
         try {
             loading.set(true);
             error.set(null);
@@ -338,6 +345,9 @@
                 {/if}
 
                 <!-- Parameter List -->
+                {#if fcIsMsp}
+                    <p class="msp-hint flex-grow">{$mavModelStore} settings live in the Betaflight or INAV Configurator.</p>
+                {:else}
                 <div class="param-list flex-grow overflow-y-auto">
                     <table class="w-full text-white">
                         <thead class="sticky top-0" style={ $darkModeStore ? 'background-color: #1f2937' : 'background-color: slategrey' }>
@@ -386,6 +396,7 @@
                         </tbody>
                     </table>
                 </div>
+                {/if}
             </div>
         </div>
     </div>
@@ -501,6 +512,12 @@
         font-size: 0.75rem;
         margin-top: 0.15rem;
         max-width: 42ch;
+    }
+
+    .msp-hint {
+        color: var(--fontColor);
+        opacity: 0.7;
+        font-size: 0.85rem;
     }
 
     .ai-modal-backdrop {

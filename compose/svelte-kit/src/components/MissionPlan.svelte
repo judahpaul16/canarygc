@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { mavLocationStore, mavModeStore, mavStateStore, mavlinkParamStore } from '../stores/mavlinkStore';
+  import { mavLocationStore, mavModeStore, mavStateStore, mavlinkParamStore, fcProtocolStore } from '../stores/mavlinkStore';
   import {
     missionPlanTitleStore,
     missionPlanActionsStore,
@@ -14,6 +14,7 @@
   import { isAutoLabel, isGuidedLabel, isPX4 } from '../lib/flight-modes';
   import { ACTION_TYPES } from '../lib/mission-icons';
   import { preflightCheck } from '../lib/preflight';
+  import { startGuidanceWithConfirm, stopGuidance } from '../lib/guidance-session';
   import { optimizePath, startSurveyCapture, startOrbitCapture, startCorridorCapture, startSarCapture, startStructureScanCapture } from '../lib/plan-actions';
 
   const GRIPPER_SERVO_CHANNEL = 9;
@@ -47,6 +48,21 @@
     title = $missionPlanTitleStore;
   });
   let missionLoaded = $derived($missionPlanTitleStore !== '');
+  // On an MSP flight controller the mission controls route to companion
+  // guidance; on MAVLink they run the autopilot's own mission.
+  let fcIsMsp = $derived($fcProtocolStore === 'msp');
+  function flyPlan() {
+    if (fcIsMsp) startGuidanceWithConfirm();
+    else startMission();
+  }
+  function onPause() {
+    if (fcIsMsp) stopGuidance();
+    else pauseMission();
+  }
+  function endFlight() {
+    if (fcIsMsp) stopGuidance();
+    else stopMission();
+  }
 
   onMount(async () => {
     const input = document.querySelector('input[type="text"]') as HTMLInputElement;
@@ -353,24 +369,24 @@
       </button>
       {#if !isAutoLabel(mavMode) || systemState === 'STANDBY'}
         <button class="px-2 py-1 bg-[#55b377] rounded-lg hover:bg-[#61cd89]"
-          disabled={isAutoLabel(mavMode) && systemState !== 'STANDBY' || !missionLoaded}
-          onclick={() => {startMission()}}
+          disabled={(isAutoLabel(mavMode) && systemState !== 'STANDBY') || (!missionLoaded && !fcIsMsp)}
+          onclick={() => {flyPlan()}}
         >
           <i class="fas fa-play"></i>
           <div class="tooltip">Start/Resume Mission</div>
         </button>
       {:else}
         <button class="px-2 py-1 bg-[#da864e] rounded-lg hover:bg-[#ff995e]"
-          disabled={!isAutoLabel(mavMode) || !missionLoaded}
-          onclick={() => {pauseMission()}}
+          disabled={!isAutoLabel(mavMode) && !fcIsMsp}
+          onclick={() => {onPause()}}
         >
           <i class="fas fa-pause"></i>
           <div class="tooltip">Pause Mission (Loiter)</div>
         </button>
       {/if}
       <button class="px-2 py-1 bg-[#f87171] rounded-lg hover:bg-[#ff7e7e]"
-          disabled={!isAutoLabel(mavMode) || !missionLoaded}
-          onclick={() => {stopMission()}}
+          disabled={(!isAutoLabel(mavMode) || !missionLoaded) && !fcIsMsp}
+          onclick={() => {endFlight()}}
         >
         <i class="fas fa-stop"></i>
         <div class="tooltip">Stop Mission (RTL)</div>

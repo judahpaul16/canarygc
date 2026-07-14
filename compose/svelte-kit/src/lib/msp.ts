@@ -10,13 +10,34 @@ export const MSP = {
 	FC_VERSION: 3,
 	BOARD_INFO: 4,
 	BUILD_INFO: 5,
+	WP_MISSION_SAVE: 19,
+	WP_GETINFO: 20,
 	REBOOT: 68,
 	STATUS: 101,
 	RAW_GPS: 106,
 	ATTITUDE: 108,
 	ALTITUDE: 109,
-	ANALOG: 110
+	ANALOG: 110,
+	WP: 118,
+	SET_RAW_RC: 200,
+	SET_WP: 209
 } as const;
+
+// INAV waypoint actions (navWaypointActions_e). INAV, unlike Betaflight, flies
+// autonomous waypoint missions, and the mission uploads over MSP with SET_WP.
+export const NAV_WP_ACTION = {
+	WAYPOINT: 1,
+	POSHOLD_UNLIM: 2,
+	POSHOLD_TIME: 3,
+	RTH: 4,
+	SET_POI: 5,
+	JUMP: 6,
+	SET_HEAD: 7,
+	LAND: 8
+} as const;
+
+// The flag byte on the last waypoint of a mission.
+export const MSP_WP_LAST = 0xa5;
 
 // Payload byte for MSP.REBOOT selecting the STM32 ROM bootloader (DFU mode).
 export const MSP_REBOOT_BOOTLOADER = 1;
@@ -247,4 +268,66 @@ export function decodeAltitude(payload: Uint8Array): { altM: number; varioMs: nu
 export function decodeStatus(payload: Uint8Array): { armed: boolean } | null {
 	if (payload.length < 10) return null;
 	return { armed: (view(payload).getUint32(6, true) & 1) !== 0 };
+}
+
+export interface InavWaypoint {
+	index: number; // 1-based waypoint number
+	action: number; // NAV_WP_ACTION code
+	lat: number; // degrees
+	lon: number; // degrees
+	altM: number; // meters, relative to home
+	p1?: number;
+	p2?: number;
+	p3?: number;
+	last?: boolean;
+}
+
+// MSP_SET_WP payload: a packed 21-byte struct (little-endian) of
+// { u8 wp_no, u8 action, i32 lat*1e7, i32 lon*1e7, i32 alt_cm, i16 p1, i16 p2,
+// i16 p3, u8 flag }. The flag is 0xA5 on the final waypoint, 0 otherwise.
+export function encodeSetWaypoint(wp: InavWaypoint): Uint8Array {
+	const buf = new Uint8Array(21);
+	const v = new DataView(buf.buffer);
+	v.setUint8(0, wp.index);
+	v.setUint8(1, wp.action);
+	v.setInt32(2, Math.round(wp.lat * 1e7), true);
+	v.setInt32(6, Math.round(wp.lon * 1e7), true);
+	v.setInt32(10, Math.round(wp.altM * 100), true);
+	v.setInt16(14, wp.p1 ?? 0, true);
+	v.setInt16(16, wp.p2 ?? 0, true);
+	v.setInt16(18, wp.p3 ?? 0, true);
+	v.setUint8(20, wp.last ? MSP_WP_LAST : 0);
+	return buf;
+}
+
+// MSP_SET_RAW_RC payload: each RC channel as a u16 (microseconds) little-endian.
+// Betaflight and INAV accept it as an override RC source, which is how the
+// companion computer flies a Betaflight board that has no onboard navigation.
+export function encodeSetRawRc(channels: number[]): Uint8Array {
+	const buf = new Uint8Array(channels.length * 2);
+	const v = new DataView(buf.buffer);
+	channels.forEach((us, i) => v.setUint16(i * 2, Math.max(0, Math.min(65535, Math.round(us))), true));
+	return buf;
+}
+
+// Maps a stored MAVLink mission command to its INAV waypoint action, or null
+// for commands an INAV mission does not carry (takeoff, servo, condition), so
+// the upload skips them.
+export function inavActionForType(type: string): number | null {
+	switch (type) {
+		case 'NAV_WAYPOINT':
+		case 'NAV_SPLINE_WAYPOINT':
+			return NAV_WP_ACTION.WAYPOINT;
+		case 'NAV_RETURN_TO_LAUNCH':
+			return NAV_WP_ACTION.RTH;
+		case 'NAV_LAND':
+		case 'NAV_VTOL_LAND':
+			return NAV_WP_ACTION.LAND;
+		case 'NAV_LOITER_UNLIM':
+			return NAV_WP_ACTION.POSHOLD_UNLIM;
+		case 'NAV_LOITER_TIME':
+			return NAV_WP_ACTION.POSHOLD_TIME;
+		default:
+			return null;
+	}
 }

@@ -16,7 +16,8 @@
     mavBatteryStore,
     mavArmedStateStore,
     mavLocationStore,
-    mavlinkParamStore
+    mavlinkParamStore,
+    fcProtocolStore
   } from '../stores/mavlinkStore';
   import { darkModeStore } from '../stores/customizationStore';
   import { markersStore } from '../stores/mapStore';
@@ -27,6 +28,7 @@
   import { isAutoLabel, isGuidedLabel, isPX4 } from '../lib/flight-modes';
   import { preflightCheck } from '../lib/preflight';
   import { missionPlanActionsStore } from '../stores/missionPlanStore';
+  import { startGuidanceWithConfirm, stopGuidance } from '../lib/guidance-session';
   import type { LatLng } from 'leaflet';
 
   const GRIPPER_SERVO_CHANNEL = 9;
@@ -316,6 +318,29 @@
     });
   }
   let darkMode = $derived($darkModeStore);
+  // On an MSP flight controller the flight controls route to companion guidance;
+  // on MAVLink they run the autopilot's own mission. Same buttons, either way.
+  let fcIsMsp = $derived($fcProtocolStore === 'msp');
+  function flyPlan() {
+    if (fcIsMsp) startGuidanceWithConfirm();
+    else startMission();
+  }
+  function endFlight() {
+    if (fcIsMsp) stopGuidance();
+    else stopMission();
+  }
+  function onTakeoff() {
+    if (fcIsMsp) startGuidanceWithConfirm();
+    else initTakeoff();
+  }
+  function onLand() {
+    if (fcIsMsp) stopGuidance();
+    else initLanding();
+  }
+  function onPause() {
+    if (fcIsMsp) stopGuidance();
+    else pauseMission();
+  }
   $effect(() => {
     mavModel = $mavModelStore;
     mavType = $mavTypeStore;
@@ -377,21 +402,21 @@
             </button>
           </div>
           <div class="relative group">
-            <button class="circular-button" onclick={releasePayload}>
+            <button class="circular-button" onclick={releasePayload} disabled={fcIsMsp}>
               <i class="fas fa-parachute-box"></i>
               <div class="tooltip text-white">Release Payload</div>
             </button>
           </div>
-          {#if systemState === 'STANDBY'}
+          {#if systemState === 'STANDBY' || !isArmed}
             <div class="relative group flex flex-col items-center">
-              <button class="circular-button" onclick={initTakeoff} disabled={isAutoLabel(mavMode)}>
+              <button class="circular-button" onclick={onTakeoff} disabled={isAutoLabel(mavMode)}>
                 <i class="fas fa-plane-departure"></i>
                 <div class="tooltip text-white">Initiate Takeoff</div>
               </button>
             </div>
           {:else}
             <div class="relative group flex flex-col items-center">
-              <button class="circular-button" onclick={initLanding} disabled={isAutoLabel(mavMode) || mavMode.includes('LAND')}>
+              <button class="circular-button" onclick={onLand} disabled={isAutoLabel(mavMode) || mavMode.includes('LAND')}>
                 <i class="fas fa-plane-arrival"></i>
                 <div class="tooltip text-white">Initiate Landing</div>
               </button>
@@ -400,8 +425,8 @@
           {#if !isAutoLabel(mavMode) || systemState === 'STANDBY'}
             <div class="relative group">
               <button
-                class="circular-button" onclick={startMission}
-                disabled={isAutoLabel(mavMode) && systemState !== 'STANDBY' || !missionLoaded}
+                class="circular-button" onclick={flyPlan}
+                disabled={(isAutoLabel(mavMode) && systemState !== 'STANDBY') || (!missionLoaded && !fcIsMsp)}
               >
                 <i class="fas fa-play"></i>
                 <div class="tooltip text-white">Start/Resume Mission</div>
@@ -410,8 +435,8 @@
           {:else}
             <div class="relative group">
               <button
-                class="circular-button" onclick={pauseMission}
-                disabled={!isAutoLabel(mavMode) || !missionLoaded}
+                class="circular-button" onclick={onPause}
+                disabled={!isAutoLabel(mavMode) && !fcIsMsp}
               >
                 <i class="fas fa-pause"></i>
                 <div class="tooltip text-white">Pause Mission (Loiter)</div>
@@ -420,8 +445,8 @@
           {/if}
           <div class="relative group">
             <button
-              class="circular-button" onclick={stopMission}
-              disabled={!isAutoLabel(mavMode) || !missionLoaded}
+              class="circular-button" onclick={endFlight}
+              disabled={(!isAutoLabel(mavMode) || !missionLoaded) && !fcIsMsp}
             >
               <i class="fas fa-stop text-red-400"></i>
               <div class="tooltip text-white">Stop Mission (RTL)</div>

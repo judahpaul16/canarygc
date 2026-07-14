@@ -1,0 +1,65 @@
+import { describe, expect, it } from 'vitest';
+import { validateMission, formatViolations, type AirspaceZone, type SafetyViolation } from './safety';
+import { DEFAULT_SAFETY_LIMITS } from './safety';
+import type { MissionPlanActions } from '../stores/missionPlanStore';
+
+// A square of controlled airspace around a patch near Atlanta.
+const zone: AirspaceZone = {
+	name: 'TEST CLASS E',
+	restricted: false,
+	polygon: [
+		[
+			[-84.4, 33.74],
+			[-84.38, 33.74],
+			[-84.38, 33.76],
+			[-84.4, 33.76],
+			[-84.4, 33.74]
+		]
+	]
+};
+
+function waypoint(): MissionPlanActions[number] {
+	return { type: 'NAV_WAYPOINT', lat: 33.75, lon: -84.39, alt: 50, notes: '', param1: null, param2: null, param3: null, param4: null };
+}
+
+describe('formatViolations grouping', () => {
+	it('collapses per-waypoint airspace warnings into one line with a range', () => {
+		const actions: MissionPlanActions = { 1: waypoint(), 2: waypoint(), 3: waypoint() };
+		const violations = validateMission(actions, DEFAULT_SAFETY_LIMITS, [zone]);
+		const text = formatViolations(violations);
+
+		const airspaceLines = text.split('\n').filter((l) => l.includes('TEST CLASS E'));
+		expect(airspaceLines).toHaveLength(1);
+		expect(airspaceLines[0]).toContain('Waypoints 1-3');
+		expect(airspaceLines[0]).toContain('inside controlled airspace: TEST CLASS E');
+	});
+
+	it('renders non-contiguous indices as separate ranges', () => {
+		const grouped: SafetyViolation[] = [1, 2, 3, 7].map((i) => ({
+			severity: 'warning',
+			index: i,
+			message: `Waypoint ${i} is inside controlled airspace: ATL.`,
+			group: { key: 'airspace:controlled:ATL', noun: 'inside controlled airspace: ATL' }
+		}));
+		expect(formatViolations(grouped)).toBe('⚠ Waypoints 1-3, 7 inside controlled airspace: ATL.');
+	});
+
+	it('keeps a single grouped waypoint singular', () => {
+		const one: SafetyViolation[] = [
+			{
+				severity: 'warning',
+				index: 4,
+				message: 'Waypoint 4 is inside controlled airspace: ATL.',
+				group: { key: 'airspace:controlled:ATL', noun: 'inside controlled airspace: ATL' }
+			}
+		];
+		expect(formatViolations(one)).toBe('⚠ Waypoint 4 inside controlled airspace: ATL.');
+	});
+
+	it('leaves ungrouped violations untouched', () => {
+		const mixed: SafetyViolation[] = [
+			{ severity: 'error', index: 2, message: 'Waypoint 2 altitude 200 m exceeds the 120 m ceiling.' }
+		];
+		expect(formatViolations(mixed)).toBe('⛔ Waypoint 2 altitude 200 m exceeds the 120 m ceiling.');
+	});
+});

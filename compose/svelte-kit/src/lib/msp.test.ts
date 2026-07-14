@@ -13,7 +13,11 @@ import {
 	decodeRawGps,
 	decodeAnalog,
 	decodeAltitude,
-	decodeStatus
+	decodeStatus,
+	encodeSetWaypoint,
+	inavActionForType,
+	NAV_WP_ACTION,
+	MSP_WP_LAST
 } from './msp';
 
 function buildBoardInfo(id: string, target: string, board: string): Uint8Array {
@@ -199,5 +203,50 @@ describe('decodeBoardInfo', () => {
 
 	it('returns null for a payload shorter than the identifier and version', () => {
 		expect(decodeBoardInfo(new Uint8Array(4))).toBeNull();
+	});
+});
+
+describe('encodeSetWaypoint', () => {
+	it('packs the 21-byte INAV waypoint struct little-endian', () => {
+		const bytes = encodeSetWaypoint({
+			index: 3,
+			action: NAV_WP_ACTION.WAYPOINT,
+			lat: 33.7911,
+			lon: -84.3713,
+			altM: 40,
+			p1: 500,
+			last: false
+		});
+		expect(bytes.length).toBe(21);
+		const v = new DataView(bytes.buffer);
+		expect(v.getUint8(0)).toBe(3);
+		expect(v.getUint8(1)).toBe(NAV_WP_ACTION.WAYPOINT);
+		expect(v.getInt32(2, true)).toBe(337911000); // 33.7911 * 1e7
+		expect(v.getInt32(6, true)).toBe(-843713000); // -84.3713 * 1e7
+		expect(v.getInt32(10, true)).toBe(4000); // 40 m in cm
+		expect(v.getInt16(14, true)).toBe(500);
+		expect(v.getUint8(20)).toBe(0);
+	});
+
+	it('flags the last waypoint with 0xA5', () => {
+		const bytes = encodeSetWaypoint({ index: 5, action: NAV_WP_ACTION.RTH, lat: 0, lon: 0, altM: 0, last: true });
+		expect(new DataView(bytes.buffer).getUint8(20)).toBe(MSP_WP_LAST);
+	});
+});
+
+describe('inavActionForType', () => {
+	it('maps waypoint and spline waypoint to WAYPOINT', () => {
+		expect(inavActionForType('NAV_WAYPOINT')).toBe(NAV_WP_ACTION.WAYPOINT);
+		expect(inavActionForType('NAV_SPLINE_WAYPOINT')).toBe(NAV_WP_ACTION.WAYPOINT);
+	});
+
+	it('maps return-to-launch to RTH and land to LAND', () => {
+		expect(inavActionForType('NAV_RETURN_TO_LAUNCH')).toBe(NAV_WP_ACTION.RTH);
+		expect(inavActionForType('NAV_LAND')).toBe(NAV_WP_ACTION.LAND);
+	});
+
+	it('returns null for commands an INAV mission does not carry', () => {
+		expect(inavActionForType('NAV_TAKEOFF')).toBeNull();
+		expect(inavActionForType('DO_SET_SERVO')).toBeNull();
 	});
 });

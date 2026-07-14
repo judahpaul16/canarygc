@@ -528,11 +528,15 @@
   // "current altitude" and never climb.
   const DEFAULT_TAKEOFF_ALT_M = 10;
 
+  // Commands that conclude a mission by bringing the vehicle home or down.
+  const MISSION_END_TYPES = new Set(['NAV_RETURN_TO_LAUNCH', 'NAV_LAND', 'NAV_VTOL_LAND']);
+
   // Appending to the plan seeds a takeoff at the vehicle's location first
   // when the mission has none, since nearly every ArduPilot and PX4 mission
-  // must begin with a takeoff. Index 0 is the hidden home slot (the panel and
-  // the markers skip it), so the plan needs one, and the takeoff check only
-  // counts the visible rows.
+  // must begin with a takeoff, and closes the mission with a return-to-launch
+  // so the vehicle comes home instead of holding at the last waypoint. Index 0
+  // is the hidden home slot (the panel and the markers skip it), so the plan
+  // needs one, and the takeoff check only counts the visible rows.
   function appendToPlan(items: MissionPlanActions[number][], anchor: L.LatLng) {
     const current = get(missionPlanActionsStore);
     const ordered = Object.keys(current)
@@ -545,13 +549,22 @@
     const lat = mav && 'lat' in mav && mav.lat !== 0 ? mav.lat : anchor.lat;
     const lon = mav && 'lng' in mav && mav.lng !== 0 ? mav.lng : anchor.lng;
     const takeoff = () => ({ type: 'NAV_TAKEOFF', lat, lon, alt: DEFAULT_TAKEOFF_ALT_M, ...blank });
+    const returnToLaunch = () => ({ type: 'NAV_RETURN_TO_LAUNCH', lat: 0, lon: 0, alt: 0, ...blank });
 
     if (ordered.length === 0) ordered.push(takeoff());
     const hasTakeoff = ordered
       .slice(1)
       .some((a) => a.type === 'NAV_TAKEOFF' || a.type === 'NAV_VTOL_TAKEOFF');
     if (!hasTakeoff) ordered.splice(1, 0, takeoff());
-    ordered.push(...items);
+
+    // Keep the closing command last: new items land ahead of an existing
+    // return-to-launch or landing, and a plan without one gains a return.
+    const tail = ordered[ordered.length - 1];
+    if (tail && MISSION_END_TYPES.has(tail.type)) {
+      ordered.splice(ordered.length - 1, 0, ...items);
+    } else {
+      ordered.push(...items, returnToLaunch());
+    }
 
     const next: MissionPlanActions = {};
     ordered.forEach((item, i) => {
@@ -977,8 +990,14 @@
   }
 
   function toggleLockView() {
-    lockView = !lockView;
-    lockViewStore.set(lockView);
+    const next = !lockView;
+    lockViewStore.set(next);
+    // Snap to the vehicle the moment lock turns on, so the button acts
+    // immediately instead of waiting for the next position update.
+    if (next && leafletMap) {
+      const mav = get(mavLocationStore);
+      if (mav) centerInWindow(mav as L.LatLng, get(mapZoomStore));
+    }
   }
 
   function toggleAirspace() {
@@ -1256,7 +1275,8 @@
         const { type, lat, lon } = action;
         const iconIndex = ACTION_TYPES.indexOf(type);
 
-        if (!isNaN(lat) && !isNaN(lon) && iconIndex >= 0) {
+        // A location-less command (return-to-launch, at 0/0) carries no marker.
+        if (!isNaN(lat) && !isNaN(lon) && (lat !== 0 || lon !== 0) && iconIndex >= 0) {
           const numericIndex = Number(index);
           const marker = L.marker([lat, lon], { icon: icons[iconIndex], draggable: true })
             .on('click', (ev) => openCombinedPopup((ev as L.LeafletMouseEvent).latlng))

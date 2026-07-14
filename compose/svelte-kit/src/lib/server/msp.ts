@@ -6,6 +6,10 @@ import {
 	MSP_REBOOT_BOOTLOADER,
 	MspParser,
 	encodeMspV1,
+	encodeSetWaypoint,
+	encodeSetRawRc,
+	inavActionForType,
+	NAV_WP_ACTION,
 	decodeApiVersion,
 	decodeFcVariant,
 	decodeFcVersion,
@@ -15,6 +19,7 @@ import {
 	decodeAnalog,
 	decodeAltitude,
 	decodeStatus,
+	type InavWaypoint,
 	type MspFrame
 } from '../msp';
 
@@ -244,6 +249,102 @@ export async function readTelemetry(): Promise<FcTelemetry> {
 	]);
 	if (gpsPresent && gps === null) gpsPresent = false;
 	return { attitude, gps, analog, altitude, status };
+}
+
+// Streams an RC channel frame to the board. Companion-side guidance sends these
+// at a fixed rate to fly a Betaflight craft that has no onboard navigation.
+export async function sendRawRc(channels: number[]): Promise<void> {
+	await request(MSP.SET_RAW_RC, Array.from(encodeSetRawRc(channels)));
+}
+
+export interface NavState {
+	gps: ReturnType<typeof decodeRawGps>;
+	attitude: ReturnType<typeof decodeAttitude>;
+	altitude: ReturnType<typeof decodeAltitude>;
+}
+
+// Reads position, attitude, and altitude in one round for the guidance loop.
+// Unlike readTelemetry it always probes GPS, since guidance needs a live fix
+// and stops when the fix is lost.
+export async function readNavState(): Promise<NavState> {
+	const read = async <T>(cmd: number, decode: (p: Uint8Array) => T): Promise<T | null> => {
+		try {
+			return decode((await request(cmd)).payload);
+		} catch {
+			return null;
+		}
+	};
+	const [gps, attitude, altitude] = await Promise.all([
+		read(MSP.RAW_GPS, decodeRawGps),
+		read(MSP.ATTITUDE, decodeAttitude),
+		read(MSP.ALTITUDE, decodeAltitude)
+	]);
+	return { gps, attitude, altitude };
+}
+
+export interface MspMissionItem {
+	type: string;
+	lat: number;
+	lon: number;
+	alt: number | null;
+}
+
+// Uploads a mission to an INAV flight controller over MSP. Each waypoint is a
+// MSP_SET_WP frame the FC acknowledges before the next is sent; INAV holds the
+// uploaded mission in RAM and flies it in NAV WP mode, and a best-effort
+// WP_MISSION_SAVE persists it so it survives a power cycle. Betaflight answers
+// none of this (it has no waypoint navigation), so the caller only routes here
+// for INAV.
+export async function uploadMissionMsp(
+	items: MspMissionItem[]
+): Promise<{ ok: boolean; message: string; count: number }> {
+	const waypoints: InavWaypoint[] = [];
+	for (const item of items) {
+		const action = inavActionForType(item.type);
+		if (action === null) continue; // takeoff, servo, condition: not a WP action
+		const positional = action === NAV_WP_ACTION.WAYPOINT;
+		if (positional && item.lat === 0 && item.lon === 0) continue;
+		waypoints.push({
+			index: waypoints.length + 1,
+			action,
+			lat: item.lat,
+			lon: item.lon,
+			altM: item.alt ?? 0
+		});
+	}
+
+	if (waypoints.length === 0) {
+		return { ok: false, message: 'Mission has no waypoints INAV can fly.', count: 0 };
+	}
+	waypoints[waypoints.length - 1].last = true;
+
+	// WP_GETINFO reports the board's waypoint capacity (byte 1); refuse a mission
+	// that would overflow it rather than upload a truncated one.
+	try {
+		const info = (await request(MSP.WP_GETINFO)).payload;
+		const maxWaypoints = info.length >= 2 ? info[1] : 0;
+		if (maxWaypoints > 0 && waypoints.length > maxWaypoints) {
+			return {
+				ok: false,
+				message: `Mission has ${waypoints.length} waypoints but the board holds ${maxWaypoints}.`,
+				count: 0
+			};
+		}
+	} catch {
+		// Older firmware may not answer WP_GETINFO; upload anyway.
+	}
+
+	for (const wp of waypoints) {
+		await request(MSP.SET_WP, Array.from(encodeSetWaypoint(wp)));
+	}
+
+	try {
+		await request(MSP.WP_MISSION_SAVE);
+	} catch {
+		// Saving to onboard storage is best-effort; the RAM mission still flies.
+	}
+
+	return { ok: true, message: `Uploaded ${waypoints.length} waypoints to the flight controller.`, count: waypoints.length };
 }
 
 // Drops the FC into its ROM bootloader so a DFU flash can follow. The FC

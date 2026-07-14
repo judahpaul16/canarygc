@@ -41,15 +41,13 @@
     { kind: 'level', icon: 'fa-ruler-horizontal', title: 'Level Horizon', desc: 'Set the level attitude with the vehicle sitting flat.' }
   ];
 
-  // A pseudo-3D tilt per orientation, so each accel tile shows the pose to hold.
-  // Angles stay clear of 90deg, where a flat glyph would turn edge-on and vanish.
-  const POSE: Record<string, string> = {
-    level: 'rotateX(52deg)',
-    left: 'rotateX(52deg) rotateY(-58deg)',
-    right: 'rotateX(52deg) rotateY(58deg)',
-    nosedown: 'rotateX(68deg) rotateZ(0deg)',
-    noseup: 'rotateX(20deg)',
-    back: 'rotateX(128deg)'
+  const ACCEL_POSITION_DESC: Record<string, string> = {
+    level: 'Flat on a level surface, wings horizontal, nose forward.',
+    left: 'Rolled onto the left wing: left wingtip down, right wingtip up.',
+    right: 'Rolled onto the right wing: right wingtip down, left wingtip up.',
+    nosedown: 'Pitched nose straight down, tail up, held vertical.',
+    noseup: 'Pitched nose straight up, tail down, held vertical.',
+    back: 'Upside down on its back, belly up, wings horizontal.'
   };
 
   async function start(kind: CalKind) {
@@ -127,14 +125,9 @@
             <div class="poses">
               {#each ACCEL_POSITIONS as pos (pos)}
                 <div class="pose-tile" class:current={cal.active === 'accel' && cal.orientation === pos}>
-                  <div class="scene">
-                    <div class="drone" style="transform: {POSE[pos]};">
-                      <span class="arm"></span>
-                      <span class="arm b"></span>
-                      <span class="nose"></span>
-                    </div>
-                  </div>
+                  <img class="pose-img" src="/calibration/accel-{pos}.png" alt="Aircraft held {ACCEL_POSITION_LABEL[pos]}" />
                   <span class="pose-label">{ACCEL_POSITION_LABEL[pos]}</span>
+                  <span class="pose-desc">{ACCEL_POSITION_DESC[pos]}</span>
                 </div>
               {/each}
             </div>
@@ -293,15 +286,9 @@
     padding: 0.5rem; text-align: center; transition: border-color 0.2s, background-color 0.2s;
   }
   .pose-tile.current { border-color: #3290e7; background: rgba(50, 144, 231, 0.12); }
-  .scene { perspective: 220px; height: 52px; display: flex; align-items: center; justify-content: center; }
-  .drone {
-    width: 30px; height: 30px; position: relative; transform-style: preserve-3d;
-    border: 2px solid #cbd5e1; border-radius: 6px; background: rgb(from var(--fontColor) r g b / 0.06);
-  }
-  .drone .arm, .drone .arm.b { position: absolute; inset: 50% 0; height: 2px; background: #94a3b8; transform: translateY(-50%) rotate(45deg); }
-  .drone .arm.b { transform: translateY(-50%) rotate(-45deg); }
-  .drone .nose { position: absolute; top: -5px; left: 50%; transform: translateX(-50%); border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 6px solid #f5c518; }
-  .pose-label { display: block; font-size: 0.7rem; opacity: 0.8; margin-top: 0.3rem; }
+  .pose-img { width: 100%; height: 84px; object-fit: contain; display: block; background: #ffffff; border-radius: 8px; padding: 4px; }
+  .pose-desc { display: block; font-size: 0.62rem; opacity: 0.6; line-height: 1.25; margin-top: 0.2rem; }
+  .pose-label { display: block; font-size: 0.7rem; opacity: 0.9; margin-top: 0.35rem; font-weight: 600; }
 
   .bar { height: 8px; border-radius: 9999px; background: rgb(from var(--fontColor) r g b / 0.12); overflow: hidden; margin: 0.3rem 0 0.5rem; }
   .fill { height: 100%; background: #3290e7; transition: width 0.2s; }

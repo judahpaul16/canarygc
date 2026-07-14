@@ -79,7 +79,7 @@
   <div class="elevated-surface fixed inset-0 flex items-center justify-center z-50 bg-[#00000090] p-4 backdrop-blur-sm"
   >
     <button type="button" aria-label="Close dialog" class="absolute inset-0 h-full w-full cursor-default" onclick={closeModal}></button>
-    <div class="container relative z-10 rounded-2xl shadow-2xl w-full {html ? 'max-w-md' : 'max-w-sm'}" role="dialog" aria-modal="true">
+    <div class="container relative z-10 rounded-2xl shadow-2xl w-full {html ? 'max-w-lg' : 'max-w-md'}" role="dialog" aria-modal="true">
       <div class="relative border-b" style="border-color: rgb(from var(--fontColor) r g b / 0.12);">
         <div class="px-5 py-3 text-lg font-semibold">
           {title}

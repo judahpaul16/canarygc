@@ -15,7 +15,7 @@
     import { normalizeMission } from '../lib/mission-commands';
     import { readMissionFile } from '../lib/mission-import';
     import { isPX4 } from '../lib/flight-modes';
-    import { mavModelStore } from '../stores/mavlinkStore';
+    import { mavModelStore, fcProtocolStore } from '../stores/mavlinkStore';
 
     const SAVE_FEEDBACK_MS = 3000;
     const DEGREES_TO_E7 = 1e7;
@@ -76,7 +76,53 @@
         });
     }
 
+    // Uploads the plan to an INAV flight controller over MSP. INAV flies
+    // waypoint missions natively; Betaflight has no waypoint navigation, so its
+    // plan stays in the planner and is not pushed to the board.
+    async function loadOverMsp(title: string, actions: MissionPlanActions) {
+        missionPlanTitleStore.set(title);
+        missionPlanActionsStore.set(actions);
+        missionCompleteStore.set(false);
+
+        if (get(mavModelStore) !== 'INAV') {
+            notify({
+                title: 'Mission saved',
+                content: 'Plan saved. Press Start to fly it.',
+                duration: SAVE_FEEDBACK_MS,
+            });
+            return;
+        }
+
+        const items = Object.keys(actions)
+            .map(Number)
+            .sort((a, b) => a - b)
+            .map((i) => ({ type: actions[i].type, lat: actions[i].lat, lon: actions[i].lon, alt: actions[i].alt }));
+        try {
+            const response = await fetch('/api/msp/load_mission', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify(items),
+            });
+            const data = await response.json();
+            if (response.ok) {
+                notify({ title: 'Mission uploaded', content: data.message, duration: SAVE_FEEDBACK_MS });
+            } else {
+                showModal({
+                    title: 'Mission upload failed',
+                    content: data.message ?? data.error ?? 'The flight controller rejected the mission.',
+                    notification: true,
+                });
+            }
+        } catch (error) {
+            showModal({ title: 'Mission upload failed', content: (error as Error).message, notification: true });
+        }
+    }
+
     async function handleLoad(title: string, actions: MissionPlanActions) {
+        if (get(fcProtocolStore) === 'msp') {
+            await loadOverMsp(title, actions);
+            return;
+        }
         setFlightMode('GUIDED');
 
         // Clear the current mission plan

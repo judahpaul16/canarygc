@@ -19,6 +19,7 @@
     mavTypeStore,
     mavStateStore,
     mavModeStore,
+    fcProtocolStore,
     mavBatteryStore,
     mavArmedStateStore,
     mavSatelliteStore,
@@ -39,6 +40,7 @@
   import { loggedInStore } from '../stores/authStore';
   import { get } from 'svelte/store';
   import Offline from '../components/Offline.svelte';
+  import GuidancePanel from '../components/GuidancePanel.svelte';
   import Map from '../components/Map.svelte';
   import { notify, type NotificationType } from '../lib/overlays';
   import { callout, initCallouts, stopCallouts } from '../lib/callouts';
@@ -145,6 +147,17 @@
     return Math.max(0, Math.min(100, Math.round(((v / cells - 3.3) / 0.9) * 100)));
   }
 
+  // MSP has no log stream, so state transitions become event-log lines to keep
+  // the events page populated on a Betaflight or INAV board.
+  let prevMspArmed: boolean | null = null;
+  function pushMspEvent(line: string): void {
+    const now = new Date();
+    const stamp = [now.getHours(), now.getMinutes(), now.getSeconds()]
+      .map((n) => String(n).padStart(2, '0'))
+      .join(':');
+    mavlinkLogStore.update((l) => [...l.slice(-500), `${line} at ${stamp}`]);
+  }
+
   // Feeds MSP flight-controller telemetry into the same stores the MAVLink path
   // uses, so a Betaflight or INAV board drives the dashboard gauges.
   function applyMspTelemetry(t: {
@@ -166,11 +179,17 @@
       }
     }
     if (t.altitude) mavAltitudeStore.set(t.altitude.altM);
-    if (t.analog) mavBatteryStore.set(mspVoltageToPercent(t.analog.voltageV));
+    // A bench or SITL board with no battery sensor reports 0 V; show that as no
+    // reading ("--") rather than a misleading empty-battery 0%.
+    if (t.analog) mavBatteryStore.set(t.analog.voltageV > 0 ? mspVoltageToPercent(t.analog.voltageV) : null);
     if (t.status) {
+      if (prevMspArmed !== null && t.status.armed !== prevMspArmed) {
+        pushMspEvent(t.status.armed ? 'ARMED' : 'DISARMED');
+      }
+      prevMspArmed = t.status.armed;
       mavArmedStateStore.set(t.status.armed);
       mavModeStore.set(t.status.armed ? 'Armed' : 'Disarmed');
-      mavStateStore.set('Active');
+      mavStateStore.set(t.status.armed ? 'ACTIVE' : 'STANDBY');
     }
   }
 
@@ -208,6 +227,7 @@
                   mspIdentity = id;
                   mavModelStore.set(id.firmware);
                   mavTypeStore.set(id.boardName || id.targetName || id.boardIdentifier || 'MSP');
+                  pushMspEvent(`CONNECTED ${id.firmware} ${id.boardName || id.targetName || 'flight controller'}`);
                 }
               }
             } catch {
@@ -219,6 +239,7 @@
             mavModelStore.set('N/A');
             return;
           }
+          fcProtocolStore.set('msp');
           if (!mspTelemetryInFlight) {
             mspTelemetryInFlight = true;
             fetch('/api/msp/telemetry')
@@ -230,6 +251,7 @@
           return;
         }
         mavlinkDisabled = false;
+        fcProtocolStore.set('mavlink');
         if (data.length > 0) {
           data.forEach((log: string) => {
             getLogs(log.replace(/\\"/g, '"') + '\n');
@@ -825,6 +847,9 @@
 
     {#if !online && !mavlinkDisabled && !isNavHidden}
       <Offline />
+    {/if}
+    {#if !isNavHidden}
+      <GuidancePanel />
     {/if}
   </div>
 </main>
