@@ -16,6 +16,7 @@ export const MSP = {
 	SET_MODE_RANGE: 35,
 	REBOOT: 68,
 	STATUS: 101,
+	MOTOR: 104,
 	RAW_GPS: 106,
 	ATTITUDE: 108,
 	ALTITUDE: 109,
@@ -299,6 +300,17 @@ export function decodeAltitude(payload: Uint8Array): { altM: number; varioMs: nu
 	if (payload.length < 6) return null;
 	const v = view(payload);
 	return { altM: v.getInt32(0, true) / 100, varioMs: v.getInt16(4, true) / 100 };
+}
+
+// MSP_MOTOR: the actual motor outputs (not servos), one U16 microsecond value
+// per motor. Trailing zero motors mark unused outputs, so a quad reports four
+// live values and a fixed-wing reports one, letting the panel show real motors
+// per airframe rather than the whole mixer.
+export function decodeMotors(payload: Uint8Array): number[] {
+	const v = view(payload);
+	const out: number[] = [];
+	for (let i = 0; i + 1 < payload.length; i += 2) out.push(v.getUint16(i, true));
+	return out;
 }
 
 // MSP_STATUS: cycle time, I2C errors, and a sensor bitmask, then a U32 of active

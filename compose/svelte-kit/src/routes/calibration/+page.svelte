@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { mavArmedStateStore, mavModelStore, mavlinkParamStore, fcProtocolStore } from '../../stores/mavlinkStore';
+  import { mavArmedStateStore, mavModelStore, mavlinkParamStore, fcProtocolStore, mavServoOutputStore } from '../../stores/mavlinkStore';
   import { get } from 'svelte/store';
   import { calibrationStore, resetCalibration } from '../../stores/calibrationStore';
   import {
@@ -14,11 +14,30 @@
   import MotorOutput from '../../components/MotorOutput.svelte';
   import { onMount } from 'svelte';
 
-  // SERVO_OUTPUT_RAW is message 36; ask the autopilot to stream it at 10 Hz
-  // while the page is open so the motor-output bars update live, then restore
-  // the default rate on the way out.
+  // The motor-output bars need a live feed while the page is open. A MAVLink
+  // autopilot streams SERVO_OUTPUT_RAW (message 36) on request; an MSP board
+  // (Betaflight or INAV) has no push, so its motors are polled over MSP_MOTOR,
+  // which reports the real motors for the airframe rather than the whole mixer.
   const SERVO_OUTPUT_RAW_ID = 36;
   onMount(() => {
+    if (get(fcProtocolStore) === 'msp') {
+      let stopped = false;
+      const poll = async () => {
+        if (stopped) return;
+        try {
+          const res = await fetch('/api/msp/motors');
+          if (res.ok) mavServoOutputStore.set((await res.json()).motors ?? []);
+        } catch {
+          // Keep the last values; the next poll retries.
+        }
+      };
+      const timer = setInterval(poll, 200);
+      poll();
+      return () => {
+        stopped = true;
+        clearInterval(timer);
+      };
+    }
     sendMavlinkCommand('SET_MESSAGE_INTERVAL', [SERVO_OUTPUT_RAW_ID, 100000], { cmdLong: true });
     return () => {
       sendMavlinkCommand('SET_MESSAGE_INTERVAL', [SERVO_OUTPUT_RAW_ID, 0], { cmdLong: true });

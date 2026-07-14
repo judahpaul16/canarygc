@@ -7,6 +7,7 @@ import {
 	uploadMissionMsp,
 	mspCalibrate,
 	readModeConfig,
+	readMotors,
 	type MspMissionItem
 } from '$lib/server/msp';
 import {
@@ -47,6 +48,12 @@ export const GET: RequestHandler = async (event): Promise<Response> => {
 			return json(guidanceStatus());
 		case 'inav_status':
 			return json(inavMissionStatus());
+		case 'motors':
+			try {
+				return json({ motors: await readMotors() });
+			} catch (err) {
+				return json({ error: (err as Error).message }, { status: 503 });
+			}
 		case 'inav_mode_config':
 			try {
 				const mode = await readModeConfig();

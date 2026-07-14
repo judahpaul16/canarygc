@@ -27,6 +27,7 @@ import {
 	decodeBoxNames,
 	decodeBoxIds,
 	decodeModeRanges,
+	decodeMotors,
 	type InavWaypoint,
 	type ModeRange,
 	type MspFrame
@@ -262,6 +263,17 @@ export async function detectFc(): Promise<FcIdentity> {
 		boardName: board.boardName,
 		platform: await readPlatform(firmware)
 	};
+}
+
+// Reads the live motor outputs (MSP_MOTOR), trimmed to the motors that carry a
+// value so the calibration panel shows the real motor count for the airframe.
+export async function readMotors(): Promise<number[]> {
+	const motors = decodeMotors((await request(MSP.MOTOR)).payload);
+	let last = 0;
+	motors.forEach((v, i) => {
+		if (v > 0) last = i + 1;
+	});
+	return motors.slice(0, Math.max(1, last));
 }
 
 export interface FcTelemetry {
