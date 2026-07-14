@@ -133,11 +133,16 @@ services:
 
   # Betaflight firmware built for the host CPU (SITL). The Firmware tab reaches
   # it over MSP through the shared "msp-sitl" alias, as it would a real board.
+  # The flight-dynamics sim feeds its sensors and virtual GPS, so it arms and
+  # flies.
   betaflight-sitl:
     profiles: ["development-betaflight"]
     build:
       context: ./compose/betaflight-sitl
+    command: ["./betaflight_SITL.elf", "betaflight-sim"]
     container_name: canarygc_betaflight_sitl
+    depends_on:
+      - betaflight-sim
     networks:
       default:
         aliases:
@@ -147,13 +152,28 @@ services:
     tty: true
     restart: always
 
+  betaflight-sim:
+    profiles: ["development-betaflight"]
+    build:
+      context: ./compose/fc-sim
+    environment:
+      - ADAPTER=bf-fdm
+      - BF_HOST=betaflight-sitl
+    container_name: canarygc_betaflight_sim
+    restart: always
+
   # INAV firmware built for the host CPU (SITL). UART2 carries MSP on 5761, the
-  # same port the Betaflight SITL uses, so the app wiring is identical.
+  # same port the Betaflight SITL uses, so the app wiring is identical. The
+  # flight-dynamics sim feeds its sensors and GPS over the RealFlight protocol,
+  # so it arms and flies missions.
   inav-sitl:
     profiles: ["development-inav"]
     build:
       context: ./compose/inav-sitl
+    command: ["--sim=rf", "--simip=inav-sim", "--chanmap=M01-01,M02-02,M03-03,M04-04"]
     container_name: canarygc_inav_sitl
+    depends_on:
+      - inav-sim
     networks:
       default:
         aliases:
@@ -161,6 +181,15 @@ services:
     ports:
       - "${MSP_PORT:-5761}:5761"
     tty: true
+    restart: always
+
+  inav-sim:
+    profiles: ["development-inav"]
+    build:
+      context: ./compose/fc-sim
+    environment:
+      - ADAPTER=inav-rf
+    container_name: canarygc_inav_sim
     restart: always
 
   # On-board WebRTC camera bridge (production profile).

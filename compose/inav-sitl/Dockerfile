@@ -19,5 +19,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends libatomic1 \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /sitl
 COPY --from=build /inav_SITL ./inav_SITL
+COPY entrypoint.sh ./entrypoint.sh
+RUN chmod +x entrypoint.sh
 EXPOSE 5761
-CMD ["./inav_SITL"]
+ENTRYPOINT ["./entrypoint.sh"]
+CMD []
