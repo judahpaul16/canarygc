@@ -23,11 +23,30 @@ export const MSP = {
 	BOXNAMES: 116,
 	WP: 118,
 	BOXIDS: 119,
+	EEPROM_WRITE: 250,
 	SET_RAW_RC: 200,
 	ACC_CALIBRATION: 205,
 	MAG_CALIBRATION: 206,
-	SET_WP: 209
+	SET_WP: 209,
+	// MSP v2 named-setting access (16-bit commands, sent as MSP v2).
+	COMMON_SETTING: 0x1003,
+	COMMON_SET_SETTING: 0x1004
 } as const;
+
+// INAV receiver_type value for taking RC from MSP. A station drives the craft
+// over MSP_SET_RAW_RC, so the board's receiver must be MSP for those channels to
+// reach the flight controller at all; otherwise the RC is accepted and ignored.
+export const INAV_RECEIVER_MSP = 2;
+
+// A named setting read (MSP2_COMMON_SETTING) or write (MSP2_COMMON_SET_SETTING):
+// a null-terminated setting name, and for a write the little-endian value bytes.
+export function encodeGetSetting(name: string): Uint8Array {
+	return Uint8Array.from([...Array.from(name, (c) => c.charCodeAt(0)), 0]);
+}
+
+export function encodeSetSetting(name: string, value: number[]): Uint8Array {
+	return Uint8Array.from([...Array.from(name, (c) => c.charCodeAt(0)), 0, ...value]);
+}
 
 // Permanent box ids for the flight modes an INAV mission needs. A mode activates
 // only when its aux channel sits inside a configured range, so the station reads

@@ -20,7 +20,7 @@ function inavHasNoFix(): boolean {
 	if (sat.total >= GPS_MIN_SATS) return false;
 	showModal({
 		title: 'No GPS fix',
-		content: `INAV flies a mission onboard and needs a position fix to navigate, the same as an ArduPilot or PX4 autopilot. The flight controller reports ${sat.total} satellite${sat.total === 1 ? '' : 's'}. Wait for a fix, or fly manually with the gamepad. A bench SITL has no GPS unless a flight simulator is attached to it.`,
+		content: `The flight controller reports ${sat.total} satellite${sat.total === 1 ? '' : 's'}. A mission needs a GPS fix to navigate. Wait for a fix, or fly manually with the gamepad.`,
 		notification: true
 	});
 	return true;

@@ -14,9 +14,9 @@ import {
 	stopGuidance,
 	heartbeatGuidance,
 	guidanceStatus,
-	sendManualRc,
 	type StartGuidanceOptions
 } from '$lib/server/msp-guidance';
+import { startMspManual, sendMspManualFrame, stopMspManual } from '$lib/server/msp-manual';
 import {
 	startInavMission,
 	startInavTakeoff,
@@ -87,6 +87,16 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
 			} catch (err) {
 				return json({ error: (err as Error).message }, { status: 503 });
 			}
+		case 'manual_start':
+			try {
+				const result = await startMspManual();
+				return json(result, { status: result.ok ? 200 : 400 });
+			} catch (err) {
+				return json({ error: (err as Error).message }, { status: 503 });
+			}
+		case 'manual_stop':
+			await stopMspManual();
+			return json({ ok: true });
 		case 'manual_control': {
 			const h = event.request.headers;
 			const num = (k: string, d = 0) => {
@@ -94,7 +104,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
 				return Number.isFinite(v) ? v : d;
 			};
 			try {
-				await sendManualRc({ x: num('x'), y: num('y'), z: num('z', 500), r: num('r') }, h.get('armed') === 'true');
+				await sendMspManualFrame({ x: num('x'), y: num('y'), z: num('z', 500), r: num('r') });
 				return json({ ok: true });
 			} catch (err) {
 				return json({ error: (err as Error).message }, { status: 503 });

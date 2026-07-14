@@ -191,19 +191,6 @@ export function stopGuidance(): void {
 	release('idle', 'Stopped by the operator; released to the flight controller.');
 }
 
-// Streams one manual RC frame from gamepad sticks: pitch/roll/yaw map to their
-// channels around center and thrust passes straight through to throttle, so a
-// pilot flies an MSP board by stick with no GPS or position estimate needed.
-export async function sendManualRc(frame: { x: number; y: number; z: number; r: number }, armed: boolean): Promise<void> {
-	const g = DEFAULT_GUIDANCE_CONFIG;
-	const stick = (v: number, sign: number) => 1500 + sign * Math.max(-500, Math.min(500, (v / 1000) * 500));
-	const roll = stick(frame.y, g.rollSign);
-	const pitch = stick(frame.x, g.pitchSign);
-	const yaw = stick(frame.r, g.yawSign);
-	const throttle = 1000 + Math.max(0, Math.min(1000, frame.z));
-	await sendRawRc(buildRcFrame({ roll, pitch, yaw }, throttle, armed, DEFAULT_RC_CHANNELS));
-}
-
 export function heartbeatGuidance(): void {
 	session.lastHeartbeat = Date.now();
 }

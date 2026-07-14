@@ -113,6 +113,57 @@ export function planInavEngage(cfg: { names: string[]; ids: number[]; ranges: Mo
 	};
 }
 
+export interface ArmChannel {
+	armAux: number; // 0-based aux channel that arms
+	armUs: number; // value inside the arm window
+	channelCount: number; // channels the RC frame must carry
+	assignment: ModeAssignment | null; // a mode range to write when ARM had no aux
+}
+
+// Resolves the aux channel that arms the craft, reusing the operator's existing
+// ARM assignment or allocating a spare aux and returning the mode range to write.
+// Manual gamepad flight and the mission both drive this channel to arm over MSP.
+export function resolveArmChannel(cfg: { names: string[]; ids: number[]; ranges: ModeRange[] }): ArmChannel {
+	const armId = resolvePermId(cfg.names, cfg.ids, 'ARM', INAV_BOX_ID.ARM);
+	const existing = findRangeForBox(cfg.ranges, armId);
+	if (existing) {
+		const us = Math.round((modeStepToUs(existing.startStep) + modeStepToUs(existing.endStep)) / 2);
+		return { armAux: existing.auxChannel, armUs: us, channelCount: Math.max(8, AUX_BASE + existing.auxChannel + 1), assignment: null };
+	}
+	const aux = pickFreeAux(cfg.ranges, []);
+	const startStep = usToModeStep(1700);
+	const endStep = usToModeStep(2100);
+	return {
+		armAux: aux,
+		armUs: NEW_RANGE_US,
+		channelCount: Math.max(8, AUX_BASE + aux + 1),
+		assignment: { slotIndex: cfg.ranges.length, permId: armId, auxChannel: aux, startStep, endStep }
+	};
+}
+
+// Builds one MSP_SET_RAW_RC frame for manual stick flight: sticks (AETR) from the
+// gamepad, throttle passed through, and the arm aux channel held high or low. The
+// FC must have received the arm channel low before high, so the caller settles the
+// channel low first; a real transmitter arm switch works the same way.
+export function buildManualRcFrame(opts: {
+	armAux: number;
+	armUs: number;
+	channelCount: number;
+	roll: number;
+	pitch: number;
+	yaw: number;
+	throttleUs: number;
+	armed: boolean;
+}): number[] {
+	const ch = new Array<number>(opts.channelCount).fill(REST_US);
+	ch[ROLL] = opts.roll;
+	ch[PITCH] = opts.pitch;
+	ch[YAW] = opts.yaw;
+	ch[THROTTLE] = opts.throttleUs;
+	ch[AUX_BASE + opts.armAux] = opts.armed ? opts.armUs : REST_US;
+	return ch;
+}
+
 // Builds one MSP_SET_RAW_RC frame that holds the plan's arm and NAV WP channels
 // inside their windows (when armed) with sticks centered and throttle low; NAV WP
 // governs throttle once INAV is navigating. Disarmed, both channels rest low so

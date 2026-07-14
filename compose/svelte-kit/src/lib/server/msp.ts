@@ -10,6 +10,9 @@ import {
 	encodeSetWaypoint,
 	encodeSetRawRc,
 	encodeSetModeRange,
+	encodeGetSetting,
+	encodeSetSetting,
+	INAV_RECEIVER_MSP,
 	inavActionForType,
 	NAV_WP_ACTION,
 	decodeApiVersion,
@@ -315,6 +318,62 @@ export async function readModeConfig(): Promise<ModeConfig> {
 // without a permanent write; it reverts on the next power cycle.
 export async function setModeRange(a: ModeAssignment): Promise<void> {
 	await request(MSP.SET_MODE_RANGE, Array.from(encodeSetModeRange(a.slotIndex, a.permId, a.auxChannel, a.startStep, a.endStep)));
+}
+
+// Reads a named setting (MSP v2) as raw little-endian bytes.
+export async function getSetting(name: string): Promise<Uint8Array> {
+	return (await request(MSP.COMMON_SETTING, Array.from(encodeGetSetting(name)), true)).payload;
+}
+
+// Writes a named setting (MSP v2). The value must match the setting's byte width.
+export async function setSetting(name: string, value: number[]): Promise<void> {
+	await request(MSP.COMMON_SET_SETTING, Array.from(encodeSetSetting(name, value)), true);
+}
+
+// Persists the running config to the board's storage.
+export async function saveEeprom(): Promise<void> {
+	await request(MSP.EEPROM_WRITE);
+}
+
+// The station drives the craft over MSP_SET_RAW_RC, which the flight controller
+// only applies when its receiver is MSP; otherwise the RC is accepted and dropped,
+// so nothing arms or moves. Sets the receiver to MSP once (persisted, one reboot)
+// when it is not already, so a station-only board takes its RC from the station.
+export async function ensureMspReceiver(): Promise<{ ok: boolean; changed: boolean; message: string }> {
+	let current: Uint8Array;
+	try {
+		current = await getSetting('receiver_type');
+	} catch (err) {
+		return { ok: false, changed: false, message: `Could not read the receiver type: ${(err as Error).message}` };
+	}
+	if (current.length >= 1 && current[0] === INAV_RECEIVER_MSP) {
+		return { ok: true, changed: false, message: 'Receiver is MSP.' };
+	}
+	try {
+		await setSetting('receiver_type', [INAV_RECEIVER_MSP]);
+		await saveEeprom();
+		try {
+			await request(MSP.REBOOT);
+		} catch {
+			// The board drops the link as it reboots; that is the success case.
+		}
+		teardown();
+	} catch (err) {
+		return { ok: false, changed: false, message: `Could not set the receiver to MSP: ${(err as Error).message}` };
+	}
+	// Wait for the reboot, then reconnect and confirm the receiver took.
+	for (let attempt = 0; attempt < 6; attempt++) {
+		await new Promise((r) => setTimeout(r, 1000));
+		try {
+			const after = await getSetting('receiver_type');
+			if (after.length >= 1 && after[0] === INAV_RECEIVER_MSP) {
+				return { ok: true, changed: true, message: 'Set the receiver to MSP so the station can drive the craft.' };
+			}
+		} catch {
+			// Board still rebooting; retry.
+		}
+	}
+	return { ok: false, changed: true, message: 'Set the receiver to MSP but could not confirm it after the reboot.' };
 }
 
 export interface MspMissionItem {
