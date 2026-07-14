@@ -155,10 +155,19 @@ if [[ "$1" != "--setup-only" ]]; then
     sudo chown -R $(whoami):www-data /home/$(whoami)/canarygc
     sudo chmod +x contrib/setup.sh
     
+    # Every profile's app shares the canarygc_app name; tear all down before up.
+    docker compose \
+        --profile development \
+        --profile development-px4 \
+        --profile development-betaflight \
+        --profile development-inav \
+        --profile production \
+        down --remove-orphans
+
     if [[ "$1" == "--simulation" ]]; then
-        docker compose --profile development down && docker system prune -f && docker compose --profile development up -d
+        docker system prune -f
+        docker compose --profile development up -d
     else
-        docker compose --profile production down
         docker system prune -af
         if libcamera-hello --list-cameras | grep -q "No cameras available!"; then
             echo "No cameras found."
