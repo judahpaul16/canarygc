@@ -365,7 +365,16 @@ export async function saveEeprom(): Promise<void> {
 // only applies when its receiver is MSP; otherwise the RC is accepted and dropped,
 // so nothing arms or moves. Sets the receiver to MSP once (persisted, one reboot)
 // when it is not already, so a station-only board takes its RC from the station.
+// Betaflight's receiver is MSP by default and has no receiver_type setting, so
+// there is nothing to change there.
 export async function ensureMspReceiver(): Promise<{ ok: boolean; changed: boolean; message: string }> {
+	try {
+		if ((await detectFc()).firmware === 'Betaflight') {
+			return { ok: true, changed: false, message: 'Betaflight takes its RC from MSP by default.' };
+		}
+	} catch {
+		// Fall through to the INAV path; a failed detect surfaces there.
+	}
 	let current: Uint8Array;
 	try {
 		current = await getSetting('receiver_type');
