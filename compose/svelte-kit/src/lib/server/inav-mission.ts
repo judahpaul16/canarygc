@@ -17,6 +17,7 @@ import {
 	uploadMissionMsp,
 	mspConfigured,
 	ensureMspReceiver,
+	setRcOverrideActive,
 	type MspMissionItem
 } from './msp';
 import { planInavEngage, buildInavRcFrame, type InavEngagePlan } from '../inav-mission';
@@ -68,6 +69,7 @@ const session: InavSession = (g.__canarygcInavMission ??= {
 });
 
 function release(phase: InavPhase, reason: string | null): void {
+	if (session.running) setRcOverrideActive(false);
 	session.running = false;
 	session.phase = phase;
 	session.lastError = reason;
@@ -143,6 +145,7 @@ async function engage(context: string): Promise<{ ok: boolean; message: string }
 	session.startedAt = Date.now();
 	session.phase = 'engaged';
 	session.running = true;
+	setRcOverrideActive(true);
 	session.timer = setInterval(() => void tick(), LOOP_MS);
 
 	const assignedNote = plan.assignments.length

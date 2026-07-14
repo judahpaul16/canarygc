@@ -6,7 +6,7 @@
 // craft back to Betaflight's own RX failsafe (GPS Rescue) rather than flying it
 // blind.
 import { building } from '$app/environment';
-import { readNavState, sendRawRc, mspConfigured } from './msp';
+import { readNavState, sendRawRc, mspConfigured, setRcOverrideActive } from './msp';
 import {
 	computeGuidance,
 	buildRcFrame,
@@ -56,6 +56,7 @@ const session: GuidanceSession = (g.__canarygcGuidance ??= {
 });
 
 function release(phase: GuidancePhase, reason: string | null): void {
+	if (session.running) setRcOverrideActive(false);
 	session.running = false;
 	session.phase = phase;
 	session.lastError = reason;
@@ -181,6 +182,7 @@ export async function startGuidance(
 	session.lastHeartbeat = Date.now();
 	session.phase = 'guiding';
 	session.running = true;
+	setRcOverrideActive(true);
 	session.timer = setInterval(() => {
 		void tick();
 	}, LOOP_MS);

@@ -82,6 +82,15 @@ let gpsPresent = true;
 let gpsRetryAt = 0;
 const GPS_RETRY_MS = 10_000;
 
+// While the station streams RC to fly the craft (gamepad, mission, guidance), a
+// GPS re-probe on a board with no GPS times out and starves the RC cadence past
+// the flight controller's RX-loss window, which drops the craft. Override
+// sessions raise this so telemetry leaves the link to the RC stream.
+let overrideActive = 0;
+export function setRcOverrideActive(on: boolean): void {
+	overrideActive = Math.max(0, overrideActive + (on ? 1 : -1));
+}
+
 function teardown(err?: Error): void {
 	if (state.pending) {
 		clearTimeout(state.pending.timer);
@@ -274,7 +283,7 @@ export async function readTelemetry(): Promise<FcTelemetry> {
 			return null;
 		}
 	};
-	if (!gpsPresent && Date.now() >= gpsRetryAt) gpsPresent = true;
+	if (!gpsPresent && overrideActive === 0 && Date.now() >= gpsRetryAt) gpsPresent = true;
 	const [attitude, gps, analog, altitude, status] = await Promise.all([
 		read(MSP.ATTITUDE, decodeAttitude),
 		gpsPresent ? read(MSP.RAW_GPS, decodeRawGps) : Promise.resolve(null),

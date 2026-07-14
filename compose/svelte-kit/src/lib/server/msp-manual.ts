@@ -6,7 +6,7 @@
 // GPS or position estimate, so this is how a no-GPS Betaflight or INAV craft flies
 // from the station.
 import { building } from '$app/environment';
-import { sendRawRc, ensureMspReceiver, readModeConfig, setModeRange, mspConfigured } from './msp';
+import { sendRawRc, ensureMspReceiver, readModeConfig, setModeRange, mspConfigured, setRcOverrideActive } from './msp';
 import { resolveArmChannel, buildManualRcFrame, type ArmChannel } from '../inav-mission';
 import { DEFAULT_GUIDANCE_CONFIG } from '../msp-guidance';
 
@@ -40,6 +40,7 @@ export async function startMspManual(): Promise<{ ok: boolean; message: string }
 		session.arm = arm;
 		session.startedAt = Date.now();
 		session.active = true;
+		setRcOverrideActive(true);
 	} catch (err) {
 		return { ok: false, message: `Could not set up the arm channel: ${(err as Error).message}` };
 	}
@@ -81,6 +82,7 @@ export async function sendMspManualFrame(frame: { x: number; y: number; z: numbe
 // low, then the stream stops and the flight controller's own RX failsafe holds.
 export async function stopMspManual(): Promise<void> {
 	const arm = session.arm;
+	if (session.active) setRcOverrideActive(false);
 	session.active = false;
 	session.arm = null;
 	if (!arm) return;
