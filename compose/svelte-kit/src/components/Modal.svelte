@@ -56,11 +56,11 @@
     event.preventDefault();
 
     if (inputs) {
-      const missing = inputs.some(
-        (input, i) => input.required && input.type !== 'checkbox' && !inputValues[i]
+      const missing = inputs.some((input, i) =>
+        input.required && (input.type === 'checkbox' ? !checkboxValues[i] : !inputValues[i])
       );
       if (missing) {
-        validationError = 'Please enter a valid value for all inputs.';
+        validationError = 'Please complete all required fields.';
         return;
       }
       inputs.forEach((input, i) => {
