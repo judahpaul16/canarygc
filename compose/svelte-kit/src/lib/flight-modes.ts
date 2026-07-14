@@ -157,6 +157,12 @@ export function isGroundOrSurface(type: string = get(mavTypeStore)): boolean {
   return /rover|boat/i.test(type);
 }
 
+// Fixed-wing and VTOL craft launch through ArduPlane's own TAKEOFF mode rather
+// than a copter-style climb-in-place command.
+export function isPlane(type: string = get(mavTypeStore)): boolean {
+  return /wing|vtol/i.test(type);
+}
+
 export function isPX4(model: string = get(mavModelStore)): boolean {
   return model.toUpperCase().includes('PX4');
 }

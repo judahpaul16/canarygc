@@ -25,7 +25,7 @@
   import { get } from 'svelte/store';
 
   import { showModal, notify } from '../lib/overlays';
-  import { sendMavlinkCommand, setFlightMode, armDisarm, writeParameter, encodeParameterValue } from '../lib/mavlink-client';
+  import { sendMavlinkCommand, setFlightMode, takeoff, writeParameter, encodeParameterValue } from '../lib/mavlink-client';
   import { isAutoLabel, isGuidedLabel, isPX4 } from '../lib/flight-modes';
   import { preflightCheck } from '../lib/preflight';
   import { missionPlanActionsStore } from '../stores/missionPlanStore';
@@ -265,9 +265,7 @@
           if (params.RTL_CLIMB_MIN) await writeParameter('RTL_CLIMB_MIN', 0, params.RTL_CLIMB_MIN.param_type);
         }
         if (get(mavStateStore) === 'STANDBY') {
-          await setFlightMode('GUIDED');
-          await armDisarm(true);
-          await sendMavlinkCommand('NAV_TAKEOFF', [0, 0, 0, NaN, NaN, NaN, DEFAULT_TAKEOFF_ALT_M], { cmdLong: true });
+          await takeoff(DEFAULT_TAKEOFF_ALT_M);
           await new Promise((resolve) => setTimeout(resolve, TAKEOFF_SETTLE_DELAY_MS));
         }
         await setFlightMode('AUTO');
@@ -306,9 +304,7 @@
         }
       ],
       onConfirm: async (values) => {
-        if (!isGuidedLabel(mavMode)) await setFlightMode('GUIDED');
-        await armDisarm(true);
-        await sendMavlinkCommand('NAV_TAKEOFF', [0, 0, 0, 0, 0, 0, parseInt(values[0])], { cmdLong: true });
+        await takeoff(parseInt(values[0]));
       },
     });
   }

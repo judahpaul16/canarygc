@@ -1,6 +1,6 @@
 import { get } from 'svelte/store';
-import { mavModelStore, mavLocationStore, mavAltitudeAmslStore } from '../stores/mavlinkStore';
-import { strategyFor, isPX4, type FlightMode } from './flight-modes';
+import { mavModelStore, mavLocationStore, mavAltitudeAmslStore, mavlinkParamStore } from '../stores/mavlinkStore';
+import { strategyFor, isPX4, isPlane, MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, type FlightMode } from './flight-modes';
 import { notify } from './overlays';
 
 export interface CommandOptions {
@@ -87,6 +87,25 @@ export async function setFlightMode(mode: FlightMode): Promise<boolean> {
 
 export async function armDisarm(arm: boolean): Promise<boolean> {
   return sendMavlinkCommand('COMPONENT_ARM_DISARM', [arm ? 1 : 0, 0], { cmdLong: true });
+}
+
+// ArduPlane rejects a copter-style NAV_TAKEOFF and launches through its own
+// TAKEOFF mode, which climbs to the TKOFF_ALT parameter. A copter climbs in
+// place under GUIDED with NAV_TAKEOFF. Both arm first.
+const PLANE_TAKEOFF_MODE = 13;
+
+export async function takeoff(altitudeM: number): Promise<boolean> {
+  if (isPlane()) {
+    const params = get(mavlinkParamStore);
+    if (params.TKOFF_ALT) await writeParameter('TKOFF_ALT', altitudeM, params.TKOFF_ALT.param_type);
+    await armDisarm(true);
+    return sendMavlinkCommand('DO_SET_MODE', [MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, PLANE_TAKEOFF_MODE, 0], {
+      cmdLong: true
+    });
+  }
+  await setFlightMode('GUIDED');
+  await armDisarm(true);
+  return sendMavlinkCommand('NAV_TAKEOFF', [0, 0, 0, NaN, NaN, NaN, altitudeM], { cmdLong: true });
 }
 
 // Single local-NED position setpoints only steer ArduPilot's GUIDED mode; PX4's
