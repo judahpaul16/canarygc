@@ -367,6 +367,34 @@
   let missionLoaded = $derived($missionPlanTitleStore !== '');
   let eta = $derived(calculateETA(missionProgress));
   let remainingDistance = $derived(calculateRemainingDistance($missionIndexStore, $mavLocationStore, $markersStore));
+
+  function clearLoadedPlan() {
+    showModal({
+      title: 'Clear Mission Plan',
+      content: 'Are you sure you want to clear the loaded mission plan? It is removed from the dashboard and cleared from the flight controller.',
+      confirmation: true,
+      onConfirm: async () => {
+        if (!fcIsMsp) {
+          await fetch('/api/mavlink/clear_mission', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' }
+          });
+        }
+        await fetch('/api/mission/unload', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' }
+        });
+        missionPlanTitleStore.set('');
+        missionPlanActionsStore.set({});
+        missionCompleteStore.set(true);
+        notify({
+          title: 'Mission Plan Cleared',
+          content: 'The loaded mission plan has been cleared.',
+          duration: 3000
+        });
+      }
+    });
+  }
 </script>
 
 <div
@@ -393,6 +421,11 @@
         <span class="text-[#66e1ff] {darkMode ? '' : 'brightness-90'}" title={missionPlanTitle}>
           {missionPlanTitle || 'No mission plan loaded.'}
         </span>
+        {#if missionLoaded}
+          <button class="clear-plan" onclick={clearLoadedPlan} title="Clear loaded plan" aria-label="Clear loaded mission plan">
+            <i class="fas fa-times"></i>
+          </button>
+        {/if}
       </div>
       <div class="flex flex-col items-center justify-end">
         <div class="w-full">
@@ -515,6 +548,22 @@
     justify-content: center;
     width: 100%;
     margin-top: 1.5rem;
+  }
+
+  .clear-plan {
+    margin-left: 0.35rem;
+    padding: 0 0.3rem;
+    font-size: 0.75rem;
+    line-height: 1;
+    color: #9ca3af;
+    border-radius: 0.3rem;
+    cursor: pointer;
+    transition: color 0.15s, background-color 0.15s;
+  }
+
+  .clear-plan:hover {
+    color: #f87171;
+    background-color: rgb(from #f87171 r g b / 0.12);
   }
 
   .circular-button {
