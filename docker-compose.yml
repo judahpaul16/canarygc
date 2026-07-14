@@ -84,9 +84,9 @@ services:
       - LON=-84.37130870603511
       - ALT=0
       - DIR=0
-      - MODEL=quad
+      - MODEL=${SITL_MODEL:-quad}
       - SPEEDUP=1
-      - VEHICLE=ArduCopter
+      - VEHICLE=${SITL_VEHICLE:-ArduCopter}
     tty: true
     container_name: canarygc_sitl
     ports:

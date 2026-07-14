@@ -180,6 +180,14 @@ docker compose --profile development up
 
 The app is served at `http://localhost:5173`; SITL exposes MAVLink on TCP `5760`. Set a different host port with `APP_DEV_PORT` in a root `.env` if 5173 collides. The first bring-up builds the ArduPilot SITL image from source (Copter 4.5.7), which takes a while; later runs reuse it, and the simulator streams telemetry about a minute after it starts.
 
+The SITL image builds the copter, rover, plane, and sub binaries, so the same `development` profile flies any of them. `SITL_VEHICLE` and `SITL_MODEL` pick which, and the dashboard controls adapt to the vehicle: a submarine gets a depth control (Go to Depth, Ascend, Descend), a rover drops the vertical control, and a plane, copter, or sub keeps Max Speed:
+
+```bash
+SITL_VEHICLE=Rover     SITL_MODEL=rover    docker compose --profile development up   # ground rover
+SITL_VEHICLE=ArduSub   SITL_MODEL=vectored docker compose --profile development up   # submarine
+SITL_VEHICLE=ArduPlane SITL_MODEL=plane    docker compose --profile development up   # fixed wing
+```
+
 To develop against **PX4** instead, use the `development-px4` profile:
 
 ```bash
