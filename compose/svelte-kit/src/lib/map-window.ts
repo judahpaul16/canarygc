@@ -16,15 +16,50 @@ function trackRect(node: HTMLElement, publish: (rect: MapRect | null) => void) {
       update();
     });
   }
-  const observer = new ResizeObserver(update);
+  // A viewport resize reads the rect mid-reflow (a vh-sized centered layout
+  // settles across several frames after the resize event), and a fixed-size
+  // element never refires its own ResizeObserver, so a mid-reflow rect would
+  // stick. After a resize, republish every frame until the rect holds still,
+  // so the settled position lands no matter how long the layout takes.
+  const SETTLE_STABLE_FRAMES = 3;
+  const SETTLE_MAX_MS = 1500;
+  let settleRaf = 0;
+  function settleTrack() {
+    cancelAnimationFrame(settleRaf);
+    let lastTop = NaN;
+    let lastLeft = NaN;
+    let stable = 0;
+    const deadline = performance.now() + SETTLE_MAX_MS;
+    const step = () => {
+      const r = node.getBoundingClientRect();
+      if (r.top === lastTop && r.left === lastLeft) {
+        stable++;
+      } else {
+        stable = 0;
+        lastTop = r.top;
+        lastLeft = r.left;
+        update();
+      }
+      if (stable < SETTLE_STABLE_FRAMES && performance.now() < deadline) {
+        settleRaf = requestAnimationFrame(step);
+      }
+    };
+    settleRaf = requestAnimationFrame(step);
+  }
+  function onResize() {
+    update();
+    settleTrack();
+  }
+  const observer = new ResizeObserver(onResize);
   observer.observe(node);
-  window.addEventListener('resize', update);
+  window.addEventListener('resize', onResize);
   window.addEventListener('scroll', scheduleUpdate, true);
   update();
   return () => {
     if (scheduled) cancelAnimationFrame(scheduled);
+    cancelAnimationFrame(settleRaf);
     observer.disconnect();
-    window.removeEventListener('resize', update);
+    window.removeEventListener('resize', onResize);
     window.removeEventListener('scroll', scheduleUpdate, true);
     publish(null);
   };

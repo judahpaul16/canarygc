@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy, untrack } from 'svelte';
+  import { afterNavigate } from '$app/navigation';
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import {
     mapStore,
@@ -343,7 +344,7 @@
   // changes. It coalesces bursts to one paint per frame and skips while the
   // container is hidden (a background page, or the 3D view active).
   let containerObserver: ResizeObserver | null = null;
-  let settleTimer: ReturnType<typeof setTimeout> | null = null;
+  let settleTimer: ReturnType<typeof setInterval> | null = null;
   function repaintForSize() {
     if (!leafletMap) return;
     const container = document.querySelector('.map-container') as HTMLElement | null;
@@ -351,11 +352,43 @@
     leafletMap.invalidateSize({ pan: false, debounceMoveend: true });
     get(threeDMapStore)?.resize();
     centerInWindow(get(mavLocationStore) as L.LatLng, get(mapZoomStore));
-    // Leaflet reads the size synchronously, but flex/grid can settle a frame
-    // later; a trailing pass fills any tiles the first invalidate missed.
-    if (settleTimer) clearTimeout(settleTimer);
-    settleTimer = setTimeout(() => leafletMap?.invalidateSize({ pan: false }), 200);
+    // The layout settles across several frames after a resize, moving the
+    // framed window while its rect keeps republishing. Recenter on each rect
+    // change until it holds still, so the final state matches the settled
+    // layout; a lone trailing pass lands mid-transition and sticks the view
+    // (and any invalidateSize re-anchors on the container center, undoing the
+    // window recenter, so every pass recenters).
+    if (settleTimer) clearInterval(settleTimer);
+    let lastRect = '';
+    let stable = 0;
+    const deadline = performance.now() + 1600;
+    settleTimer = setInterval(() => {
+      if (!leafletMap) return;
+      const w = get(mapWindowStore);
+      const key = w ? `${w.top},${w.left},${w.width},${w.height}` : 'none';
+      if (key === lastRect) {
+        stable++;
+      } else {
+        stable = 0;
+        lastRect = key;
+        leafletMap.invalidateSize({ pan: false });
+        centerInWindow(get(mavLocationStore) as L.LatLng, get(mapZoomStore));
+      }
+      if ((stable >= 2 || performance.now() > deadline) && settleTimer) {
+        clearInterval(settleTimer);
+        settleTimer = null;
+      }
+    }, 120);
   }
+
+  // A page change moves the framed window (the dashboard mini-map sits at a
+  // different spot than the planner window) without resizing the viewport, and
+  // a parked vehicle sends no location update to recenter through the marker
+  // path. Repaint once the new page's layout has painted, and again after the
+  // grid settles, so the window centers on the vehicle from its live rect.
+  afterNavigate(() => {
+    requestAnimationFrame(() => requestAnimationFrame(repaintForSize));
+  });
   // The container is fixed full-viewport and always visible (unlike #map, which
   // is display:none in the 3D view), so observing it catches every viewport
   // resize, browser zoom, and panel change. A window resize listener backs it
@@ -380,7 +413,7 @@
     if (typeof document === 'undefined') return;
     containerObserver?.disconnect();
     if (onWindowResize) window.removeEventListener('resize', onWindowResize);
-    if (settleTimer) clearTimeout(settleTimer);
+    if (settleTimer) clearInterval(settleTimer);
     document.removeEventListener('fullscreenchange', handleFullscreenChange);
   });
 
@@ -1478,20 +1511,30 @@
   // else the page shell (the dashboard slab, which has no window), else the
   // viewport. Tracking shell and panel too means a dashboard slab reflow
   // refits Leaflet, not only a full viewport resize.
-  let trackedWinSize = { width: 0, height: 0 };
+  // Sizes only: scroll moves rects without resizing them, so comparing sizes
+  // keeps scroll from recentering (the frame slides over the fixed map) while a
+  // layout settle that reshapes the slab (fonts, grid) still recenters a
+  // fixed-size mini-map whose position moved with it.
+  let trackedWinSize = { width: 0, height: 0, shellWidth: 0, shellHeight: 0 };
   $effect(() => {
     const w = win;
-    void shell;
+    const s = shell;
     void panel;
     void isFullscreen;
     untrack(() => {
       if (!leafletMap) return;
-      const rect = w ?? get(mapShellStore);
+      const rect = w ?? s;
       const width = rect?.width ?? window.innerWidth;
       const height = rect?.height ?? window.innerHeight;
-      const resized = width !== trackedWinSize.width || height !== trackedWinSize.height;
+      const shellWidth = s?.width ?? 0;
+      const shellHeight = s?.height ?? 0;
+      const resized =
+        width !== trackedWinSize.width ||
+        height !== trackedWinSize.height ||
+        shellWidth !== trackedWinSize.shellWidth ||
+        shellHeight !== trackedWinSize.shellHeight;
       if (resized) {
-        trackedWinSize = { width, height };
+        trackedWinSize = { width, height, shellWidth, shellHeight };
         leafletMap.invalidateSize();
         centerInWindow(get(mavLocationStore) as L.LatLng, get(mapZoomStore));
       }
