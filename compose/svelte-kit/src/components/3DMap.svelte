@@ -301,6 +301,7 @@
       center: [mavLocation.lng, mavLocation.lat], // starting position [lng, lat]
       zoom: get(mapZoomStore) - 1, // starting zoom
       pitch: 45,
+      maxPitch: 85, // let the operator tilt low to read terrain relief
       canvasContextAttributes: {antialias: true}
     });
     map = m;
@@ -308,6 +309,32 @@
     // The 'building' layer in the streets vector source contains building-height
     // data from OpenStreetMap.
     m.on('load', () => {
+        // Real 3D terrain from a free, keyless raster-DEM: MapTiler terrain-RGB
+        // when a key is set, otherwise AWS Open Data terrain tiles. The satellite
+        // drape and every overlay sit on the relief, so the map is genuinely 3D
+        // without a paid or token-gated globe engine.
+        if (!m.getSource('terrain-dem')) {
+            if (maptilerKey) {
+                m.addSource('terrain-dem', {
+                    type: 'raster-dem',
+                    tiles: [`https://api.maptiler.com/tiles/terrain-rgb-v2/{z}/{x}/{y}.webp?key=${maptilerKey}`],
+                    encoding: 'mapbox',
+                    tileSize: 256,
+                    maxzoom: 12
+                });
+            } else {
+                m.addSource('terrain-dem', {
+                    type: 'raster-dem',
+                    tiles: ['https://elevation-tiles-prod.s3.amazonaws.com/terrarium/{z}/{x}/{y}.png'],
+                    encoding: 'terrarium',
+                    tileSize: 256,
+                    maxzoom: 15,
+                    attribution: '<a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Terrain Tiles</a>'
+                });
+            }
+        }
+        m.setTerrain({ source: 'terrain-dem', exaggeration: 1 });
+
         // Insert the layer beneath any symbol layer.
         const layers = m.getStyle().layers;
 
