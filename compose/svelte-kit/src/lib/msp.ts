@@ -12,17 +12,36 @@ export const MSP = {
 	BUILD_INFO: 5,
 	WP_MISSION_SAVE: 19,
 	WP_GETINFO: 20,
+	MODE_RANGES: 34,
+	SET_MODE_RANGE: 35,
 	REBOOT: 68,
 	STATUS: 101,
 	RAW_GPS: 106,
 	ATTITUDE: 108,
 	ALTITUDE: 109,
 	ANALOG: 110,
+	BOXNAMES: 116,
 	WP: 118,
+	BOXIDS: 119,
 	SET_RAW_RC: 200,
 	ACC_CALIBRATION: 205,
 	MAG_CALIBRATION: 206,
 	SET_WP: 209
+} as const;
+
+// Permanent box ids for the flight modes an INAV mission needs. A mode activates
+// only when its aux channel sits inside a configured range, so the station reads
+// the ranges (MSP_MODE_RANGES) and drives the matching aux channel to engage the
+// mode, exactly as a transmitter switch would. Ids are stable across INAV builds;
+// the station still resolves them by name from MSP_BOXNAMES/MSP_BOXIDS at runtime
+// and falls back to these when a build reports no id.
+export const INAV_BOX_ID = {
+	ARM: 0,
+	ANGLE: 1,
+	NAV_ALTHOLD: 3,
+	NAV_RTH: 10,
+	NAV_POSHOLD: 11,
+	NAV_WP: 28
 } as const;
 
 // INAV waypoint actions (navWaypointActions_e). INAV, unlike Betaflight, flies
@@ -270,6 +289,69 @@ export function decodeAltitude(payload: Uint8Array): { altM: number; varioMs: nu
 export function decodeStatus(payload: Uint8Array): { armed: boolean } | null {
 	if (payload.length < 10) return null;
 	return { armed: (view(payload).getUint32(6, true) & 1) !== 0 };
+}
+
+// MSP_BOXNAMES: a semicolon-separated list of the flight-mode boxes this board
+// exposes, in the board's box order. MSP_BOXIDS returns the matching permanent
+// id for each, so zipping the two maps a mode name to the id used by the mode
+// ranges. INAV terminates the list with a trailing ';', dropped here.
+export function decodeBoxNames(payload: Uint8Array): string[] {
+	return String.fromCharCode(...payload)
+		.split(';')
+		.map((s) => s.trim())
+		.filter(Boolean);
+}
+
+export function decodeBoxIds(payload: Uint8Array): number[] {
+	return Array.from(payload);
+}
+
+// One mode-activation condition: the permanent box id it activates, the aux
+// channel that controls it, and the channel window (in 25us steps above 900us)
+// within which the mode is on. An empty slot reads as all zeros.
+export interface ModeRange {
+	permId: number;
+	auxChannel: number;
+	startStep: number;
+	endStep: number;
+}
+
+// MSP_MODE_RANGES: a fixed array of 4-byte slots
+// { u8 permId, u8 auxChannel, u8 startStep, u8 endStep }. Empty slots (a zero
+// window) are dropped so only real assignments remain.
+export function decodeModeRanges(payload: Uint8Array): ModeRange[] {
+	const ranges: ModeRange[] = [];
+	for (let i = 0; i + 3 < payload.length; i += 4) {
+		const startStep = payload[i + 2];
+		const endStep = payload[i + 3];
+		if (startStep === 0 && endStep === 0) continue;
+		ranges.push({ permId: payload[i], auxChannel: payload[i + 1], startStep, endStep });
+	}
+	return ranges;
+}
+
+// Mode-range windows are stored as 25us steps above 900us: step 0 is 900us and
+// step 48 is 2100us.
+export function modeStepToUs(step: number): number {
+	return 900 + step * 25;
+}
+
+export function usToModeStep(us: number): number {
+	return Math.max(0, Math.min(48, Math.round((us - 900) / 25)));
+}
+
+// MSP_SET_MODE_RANGE payload: { u8 slotIndex, u8 permId, u8 auxChannel,
+// u8 startStep, u8 endStep }. INAV applies the change to its running config
+// immediately, so a station can assign an aux channel to a mode for one flight
+// without a permanent EEPROM write.
+export function encodeSetModeRange(
+	slotIndex: number,
+	permId: number,
+	auxChannel: number,
+	startStep: number,
+	endStep: number
+): Uint8Array {
+	return Uint8Array.from([slotIndex & 0xff, permId & 0xff, auxChannel & 0xff, startStep & 0xff, endStep & 0xff]);
 }
 
 export interface InavWaypoint {

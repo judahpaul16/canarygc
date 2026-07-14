@@ -17,7 +17,8 @@
     mavArmedStateStore,
     mavLocationStore,
     mavlinkParamStore,
-    fcProtocolStore
+    fcProtocolStore,
+    fcFirmwareStore
   } from '../stores/mavlinkStore';
   import { darkModeStore } from '../stores/customizationStore';
   import { markersStore } from '../stores/mapStore';
@@ -28,7 +29,13 @@
   import { isAutoLabel, isGuidedLabel, isPX4 } from '../lib/flight-modes';
   import { preflightCheck } from '../lib/preflight';
   import { missionPlanActionsStore } from '../stores/missionPlanStore';
-  import { startGuidanceWithConfirm, stopGuidance } from '../lib/guidance-session';
+  import {
+    startGuidanceWithConfirm,
+    stopGuidance,
+    startInavMissionWithConfirm,
+    takeoffInavWithConfirm,
+    stopInavMission
+  } from '../lib/guidance-session';
   import type { LatLng } from 'leaflet';
 
   const GRIPPER_SERVO_CHANNEL = 9;
@@ -318,27 +325,34 @@
     });
   }
   let darkMode = $derived($darkModeStore);
-  // On an MSP flight controller the flight controls route to companion guidance;
-  // on MAVLink they run the autopilot's own mission. Same buttons, either way.
+  // The same flight controls route to each firmware's own way of flying: a MAVLink
+  // autopilot runs its own mission, INAV runs its own mission over MSP, and
+  // Betaflight (no waypoint engine) flies by companion guidance from the station.
   let fcIsMsp = $derived($fcProtocolStore === 'msp');
+  let fcIsInav = $derived($fcProtocolStore === 'msp' && $fcFirmwareStore === 'INAV');
   function flyPlan() {
-    if (fcIsMsp) startGuidanceWithConfirm();
+    if (fcIsInav) startInavMissionWithConfirm();
+    else if (fcIsMsp) startGuidanceWithConfirm();
     else startMission();
   }
   function endFlight() {
-    if (fcIsMsp) stopGuidance();
+    if (fcIsInav) stopInavMission();
+    else if (fcIsMsp) stopGuidance();
     else stopMission();
   }
   function onTakeoff() {
-    if (fcIsMsp) startGuidanceWithConfirm();
+    if (fcIsInav) takeoffInavWithConfirm();
+    else if (fcIsMsp) startGuidanceWithConfirm();
     else initTakeoff();
   }
   function onLand() {
-    if (fcIsMsp) stopGuidance();
+    if (fcIsInav) stopInavMission();
+    else if (fcIsMsp) stopGuidance();
     else initLanding();
   }
   function onPause() {
-    if (fcIsMsp) stopGuidance();
+    if (fcIsInav) stopInavMission();
+    else if (fcIsMsp) stopGuidance();
     else pauseMission();
   }
   $effect(() => {

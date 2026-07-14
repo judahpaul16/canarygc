@@ -1,6 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { mavLocationStore, mavModeStore, mavStateStore, mavlinkParamStore, fcProtocolStore } from '../stores/mavlinkStore';
+  import {
+    mavLocationStore,
+    mavModeStore,
+    mavStateStore,
+    mavlinkParamStore,
+    fcProtocolStore,
+    fcFirmwareStore
+  } from '../stores/mavlinkStore';
   import {
     missionPlanTitleStore,
     missionPlanActionsStore,
@@ -14,7 +21,12 @@
   import { isAutoLabel, isGuidedLabel, isPX4 } from '../lib/flight-modes';
   import { ACTION_TYPES } from '../lib/mission-icons';
   import { preflightCheck } from '../lib/preflight';
-  import { startGuidanceWithConfirm, stopGuidance } from '../lib/guidance-session';
+  import {
+    startGuidanceWithConfirm,
+    stopGuidance,
+    startInavMissionWithConfirm,
+    stopInavMission
+  } from '../lib/guidance-session';
   import { optimizePath, startSurveyCapture, startOrbitCapture, startCorridorCapture, startSarCapture, startStructureScanCapture } from '../lib/plan-actions';
 
   const GRIPPER_SERVO_CHANNEL = 9;
@@ -48,19 +60,23 @@
     title = $missionPlanTitleStore;
   });
   let missionLoaded = $derived($missionPlanTitleStore !== '');
-  // On an MSP flight controller the mission controls route to companion
-  // guidance; on MAVLink they run the autopilot's own mission.
+  // INAV runs its own mission over MSP the same as a MAVLink autopilot; Betaflight
+  // has no waypoint engine and flies by companion guidance from the station.
   let fcIsMsp = $derived($fcProtocolStore === 'msp');
+  let fcIsInav = $derived($fcProtocolStore === 'msp' && $fcFirmwareStore === 'INAV');
   function flyPlan() {
-    if (fcIsMsp) startGuidanceWithConfirm();
+    if (fcIsInav) startInavMissionWithConfirm();
+    else if (fcIsMsp) startGuidanceWithConfirm();
     else startMission();
   }
   function onPause() {
-    if (fcIsMsp) stopGuidance();
+    if (fcIsInav) stopInavMission();
+    else if (fcIsMsp) stopGuidance();
     else pauseMission();
   }
   function endFlight() {
-    if (fcIsMsp) stopGuidance();
+    if (fcIsInav) stopInavMission();
+    else if (fcIsMsp) stopGuidance();
     else stopMission();
   }
 

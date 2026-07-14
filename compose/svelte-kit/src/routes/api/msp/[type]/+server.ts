@@ -6,6 +6,7 @@ import {
 	rebootToBootloader,
 	uploadMissionMsp,
 	mspCalibrate,
+	readModeConfig,
 	type MspMissionItem
 } from '$lib/server/msp';
 import {
@@ -16,6 +17,14 @@ import {
 	sendManualRc,
 	type StartGuidanceOptions
 } from '$lib/server/msp-guidance';
+import {
+	startInavMission,
+	startInavTakeoff,
+	stopInavMission,
+	heartbeatInavMission,
+	inavMissionStatus
+} from '$lib/server/inav-mission';
+import { planInavEngage } from '$lib/inav-mission';
 import type { GuidancePoint } from '$lib/msp-guidance';
 
 export const GET: RequestHandler = async (event): Promise<Response> => {
@@ -36,6 +45,15 @@ export const GET: RequestHandler = async (event): Promise<Response> => {
 			}
 		case 'guidance_status':
 			return json(guidanceStatus());
+		case 'inav_status':
+			return json(inavMissionStatus());
+		case 'inav_mode_config':
+			try {
+				const mode = await readModeConfig();
+				return json({ ...mode, plan: planInavEngage(mode) });
+			} catch (err) {
+				return json({ error: (err as Error).message }, { status: 503 });
+			}
 		default:
 			return new Response('Unknown MSP request', { status: 404 });
 	}
@@ -95,6 +113,28 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
 			return json({ ok: true });
 		case 'guidance_heartbeat':
 			heartbeatGuidance();
+			return json({ ok: true });
+		case 'inav_mission_start':
+			try {
+				const body = (await event.request.json().catch(() => ({}))) as { waypoints?: MspMissionItem[] };
+				const result = await startInavMission(body.waypoints);
+				return json(result, { status: result.ok ? 200 : 400 });
+			} catch (err) {
+				return json({ error: (err as Error).message }, { status: 503 });
+			}
+		case 'inav_takeoff':
+			try {
+				const body = (await event.request.json().catch(() => ({}))) as { altM?: number };
+				const result = await startInavTakeoff(Number(body.altM) || 10);
+				return json(result, { status: result.ok ? 200 : 400 });
+			} catch (err) {
+				return json({ error: (err as Error).message }, { status: 503 });
+			}
+		case 'inav_stop':
+			stopInavMission();
+			return json({ ok: true });
+		case 'inav_heartbeat':
+			heartbeatInavMission();
 			return json({ ok: true });
 		default:
 			return new Response('Unknown MSP request', { status: 404 });

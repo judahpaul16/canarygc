@@ -6,8 +6,10 @@ import {
 	MSP_REBOOT_BOOTLOADER,
 	MspParser,
 	encodeMspV1,
+	encodeMspV2,
 	encodeSetWaypoint,
 	encodeSetRawRc,
+	encodeSetModeRange,
 	inavActionForType,
 	NAV_WP_ACTION,
 	decodeApiVersion,
@@ -19,9 +21,14 @@ import {
 	decodeAnalog,
 	decodeAltitude,
 	decodeStatus,
+	decodeBoxNames,
+	decodeBoxIds,
+	decodeModeRanges,
 	type InavWaypoint,
+	type ModeRange,
 	type MspFrame
 } from '../msp';
+import type { ModeAssignment } from '../inav-mission';
 
 // A Betaflight or INAV flight controller speaks MSP over its own serial link,
 // separate from the MAVLink autopilot. The path is opt-in through env so it
@@ -145,8 +152,10 @@ function send(bytes: Uint8Array): void {
 // MSP has no sequence numbers, so requests run one at a time: each waits its
 // turn in the queue, sends, and resolves on the matching response or an error
 // frame. An idle timer closes the link so a plugged-and-forgotten FC does not
-// hold the port.
-async function request(cmd: number, payload: number[] = []): Promise<MspFrame> {
+// hold the port. A reply over 255 bytes (the box-name table on INAV) cannot fit
+// an MSP v1 size byte, so those commands are requested over MSP v2, whose size is
+// 16-bit; the FC answers in the version it was asked in.
+async function request(cmd: number, payload: number[] = [], v2 = false): Promise<MspFrame> {
 	await open();
 	if (state.idleTimer) clearTimeout(state.idleTimer);
 	state.idleTimer = setTimeout(() => teardown(), IDLE_CLOSE_MS);
@@ -165,7 +174,7 @@ async function request(cmd: number, payload: number[] = []): Promise<MspFrame> {
 				}, REQUEST_TIMEOUT_MS)
 			};
 			try {
-				send(encodeMspV1(cmd, payload));
+				send(v2 ? encodeMspV2(cmd, payload) : encodeMspV1(cmd, payload));
 			} catch (err) {
 				clearTimeout(state.pending.timer);
 				state.pending = null;
@@ -280,6 +289,32 @@ export async function readNavState(): Promise<NavState> {
 		read(MSP.ALTITUDE, decodeAltitude)
 	]);
 	return { gps, attitude, altitude };
+}
+
+export interface ModeConfig {
+	names: string[];
+	ids: number[];
+	ranges: ModeRange[];
+}
+
+// Reads the flight-mode boxes this board exposes and the aux-channel ranges that
+// activate them. INAV activates a mode only when its aux channel sits inside a
+// range, so a station reads these to learn which channel to drive to arm and to
+// turn on NAV WP for a mission.
+export async function readModeConfig(): Promise<ModeConfig> {
+	const [names, ids, ranges] = await Promise.all([
+		request(MSP.BOXNAMES, [], true).then((f) => decodeBoxNames(f.payload)),
+		request(MSP.BOXIDS, [], true).then((f) => decodeBoxIds(f.payload)),
+		request(MSP.MODE_RANGES, [], true).then((f) => decodeModeRanges(f.payload))
+	]);
+	return { names, ids, ranges };
+}
+
+// Assigns an aux channel and window to a flight-mode box. INAV applies the change
+// to its running config at once, so the station can enable NAV WP for one flight
+// without a permanent write; it reverts on the next power cycle.
+export async function setModeRange(a: ModeAssignment): Promise<void> {
+	await request(MSP.SET_MODE_RANGE, Array.from(encodeSetModeRange(a.slotIndex, a.permId, a.auxChannel, a.startStep, a.endStep)));
 }
 
 export interface MspMissionItem {

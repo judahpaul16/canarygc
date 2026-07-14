@@ -1,24 +1,51 @@
 <script lang="ts">
-  import { guidanceRunningStore, guidanceStatusStore, stopGuidance } from '../lib/guidance-session';
+  import {
+    guidanceRunningStore,
+    guidanceStatusStore,
+    stopGuidance,
+    inavRunningStore,
+    inavStatusStore,
+    stopInavMission
+  } from '../lib/guidance-session';
 
-  let running = $derived($guidanceRunningStore);
-  let status = $derived($guidanceStatusStore);
+  let guidanceRunning = $derived($guidanceRunningStore);
+  let guidanceStatus = $derived($guidanceStatusStore);
+  let inavRunning = $derived($inavRunningStore);
+  let inavStatus = $derived($inavStatusStore);
 </script>
 
-{#if running}
+{#if guidanceRunning}
   <div class="guidance-panel">
     <div class="guidance-info">
       <strong><i class="fas fa-satellite-dish"></i> Companion guidance</strong>
       <span>
-        {#if status}
-          {status.phase === 'complete' ? 'Holding final waypoint' : `Waypoint ${status.index + 1} of ${status.count}`}
-          {#if status.distanceM !== null}· {status.distanceM.toFixed(0)} m{/if}
+        {#if guidanceStatus}
+          {guidanceStatus.phase === 'complete'
+            ? 'Holding final waypoint'
+            : `Waypoint ${guidanceStatus.index + 1} of ${guidanceStatus.count}`}
+          {#if guidanceStatus.distanceM !== null}· {guidanceStatus.distanceM.toFixed(0)} m{/if}
         {:else}
           Starting…
         {/if}
       </span>
     </div>
     <button class="guidance-stop" onclick={stopGuidance}>
+      <i class="fas fa-hand"></i> Stop &amp; release
+    </button>
+  </div>
+{:else if inavRunning}
+  <div class="guidance-panel">
+    <div class="guidance-info">
+      <strong><i class="fas fa-route"></i> INAV mission</strong>
+      <span>
+        {#if inavStatus}
+          {inavStatus.phase === 'failsafe' ? 'Failsafe: returning to home' : 'Flying the mission onboard'}
+        {:else}
+          Engaging…
+        {/if}
+      </span>
+    </div>
+    <button class="guidance-stop" onclick={stopInavMission}>
       <i class="fas fa-hand"></i> Stop &amp; release
     </button>
   </div>

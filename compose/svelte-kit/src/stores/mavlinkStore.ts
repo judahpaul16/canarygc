@@ -19,10 +19,15 @@ export interface ParameterMeta {
 }
 
 export const onlineStore = writable<boolean>(false);
-// Which protocol the connected flight controller speaks. A Betaflight or INAV
-// board is 'msp' and answers none of the autonomous MAVLink commands (takeoff,
-// land, missions, parameters), so the dashboard gates those controls on it.
+// Which protocol the connected flight controller speaks: a MAVLink autopilot
+// (ArduPilot, PX4) or an MSP board (Betaflight, INAV). The flight controls
+// dispatch on this and on the firmware below.
 export const fcProtocolStore = writable<'mavlink' | 'msp' | null>(null);
+// The MSP firmware, which decides how a mission flies: INAV navigates onboard
+// (upload waypoints, then arm and engage NAV WP over MSP, the same as a MAVLink
+// autopilot), while Betaflight has no waypoint engine and flies by companion
+// guidance from the station.
+export const fcFirmwareStore = writable<'Betaflight' | 'INAV' | 'Cleanflight' | 'Unknown' | null>(null);
 export const mavModelStore = writable<string>('UNKNOWN');
 export const mavTypeStore = writable<string>('Unknown');
 export const mavArmedStateStore = writable<boolean>(false);

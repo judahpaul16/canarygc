@@ -20,6 +20,7 @@
     mavStateStore,
     mavModeStore,
     fcProtocolStore,
+    fcFirmwareStore,
     mavBatteryStore,
     mavArmedStateStore,
     mavSatelliteStore,
@@ -227,6 +228,7 @@
                   mspIdentity = id;
                   mavModelStore.set(id.firmware);
                   mavTypeStore.set(id.boardName || id.targetName || id.boardIdentifier || 'MSP');
+                  fcFirmwareStore.set(id.firmware);
                   pushMspEvent(`CONNECTED ${id.firmware} ${id.boardName || id.targetName || 'flight controller'}`);
                 }
               }
@@ -252,6 +254,7 @@
         }
         mavlinkDisabled = false;
         fcProtocolStore.set('mavlink');
+        fcFirmwareStore.set(null);
         if (data.length > 0) {
           data.forEach((log: string) => {
             getLogs(log.replace(/\\"/g, '"') + '\n');
