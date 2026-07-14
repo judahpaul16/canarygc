@@ -307,13 +307,11 @@
             </span>
           </div>
           <div class="plan-actions">
-            <button class="act load" aria-label="Load {plan.title}" onclick={() => loadMissionPlan(plan)}>
+            <button class="act load" aria-label="Load {plan.title}" title="Load" onclick={() => loadMissionPlan(plan)}>
               <i class="fas fa-cloud-arrow-up"></i>
-              <span class="act-tip">Load</span>
             </button>
-            <button class="act del" aria-label="Delete {plan.title}" onclick={() => deleteMissionPlan(plan.title)}>
+            <button class="act del" aria-label="Delete {plan.title}" title="Delete" onclick={() => deleteMissionPlan(plan.title)}>
               <i class="fas fa-trash-alt"></i>
-              <span class="act-tip">Delete</span>
             </button>
           </div>
         </li>
@@ -528,6 +526,7 @@
   .loaded-tag {
     color: #62bbff;
     font-weight: 600;
+    margin-left: 0.35rem;
   }
 
   .plan-actions {
@@ -559,28 +558,6 @@
     color: #f87171;
     background-color: rgba(248, 113, 113, 0.12);
   }
-  .act-tip {
-    position: absolute;
-    bottom: calc(100% + 4px);
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 0.15rem 0.4rem;
-    font-size: 0.6rem;
-    white-space: nowrap;
-    color: #fff;
-    background-color: #1f2937;
-    border-radius: 0.3rem;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.15s;
-    pointer-events: none;
-    z-index: 2;
-  }
-  .act:hover .act-tip {
-    opacity: 1;
-    visibility: visible;
-  }
-
   .empty {
     padding: 1.1rem 0.5rem;
     text-align: center;
