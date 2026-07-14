@@ -10,7 +10,8 @@
     import ManageMissionPlans from "./ManageMissionPlans.svelte";
     import { get } from "svelte/store";
     import { showModal, notify } from '../lib/overlays';
-    import { setFlightMode, sendMavlinkCommand } from '../lib/mavlink-client';
+    import { setFlightMode } from '../lib/mavlink-client';
+    import { openVehicleLocationModal } from '../lib/vehicle-location';
     import { optimizePath, confirmClear } from '../lib/plan-actions';
     import { normalizeMission } from '../lib/mission-commands';
     import { readMissionFile } from '../lib/mission-import';
@@ -18,7 +19,6 @@
     import { mavModelStore, fcProtocolStore } from '../stores/mavlinkStore';
 
     const SAVE_FEEDBACK_MS = 3000;
-    const DEGREES_TO_E7 = 1e7;
 
     let actions: MissionPlanActions = $derived($missionPlanActionsStore);
     let title: string = $derived($missionPlanTitleStore);
@@ -322,64 +322,14 @@
         URL.revokeObjectURL(url);
     }
 
-    function setHomeLocation() {
-        showModal({
-            title: "Set Home Location",
-            content: "Please enter the latitude and longitude for home. This is where the MAV will return in RTL mode.",
-            confirmation: true,
-            inputs: [
-                {
-                    type: "number",
-                    placeholder: "Latitude",
-                    required: false,
-                },
-                {
-                    type: "number",
-                    placeholder: "Longitude",
-                    required: false,
-                },
-                {
-                    type: "number",
-                    placeholder: "Altitude",
-                    required: false,
-                },
-            ],
-            onConfirm: async (values) => {
-                let lat = Number((parseFloat(values[0]) * DEGREES_TO_E7).toFixed(0));
-                let lon = Number((parseFloat(values[1]) * DEGREES_TO_E7).toFixed(0));
-                let alt = Number(parseFloat(values[2]).toFixed(0));
-                let useCurrent = 0;
-                if (isNaN(lat) || isNaN(lon) || isNaN(alt)) {
-                    useCurrent = 1;
-                    lat = 0;
-                    lon = 0;
-                    alt = 0;
-                }
-                const ok = await sendMavlinkCommand("DO_SET_HOME", [useCurrent, 0, 0, 0, lat, lon, alt]);
-                if (ok) {
-                    notify({
-                        title: "Home Location Set",
-                        content: "The home location has been set successfully.",
-                        duration: SAVE_FEEDBACK_MS,
-                    });
-                } else {
-                    showModal({
-                        title: "Error",
-                        content: "An error occurred while setting the home location.",
-                        notification: true,
-                    });
-                }
-            },
-        });
-    }
 </script>
 
 <section
     class="flight-plan-settings rounded-2xl p-4 h-full"
 >
-    <button onclick={setHomeLocation}>
+    <button onclick={openVehicleLocationModal}>
         <i class="fas fa-home text-[#ffc64a]"></i>
-        Set Home Location
+        Set home / start point
     </button>
     <button onclick={toggleMissionPlans}>
         <i class="fas fa-globe text-[#5398e6]"></i>
