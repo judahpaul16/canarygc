@@ -151,6 +151,7 @@
   // MSP has no log stream, so state transitions become event-log lines to keep
   // the events page populated on a Betaflight or INAV board.
   let prevMspArmed: boolean | null = null;
+  let prevMspFix: boolean | null = null;
   function pushMspEvent(line: string): void {
     const now = new Date();
     const stamp = [now.getHours(), now.getMinutes(), now.getSeconds()]
@@ -174,6 +175,11 @@
     }
     if (t.gps) {
       mavSatelliteStore.set({ total: t.gps.numSat, hdop: t.gps.hdop ?? 999 });
+      const hasFix = t.gps.fix >= 2;
+      if (prevMspFix !== null && hasFix !== prevMspFix) {
+        pushMspEvent(hasFix ? `GPS FIX ACQUIRED (${t.gps.numSat} sats)` : 'GPS FIX LOST');
+      }
+      prevMspFix = hasFix;
       if (t.gps.fix > 0) {
         mavLocationStore.set({ lat: t.gps.lat, lng: t.gps.lon });
         mavSpeedStore.set(t.gps.speedMs);

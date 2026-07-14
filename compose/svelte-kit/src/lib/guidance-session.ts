@@ -6,8 +6,25 @@
 // the autopilot's own mission.
 import { get, writable } from 'svelte/store';
 import { missionPlanActionsStore } from '../stores/missionPlanStore';
-import { fcProtocolStore, fcFirmwareStore } from '../stores/mavlinkStore';
+import { fcProtocolStore, fcFirmwareStore, mavSatelliteStore } from '../stores/mavlinkStore';
 import { showModal, notify } from './overlays';
+
+const GPS_MIN_SATS = 6;
+
+// INAV navigates a mission onboard and cannot without a position fix, the same as
+// an ArduPilot or PX4 autopilot. When the board reports no usable fix, say so
+// plainly up front instead of asking for an altitude and refusing after; the
+// server stays the authority and refuses too.
+function inavHasNoFix(): boolean {
+	const sat = get(mavSatelliteStore);
+	if (sat.total >= GPS_MIN_SATS) return false;
+	showModal({
+		title: 'No GPS fix',
+		content: `INAV flies a mission onboard and needs a position fix to navigate, the same as an ArduPilot or PX4 autopilot. The flight controller reports ${sat.total} satellite${sat.total === 1 ? '' : 's'}. Wait for a fix, or fly manually with the gamepad. A bench SITL has no GPS unless a flight simulator is attached to it.`,
+		notification: true
+	});
+	return true;
+}
 
 interface MspMissionItem {
 	type: string;
@@ -250,6 +267,7 @@ export function startInavMissionWithConfirm(): void {
 		notify({ title: 'No mission', content: 'Add waypoints to the plan first.', type: 'warning' });
 		return;
 	}
+	if (inavHasNoFix()) return;
 	showModal({
 		title: 'Start INAV mission',
 		content:
@@ -266,6 +284,7 @@ export function startInavMissionWithConfirm(): void {
 // Climbs to an altitude under INAV navigation and holds, the MSP counterpart of a
 // MAVLink NAV_TAKEOFF.
 export function takeoffInavWithConfirm(): void {
+	if (inavHasNoFix()) return;
 	showModal({
 		title: 'Take off (INAV)',
 		content:

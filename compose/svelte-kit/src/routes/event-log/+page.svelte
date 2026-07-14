@@ -1,8 +1,13 @@
 <script lang="ts">
-    import { mavlinkLogStore, mavStateStore, mavModelStore } from '../../stores/mavlinkStore';
+    import { mavlinkLogStore, mavStateStore, mavModelStore, fcProtocolStore } from '../../stores/mavlinkStore';
     import { showModal } from '../../lib/overlays';
     import { sendMavlinkCommand } from '../../lib/mavlink-client';
     import { commandCatalog, paramHint, parseConsoleInput } from '../../lib/mav-console';
+
+    // A Betaflight or INAV board speaks MSP, not MAVLink, so it carries no MAVLink
+    // heartbeat and takes no MAVLink console command; the log shows its own MSP
+    // connection and arm events instead.
+    let fcIsMsp = $derived($fcProtocolStore === 'msp');
 
     const HEARTBEAT_FLASH_MS = 2000;
 
@@ -258,7 +263,7 @@
     >
         <div class="event-log rounded-2xl h-full flex flex-col p-5">
             <div class="log-head flex items-center justify-between gap-4 mb-4">
-                <h2 class="text-xl">MAVLink Events</h2>
+                <h2 class="text-xl">{fcIsMsp ? 'Flight Controller Events' : 'MAVLink Events'}</h2>
                 <div class="filters flex gap-4 justify-center items-center">
                     <input type="text" class="form-input" placeholder="Search" bind:value={searchTerm}/>
                     <div class="form-checkbox gap-2">
@@ -284,13 +289,15 @@
                 </div>
                 <div class="system-state w-fit flex">
                     System State:<p class="text-[#61cd89] ml-1 mr-2">{systemState}</p>
-                    <div class="heartbeat w-fit relative mr-5">
-                        <div>
-                            <i class="fas fa-heart absolute top-[0.15rem]"></i>
-                            <i class="fas fa-heart absolute top-[0.15rem]"></i>
+                    {#if !fcIsMsp}
+                        <div class="heartbeat w-fit relative mr-5">
+                            <div>
+                                <i class="fas fa-heart absolute top-[0.15rem]"></i>
+                                <i class="fas fa-heart absolute top-[0.15rem]"></i>
+                            </div>
+                            <div class="tooltip">{heartbeatInfo}</div>
                         </div>
-                        <div class="tooltip">{heartbeatInfo}</div>
-                    </div>
+                    {/if}
                 </div>
             </div>
             {#snippet hl(text: string)}{#each segments(text) as seg, i (i)}{#if seg.hit}<mark>{seg.text}</mark>{:else}{seg.text}{/if}{/each}{/snippet}
@@ -301,9 +308,14 @@
                     </div>
                 {/each}
                 {#if visibleLogs.length === 0}
-                    <div class="log-empty">No events yet.</div>
+                    <div class="log-empty">
+                        {fcIsMsp
+                            ? 'No events yet. Connection, arm, and GPS events from the flight controller appear here.'
+                            : 'No events yet.'}
+                    </div>
                 {/if}
             </div>
+            {#if !fcIsMsp}
             <div class="console">
                 {#if suggestions.length}
                     <ul class="console-suggestions">
@@ -332,6 +344,7 @@
                 </div>
                 <div class="console-hint" class:console-error={consoleError !== ''}>{consoleError || hintLine}</div>
             </div>
+            {/if}
         </div>
     </div>
 </div>
