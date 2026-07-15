@@ -26,7 +26,7 @@
 
   import { showModal, notify } from '../lib/overlays';
   import { sendMavlinkCommand, setFlightMode, takeoff, writeParameter, encodeParameterValue } from '../lib/mavlink-client';
-  import { isAutoLabel, isGuidedLabel, isPX4 } from '../lib/flight-modes';
+  import { isAutoLabel, isGuidedLabel, isPX4, isPlane } from '../lib/flight-modes';
   import { preflightCheck } from '../lib/preflight';
   import { missionPlanActionsStore } from '../stores/missionPlanStore';
   import {
@@ -310,6 +310,18 @@
   }
 
   function initLanding() {
+    if (isPlane()) {
+      showModal({
+        title: 'Return to Launch',
+        content:
+          'A fixed-wing cannot land in place, so this returns to launch: the plane flies home and lands through its configured landing sequence, or loiters overhead until you take over.',
+        confirmation: true,
+        onConfirm: async () => {
+          await setFlightMode('RTL');
+        },
+      });
+      return;
+    }
     showModal({
       title: 'Confirm Landing',
       content: 'Are you sure you want to land the MAV?',

@@ -3,7 +3,7 @@ import { mount, unmount } from 'svelte';
 import { firstGamepad, startGamepadLoop } from './gamepad-control';
 import { setFlightMode } from './mavlink-client';
 import { sendManualFrame, manualTransportIsMsp } from './manual-transport';
-import { isPX4 } from './flight-modes';
+import { isPX4, isPlane } from './flight-modes';
 import { mavArmedStateStore } from '../stores/mavlinkStore';
 import { notify, overlayTarget, showModal } from './overlays';
 import GamepadConnect from '../components/GamepadConnect.svelte';
@@ -31,9 +31,13 @@ function inFlight(): boolean {
 async function enterStickMode(attempt = 1): Promise<void> {
 	if (!get(gamepadActiveStore) || !inFlight()) return;
 	if (await setFlightMode('POSCTL')) {
+		const label = isPX4() ? 'Position' : isPlane() ? 'Cruise' : 'Loiter';
+		const behavior = isPlane()
+			? 'the stick steers; release to hold heading, altitude, and airspeed'
+			: 'sticks steer, centered sticks hold position';
 		notify({
 			title: 'Gamepad flight active',
-			content: `Flying in ${isPX4() ? 'Position' : 'Loiter'} mode: sticks steer, centered sticks hold position. A running mission is paused until resumed.`,
+			content: `Flying in ${label} mode: ${behavior}. A running mission is paused until resumed.`,
 			type: 'info'
 		});
 		return;

@@ -17,14 +17,16 @@ interface AutopilotStrategy {
 
 // ArduPilot numbers its flight modes differently per vehicle, so each intent
 // mode resolves through the connected vehicle's own table. POSCTL is the
-// stick-flying hold: Loiter on copter, FBWA on plane, Manual on rover, and
-// depth-holding AltHold on a sub. LAND has no plane or rover equivalent, so it
-// falls back to the safe "come home / stop" mode for that vehicle.
+// stick-flying hold: Loiter on copter, Cruise on plane (auto-throttle keeps a
+// spring-centered gamepad stick from stalling it while the stick steers),
+// Manual on rover, and depth-holding AltHold on a sub. LAND has no plane or
+// rover equivalent, so it falls back to the safe "come home / stop" mode for
+// that vehicle.
 const COPTER_MODES: Record<FlightMode, number> = {
   GUIDED: 4, AUTO: 3, RTL: 6, LOITER: 5, LAND: 9, POSCTL: 5
 };
 const PLANE_MODES: Record<FlightMode, number> = {
-  GUIDED: 15, AUTO: 10, RTL: 11, LOITER: 12, LAND: 11, POSCTL: 5
+  GUIDED: 15, AUTO: 10, RTL: 11, LOITER: 12, LAND: 11, POSCTL: 7
 };
 const ROVER_MODES: Record<FlightMode, number> = {
   GUIDED: 15, AUTO: 10, RTL: 11, LOITER: 5, LAND: 4, POSCTL: 0
