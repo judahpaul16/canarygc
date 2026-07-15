@@ -9,6 +9,9 @@ export const mapTypeStore = sessionString('map.type', 'Satellite');
 export const mapTileLayerStore = writable<L.TileLayer | null>(null);
 export const mapZoomStore = writable<number>(18);
 export const lockViewStore = sessionBool('map.lockView', true);
+// Bumped when a locked map is dragged, so the lock button pulses to explain
+// why the camera snapped back; the 3D map bumps it and the map chrome reacts.
+export const lockNudgeStore = writable(0);
 export const threeDMapStore = writable<pkg.Map | null>(null);
 
 export interface MapRect {

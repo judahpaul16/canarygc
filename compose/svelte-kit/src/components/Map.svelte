@@ -10,6 +10,7 @@
     mapTileLayerStore,
     mapZoomStore,
     lockViewStore,
+    lockNudgeStore,
     threeDMapStore,
     missionPathsStore
   } from '../stores/mapStore';
@@ -213,6 +214,12 @@
     requestAnimationFrame(() => (lockPulse = true));
     lockPulseTimer = setTimeout(() => (lockPulse = false), 1200);
   }
+
+  // The 3D map bumps this when a locked view is dragged; the shared lock
+  // button pulses so the snap-back reads as the lock.
+  $effect(() => {
+    if ($lockNudgeStore > 0) untrack(() => triggerLockPulse());
+  });
 
   function isSmallScreen(): boolean {
     return window.matchMedia('(max-width: 990px)').matches;
