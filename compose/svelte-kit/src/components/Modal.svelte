@@ -68,8 +68,15 @@
       });
     }
 
-    await onConfirm([...inputValues]);
+    // Dismiss immediately, then run the handler; it may open another modal (the
+    // pre-flight check) and take seconds to arm and take off, so leaving this one
+    // mounted until it resolves would strand it on screen behind the next one.
+    // onClose fires only after onConfirm settles: callers like the pre-flight
+    // check resolve a decision in onConfirm and treat onClose as "dismissed
+    // without deciding," so closing first would turn every confirm into a cancel.
+    const values = [...inputValues];
     isOpen = false;
+    await onConfirm(values);
     onClose();
   };
 </script>
