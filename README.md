@@ -164,14 +164,13 @@ CanaryGC is designed for **headless, remote-first UAV deployments**:
 
 The stack is a single `docker-compose.yml` with `development`, `development-px4`, `development-betaflight`, `development-inav`, and `production` profiles.
 
-Before the first bring-up, copy the environment templates (both are optional; the stack runs on defaults without them):
+Before the first bring-up, copy the environment template (optional; the stack runs on defaults without it):
 
 ```bash
-cp .env.example .env                                          # docker compose host ports
-cp compose/svelte-kit/.env.example compose/svelte-kit/.env    # app config: API keys, SMTP, MSP
+cp .env.example .env    # host ports and app config, one file at the repo root
 ```
 
-The app loads its keys from `compose/svelte-kit/.env`; the Integrations page overrides any of them at runtime.
+The root `.env` feeds both Docker Compose (host ports, which SITL vehicle to run, the image) and the app container (API keys, MSP, database); the Integrations page overrides the app keys at runtime.
 
 **Development** runs the SvelteKit dev server with hot reload against an ArduPilot SITL container:
 
@@ -260,7 +259,7 @@ suite runs single-worker because every spec shares one app and one vehicle.
 
 ## ⚙️ Configuration
 
-The app reads its configuration from environment variables (see `compose/svelte-kit/.env.example`):
+The app reads its configuration from environment variables (see the root `.env.example`):
 
 | Variable | Purpose |
 | --- | --- |

@@ -7,7 +7,9 @@ interface ApiResponse {
 
 export const GET: RequestHandler = async ({ url }) => {
   const apiUrl = 'https://api.altitudeangel.com/v2/mapdata/geojson';
-  const apiKey = import.meta.env.VITE_ALTITUDE_ANGEL_API_KEY;
+  // import.meta.env is fixed at build time; process.env carries the value the
+  // container is given at runtime through the root .env, so read both.
+  const apiKey = import.meta.env.VITE_ALTITUDE_ANGEL_API_KEY ?? process.env.VITE_ALTITUDE_ANGEL_API_KEY;
 
   try {
     const response = await axios.get<ApiResponse>(apiUrl, {
