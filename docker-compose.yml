@@ -1,3 +1,16 @@
+# App config (API keys, MSP, database), read from the root .env when set and
+# defaulted otherwise. Compose loads the root .env natively, so no file needs to
+# exist; the Integrations page overrides any of it at runtime.
+x-app-env: &app-env
+  DATABASE_PATH: ${DATABASE_PATH:-./src/data.db}
+  OPENAIP_API_KEY: ${OPENAIP_API_KEY:-}
+  VITE_ALTITUDE_ANGEL_API_KEY: ${VITE_ALTITUDE_ANGEL_API_KEY:-}
+  MSP_SERIAL_PATH: ${MSP_SERIAL_PATH:-}
+  MSP_BAUD: ${MSP_BAUD:-115200}
+  MSP_TCP_HOST: ${MSP_TCP_HOST:-}
+  MSP_TCP_PORT: ${MSP_TCP_PORT:-}
+  FC_BOOTLOADER_PATH: ${FC_BOOTLOADER_PATH:-/dev/ttyACM0}
+
 # Shared config for the dev app-server faces. The container name is shared, so
 # only one face runs at a time; each profile supplies its own environment.
 x-app-dev: &app-dev
@@ -11,11 +24,6 @@ x-app-dev: &app-dev
     - ./compose/svelte-kit:/app
     - ./.git:/app/.git:ro
     - /app/node_modules
-  # App config (API keys, MSP, database) is read from the root .env when it
-  # exists; the Integrations page overrides any of it at runtime.
-  env_file:
-    - path: ./.env
-      required: false
   deploy:
     resources:
       limits:
@@ -28,8 +36,9 @@ services:
     <<: *app-dev
     profiles: ["development", "development-px4"]
     environment:
-      - CHOKIDAR_USEPOLLING=true
-      - NODE_ENV=development
+      <<: *app-env
+      CHOKIDAR_USEPOLLING: "true"
+      NODE_ENV: development
 
   # Dev server wired to a Betaflight or INAV SITL over MSP for the Firmware tab;
   # the "msp-sitl" alias resolves to whichever firmware profile is running.
@@ -37,13 +46,14 @@ services:
     <<: *app-dev
     profiles: ["development-betaflight", "development-inav"]
     environment:
-      - CHOKIDAR_USEPOLLING=true
-      - NODE_ENV=development
-      - MSP_TCP_HOST=msp-sitl
-      - MSP_TCP_PORT=5761
+      <<: *app-env
+      CHOKIDAR_USEPOLLING: "true"
+      NODE_ENV: development
+      MSP_TCP_HOST: msp-sitl
+      MSP_TCP_PORT: "5761"
       # Blank MAVLink host: this profile has no MAVLink vehicle, only the MSP FC,
       # so the dashboard link stays idle instead of dialing a missing SITL.
-      - MAVLINK_TCP_HOST=
+      MAVLINK_TCP_HOST: ""
 
   # Production: built Node server on the Pi, talks to the autopilot over UART.
   app:
@@ -58,11 +68,9 @@ services:
       - "${APP_PORT:-3000}:3000"
     container_name: canarygc_app
     environment:
-      - NODE_ENV=production
-      - MEDIAMTX_API_URL=${MEDIAMTX_API_URL:-http://host.docker.internal:9997}
-    env_file:
-      - path: ./.env
-        required: false
+      <<: *app-env
+      NODE_ENV: production
+      MEDIAMTX_API_URL: ${MEDIAMTX_API_URL:-http://host.docker.internal:9997}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     deploy:
