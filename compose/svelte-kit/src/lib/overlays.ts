@@ -8,8 +8,11 @@ export interface ModalInput {
   placeholder: string;
   required: boolean;
   // Shown above the field; the placeholder becomes a short example hint. A
-  // labelled field stays identified when filled and never truncates.
+  // labeled field stays identified when filled and never truncates.
   label?: string;
+  // Initial value; a select confirms with this when left untouched.
+  value?: string;
+  options?: { value: string; label: string }[];
 }
 
 export type NotificationType = 'success' | 'warning' | 'error' | 'info';

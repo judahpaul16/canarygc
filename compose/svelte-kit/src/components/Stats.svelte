@@ -26,9 +26,8 @@
   import { showModal, notify } from '../lib/overlays';
   import { sendMavlinkCommand, setFlightMode, takeoff } from '../lib/mavlink-client';
   import { isAutoLabel, isGuidedLabel, isPX4, isPlane } from '../lib/flight-modes';
-  import { rtlAltitudeNow, applyRtlAltitude } from '../lib/rtl-altitude';
+  import { startMissionWithConfirm } from '../lib/start-mission';
   import { landNow, planeHasLandingSequence } from '../lib/landing';
-  import { preflightCheck } from '../lib/preflight';
   import { missionPlanActionsStore } from '../stores/missionPlanStore';
   import {
     startGuidanceWithConfirm,
@@ -43,9 +42,7 @@
   const GRIPPER_OPEN_PWM_US = 1050;
   const GRIPPER_CLOSE_PWM_US = 1950;
   const GRIPPER_CYCLE_DELAY_MS = 500;
-  const TAKEOFF_SETTLE_DELAY_MS = 5000;
   const CALIBRATION_SETTLE_DELAY_MS = 5000;
-  const DEFAULT_TAKEOFF_ALT_M = 10;
 
   interface Props {
     mavModel?: string;
@@ -239,51 +236,6 @@
     });
   }
 
-  async function startMission() {
-    // The return altitude is asked only for air vehicles and lands in the
-    // connected autopilot's own parameter (ArduCopter RTL_ALT, ArduPlane
-    // ALT_HOLD_RTL, PX4 RTL_RETURN_ALT); ground and surface craft skip it.
-    const rtl = rtlAltitudeNow();
-    showModal({
-      title: 'Start / Resume Mission',
-      content: rtl.ask
-        ? 'Are you sure you want to start the mission? Set the altitude in meters the vehicle uses when returning to launch, considering any obstacles between the mission area and the launch point.'
-        : 'Are you sure you want to start the mission?',
-      confirmation: true,
-      inputs: rtl.ask
-        ? [
-            {
-              type: 'number',
-              label: 'Return altitude (m)',
-              placeholder: `${rtl.currentM ?? DEFAULT_TAKEOFF_ALT_M}`,
-              required: true,
-            }
-          ]
-        : null,
-      onConfirm: async (values) => {
-        if (!(await preflightCheck(get(missionPlanActionsStore)))) return;
-        missionIndexStore.set(1);
-        missionCompleteStore.set(false);
-        if (rtl.ask && !(await applyRtlAltitude(parseInt(values[0])))) {
-          notify({
-            title: 'Return altitude not set',
-            content: 'The vehicle has not published its return-altitude parameter yet, so it returns at its current setting.',
-            type: 'warning',
-          });
-        }
-        if (get(mavStateStore) === 'STANDBY') {
-          await takeoff(DEFAULT_TAKEOFF_ALT_M);
-          await new Promise((resolve) => setTimeout(resolve, TAKEOFF_SETTLE_DELAY_MS));
-        }
-        await setFlightMode('AUTO');
-        notify({
-          title: 'Mission Started',
-          content: 'The mission has been started.',
-        });
-      },
-    });
-  }
-
   function releasePayload() {
     showModal({
       title: 'Confirm Release Payload',
@@ -356,7 +308,7 @@
   function flyPlan() {
     if (fcIsInav) startInavMissionWithConfirm();
     else if (fcIsMsp) startGuidanceWithConfirm();
-    else startMission();
+    else startMissionWithConfirm();
   }
   function endFlight() {
     if (fcIsInav) stopInavMission();

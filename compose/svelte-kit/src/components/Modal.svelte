@@ -10,7 +10,14 @@
     notification?: boolean;
     confirmLabel?: string;
     cancelLabel?: string;
-    inputs?: { type: string; placeholder: string; required: boolean; label?: string }[] | null;
+    inputs?: {
+      type: string;
+      placeholder: string;
+      required: boolean;
+      label?: string;
+      value?: string;
+      options?: { value: string; label: string }[];
+    }[] | null;
     onConfirm?: (values: string[]) => void | Promise<void>;
     onCancel?: (values: string[]) => void;
     onClose?: () => void;
@@ -31,7 +38,7 @@
     onClose = () => {}
   }: Props = $props();
 
-  let inputValues: string[] = $state(untrack(() => (inputs ? inputs.map(() => '') : [])));
+  let inputValues: string[] = $state(untrack(() => (inputs ? inputs.map((input) => input.value ?? '') : [])));
   let checkboxValues: boolean[] = $state(untrack(() => (inputs ? inputs.map(() => false) : [])));
   let validationError = $state('');
   const closeModal = () => {
@@ -111,6 +118,15 @@
                       bind:checked={checkboxValues[i]}
                     />
                     <label for={`modal-checkbox-${i}`}>{input.label ?? input.placeholder}</label>
+                  </div>
+                {:else if input.type === 'select'}
+                  <div class="field field-wide">
+                    {#if input.label}<label for={`modal-input-${i}`}>{input.label}</label>{/if}
+                    <select id={`modal-input-${i}`} bind:value={inputValues[i]} class="form-input">
+                      {#each input.options ?? [] as option (option.value)}
+                        <option value={option.value}>{option.label}</option>
+                      {/each}
+                    </select>
                   </div>
                 {:else}
                   <div class="field">
@@ -207,6 +223,24 @@
 
   .form-input::placeholder {
     color: rgb(from var(--fontColor) r g b / 0.4);
+  }
+
+  /* Option labels run long, so a select takes the full row. */
+  .field-wide {
+    grid-column: 1 / -1;
+  }
+
+  select.form-input {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%23888' stroke-width='1.6' stroke-linecap='round'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 0.7rem center;
+    padding-right: 2rem;
+    cursor: pointer;
+  }
+
+  select.form-input option {
+    background-color: var(--tertiaryColor);
+    color: var(--fontColor);
   }
 
   .form-input:focus {

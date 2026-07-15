@@ -7,7 +7,7 @@
 import { get, writable } from 'svelte/store';
 import { missionPlanActionsStore } from '../stores/missionPlanStore';
 import { fcProtocolStore, fcFirmwareStore, mavSatelliteStore } from '../stores/mavlinkStore';
-import { showModal, notify } from './overlays';
+import { showModal, notify, type ModalInput } from './overlays';
 
 const GPS_MIN_SATS = 6;
 
@@ -259,24 +259,78 @@ export async function stopInavMission(): Promise<void> {
 	notify({ title: 'Mission stopped', content: 'Control released to the flight controller.' });
 }
 
+const RTH_LANDING_CHOICES = [
+	{ value: '0', label: 'Never land (loiter overhead)' },
+	{ value: '1', label: 'Land after any return' },
+	{ value: '2', label: 'Land only on a failsafe return' }
+];
+
 // Uploads the loaded plan and engages it. INAV arms, auto-takes-off, flies the
-// waypoints, and runs the plan's end action itself.
-export function startInavMissionWithConfirm(): void {
+// waypoints, and runs the plan's end action itself. A plane cannot hover, so
+// whether its return to home ends in a landing or a loiter overhead
+// (nav_rth_allow_landing) is offered before the mission runs.
+export async function startInavMissionWithConfirm(): Promise<void> {
 	const items = missionItemsForMsp();
 	if (items.length === 0) {
 		notify({ title: 'No mission', content: 'Add waypoints to the plan first.', type: 'warning' });
 		return;
 	}
 	if (inavHasNoFix()) return;
+	let rth: { platform?: string; value?: number | null } = {};
+	try {
+		const res = await fetch('/api/msp/rth_landing');
+		if (res.ok) rth = await res.json();
+	} catch {
+		// The modal simply omits the landing selector.
+	}
+	const askLanding = rth.platform === 'Airplane';
+	const current = rth.value ?? null;
+	const inputs: ModalInput[] = [
+		{ type: 'checkbox', placeholder: 'The area is clear and I am ready for an automatic takeoff', required: true }
+	];
+	if (askLanding) {
+		inputs.push({
+			type: 'select',
+			label: 'Landing after a return to home (nav_rth_allow_landing)',
+			placeholder: '',
+			required: false,
+			value: current === null ? '' : String(current),
+			options: [
+				...(current === null ? [{ value: '', label: 'Keep current setting' }] : []),
+				...RTH_LANDING_CHOICES
+			]
+		});
+	}
 	showModal({
 		title: 'Start INAV mission',
 		content:
-			'INAV arms and flies the uploaded mission on its own, including an automatic takeoff. Make sure the area is clear, the craft has a GPS fix, and the transmitter is ready as a kill switch.',
+			'INAV arms and flies the uploaded mission on its own, including an automatic takeoff. Make sure the area is clear, the craft has a GPS fix, and the transmitter is ready as a kill switch.' +
+			(askLanding
+				? '\n\nOn a return to home the plane lands or loiters overhead per the setting below; it applies until the flight controller powers off.'
+				: ''),
 		confirmation: true,
 		confirmLabel: 'Start mission',
-		inputs: [{ type: 'checkbox', placeholder: 'The area is clear and I am ready for an automatic takeoff', required: true }],
-		onConfirm: (values) => {
-			if (values[0] === 'true') postInav('/api/msp/inav_mission_start', { waypoints: items }, 'Mission engaged');
+		inputs,
+		onConfirm: async (values) => {
+			if (values[0] !== 'true') return;
+			const picked = values[1] ?? '';
+			if (askLanding && picked !== '' && Number(picked) !== current) {
+				try {
+					const res = await fetch('/api/msp/rth_landing', {
+						method: 'POST',
+						headers: { 'content-type': 'application/json' },
+						body: JSON.stringify({ value: Number(picked) })
+					});
+					if (!res.ok) throw new Error('rejected');
+				} catch {
+					notify({
+						title: 'Landing setting not applied',
+						content: 'The flight controller rejected the change, so it returns at its current setting.',
+						type: 'warning'
+					});
+				}
+			}
+			await postInav('/api/msp/inav_mission_start', { waypoints: items }, 'Mission engaged');
 		}
 	});
 }

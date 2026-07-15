@@ -9,6 +9,8 @@ import {
 	readModeConfig,
 	readMotors,
 	sendMspCommand,
+	getSetting,
+	setSetting,
 	type MspMissionItem
 } from '$lib/server/msp';
 import {
@@ -59,6 +61,15 @@ export const GET: RequestHandler = async (event): Promise<Response> => {
 			try {
 				const mode = await readModeConfig();
 				return json({ ...mode, plan: planInavEngage(mode) });
+			} catch (err) {
+				return json({ error: (err as Error).message }, { status: 503 });
+			}
+		case 'rth_landing':
+			try {
+				const fc = await detectFc();
+				if (fc.firmware !== 'INAV') return json({ platform: fc.platform, value: null });
+				const raw = await getSetting('nav_rth_allow_landing');
+				return json({ platform: fc.platform, value: raw.length ? raw[0] : null });
 			} catch (err) {
 				return json({ error: (err as Error).message }, { status: 503 });
 			}
@@ -159,6 +170,17 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
 		case 'inav_stop':
 			stopInavMission();
 			return json({ ok: true });
+		case 'rth_landing':
+			try {
+				const body = (await event.request.json()) as { value?: number };
+				const value = Number(body.value);
+				if (![0, 1, 2].includes(value)) return json({ error: 'The landing value must be 0, 1, or 2' }, { status: 400 });
+				// Applied in place, not saved: it governs returns until power-off.
+				await setSetting('nav_rth_allow_landing', [value]);
+				return json({ ok: true });
+			} catch (err) {
+				return json({ error: (err as Error).message }, { status: 503 });
+			}
 		case 'inav_heartbeat':
 			heartbeatInavMission();
 			return json({ ok: true });
