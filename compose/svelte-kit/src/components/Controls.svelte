@@ -3,8 +3,8 @@
   import { mapWindow, mapPanel } from '../lib/map-window';
   import Weather from './Weather.svelte';
   import { mavModeStore, mavAltitudeStore, mavLocationStore, mavSatelliteStore, mavTypeStore } from '../stores/mavlinkStore';
-  import { sendMavlinkCommand, setFlightMode, setPositionLocal, setDepthGlobal, setAltitudeGlobal } from '../lib/mavlink-client';
-  import { isGuidedLabel, isSubmarine, isGroundOrSurface, isPlane } from '../lib/flight-modes';
+  import { sendMavlinkCommand, setFlightMode, setPositionLocal, setDepthGlobal, setAltitudeGlobal, repositionRelative } from '../lib/mavlink-client';
+  import { isGuidedLabel, isSubmarine, isGroundOrSurface, isPlane, isPX4 } from '../lib/flight-modes';
   import { gamepadActiveStore, toggleGamepad } from '../lib/gamepad-session';
 
   const SPEED_TYPE_AIRSPEED = 0;
@@ -66,6 +66,8 @@
       } else if (isPlane()) {
         await ensureGuided();
         setAltitudeGlobal(vertical);
+      } else if (isPX4()) {
+        repositionRelative(0, 0, vertical - altitude);
       } else {
         await ensureGuided();
         setPositionLocal(0, 0, -vertical);
@@ -82,6 +84,8 @@
       const currentDepth = Math.max(0, -altitude);
       const target = up ? Math.max(0, currentDepth - ALTITUDE_STEP_M) : currentDepth + ALTITUDE_STEP_M;
       setDepthGlobal(target);
+    } else if (isPX4()) {
+      repositionRelative(0, 0, up ? ALTITUDE_STEP_M : -ALTITUDE_STEP_M);
     } else {
       await ensureGuided();
       const target = altitude + (up ? ALTITUDE_STEP_M : -ALTITUDE_STEP_M);
