@@ -142,6 +142,11 @@
   let mspIdentity: { firmware: string; boardName: string; targetName: string; boardIdentifier: string } | null = null;
   let mspTelemetryInFlight = false;
 
+  // The SSE telemetry stream pushes each MAVLink log line in real time; the
+  // heartbeat poll only drains logs as a fallback while the stream is down.
+  let telemetryStream: EventSource | null = null;
+  let streamActive = false;
+
   function mspVoltageToPercent(v: number): number {
     if (v <= 0) return 0;
     const cells = Math.max(1, Math.ceil(v / 4.3));
@@ -210,6 +215,53 @@
     if (consecutiveMisses >= OFFLINE_AFTER_MISSES && online) onlineStore.set(false);
   }
 
+  function openTelemetryStream() {
+    if (telemetryStream) return;
+    const es = new EventSource('/api/mavlink/stream');
+    telemetryStream = es;
+    es.onopen = () => {
+      streamActive = true;
+    };
+    es.onmessage = (ev) => {
+      let msg: { log?: string; disabled?: boolean };
+      try {
+        msg = JSON.parse(ev.data);
+      } catch {
+        return;
+      }
+      if (msg.disabled) {
+        // MSP flight controller: no MAVLink stream, so the poll drives it.
+        mavlinkDisabled = true;
+        return;
+      }
+      if (typeof msg.log === 'string') {
+        mavlinkDisabled = false;
+        fcProtocolStore.set('mavlink');
+        fcFirmwareStore.set(null);
+        getLogs(msg.log.replace(/\\"/g, '"') + '\n');
+        setOnline(true);
+      }
+    };
+    es.onerror = () => {
+      // The browser reconnects on its own; the poll covers the gap.
+      streamActive = false;
+      setOnline(false);
+    };
+  }
+
+  function closeTelemetryStream() {
+    telemetryStream?.close();
+    telemetryStream = null;
+    streamActive = false;
+  }
+
+  // Hold the stream open on every authenticated page and drop it on the login
+  // routes, mirroring the heartbeat poll's guard.
+  $effect(() => {
+    const active = loggedIn && !isNavHidden;
+    untrack(() => (active ? openTelemetryStream() : closeTelemetryStream()));
+  });
+
   async function checkOnlineStatus() {
     if (isNavHidden) return;
     try {
@@ -267,6 +319,12 @@
         mavlinkDisabled = false;
         fcProtocolStore.set('mavlink');
         fcFirmwareStore.set(null);
+        // The SSE stream delivers each log line in real time; when it is up the
+        // poll confirms the link but leaves log processing to the stream.
+        if (streamActive) {
+          setOnline(true);
+          return;
+        }
         if (data.length > 0) {
           data.forEach((log: string) => {
             getLogs(log.replace(/\\"/g, '"') + '\n');
@@ -675,6 +733,7 @@
       window.removeEventListener('keydown', refreshCookie);
       window.removeEventListener('click', refreshCookie);
       window.removeEventListener('scroll', refreshCookie);
+      closeTelemetryStream();
       resizeObserver?.disconnect();
       teardownCallouts();
       teardownAlerts();

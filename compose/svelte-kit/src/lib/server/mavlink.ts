@@ -171,11 +171,26 @@ export function forceReconnect(): void {
     initializePort();
 }
 
+// SSE consumers receive each line the instant it is parsed, so the marker and
+// HUD reach a fresh fix instead of one drained on the next poll.
+const logSubscribers = new Set<(line: string) => void>();
+export function subscribeLogs(cb: (line: string) => void): () => void {
+    logSubscribers.add(cb);
+    return () => logSubscribers.delete(cb);
+}
+
 function pushLog(entry: string): void {
     logs.push(entry);
     newLogs.push(entry);
     if (logs.length > MAX_LOG_ENTRIES) logs.splice(0, logs.length - MAX_LOG_ENTRIES);
     if (newLogs.length > MAX_LOG_ENTRIES) newLogs.splice(0, newLogs.length - MAX_LOG_ENTRIES);
+    for (const cb of logSubscribers) {
+        try {
+            cb(entry);
+        } catch {
+            // A broken stream consumer must not stall telemetry parsing.
+        }
+    }
 }
 
 function linkAlive(): boolean {
