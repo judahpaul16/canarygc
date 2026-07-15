@@ -39,5 +39,8 @@ ENV MODEL $MODEL
 ENV SPEEDUP $SPEEDUP
 ENV VEHICLE $VEHICLE
 
-# Finally the command
-ENTRYPOINT /ardupilot/Tools/autotest/sim_vehicle.py --vehicle ${VEHICLE} -I${INSTANCE} --custom-location=${LAT},${LON},${ALT},${DIR} -w --frame ${MODEL} --no-rebuild --no-mavproxy --speedup ${SPEEDUP}
+# The entrypoint picks a water home for marine craft and the land home
+# otherwise, then launches the simulator.
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]

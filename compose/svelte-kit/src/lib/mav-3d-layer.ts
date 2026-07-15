@@ -46,6 +46,14 @@ export function createMav3DLayer(getState: () => Mav3DState | null): CustomLayer
     }
     vehicle = buildVehicleModel(cls);
     vehicle.scale.setScalar(MODEL_SCALE);
+    // A submerged submarine sits below the water-surface terrain; render it
+    // without depth testing so it stays visible through the surface at depth.
+    const submerged = cls === 'sub';
+    vehicle.traverse((obj) => {
+      const material = (obj as THREE.Mesh).material;
+      if (!material) return;
+      for (const m of Array.isArray(material) ? material : [material]) m.depthTest = !submerged;
+    });
     scene.add(vehicle);
     currentClass = cls;
   }
@@ -102,14 +110,20 @@ export function createMav3DLayer(getState: () => Mav3DState | null): CustomLayer
         if (!s || !Number.isFinite(s.lat) || !Number.isFinite(s.lng)) return;
         setVehicleModel(s.cls);
 
-        const agl = Math.max(0, s.heightM);
+        // A submarine's relative altitude is negative below the surface, so it
+        // renders that far below the water plane; every other craft rises above
+        // the ground under it.
+        const offsetM = s.cls === 'sub' ? Math.min(0, s.heightM) : Math.max(0, s.heightM);
 
-        vehicle!.position.set(0, agl, 0);
+        vehicle!.position.set(0, offsetM, 0);
         vehicle!.rotation.order = 'YXZ';
         vehicle!.rotation.set(-s.pitchDeg * DEG, s.headingDeg * DEG, -s.rollDeg * DEG);
 
-        dropLine.scale.set(1, Math.max(agl, 0.001), 1);
-        dropLine.visible = agl > 0.5;
+        // The tether runs between the surface/ground point and the craft: up to
+        // an aircraft, down to a submerged submarine (a negative Y scale flips
+        // the upward unit line downward).
+        dropLine.scale.set(1, Math.abs(offsetM) < 0.001 ? 0.001 : offsetM, 1);
+        dropLine.visible = Math.abs(offsetM) > 0.5;
 
         const merc = maplibregl.MercatorCoordinate.fromLngLat([s.lng, s.lat], s.ground);
         const scale = merc.meterInMercatorCoordinateUnits();
