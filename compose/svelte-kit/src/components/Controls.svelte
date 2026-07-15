@@ -2,27 +2,14 @@
   import DPad from './DPad.svelte';
   import { mapWindow, mapPanel } from '../lib/map-window';
   import Weather from './Weather.svelte';
-  import { mavModeStore, mavAltitudeStore, mavLocationStore, mavSatelliteStore, mavTypeStore } from '../stores/mavlinkStore';
-  import { sendMavlinkCommand, setFlightMode, setPositionLocal, setDepthGlobal, setAltitudeGlobal, repositionRelative } from '../lib/mavlink-client';
-  import { isGuidedLabel, isSubmarine, isGroundOrSurface, isPlane, isPX4 } from '../lib/flight-modes';
+  import { mavLocationStore, mavSatelliteStore, mavTypeStore } from '../stores/mavlinkStore';
+  import { isSubmarine, isGroundOrSurface, isPlane } from '../lib/flight-modes';
+  import { applyMaxSpeed, goToVertical, verticalStep, yawStep } from '../lib/vehicle-nudges';
   import { gamepadActiveStore, toggleGamepad } from '../lib/gamepad-session';
 
-  const SPEED_TYPE_AIRSPEED = 0;
-  const SPEED_TYPE_GROUNDSPEED = 1;
-  const THROTTLE_NO_CHANGE = -1;
-  const SPEED_ABSOLUTE = 0;
-  const MAV_MODE_FLAG_CUSTOM_MODE_ENABLED = 1;
-  const SUB_DEPTH_HOLD_MODE = 2; // ArduSub ALT_HOLD (depth hold)
-  const YAW_STEP_DEG = 10;
-  const YAW_RATE_DEG_PER_S = 10;
-  const YAW_RELATIVE_OFFSET = 1;
-  const ALTITUDE_STEP_M = 10;
-
-  let altitude = $derived($mavAltitudeStore);
   let maxSpeed: string = $state('');
   let altitudeSetPoint: string = $state('');
 
-  let mavMode = $derived($mavModeStore);
   let mavLocation = $derived($mavLocationStore);
   let mavSatellite = $derived($mavSatelliteStore);
   let gamepadActive = $derived($gamepadActiveStore);
@@ -34,64 +21,9 @@
   // go-to-altitude, and missions, so the rotate and D-Pad nudges are hidden.
   let plane = $derived(isPlane($mavTypeStore));
 
-  async function ensureGuided() {
-    if (!isGuidedLabel(mavMode)) await setFlightMode('GUIDED');
-  }
-
-  // ArduSub holds depth in ALT_HOLD (depth hold), which needs only a depth
-  // sensor and so works on a sub with no horizontal position source. Depth
-  // setpoints are ignored in modes that do not hold depth.
-  async function ensureDepthHold() {
-    if (mavMode !== 'ALT_HOLD')
-      await sendMavlinkCommand('DO_SET_MODE', [MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, SUB_DEPTH_HOLD_MODE, 0], {
-        cmdLong: true
-      });
-  }
-
   async function setSpeedAndVertical() {
-    const speed = parseFloat(maxSpeed);
-    // ArduPlane holds airspeed; copter, rover, and boat use groundspeed.
-    if (!isNaN(speed))
-      sendMavlinkCommand('DO_CHANGE_SPEED', [
-        isPlane() ? SPEED_TYPE_AIRSPEED : SPEED_TYPE_GROUNDSPEED,
-        speed,
-        THROTTLE_NO_CHANGE,
-        SPEED_ABSOLUTE
-      ]);
-    const vertical = parseFloat(altitudeSetPoint);
-    if (!isNaN(vertical)) {
-      if (submarine) {
-        await ensureDepthHold();
-        setDepthGlobal(vertical);
-      } else if (isPlane()) {
-        await ensureGuided();
-        setAltitudeGlobal(vertical);
-      } else if (isPX4()) {
-        repositionRelative(0, 0, vertical - altitude);
-      } else {
-        await ensureGuided();
-        setPositionLocal(0, 0, -vertical);
-      }
-    }
-  }
-
-  // The up arrow climbs (air) or ascends toward the surface (sub); the down
-  // arrow descends. A submarine's depth is a positive number of meters below
-  // the surface, floored at 0 so ascending never commands a target above it.
-  async function verticalStep(up: boolean) {
-    if (submarine) {
-      await ensureDepthHold();
-      const currentDepth = Math.max(0, -altitude);
-      const target = up ? Math.max(0, currentDepth - ALTITUDE_STEP_M) : currentDepth + ALTITUDE_STEP_M;
-      setDepthGlobal(target);
-    } else if (isPX4()) {
-      repositionRelative(0, 0, up ? ALTITUDE_STEP_M : -ALTITUDE_STEP_M);
-    } else {
-      await ensureGuided();
-      const target = altitude + (up ? ALTITUDE_STEP_M : -ALTITUDE_STEP_M);
-      if (isPlane()) setAltitudeGlobal(target);
-      else setPositionLocal(0, 0, -target);
-    }
+    await applyMaxSpeed(parseFloat(maxSpeed));
+    await goToVertical(parseFloat(altitudeSetPoint));
   }
 
 
@@ -184,21 +116,13 @@
     <div class="rotate-btns column flex flex-col items-center justify-center text-center space-y-4">
       <div id="rotate-left-button" class="flex flex-col items-center">
         <div class="label text-sm mb-1">Rotate Left</div>
-        <button class="rotate-button rotate-left rounded-full" aria-label="Rotate left"
-          onclick={async () => {
-              await ensureGuided();
-              sendMavlinkCommand('CONDITION_YAW', [YAW_STEP_DEG, YAW_RATE_DEG_PER_S, -1, YAW_RELATIVE_OFFSET]);
-            }}>
+        <button class="rotate-button rotate-left rounded-full" aria-label="Rotate left" onclick={() => yawStep(-1)}>
           <i class="fas fa-rotate-left"></i>
         </button>
       </div>
       <div class="flex flex-col items-center">
         <div class="label text-sm mb-1">Rotate Right</div>
-        <button class="rotate-button rotate-right rounded-full" aria-label="Rotate right"
-          onclick={async () => {
-              await ensureGuided();
-              sendMavlinkCommand('CONDITION_YAW', [YAW_STEP_DEG, YAW_RATE_DEG_PER_S, 1, YAW_RELATIVE_OFFSET]);
-            }}>
+        <button class="rotate-button rotate-right rounded-full" aria-label="Rotate right" onclick={() => yawStep(1)}>
           <i class="fas fa-rotate-right"></i>
         </button>
       </div>

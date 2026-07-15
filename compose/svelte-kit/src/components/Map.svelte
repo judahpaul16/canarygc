@@ -14,10 +14,10 @@
     threeDMapStore,
     missionPathsStore
   } from '../stores/mapStore';
-  import { mavLocationStore, mavHeadingStore, mavAltitudeStore, mavModeStore, mavTypeStore } from '../stores/mavlinkStore';
+  import { mavLocationStore, mavAltitudeStore, mavTypeStore } from '../stores/mavlinkStore';
   import { smoothLocationStore, smoothHeadingStore } from '../lib/smooth-telemetry';
-  import { sendMavlinkCommand, setFlightMode, setPositionLocal, repositionRelative, setAltitudeGlobal } from '../lib/mavlink-client';
-  import { isGuidedLabel, isAirVehicle, isPX4, isPlane } from '../lib/flight-modes';
+  import { isAirVehicle, isPX4, isPlane } from '../lib/flight-modes';
+  import { applyMaxSpeed, goToVertical, verticalStep, yawStep, YAW_STEP_DEG } from '../lib/vehicle-nudges';
   import { missionSegmentPaths, stopsAt, type PathNode, type PathPoint } from '../lib/spline-path';
   import { hasSessionValue } from '../lib/session-persisted';
   import { surveyGrid, orbit, corridor, sarExpandingSquare, structureScan, type PatternPoint } from '../lib/mission-patterns';
@@ -172,9 +172,6 @@
   let mavMarker: L.Marker;
   let darkMode = $derived($darkModeStore);
 
-  const YAW_STEP_DEG = 10;
-  const YAW_RATE_DEG_PER_S = 10;
-  const YAW_RELATIVE_OFFSET = 1;
   // One meter per click: a vertical step is the ground-impact axis, so each
   // press stays small and predictable; big altitude changes belong to the
   // plan or a guided target. Horizontal D-pad nudges stay at 10 m.
@@ -275,32 +272,14 @@
 
   let gamepadActive = $derived($gamepadActiveStore);
 
-  async function ensureGuided() {
-    if (!isGuidedLabel(get(mavModeStore))) await setFlightMode('GUIDED');
-  }
+  // A fixed wing steers by airspeed and altitude targets; the dock carries
+  // those fields where the copter shows its strafe and yaw nudges.
+  let dockMaxSpeed: string = $state('');
+  let dockAltitude: string = $state('');
 
-  // PX4 rides DO_REPOSITION for altitude and yaw (CONDITION_YAW and single
-  // local setpoints come back UNSUPPORTED there); ArduPilot keeps its GUIDED
-  // mechanisms.
-  async function nudgeAltitude(direction: 1 | -1) {
-    if (isPX4()) {
-      await repositionRelative(0, 0, direction * ALTITUDE_STEP_M);
-      return;
-    }
-    await ensureGuided();
-    const target = get(mavAltitudeStore) + direction * ALTITUDE_STEP_M;
-    if (isPlane()) await setAltitudeGlobal(target);
-    else await setPositionLocal(0, 0, -target);
-  }
-
-  async function rotate(direction: 1 | -1) {
-    if (isPX4()) {
-      const yaw = (get(mavHeadingStore) + direction * YAW_STEP_DEG + 360) % 360;
-      await repositionRelative(0, 0, 0, yaw);
-      return;
-    }
-    await ensureGuided();
-    await sendMavlinkCommand('CONDITION_YAW', [YAW_STEP_DEG, YAW_RATE_DEG_PER_S, direction, YAW_RELATIVE_OFFSET]);
+  async function applyDockTargets() {
+    await applyMaxSpeed(parseFloat(dockMaxSpeed));
+    await goToVertical(parseFloat(dockAltitude));
   }
 
 
@@ -1912,10 +1891,12 @@
      that persists for the session. The live feed and manual control sit down
      the left, the small compass sits just right of the manual control, and
      stats sits on the right. */
-  .dock-feed { left: 0.75rem; top: 4.5rem; }
-  .dock-control { left: 0.75rem; bottom: 3rem; }
-  .dock-compass { left: 21.5rem; bottom: 3rem; }
-  .dock-stats { right: 0.75rem; top: 4.5rem; }
+  /* Desktop defaults: live feed and stats stack in the bottom-left, the
+     manual control dock sits bottom-right with the compass beside it. */
+  .dock-feed { left: 0.75rem; bottom: 3rem; }
+  .dock-stats { left: 0.75rem; bottom: 17.5rem; }
+  .dock-control { right: 0.75rem; bottom: 3rem; }
+  .dock-compass { right: 21.5rem; bottom: 3rem; }
 
   .dock-slot .dock-head {
     cursor: grab;
@@ -2063,6 +2044,46 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+  }
+
+  .ctl-fields {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .ctl-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    font-size: 0.68rem;
+    color: var(--fontColor);
+  }
+
+  .ctl-field input {
+    width: 100%;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--tertiaryColor);
+    background-color: rgb(from var(--secondaryColor) r g b / 0.9);
+    color: var(--fontColor);
+  }
+
+  .ctl-set {
+    align-self: flex-end;
+    padding: 0.25rem 0.9rem;
+    font-size: 0.72rem;
+    border-radius: 9999px;
+    border: 1px solid var(--tertiaryColor);
+    background-color: rgb(from var(--secondaryColor) r g b / 0.9);
+    color: var(--fontColor);
+  }
+
+  .ctl-set:hover {
+    background-color: #4e94f7;
+    color: #ffffff;
   }
 
   .ctl-btn {
@@ -2263,22 +2284,34 @@
             </div>
             <div class="control-body">
               <div class="control-col">
-                <button class="ctl-btn" aria-label="Altitude up" data-tip="Climb {ALTITUDE_STEP_M} m" data-tip-pos="right" onclick={() => nudgeAltitude(1)}>
+                <button class="ctl-btn" aria-label="Altitude up" data-tip="Climb {ALTITUDE_STEP_M} m" data-tip-pos="right" onclick={() => verticalStep(true, ALTITUDE_STEP_M)}>
                   <i class="fas fa-arrow-up"></i>
                 </button>
-                <button class="ctl-btn" aria-label="Altitude down" data-tip="Descend {ALTITUDE_STEP_M} m" data-tip-pos="right" onclick={() => nudgeAltitude(-1)}>
+                <button class="ctl-btn" aria-label="Altitude down" data-tip="Descend {ALTITUDE_STEP_M} m" data-tip-pos="right" onclick={() => verticalStep(false, ALTITUDE_STEP_M)}>
                   <i class="fas fa-arrow-down"></i>
                 </button>
               </div>
               {#if !plane}
               <DPad />
               <div class="control-col">
-                <button class="ctl-btn" aria-label="Rotate left" data-tip="Yaw left {YAW_STEP_DEG}°" data-tip-pos="left" onclick={() => rotate(-1)}>
+                <button class="ctl-btn" aria-label="Rotate left" data-tip="Yaw left {YAW_STEP_DEG}°" data-tip-pos="left" onclick={() => yawStep(-1)}>
                   <i class="fas fa-rotate-left"></i>
                 </button>
-                <button class="ctl-btn" aria-label="Rotate right" data-tip="Yaw right {YAW_STEP_DEG}°" data-tip-pos="left" onclick={() => rotate(1)}>
+                <button class="ctl-btn" aria-label="Rotate right" data-tip="Yaw right {YAW_STEP_DEG}°" data-tip-pos="left" onclick={() => yawStep(1)}>
                   <i class="fas fa-rotate-right"></i>
                 </button>
+              </div>
+              {:else}
+              <div class="ctl-fields">
+                <label class="ctl-field">
+                  <span>Max speed (m/s)</span>
+                  <input type="number" min="0" placeholder="10" bind:value={dockMaxSpeed} />
+                </label>
+                <label class="ctl-field">
+                  <span>Go to altitude (m)</span>
+                  <input type="number" min="0" placeholder="100" bind:value={dockAltitude} />
+                </label>
+                <button class="ctl-set" onclick={applyDockTargets}>Set</button>
               </div>
               {/if}
             </div>
