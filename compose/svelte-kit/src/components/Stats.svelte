@@ -16,7 +16,6 @@
     mavBatteryStore,
     mavArmedStateStore,
     mavLocationStore,
-    mavlinkParamStore,
     fcProtocolStore,
     fcFirmwareStore
   } from '../stores/mavlinkStore';
@@ -25,8 +24,9 @@
   import { get } from 'svelte/store';
 
   import { showModal, notify } from '../lib/overlays';
-  import { sendMavlinkCommand, setFlightMode, takeoff, writeParameter, encodeParameterValue } from '../lib/mavlink-client';
+  import { sendMavlinkCommand, setFlightMode, takeoff } from '../lib/mavlink-client';
   import { isAutoLabel, isGuidedLabel, isPX4, isPlane } from '../lib/flight-modes';
+  import { rtlAltitudeNow, applyRtlAltitude } from '../lib/rtl-altitude';
   import { preflightCheck } from '../lib/preflight';
   import { missionPlanActionsStore } from '../stores/missionPlanStore';
   import {
@@ -45,7 +45,6 @@
   const TAKEOFF_SETTLE_DELAY_MS = 5000;
   const CALIBRATION_SETTLE_DELAY_MS = 5000;
   const DEFAULT_TAKEOFF_ALT_M = 10;
-  const RTL_ALT_CM_PER_M = 100;
 
   interface Props {
     mavModel?: string;
@@ -240,29 +239,36 @@
   }
 
   async function startMission() {
-    const rtlAltParam = get(mavlinkParamStore).RTL_ALT;
-    const encodedValue = rtlAltParam
-      ? encodeParameterValue(rtlAltParam.param_value, rtlAltParam.param_type)
-      : DEFAULT_TAKEOFF_ALT_M * RTL_ALT_CM_PER_M;
+    // The return altitude is asked only for air vehicles and lands in the
+    // connected autopilot's own parameter (ArduCopter RTL_ALT, ArduPlane
+    // ALT_HOLD_RTL, PX4 RTL_RETURN_ALT); ground and surface craft skip it.
+    const rtl = rtlAltitudeNow();
     showModal({
       title: 'Start / Resume Mission',
-      content: 'Are you sure you want to start the mission? Please specify RTL_ALT (Return to Launch Altitude) in METERS. Make sure to consider any potential obstacles between the RTL waypoint and the launch location.',
+      content: rtl.ask
+        ? 'Are you sure you want to start the mission? Set the altitude in meters the vehicle uses when returning to launch, considering any obstacles between the mission area and the launch point.'
+        : 'Are you sure you want to start the mission?',
       confirmation: true,
-      inputs: [
-        {
-          type: 'number',
-          placeholder: `RTL_ALT: ${encodedValue / RTL_ALT_CM_PER_M} m`,
-          required: true,
-        }
-      ],
+      inputs: rtl.ask
+        ? [
+            {
+              type: 'number',
+              label: 'Return altitude (m)',
+              placeholder: `${rtl.currentM ?? DEFAULT_TAKEOFF_ALT_M}`,
+              required: true,
+            }
+          ]
+        : null,
       onConfirm: async (values) => {
         if (!(await preflightCheck(get(missionPlanActionsStore)))) return;
         missionIndexStore.set(1);
         missionCompleteStore.set(false);
-        const params = get(mavlinkParamStore);
-        if (!isPX4() && params.RTL_ALT) {
-          await writeParameter('RTL_ALT', parseInt(values[0]) * RTL_ALT_CM_PER_M, params.RTL_ALT.param_type);
-          if (params.RTL_CLIMB_MIN) await writeParameter('RTL_CLIMB_MIN', 0, params.RTL_CLIMB_MIN.param_type);
+        if (rtl.ask && !(await applyRtlAltitude(parseInt(values[0])))) {
+          notify({
+            title: 'Return altitude not set',
+            content: 'The vehicle has not published its return-altitude parameter yet, so it returns at its current setting.',
+            type: 'warning',
+          });
         }
         if (get(mavStateStore) === 'STANDBY') {
           await takeoff(DEFAULT_TAKEOFF_ALT_M);
