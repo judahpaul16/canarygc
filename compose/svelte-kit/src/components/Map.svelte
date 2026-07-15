@@ -15,8 +15,8 @@
   } from '../stores/mapStore';
   import { mavLocationStore, mavHeadingStore, mavAltitudeStore, mavModeStore, mavTypeStore } from '../stores/mavlinkStore';
   import { smoothLocationStore, smoothHeadingStore } from '../lib/smooth-telemetry';
-  import { sendMavlinkCommand, setFlightMode, setPositionLocal, repositionRelative } from '../lib/mavlink-client';
-  import { isGuidedLabel, isAirVehicle, isPX4 } from '../lib/flight-modes';
+  import { sendMavlinkCommand, setFlightMode, setPositionLocal, repositionRelative, setAltitudeGlobal } from '../lib/mavlink-client';
+  import { isGuidedLabel, isAirVehicle, isPX4, isPlane } from '../lib/flight-modes';
   import { missionSegmentPaths, stopsAt, type PathNode, type PathPoint } from '../lib/spline-path';
   import { hasSessionValue } from '../lib/session-persisted';
   import { surveyGrid, orbit, corridor, sarExpandingSquare, structureScan, type PatternPoint } from '../lib/mission-patterns';
@@ -67,6 +67,9 @@
   let { id = 'map' }: Props = $props();
 
   let mavLocation: L.LatLng | { lat: number; lng: number } = $derived($smoothLocationStore);
+  // A fixed-wing has no in-place yaw or strafe, so the dock hides the D-Pad and
+  // rotate controls for a plane.
+  let plane = $derived(isPlane($mavTypeStore));
   let win = $derived($mapWindowStore);
   let isFullscreen = $state(false);
   let hideOverlay = $derived(isFullscreen ? false : win ? !win.overlay : true);
@@ -278,7 +281,9 @@
       return;
     }
     await ensureGuided();
-    await setPositionLocal(0, 0, -(get(mavAltitudeStore) + direction * ALTITUDE_STEP_M));
+    const target = get(mavAltitudeStore) + direction * ALTITUDE_STEP_M;
+    if (isPlane()) await setAltitudeGlobal(target);
+    else await setPositionLocal(0, 0, -target);
   }
 
   async function rotate(direction: 1 | -1) {
@@ -2258,6 +2263,7 @@
                   <i class="fas fa-arrow-down"></i>
                 </button>
               </div>
+              {#if !plane}
               <DPad />
               <div class="control-col">
                 <button class="ctl-btn" aria-label="Rotate left" data-tip="Yaw left {YAW_STEP_DEG}°" data-tip-pos="left" onclick={() => rotate(-1)}>
@@ -2267,6 +2273,7 @@
                   <i class="fas fa-rotate-right"></i>
                 </button>
               </div>
+              {/if}
             </div>
           </div>
         {:else}

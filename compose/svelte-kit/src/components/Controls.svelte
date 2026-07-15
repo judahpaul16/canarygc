@@ -30,6 +30,9 @@
   // positive); a rover or boat has no vertical axis and hides the control.
   let submarine = $derived(isSubmarine($mavTypeStore));
   let surface = $derived(isGroundOrSurface($mavTypeStore));
+  // A fixed-wing has no in-place yaw or strafe: it steers with the gamepad,
+  // go-to-altitude, and missions, so the rotate and D-Pad nudges are hidden.
+  let plane = $derived(isPlane($mavTypeStore));
 
   async function ensureGuided() {
     if (!isGuidedLabel(mavMode)) await setFlightMode('GUIDED');
@@ -172,6 +175,7 @@
         </div>
       </div>
     {/if}
+    {#if !plane}
     <div class="separator"></div>
     <div class="rotate-btns column flex flex-col items-center justify-center text-center space-y-4">
       <div id="rotate-left-button" class="flex flex-col items-center">
@@ -195,8 +199,9 @@
         </button>
       </div>
     </div>
+    {/if}
   </div>
-  <DPad />
+  {#if !plane}<DPad />{/if}
 </div>
 
 <style>
