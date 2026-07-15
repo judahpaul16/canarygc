@@ -176,9 +176,13 @@
   // plan or a guided target. Horizontal D-pad nudges stay at 10 m.
   const ALTITUDE_STEP_M = 1;
 
-  let feedDockOpen = $state(true);
-  let controlDockOpen = $state(true);
-  let statsDockOpen = $state(true);
+  // On a phone the docks open collapsed so they do not bury the fullscreen map;
+  // on desktop they open expanded.
+  const docksStartCollapsed =
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 990px)').matches;
+  let feedDockOpen = $state(!docksStartCollapsed);
+  let controlDockOpen = $state(!docksStartCollapsed);
+  let statsDockOpen = $state(!docksStartCollapsed);
 
   // Each fullscreen dock remembers where it was dragged for the session; an
   // untouched dock keeps its CSS default corner.
@@ -2066,12 +2070,12 @@
   }
 
   @media (max-width: 990px) {
-    /* Narrow screens sit the docks clear of the bottom map controls; each
-       stays draggable from here. */
-    .dock-feed { left: 0.75rem; top: 4.5rem; }
-    .dock-control { left: 0.75rem; bottom: 4.5rem; }
-    .dock-compass { right: 0.75rem; bottom: 4.5rem; }
-    .dock-stats { right: 0.75rem; top: 4.5rem; }
+    /* Narrow screens stack the docks up from the bottom-left, clear of the map
+       controls; each stays draggable from here. */
+    .dock-compass { left: 0.75rem; right: auto; bottom: 0.75rem; top: auto; }
+    .dock-control { left: 0.75rem; right: auto; bottom: 6rem; top: auto; }
+    .dock-stats { left: 0.75rem; right: auto; bottom: 9rem; top: auto; }
+    .dock-feed { left: 0.75rem; right: auto; bottom: 12rem; top: auto; }
 
     .dock-panel {
       width: min(300px, calc(100vw - 1.5rem));
