@@ -7,6 +7,10 @@
   } from "../stores/missionPlanStore";
   import { showModal, notify } from "../lib/overlays";
   import { setFlightMode } from "../lib/mavlink-client";
+  import { normalizeMission } from "../lib/mission-commands";
+  import { isPX4 } from "../lib/flight-modes";
+  import { mavModelStore } from "../stores/mavlinkStore";
+  import { get } from "svelte/store";
   import { readMissionFile } from "../lib/mission-import";
   import { toQgcWpl } from "../lib/mission-export";
   import { onMount } from "svelte";
@@ -115,12 +119,24 @@
     missionPlanTitleStore.set(title);
     missionPlanActionsStore.set(actions);
     missionCompleteStore.set(false);
+
+    // Resolve the neutral plan into wire-ready items for the connected autopilot;
+    // sending raw plan actions leaves the command and frame unset, which PX4
+    // rejects ("IGN MISSION_ITEM: Invalid item") so a mission never uploads.
+    const { items, warnings } = normalizeMission(actions, isPX4(get(mavModelStore)));
+    if (warnings.length > 0) {
+        notify({
+            title: "Mission adjusted for PX4",
+            content: warnings.join("<br>"),
+        });
+    }
+
     try {
         let response = await fetch("/api/mavlink/load_mission", {
             method: "POST",
             headers: {
                 "content-type": "application/json",
-                "actions": JSON.stringify(actions),
+                "actions": JSON.stringify(items),
             },
         });
         if (response.ok) {

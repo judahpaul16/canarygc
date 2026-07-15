@@ -46,6 +46,34 @@ describe('normalizeMission', () => {
 		expect(warnings[1]).toContain('CONDITION_YAW');
 	});
 
+	it('moves a single takeoff to index 0 for PX4 when a home slot leads', () => {
+		const homePlan: MissionPlanActions = {
+			0: item('NAV_WAYPOINT'), // ArduPilot home slot
+			1: item('NAV_TAKEOFF'),
+			2: item('NAV_WAYPOINT'),
+			3: item('NAV_TAKEOFF') // duplicate leading takeoff
+		};
+		const { items } = normalizeMission(homePlan, true);
+		expect(items.map((i) => i.command)).toEqual([
+			MISSION_COMMANDS.NAV_TAKEOFF.id,
+			MISSION_COMMANDS.NAV_WAYPOINT.id
+		]);
+	});
+
+	it('keeps the home slot and order for ArduPilot', () => {
+		const homePlan: MissionPlanActions = {
+			0: item('NAV_WAYPOINT'),
+			1: item('NAV_TAKEOFF'),
+			2: item('NAV_WAYPOINT')
+		};
+		const { items } = normalizeMission(homePlan, false);
+		expect(items.map((i) => i.command)).toEqual([
+			MISSION_COMMANDS.NAV_WAYPOINT.id,
+			MISSION_COMMANDS.NAV_TAKEOFF.id,
+			MISSION_COMMANDS.NAV_WAYPOINT.id
+		]);
+	});
+
 	it('skips unknown commands with a warning', () => {
 		const { items, warnings } = normalizeMission({ 0: item('NAV_MADE_UP') }, false);
 		expect(items).toHaveLength(0);

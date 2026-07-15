@@ -46,7 +46,8 @@
   import { notify, type NotificationType } from '../lib/overlays';
   import { callout, initCallouts, stopCallouts } from '../lib/callouts';
   import { initAlerts } from '../lib/alerts';
-  import { decodeMode, isArmed } from '../lib/flight-modes';
+  import { decodeMode, isArmed, isPX4 } from '../lib/flight-modes';
+  import { normalizeMission } from '../lib/mission-commands';
   import { decodeParameterValue, requestParameters, sendMavlinkCommand } from '../lib/mavlink-client';
   import { parseCalStatustext, parseMagCalProgress, parseMagCalReport } from '../lib/calibration';
   import { calibrationStore } from '../stores/calibrationStore';
@@ -356,14 +357,24 @@
       if (responseData.length > 0) {
         const loadedMission = responseData.find((mission: { isLoaded: number }) => mission.isLoaded === 1);
         if (loadedMission) {
+          const actions = JSON.parse(loadedMission.actions);
           missionPlanTitleStore.set(loadedMission.title);
-          missionPlanActionsStore.set(JSON.parse(loadedMission.actions));
+          missionPlanActionsStore.set(actions);
+          // Re-sync the vehicle once it has identified itself, so the mission is
+          // resolved into wire-ready items for the connected autopilot. Sending
+          // the raw stored actions re-uploads unset commands the vehicle rejects
+          // on every page load.
+          for (let i = 0; i < 20 && get(mavModelStore) === 'UNKNOWN'; i++) {
+            await new Promise((resolve) => setTimeout(resolve, 500));
+          }
+          if (get(mavModelStore) === 'UNKNOWN') return;
+          const { items } = normalizeMission(actions, isPX4(get(mavModelStore)));
           try {
               let response = await fetch("/api/mavlink/load_mission", {
                   method: "POST",
                   headers: {
                       "content-type": "application/json",
-                      "actions": JSON.stringify(loadedMission.actions),
+                      "actions": JSON.stringify(items),
                   },
               });
               if (response.ok) {

@@ -74,6 +74,20 @@ export interface NormalizeResult {
   warnings: string[];
 }
 
+const TAKEOFF_IDS = new Set([MISSION_COMMANDS.NAV_TAKEOFF.id, MISSION_COMMANDS.NAV_VTOL_TAKEOFF.id]);
+
+// PX4 refuses a mission whose first item is not a takeoff ("takeoff not first
+// waypoint item"). Neutral plans carry a duplicate leading item for ArduPilot's
+// home slot, which pushes the takeoff off the front, so for PX4 the items ahead
+// of the first takeoff are dropped and any repeated takeoff collapsed, leaving
+// one takeoff at index 0.
+function px4TakeoffFirst(items: NormalizedMissionItem[]): NormalizedMissionItem[] {
+  const firstTakeoff = items.findIndex((it) => TAKEOFF_IDS.has(it.command));
+  if (firstTakeoff < 0) return items;
+  const tail = items.slice(firstTakeoff + 1).filter((it) => !TAKEOFF_IDS.has(it.command));
+  return [items[firstTakeoff], ...tail];
+}
+
 // Resolves the neutral plan into wire-ready items for the connected autopilot.
 // PX4 loses commands it cannot run (substituted or skipped) with a warning each.
 export function normalizeMission(actions: MissionPlanActions, targetIsPX4: boolean): NormalizeResult {
@@ -116,5 +130,5 @@ export function normalizeMission(actions: MissionPlanActions, targetIsPX4: boole
     });
   }
 
-  return { items, warnings };
+  return { items: targetIsPX4 ? px4TakeoffFirst(items) : items, warnings };
 }
