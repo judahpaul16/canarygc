@@ -176,23 +176,27 @@ The app loads its keys from `compose/svelte-kit/.env`; the Integrations page ove
 **Development** runs the SvelteKit dev server with hot reload against an ArduPilot SITL container:
 
 ```bash
-docker compose --profile development up
+docker compose --profile development up -d
 ```
 
-The app is served at `http://localhost:5173`; SITL exposes MAVLink on TCP `5760`. Set a different host port with `APP_DEV_PORT` in a root `.env` if 5173 collides. The first bring-up builds the ArduPilot SITL image from source (Copter 4.5.7), which takes a while; later runs reuse it, and the simulator streams telemetry about a minute after it starts.
+The app is served at `http://localhost:5173`; SITL exposes MAVLink on TCP `5760`. Set a different host port with `APP_DEV_PORT` in a root `.env` if 5173 collides. The first bring-up builds the ArduPilot SITL image from source (Copter 4.5.7), which takes a while; later runs reuse it, and the simulator streams telemetry about a minute after it starts. The stack runs detached; follow its output with:
+
+```bash
+docker compose --profile development logs -f
+```
 
 The SITL image builds the copter, rover, plane, and sub binaries, so the same `development` profile flies any of them. `SITL_VEHICLE` and `SITL_MODEL` pick which, and the dashboard controls adapt to the vehicle: a submarine gets a depth control (Go to Depth, Ascend, Descend), a rover drops the vertical control, and a plane, copter, or sub keeps Max Speed:
 
 ```bash
-SITL_VEHICLE=Rover     SITL_MODEL=rover    docker compose --profile development up   # ground rover
-SITL_VEHICLE=ArduSub   SITL_MODEL=vectored docker compose --profile development up   # submarine
-SITL_VEHICLE=ArduPlane SITL_MODEL=plane    docker compose --profile development up   # fixed wing
+SITL_VEHICLE=Rover     SITL_MODEL=rover    docker compose --profile development up -d   # ground rover
+SITL_VEHICLE=ArduSub   SITL_MODEL=vectored docker compose --profile development up -d   # submarine
+SITL_VEHICLE=ArduPlane SITL_MODEL=plane    docker compose --profile development up -d   # fixed wing
 ```
 
 To develop against **PX4** instead, use the `development-px4` profile:
 
 ```bash
-docker compose --profile development-px4 up
+docker compose --profile development-px4 up -d
 ```
 
 This runs headless PX4 SITL (Gazebo) alongside a MAVProxy bridge that presents PX4's MAVLink on the same TCP `5760`, so the app connects identically. Both dev profiles bind `5760`, so run one at a time. PX4 SITL streams telemetry about a minute after Gazebo finishes initializing.
@@ -200,7 +204,7 @@ This runs headless PX4 SITL (Gazebo) alongside a MAVProxy bridge that presents P
 To exercise the **Firmware tab against a Betaflight or INAV flight controller** with no hardware, use the `development-betaflight` or `development-inav` profile:
 
 ```bash
-docker compose --profile development-betaflight up   # or development-inav
+docker compose --profile development-betaflight up -d   # or development-inav
 ```
 
 Each builds the flight-controller firmware for the host CPU (SITL) and serves MSP on TCP `5761`, which the app reaches through the shared `msp-sitl` alias. The Firmware tab detects the board and reads its identity over MSP, as it would a real board on a serial link. These profiles carry no MAVLink autopilot, so the dashboard link stays offline; they cover MSP detection and telemetry.
@@ -217,7 +221,7 @@ The schema recreates empty on the next boot, and the app then prompts for first-
 **Production** builds the Node server image and runs the WebRTC camera bridge, talking to a real autopilot over UART:
 
 ```bash
-docker compose --profile production up app webrtc
+docker compose --profile production up -d app webrtc
 ```
 
 The app is served at `http://localhost:3000`.
