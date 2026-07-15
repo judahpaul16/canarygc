@@ -8,6 +8,13 @@ vi.mock('./mavlink-client', () => ({
 	sendMavlinkCommand: vi.fn(),
 	setFlightMode: vi.fn()
 }));
+vi.mock('./overlays', () => ({ notify: vi.fn() }));
+vi.mock('./preflight', () => ({
+	refreshAirspace: vi.fn(async () => []),
+	refreshHazards: vi.fn(async () => ({ ceilings: [], obstacles: [] })),
+	refreshBuildings: vi.fn(async () => [])
+}));
+vi.mock('./dem', () => ({ sampleElevations: vi.fn(async () => null) }));
 
 const { autolandPlan } = await import('./autoland');
 

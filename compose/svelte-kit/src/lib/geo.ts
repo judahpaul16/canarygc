@@ -117,9 +117,10 @@ export function segmentsIntersect(a: LatLon, b: LatLon, c: LatLon, d: LatLon): b
   return false;
 }
 
-// Shortest distance in meters from a point to the segment a-b, on a local
-// equirectangular projection, which is accurate at mission-leg scale.
-export function pointToSegmentMeters(p: LatLon, a: LatLon, b: LatLon): number {
+// Projection of a point onto the segment a-b on a local equirectangular
+// plane, accurate at mission-leg scale: the along-track fraction (0 at a,
+// 1 at b, clamped) and the offset distance in meters.
+export function segmentProjection(p: LatLon, a: LatLon, b: LatLon): { t: number; distanceM: number } {
   const metersPerDegLat = (Math.PI / 180) * EARTH_RADIUS_M;
   const metersPerDegLon = metersPerDegLat * Math.cos(p.lat * DEG_TO_RAD);
   const ax = (a.lon - p.lon) * metersPerDegLon;
@@ -132,7 +133,22 @@ export function pointToSegmentMeters(p: LatLon, a: LatLon, b: LatLon): number {
   const t = lengthSq === 0 ? 0 : Math.max(0, Math.min(1, -(ax * dx + ay * dy) / lengthSq));
   const cx = ax + t * dx;
   const cy = ay + t * dy;
-  return Math.sqrt(cx * cx + cy * cy);
+  return { t, distanceM: Math.sqrt(cx * cx + cy * cy) };
+}
+
+// Shortest distance in meters from a point to the segment a-b.
+export function pointToSegmentMeters(p: LatLon, a: LatLon, b: LatLon): number {
+  return segmentProjection(p, a, b).distanceM;
+}
+
+// Evenly spaced points along the segment a-b, endpoints included.
+export function pointsAlong(a: LatLon, b: LatLon, count: number): LatLon[] {
+  const points: LatLon[] = [];
+  for (let i = 0; i < count; i++) {
+    const t = count === 1 ? 0 : i / (count - 1);
+    points.push({ lat: a.lat + (b.lat - a.lat) * t, lon: a.lon + (b.lon - a.lon) * t });
+  }
+  return points;
 }
 
 // True when the leg a-b enters a GeoJSON polygon: either endpoint inside, or the

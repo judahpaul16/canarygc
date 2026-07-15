@@ -275,7 +275,7 @@
         title: 'Confirm Landing',
         content: hasSequence
           ? 'The mission jumps to its landing sequence and the plane flies the approach down to touchdown.'
-          : 'The loaded mission has no Land action. With the box checked, a landing approach into the launch point uploads on the spot and the plane flies it down to touchdown; unchecked, the plane returns to launch and loiters overhead until you land it.',
+          : 'The loaded mission has no Land action. With the box checked, a landing approach into the launch point uploads on the spot, placed clear of obstacles, terrain, and restricted airspace where map data allows, and the plane flies it down to touchdown; unchecked, the plane returns to launch and loiters overhead until you land it.',
         confirmation: true,
         inputs: hasSequence
           ? null
@@ -441,7 +441,7 @@
           </div>
           {#if systemState === 'STANDBY' || !isArmed}
             <div class="relative group flex flex-col items-center">
-              <button class="circular-button" onclick={onTakeoff} disabled={isAutoLabel(mavMode)}>
+              <button class="circular-button" onclick={onTakeoff} disabled={isAutoLabel(mavMode) && systemState !== 'STANDBY'}>
                 <i class="fas fa-plane-departure"></i>
                 <div class="tooltip text-white">Initiate Takeoff</div>
               </button>

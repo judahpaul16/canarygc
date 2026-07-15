@@ -98,6 +98,9 @@ export async function takeoff(altitudeM: number): Promise<boolean> {
   if (isPlane()) {
     const params = get(mavlinkParamStore);
     if (params.TKOFF_ALT) await writeParameter('TKOFF_ALT', altitudeM, params.TKOFF_ALT.param_type);
+    // A mission pointer parked on a landing sequence blocks arming
+    // ("Arm: In landing sequence"), so a fresh launch rewinds it first.
+    await sendMavlinkCommand('DO_SET_MISSION_CURRENT', [0, 0], { cmdLong: true });
     await armDisarm(true);
     return sendMavlinkCommand('DO_SET_MODE', [MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, PLANE_TAKEOFF_MODE, 0], {
       cmdLong: true

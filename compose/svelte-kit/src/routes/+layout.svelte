@@ -10,6 +10,7 @@
     onlineStore,
     mavHeadingStore,
     mavLocationStore,
+    mavHomeStore,
     mavlinkLogStore,
     mavlinkParamStore,
     mavAltitudeStore,
@@ -474,6 +475,11 @@
       mavAttitudeStore.set({ rollDeg: toDeg(roll), pitchDeg: toDeg(pitch) });
     },
 
+    HOME_POSITION: (text: string) => {
+      const home = parseLocation(extractValue(text, 'latitude'), extractValue(text, 'longitude'));
+      if (home) mavHomeStore.set({ lat: home.lat, lon: home.lng });
+    },
+
     SERVO_OUTPUT_RAW: (text: string) => {
       const servos: number[] = [];
       for (let i = 1; i <= 8; i++) {
@@ -744,6 +750,9 @@
       // Ask the vehicle whether it advertises a camera stream (message 269);
       // an advertised uri becomes a one-click RTSP source for the live feed.
       sendMavlinkCommand('REQUEST_MESSAGE', [269], { cmdLong: true });
+      // Stream HOME_POSITION (242) at 0.5 Hz so the return point is known for
+      // an autoland even when no mission plan is loaded.
+      sendMavlinkCommand('SET_MESSAGE_INTERVAL', [242, 2000000], { cmdLong: true });
     }, STARTUP_SYNC_DELAY_MS);
 
     const checkCookieInterval = setInterval(() => {
