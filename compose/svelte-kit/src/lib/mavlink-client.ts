@@ -147,6 +147,24 @@ export async function setDepthGlobal(depthM: number | string): Promise<boolean> 
   return response.ok;
 }
 
+// Commands a target altitude above home while holding the current horizontal
+// position, so a plane loiters in place and climbs or descends. A copter
+// accepts a local-NED nudge; a plane needs this global destination.
+export async function setAltitudeGlobal(altM: number | string): Promise<boolean> {
+  const loc = get(mavLocationStore) as { lat: number; lng: number };
+  const response = await fetch('/api/mavlink/set_altitude', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      lat: `${loc.lat}`,
+      lon: `${loc.lng}`,
+      alt: `${altM}`
+    }
+  });
+  if (!response.ok) console.error('Failed to set altitude');
+  return response.ok;
+}
+
 // MAV_PARAM_TYPE numeric ranges (https://mavlink.io/en/messages/common.html#MAV_PARAM_TYPE)
 const PARAM_RANGES: Record<number, { min: number; max: number; integer: boolean }> = {
   1: { min: 0, max: 255, integer: true },

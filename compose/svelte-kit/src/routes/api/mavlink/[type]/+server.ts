@@ -12,6 +12,7 @@ import {
     clearAllMissionItems,
     setPositionLocal,
     setDepthGlobal,
+    setAltitudeGlobal,
     setGlobalOrigin,
     newLogs,
     logs,
@@ -160,6 +161,21 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
             try {
                 await setDepthGlobal(depth);
                 return new Response(`Depth set to ${depth} m below surface`, { status: 200 });
+            } catch (err) {
+                console.error(err);
+                return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
+            }
+        }
+        case 'set_altitude': {
+            const lat: number = parseFloat(event.request.headers.get('lat')!);
+            const lon: number = parseFloat(event.request.headers.get('lon')!);
+            const alt: number = parseFloat(event.request.headers.get('alt')!);
+            if (isNaN(lat) || isNaN(lon) || isNaN(alt)) {
+                return new Response('Invalid altitude', { status: 400 });
+            }
+            try {
+                await setAltitudeGlobal(lat, lon, alt);
+                return new Response(`Altitude set to ${alt} m`, { status: 200 });
             } catch (err) {
                 console.error(err);
                 return new Response(`Error: ${(err as Error).stack}`, { status: 500 });

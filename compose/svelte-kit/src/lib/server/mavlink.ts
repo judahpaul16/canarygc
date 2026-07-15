@@ -671,6 +671,29 @@ async function setDepthGlobal(depthM: number) {
     await sendMsg(state.port, msg);
   }
 
+// Sends a GUIDED air vehicle to a target altitude above home while holding its
+// current horizontal position. A plane acts on a global destination, not the
+// local-NED origin a copter accepts, so the current lat/lon travel with the
+// altitude and the vehicle loiters there as it climbs or descends.
+async function setAltitudeGlobal(lat: number, lon: number, alt: number) {
+    if (!state.port || !state.reader) {
+        state.online = false;
+        return;
+    }
+    const msg = new common.SetPositionTargetGlobalInt();
+    msg.timeBootMs = 0;
+    msg.targetSystem = 1;
+    msg.targetComponent = 1;
+    msg.coordinateFrame = 6; // MAV_FRAME_GLOBAL_RELATIVE_ALT_INT
+    // @ts-expect-error typeMask is declared readonly upstream but must be set per message
+    msg.typeMask = 0b110111111000; // position (lat, lon, alt) only
+    msg.latInt = Math.round(lat * 1e7);
+    msg.lonInt = Math.round(lon * 1e7);
+    msg.alt = alt;
+    msg.yawRate = 0;
+    await sendMsg(state.port, msg);
+}
+
 // Establishes the vehicle's global origin so a vehicle with no GPS can hold a
 // local position referenced to a manual start point, and sets home to the same
 // point. This gives the local-NED moves and the map one shared reference instead
@@ -714,6 +737,7 @@ export {
     clearAllMissionItems,
     setPositionLocal,
     setDepthGlobal,
+    setAltitudeGlobal,
     setGlobalOrigin,
     linkAlive,
     logs,

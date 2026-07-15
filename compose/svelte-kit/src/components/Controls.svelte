@@ -3,10 +3,11 @@
   import { mapWindow, mapPanel } from '../lib/map-window';
   import Weather from './Weather.svelte';
   import { mavModeStore, mavAltitudeStore, mavLocationStore, mavSatelliteStore, mavTypeStore } from '../stores/mavlinkStore';
-  import { sendMavlinkCommand, setFlightMode, setPositionLocal, setDepthGlobal } from '../lib/mavlink-client';
-  import { isGuidedLabel, isSubmarine, isGroundOrSurface } from '../lib/flight-modes';
+  import { sendMavlinkCommand, setFlightMode, setPositionLocal, setDepthGlobal, setAltitudeGlobal } from '../lib/mavlink-client';
+  import { isGuidedLabel, isSubmarine, isGroundOrSurface, isPlane } from '../lib/flight-modes';
   import { gamepadActiveStore, toggleGamepad } from '../lib/gamepad-session';
 
+  const SPEED_TYPE_AIRSPEED = 0;
   const SPEED_TYPE_GROUNDSPEED = 1;
   const THROTTLE_NO_CHANGE = -1;
   const SPEED_ABSOLUTE = 0;
@@ -46,13 +47,22 @@
 
   async function setSpeedAndVertical() {
     const speed = parseFloat(maxSpeed);
+    // ArduPlane holds airspeed; copter, rover, and boat use groundspeed.
     if (!isNaN(speed))
-      sendMavlinkCommand('DO_CHANGE_SPEED', [SPEED_TYPE_GROUNDSPEED, speed, THROTTLE_NO_CHANGE, SPEED_ABSOLUTE]);
+      sendMavlinkCommand('DO_CHANGE_SPEED', [
+        isPlane() ? SPEED_TYPE_AIRSPEED : SPEED_TYPE_GROUNDSPEED,
+        speed,
+        THROTTLE_NO_CHANGE,
+        SPEED_ABSOLUTE
+      ]);
     const vertical = parseFloat(altitudeSetPoint);
     if (!isNaN(vertical)) {
       if (submarine) {
         await ensureDepthHold();
         setDepthGlobal(vertical);
+      } else if (isPlane()) {
+        await ensureGuided();
+        setAltitudeGlobal(vertical);
       } else {
         await ensureGuided();
         setPositionLocal(0, 0, -vertical);
@@ -71,7 +81,9 @@
       setDepthGlobal(target);
     } else {
       await ensureGuided();
-      setPositionLocal(0, 0, -(altitude + (up ? ALTITUDE_STEP_M : -ALTITUDE_STEP_M)));
+      const target = altitude + (up ? ALTITUDE_STEP_M : -ALTITUDE_STEP_M);
+      if (isPlane()) setAltitudeGlobal(target);
+      else setPositionLocal(0, 0, -target);
     }
   }
 
