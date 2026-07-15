@@ -27,6 +27,7 @@
   import { sendMavlinkCommand, setFlightMode, takeoff } from '../lib/mavlink-client';
   import { isAutoLabel, isGuidedLabel, isPX4, isPlane } from '../lib/flight-modes';
   import { rtlAltitudeNow, applyRtlAltitude } from '../lib/rtl-altitude';
+  import { landNow, planeHasLandingSequence } from '../lib/landing';
   import { preflightCheck } from '../lib/preflight';
   import { missionPlanActionsStore } from '../stores/missionPlanStore';
   import {
@@ -317,13 +318,22 @@
 
   function initLanding() {
     if (isPlane()) {
+      const hasSequence = planeHasLandingSequence();
       showModal({
-        title: 'Return to Launch',
-        content:
-          'A fixed-wing cannot land in place, so this returns to launch: the plane flies home and lands through its configured landing sequence, or loiters overhead until you take over.',
+        title: hasSequence ? 'Confirm Landing' : 'Return to Launch',
+        content: hasSequence
+          ? 'The mission jumps to its landing sequence and the plane flies the approach down to touchdown.'
+          : 'The loaded mission has no Land action, so the plane returns to launch and loiters overhead until you land it. Add a Land action to the end of the mission for an automatic landing.',
         confirmation: true,
         onConfirm: async () => {
-          await setFlightMode('RTL');
+          const landing = await landNow();
+          notify({
+            title: landing ? 'Landing' : 'Returning to launch',
+            content: landing
+              ? 'The plane is flying the landing sequence.'
+              : 'The plane loiters over the launch point until you land it.',
+            type: landing ? 'success' : 'warning',
+          });
         },
       });
       return;
@@ -333,8 +343,7 @@
       content: 'Are you sure you want to land the MAV?',
       confirmation: true,
       onConfirm: async () => {
-        await setFlightMode('GUIDED');
-        await sendMavlinkCommand('NAV_LAND', [0, 0, 0, 0, mavLocation.lat, mavLocation.lng, 0], { cmdLong: true });
+        await landNow();
       },
     });
   }
