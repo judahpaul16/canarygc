@@ -87,6 +87,12 @@
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.28);
   }
 
+  /* Dark mode sits over the satellite map, so the card takes a near-solid fill
+     to keep the form legible; light mode stays translucent glass. */
+  :global(html.dark) .glass {
+    background-color: rgb(from var(--primaryColor) r g b / 94%);
+  }
+
   .card {
     width: 100%;
     max-width: 380px;
