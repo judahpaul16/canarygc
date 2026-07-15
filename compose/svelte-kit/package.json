@@ -42,6 +42,7 @@
 		"@libsql/client": "^0.17.4",
 		"@lucia-auth/adapter-sqlite": "^3.0.2",
 		"@node-rs/argon2": "^2.0.2",
+		"@types/three": "^0.185.1",
 		"axios": "^1.18.1",
 		"hls.js": "^1.5.15",
 		"leaflet": "^1.9.4",
@@ -49,7 +50,8 @@
 		"maplibre-gl": "^5.0.0",
 		"node-mavlink": "^2.3.0",
 		"nodemailer": "^9.0.3",
-		"serialport": "^13.0.0"
+		"serialport": "^13.0.0",
+		"three": "^0.185.1"
 	},
 	"overrides": {
 		"@lucia-auth/adapter-sqlite": {

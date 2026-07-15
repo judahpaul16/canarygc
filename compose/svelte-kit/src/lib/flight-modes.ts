@@ -1,5 +1,6 @@
 import { get } from 'svelte/store';
 import { mavModelStore, mavTypeStore } from '../stores/mavlinkStore';
+import type { VehicleClass } from './vehicle-models-3d';
 
 // POSCTL is the app's stick-flying intent: each stack resolves it to its
 // native pilot position mode (PX4 Position, ArduPilot Loiter).
@@ -167,6 +168,16 @@ export function isPlane(type: string = get(mavTypeStore)): boolean {
 
 export function isPX4(model: string = get(mavModelStore)): boolean {
   return model.toUpperCase().includes('PX4');
+}
+
+// The 3D map renders a model per broad vehicle family, read from the MAV_TYPE.
+export function vehicleClass(type: string = get(mavTypeStore)): VehicleClass {
+  if (isSubmarine(type)) return 'sub';
+  if (isPlane(type)) return 'plane';
+  if (/boat/i.test(type)) return 'boat';
+  if (/rover/i.test(type)) return 'rover';
+  if (isAirVehicle(type)) return 'multirotor';
+  return 'generic';
 }
 
 export function strategyFor(

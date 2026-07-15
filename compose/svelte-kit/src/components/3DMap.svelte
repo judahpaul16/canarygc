@@ -1,10 +1,17 @@
 <script lang="ts">
   import { onMount, onDestroy, untrack } from 'svelte';
-  import { mavLocationStore } from '../stores/mavlinkStore';
-  import { smoothLocationStore, smoothHeadingStore } from '../lib/smooth-telemetry';
+  import { mavLocationStore, mavTypeStore } from '../stores/mavlinkStore';
+  import {
+    smoothLocationStore,
+    smoothHeadingStore,
+    smoothRollStore,
+    smoothPitchStore,
+    smoothAmslStore
+  } from '../lib/smooth-telemetry';
   import { mapZoomStore, lockViewStore, mapTypeStore, threeDMapStore, mapWindowStore, mapFullscreenStore, missionPathsStore } from '../stores/mapStore';
   import 'maplibre-gl/dist/maplibre-gl.css';
-  import { mavIconStore } from '../stores/customizationStore';
+  import { createMav3DLayer, type Mav3DState } from '../lib/mav-3d-layer';
+  import { vehicleClass } from '../lib/flight-modes';
   import {
     airspaceZonesStore,
     showAirspaceStore,
@@ -221,27 +228,38 @@
     }
   }
 
-  // One persistent MAV marker; position, rotation, and icon update in place so
-  // the marker never detaches between telemetry frames.
-  let mavMarker: pkg.Marker | null = null;
-  let mavImg: HTMLImageElement | null = null;
+  // Terrain height under the vehicle, sampled outside the GL render pass on a
+  // roughly one-meter grid. Sampling inside the layer's render re-dirties the
+  // map every frame and locks the page into a repaint loop.
+  let mavGround = 0;
+  let mavGroundKey = '';
 
-  function ensureMavMarker(m: pkg.Map, loc: { lat: number; lng: number }) {
-    if (mavMarker) return;
-    const img = new Image();
-    img.src = get(mavIconStore);
-    img.style.width = '50px';
-    img.style.height = '50px';
-    img.style.cursor = 'pointer';
-    img.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const ll = mavMarker?.getLngLat();
-      if (ll) onFeatureClick?.(ll.lat, ll.lng);
-    });
-    mavImg = img;
-    mavMarker = new Marker({ element: img, rotationAlignment: 'map', pitchAlignment: 'map' })
-      .setLngLat([loc.lng, loc.lat])
-      .addTo(m);
+  function sampleGround(m: pkg.Map, loc: { lat: number; lng: number }) {
+    const key = `${loc.lat.toFixed(5)},${loc.lng.toFixed(5)}`;
+    if (key === mavGroundKey) return;
+    mavGroundKey = key;
+    try {
+      mavGround = m.queryTerrainElevation([loc.lng, loc.lat]) ?? 0;
+    } catch {
+      mavGround = 0;
+    }
+  }
+
+  // The MAV renders as a three.js model at its true flight altitude through a
+  // custom layer; this getter hands it the current smoothed pose each frame.
+  function mav3DState(): Mav3DState | null {
+    const loc = get(smoothLocationStore);
+    if (!loc) return null;
+    return {
+      lat: loc.lat,
+      lng: loc.lng,
+      amsl: get(smoothAmslStore),
+      ground: mavGround,
+      headingDeg: get(smoothHeadingStore),
+      rollDeg: get(smoothRollStore),
+      pitchDeg: get(smoothPitchStore),
+      cls: vehicleClass(get(mavTypeStore))
+    };
   }
 
   function followCamera(m: pkg.Map, loc: { lat: number; lng: number }) {
@@ -482,6 +500,9 @@
         renderMissionPaths3D();
         renderMissionMarkers3D();
 
+        // The vehicle rides above the terrain as a 3D model of its type.
+        if (!m.getLayer('mav-3d')) m.addLayer(createMav3DLayer(mav3DState));
+
         m.addControl(
             new NavigationControl({
                 visualizePitch: true,
@@ -512,8 +533,7 @@
 
   onDestroy(() => {
     if (viewportTimer) clearTimeout(viewportTimer);
-    mavMarker?.remove();
-    mavMarker = null;
+    if (map?.getLayer('mav-3d')) map.removeLayer('mav-3d');
     for (const marker of trafficMarkers.values()) marker.remove();
     trafficMarkers.clear();
     for (const marker of missionMarkers.values()) marker.remove();
@@ -522,15 +542,21 @@
 
   $effect(() => {
     const loc = $smoothLocationStore;
-    const heading = $smoothHeadingStore;
-    const icon = $mavIconStore;
+    void $smoothHeadingStore;
+    void $smoothRollStore;
+    void $smoothPitchStore;
+    void $smoothAmslStore;
+    void $mavTypeStore;
     const m = map;
     untrack(() => {
       if (!m || !loc) return;
-      ensureMavMarker(m, loc);
-      if (mavImg && mavImg.getAttribute('src') !== icon) mavImg.src = icon;
-      mavMarker!.setLngLat([loc.lng, loc.lat]);
-      mavMarker!.setRotation(heading);
+      // Repaint only while the 3D view is on screen; the hidden 3D canvas stays
+      // idle in the 2D view, so the model costs nothing there. The custom layer
+      // reads the live pose in its own render pass, so one repaint per fix drives
+      // the redraw when the camera is not already following.
+      if (get(mapTypeStore) !== '3D') return;
+      sampleGround(m, loc);
+      m.triggerRepaint();
       followCamera(m, loc);
     });
   });
@@ -573,3 +599,13 @@
 </script>
 
 <div id='threedmap' class="relative h-full rounded-2xl z-0"></div>
+
+<style>
+  /* Inset the zoom/compass controls and attribution off the corners so they
+     clear the rounded map edge instead of hugging it, matching the 2D map. */
+  #threedmap :global(.maplibregl-ctrl-top-left) { top: 14px; left: 14px; }
+  #threedmap :global(.maplibregl-ctrl-top-right) { top: 14px; right: 14px; }
+  #threedmap :global(.maplibregl-ctrl-bottom-left) { bottom: 14px; left: 14px; }
+  #threedmap :global(.maplibregl-ctrl-bottom-right) { bottom: 14px; right: 14px; }
+  #threedmap :global(.maplibregl-ctrl) { margin: 0; }
+</style>
