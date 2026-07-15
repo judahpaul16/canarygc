@@ -13,7 +13,7 @@ NC='\033[0m' # No Color
 #### SETUP ####
 if [[ "$1" != "--install-only" && "$1" != "--simulation" ]]; then
     sudo apt-get update
-    sudo apt-get -y install docker.io nginx ufw wget network-manager
+    sudo apt-get -y install docker.io ufw wget network-manager
     
     sudo systemctl enable docker
     sudo systemctl start docker
@@ -22,6 +22,7 @@ if [[ "$1" != "--install-only" && "$1" != "--simulation" ]]; then
     # Enable and start the firewall
     echo "y" | sudo ufw enable
     sudo ufw allow 22
+    sudo ufw allow 80
     sudo ufw allow 8090
     sudo ufw allow 8189
     sudo ufw allow 8889
@@ -171,9 +172,9 @@ if [[ "$1" != "--setup-only" ]]; then
         docker system prune -af
         if libcamera-hello --list-cameras | grep -q "No cameras available!"; then
             echo "No cameras found."
-            docker compose --profile production up app -d
+            docker compose --profile production up app nginx -d
         else
-            docker compose --profile production up app webrtc -d
+            docker compose --profile production up app webrtc nginx -d
         fi
     fi
     sleep 5

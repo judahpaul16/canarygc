@@ -1,8 +1,9 @@
-# App config (API keys, MSP, database), read from the root .env when set and
-# defaulted otherwise. Compose loads the root .env natively, so no file needs to
-# exist; the Integrations page overrides any of it at runtime.
+# App config (API keys, MSP), read from the root .env when set and defaulted
+# otherwise. Compose loads the root .env natively, so no file needs to exist;
+# the Integrations page overrides any of it at runtime. DATABASE_PATH is not
+# here: each face sets it with its own default (the dev source tree vs the prod
+# image path) so the shared anchor never clobbers the production location.
 x-app-env: &app-env
-  DATABASE_PATH: ${DATABASE_PATH:-./src/data.db}
   OPENAIP_API_KEY: ${OPENAIP_API_KEY:-}
   VITE_ALTITUDE_ANGEL_API_KEY: ${VITE_ALTITUDE_ANGEL_API_KEY:-}
   MSP_SERIAL_PATH: ${MSP_SERIAL_PATH:-}
@@ -37,6 +38,7 @@ services:
     profiles: ["development", "development-px4"]
     environment:
       <<: *app-env
+      DATABASE_PATH: ${DATABASE_PATH:-./src/data.db}
       CHOKIDAR_USEPOLLING: "true"
       NODE_ENV: development
 
@@ -47,6 +49,7 @@ services:
     profiles: ["development-betaflight", "development-inav"]
     environment:
       <<: *app-env
+      DATABASE_PATH: ${DATABASE_PATH:-./src/data.db}
       CHOKIDAR_USEPOLLING: "true"
       NODE_ENV: development
       MSP_TCP_HOST: msp-sitl
@@ -67,8 +70,13 @@ services:
     ports:
       - "${APP_PORT:-3000}:3000"
     container_name: canarygc_app
+    # Persist the SQLite database (operator account, settings, missions, flight
+    # logs) across image rebuilds and container recreates.
+    volumes:
+      - canarygc_data:/app/src
     environment:
       <<: *app-env
+      DATABASE_PATH: ${DATABASE_PATH:-/app/src/data.db}
       NODE_ENV: production
       MEDIAMTX_API_URL: ${MEDIAMTX_API_URL:-http://host.docker.internal:9997}
     extra_hosts:
@@ -77,6 +85,20 @@ services:
       resources:
         limits:
           memory: 700m
+    restart: always
+
+  # Reverse proxy serving the app on port 80, so the station answers at its
+  # hostname with no port. SSE and forwarded-proto handling live in the config.
+  nginx:
+    profiles: ["production"]
+    image: nginx:alpine
+    container_name: canarygc_nginx
+    depends_on:
+      - app
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    volumes:
+      - ./compose/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     restart: always
 
   # ArduPilot SITL for local testing (development profile).
@@ -235,3 +257,6 @@ services:
     network_mode: host
     privileged: true
     restart: always
+
+volumes:
+  canarygc_data:
