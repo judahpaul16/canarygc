@@ -1892,11 +1892,12 @@
      the left, the small compass sits just right of the manual control, and
      stats sits on the right. */
   /* Desktop defaults: live feed and stats stack in the bottom-left, the
-     manual control dock sits bottom-right with the compass beside it. */
-  .dock-feed { left: 0.75rem; bottom: 3rem; }
-  .dock-stats { left: 0.75rem; bottom: 17.5rem; }
-  .dock-control { right: 0.75rem; bottom: 3rem; }
-  .dock-compass { right: 21.5rem; bottom: 3rem; }
+     manual control dock sits bottom-right with the compass beside it. The
+     baseline clears the location readout and attribution bars below. */
+  .dock-feed { left: 0.75rem; bottom: 4.5rem; }
+  .dock-stats { left: 0.75rem; bottom: 19rem; }
+  .dock-control { right: 0.75rem; bottom: 4.5rem; }
+  .dock-compass { right: 21.5rem; bottom: 4.5rem; }
 
   .dock-slot .dock-head {
     cursor: grab;
