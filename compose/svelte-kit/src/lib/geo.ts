@@ -33,6 +33,24 @@ export function bearingDegrees(a: LatLon, b: LatLon): number {
   return (Math.atan2(y, x) / DEG_TO_RAD + 360) % 360;
 }
 
+// Destination coordinate a great-circle distance and initial bearing away.
+export function destinationPoint(origin: LatLon, bearingDeg: number, distanceM: number): LatLon {
+  const angular = distanceM / EARTH_RADIUS_M;
+  const bearing = bearingDeg * DEG_TO_RAD;
+  const lat1 = origin.lat * DEG_TO_RAD;
+  const lon1 = origin.lon * DEG_TO_RAD;
+  const lat2 = Math.asin(
+    Math.sin(lat1) * Math.cos(angular) + Math.cos(lat1) * Math.sin(angular) * Math.cos(bearing)
+  );
+  const lon2 =
+    lon1 +
+    Math.atan2(
+      Math.sin(bearing) * Math.sin(angular) * Math.cos(lat1),
+      Math.cos(angular) - Math.sin(lat1) * Math.sin(lat2)
+    );
+  return { lat: lat2 / DEG_TO_RAD, lon: ((lon2 / DEG_TO_RAD + 540) % 360) - 180 };
+}
+
 // Total path length in meters for an ordered list of points.
 export function pathLengthMeters(points: LatLon[]): number {
   let total = 0;

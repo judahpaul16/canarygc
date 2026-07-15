@@ -272,17 +272,27 @@
     if (isPlane()) {
       const hasSequence = planeHasLandingSequence();
       showModal({
-        title: hasSequence ? 'Confirm Landing' : 'Return to Launch',
+        title: 'Confirm Landing',
         content: hasSequence
           ? 'The mission jumps to its landing sequence and the plane flies the approach down to touchdown.'
-          : 'The loaded mission has no Land action, so the plane returns to launch and loiters overhead until you land it. Add a Land action to the end of the mission for an automatic landing.',
+          : 'The loaded mission has no Land action. With the box checked, a landing approach into the launch point uploads on the spot and the plane flies it down to touchdown; unchecked, the plane returns to launch and loiters overhead until you land it.',
         confirmation: true,
-        onConfirm: async () => {
-          const landing = await landNow();
+        inputs: hasSequence
+          ? null
+          : [
+              {
+                type: 'checkbox',
+                placeholder: 'Autoland at the launch point',
+                value: 'true',
+                required: false,
+              }
+            ],
+        onConfirm: async (values) => {
+          const landing = await landNow(hasSequence || values[0] === 'true');
           notify({
             title: landing ? 'Landing' : 'Returning to launch',
             content: landing
-              ? 'The plane is flying the landing sequence.'
+              ? 'The plane is flying the landing approach down to touchdown.'
               : 'The plane loiters over the launch point until you land it.',
             type: landing ? 'success' : 'warning',
           });

@@ -1,7 +1,7 @@
 import type { MissionPlanActions } from '../stores/missionPlanStore';
 
-const FRAME_GLOBAL_RELATIVE_ALT = 3;
-const FRAME_MISSION = 2;
+export const FRAME_GLOBAL_RELATIVE_ALT = 3;
+export const FRAME_MISSION = 2;
 
 type Px4Support = 'ok' | 'drop' | { substitute: string };
 

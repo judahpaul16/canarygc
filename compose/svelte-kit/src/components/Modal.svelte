@@ -39,7 +39,9 @@
   }: Props = $props();
 
   let inputValues: string[] = $state(untrack(() => (inputs ? inputs.map((input) => input.value ?? '') : [])));
-  let checkboxValues: boolean[] = $state(untrack(() => (inputs ? inputs.map(() => false) : [])));
+  let checkboxValues: boolean[] = $state(
+    untrack(() => (inputs ? inputs.map((input) => input.type === 'checkbox' && input.value === 'true') : []))
+  );
   let validationError = $state('');
   const closeModal = () => {
     isOpen = false;
