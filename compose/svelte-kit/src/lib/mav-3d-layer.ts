@@ -5,7 +5,10 @@ import { buildVehicleModel, disposeVehicleModel, type VehicleClass } from './veh
 export interface Mav3DState {
   lat: number;
   lng: number;
-  amsl: number;
+  // Height above home, the altitude the rest of the app displays. The model
+  // rises this far above the terrain under it; a sea-level difference is not
+  // reliable because the autopilot's datum and the map DEM's disagree.
+  heightM: number;
   // Terrain height under the vehicle, sampled by the caller outside the render
   // pass. Querying terrain inside render() re-dirties the map every frame and
   // locks the main thread into a repaint loop.
@@ -99,7 +102,7 @@ export function createMav3DLayer(getState: () => Mav3DState | null): CustomLayer
         if (!s || !Number.isFinite(s.lat) || !Number.isFinite(s.lng)) return;
         setVehicleModel(s.cls);
 
-        const agl = Math.max(0, s.amsl - s.ground);
+        const agl = Math.max(0, s.heightM);
 
         vehicle!.position.set(0, agl, 0);
         vehicle!.rotation.order = 'YXZ';

@@ -6,9 +6,9 @@
     smoothHeadingStore,
     smoothRollStore,
     smoothPitchStore,
-    smoothAmslStore
+    smoothAltitudeStore
   } from '../lib/smooth-telemetry';
-  import { mapZoomStore, lockViewStore, mapTypeStore, threeDMapStore, mapWindowStore, mapFullscreenStore, missionPathsStore } from '../stores/mapStore';
+  import { mapZoomStore, lockViewStore, lockNudgeStore, mapTypeStore, threeDMapStore, mapWindowStore, mapFullscreenStore, missionPathsStore } from '../stores/mapStore';
   import 'maplibre-gl/dist/maplibre-gl.css';
   import { createMav3DLayer, type Mav3DState } from '../lib/mav-3d-layer';
   import { vehicleClass } from '../lib/flight-modes';
@@ -253,7 +253,7 @@
     return {
       lat: loc.lat,
       lng: loc.lng,
-      amsl: get(smoothAmslStore),
+      heightM: get(smoothAltitudeStore),
       ground: mavGround,
       headingDeg: get(smoothHeadingStore),
       rollDeg: get(smoothRollStore),
@@ -522,6 +522,12 @@
       mapZoomStore.set(m.getZoom() + 1);
     });
 
+    // Dragging while the camera is locked snaps back on the next telemetry
+    // fix; the lock button pulses so the snap reads as the lock, not a hang.
+    m.on('dragstart', () => {
+      if (get(lockViewStore)) lockNudgeStore.update((n) => n + 1);
+    });
+
     m.on('moveend', () => {
       if (viewportTimer) clearTimeout(viewportTimer);
       viewportTimer = setTimeout(refreshViewportOverlays3D, VIEWPORT_REFRESH_DELAY_MS);
@@ -545,7 +551,7 @@
     void $smoothHeadingStore;
     void $smoothRollStore;
     void $smoothPitchStore;
-    void $smoothAmslStore;
+    void $smoothAltitudeStore;
     void $mavTypeStore;
     const m = map;
     untrack(() => {
