@@ -24,16 +24,15 @@
   import { get } from 'svelte/store';
 
   import { showModal, notify } from '../lib/overlays';
-  import { sendMavlinkCommand, setFlightMode, takeoff } from '../lib/mavlink-client';
-  import { isAutoLabel, isGuidedLabel, isPX4, isPlane } from '../lib/flight-modes';
+  import { sendMavlinkCommand, setFlightMode } from '../lib/mavlink-client';
+  import { isAutoLabel, isGuidedLabel, isPX4 } from '../lib/flight-modes';
   import { startMissionWithConfirm } from '../lib/start-mission';
-  import { landNow, planeHasLandingSequence } from '../lib/landing';
+  import { takeoffWithConfirm, landWithConfirm } from '../lib/takeoff-land';
   import { missionPlanActionsStore } from '../stores/missionPlanStore';
   import {
     startGuidanceWithConfirm,
     stopGuidance,
     startInavMissionWithConfirm,
-    takeoffInavWithConfirm,
     stopInavMission
   } from '../lib/guidance-session';
   import type { LatLng } from 'leaflet';
@@ -250,65 +249,6 @@
     });
   }
 
-  function initTakeoff() {
-    showModal({
-      title: 'Confirm Takeoff',
-      content: 'Are you sure you want to initiate takeoff? If so please specify the altitude.',
-      confirmation: true,
-      inputs: [
-        {
-          type: 'number',
-          placeholder: 'Altitude (m)',
-          required: true,
-        }
-      ],
-      onConfirm: async (values) => {
-        await takeoff(parseInt(values[0]));
-      },
-    });
-  }
-
-  function initLanding() {
-    if (isPlane()) {
-      const hasSequence = planeHasLandingSequence();
-      showModal({
-        title: 'Confirm Landing',
-        content: hasSequence
-          ? 'The mission jumps to its landing sequence and the plane flies the approach down to touchdown.'
-          : 'The loaded mission has no Land action. With the box checked, a landing approach into the launch point uploads on the spot, placed clear of obstacles, terrain, and restricted airspace where map data allows, and the plane flies it down to touchdown; unchecked, the plane returns to launch and loiters overhead until you land it.',
-        confirmation: true,
-        inputs: hasSequence
-          ? null
-          : [
-              {
-                type: 'checkbox',
-                placeholder: 'Autoland at the launch point',
-                value: 'true',
-                required: false,
-              }
-            ],
-        onConfirm: async (values) => {
-          const landing = await landNow(hasSequence || values[0] === 'true');
-          notify({
-            title: landing ? 'Landing' : 'Returning to launch',
-            content: landing
-              ? 'The plane is flying the landing approach down to touchdown.'
-              : 'The plane loiters over the launch point until you land it.',
-            type: landing ? 'success' : 'warning',
-          });
-        },
-      });
-      return;
-    }
-    showModal({
-      title: 'Confirm Landing',
-      content: 'Are you sure you want to land the MAV?',
-      confirmation: true,
-      onConfirm: async () => {
-        await landNow();
-      },
-    });
-  }
   let darkMode = $derived($darkModeStore);
   // The same flight controls route to each firmware's own way of flying: a MAVLink
   // autopilot runs its own mission, INAV runs its own mission over MSP, and
@@ -324,16 +264,6 @@
     if (fcIsInav) stopInavMission();
     else if (fcIsMsp) stopGuidance();
     else stopMission();
-  }
-  function onTakeoff() {
-    if (fcIsInav) takeoffInavWithConfirm();
-    else if (fcIsMsp) startGuidanceWithConfirm();
-    else initTakeoff();
-  }
-  function onLand() {
-    if (fcIsInav) stopInavMission();
-    else if (fcIsMsp) stopGuidance();
-    else initLanding();
   }
   function onPause() {
     if (fcIsInav) stopInavMission();
@@ -441,14 +371,14 @@
           </div>
           {#if systemState === 'STANDBY' || !isArmed}
             <div class="relative group flex flex-col items-center">
-              <button class="circular-button" onclick={onTakeoff} disabled={isAutoLabel(mavMode) && systemState !== 'STANDBY'}>
+              <button class="circular-button" onclick={takeoffWithConfirm} disabled={isAutoLabel(mavMode) && systemState !== 'STANDBY'}>
                 <i class="fas fa-plane-departure"></i>
                 <div class="tooltip text-white">Initiate Takeoff</div>
               </button>
             </div>
           {:else}
             <div class="relative group flex flex-col items-center">
-              <button class="circular-button" onclick={onLand} disabled={isAutoLabel(mavMode) || mavMode.includes('LAND')}>
+              <button class="circular-button" onclick={landWithConfirm} disabled={isAutoLabel(mavMode) || mavMode.includes('LAND')}>
                 <i class="fas fa-plane-arrival"></i>
                 <div class="tooltip text-white">Initiate Landing</div>
               </button>

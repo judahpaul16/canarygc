@@ -4,6 +4,7 @@
     mavLocationStore,
     mavModeStore,
     mavStateStore,
+    mavArmedStateStore,
     fcProtocolStore,
     fcFirmwareStore
   } from '../stores/mavlinkStore';
@@ -17,6 +18,7 @@
   import { sendMavlinkCommand, setFlightMode } from '../lib/mavlink-client';
   import { isAutoLabel, isGuidedLabel } from '../lib/flight-modes';
   import { startMissionWithConfirm } from '../lib/start-mission';
+  import { takeoffWithConfirm, landWithConfirm } from '../lib/takeoff-land';
   import { ACTION_TYPES } from '../lib/mission-icons';
   import {
     startGuidanceWithConfirm,
@@ -50,6 +52,7 @@
   let mavLocation = $derived($mavLocationStore);
   let mavMode = $derived($mavModeStore);
   let systemState = $derived($mavStateStore);
+  let isArmed = $derived($mavArmedStateStore);
   $effect(() => {
     title = $missionPlanTitleStore;
   });
@@ -337,6 +340,23 @@
           <i class="fas fa-parachute-box"></i>
           <div class="tooltip">Release Payload</div>
       </button>
+      {#if systemState === 'STANDBY' || !isArmed}
+        <button class="px-2 py-1 bg-[#6366f1] rounded-lg hover:bg-[#818cf8]"
+          disabled={isAutoLabel(mavMode) && systemState !== 'STANDBY'}
+          onclick={() => {takeoffWithConfirm()}}
+        >
+          <i class="fas fa-plane-departure"></i>
+          <div class="tooltip">Initiate Takeoff</div>
+        </button>
+      {:else}
+        <button class="px-2 py-1 bg-[#6366f1] rounded-lg hover:bg-[#818cf8]"
+          disabled={isAutoLabel(mavMode) || mavMode.includes('LAND')}
+          onclick={() => {landWithConfirm()}}
+        >
+          <i class="fas fa-plane-arrival"></i>
+          <div class="tooltip">Initiate Landing</div>
+        </button>
+      {/if}
       {#if !isAutoLabel(mavMode) || systemState === 'STANDBY'}
         <button class="px-2 py-1 bg-[#55b377] rounded-lg hover:bg-[#61cd89]"
           disabled={(isAutoLabel(mavMode) && systemState !== 'STANDBY') || (!missionLoaded && !fcIsMsp)}
