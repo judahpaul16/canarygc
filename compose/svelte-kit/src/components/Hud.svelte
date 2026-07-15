@@ -1,14 +1,17 @@
 <script lang="ts">
   import {
-    mavAttitudeStore,
-    mavHeadingStore,
-    mavAltitudeStore,
-    mavSpeedStore,
     mavBatteryStore,
     mavSatelliteStore,
     mavModeStore,
     mavArmedStateStore
   } from '../stores/mavlinkStore';
+  import {
+    smoothRollStore,
+    smoothPitchStore,
+    smoothHeadingStore,
+    smoothAltitudeStore,
+    smoothSpeedStore
+  } from '../lib/smooth-telemetry';
 
   let { compact = false, transparent = false }: { compact?: boolean; transparent?: boolean } =
     $props();
@@ -17,11 +20,11 @@
   const CX = 160;
   const CY = 90;
 
-  const roll = $derived($mavAttitudeStore.rollDeg);
-  const pitch = $derived($mavAttitudeStore.pitchDeg);
-  const heading = $derived((((Math.round($mavHeadingStore) % 360) + 360) % 360));
-  const altitude = $derived($mavAltitudeStore);
-  const speed = $derived($mavSpeedStore);
+  const roll = $derived($smoothRollStore);
+  const pitch = $derived($smoothPitchStore);
+  const heading = $derived((((Math.round($smoothHeadingStore) % 360) + 360) % 360));
+  const altitude = $derived($smoothAltitudeStore);
+  const speed = $derived($smoothSpeedStore);
   const battery = $derived($mavBatteryStore);
   const sats = $derived($mavSatelliteStore);
   const mode = $derived($mavModeStore);

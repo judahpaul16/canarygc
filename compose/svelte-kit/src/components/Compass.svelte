@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { mavLocationStore, mavHeadingStore } from '../stores/mavlinkStore';
+  import { mavLocationStore } from '../stores/mavlinkStore';
+  import { smoothHeadingStore } from '../lib/smooth-telemetry';
 
   interface Props {
     mavLocation?: L.LatLng | { lat: number; lng: number };
@@ -39,7 +40,7 @@
   }
 
   let location = $derived(mavLocation ?? $mavLocationStore);
-  let headingDeg = $derived(norm($mavHeadingStore));
+  let headingDeg = $derived(norm($smoothHeadingStore));
   let heading = $derived(`${Math.round(headingDeg)}° ${cardinal(headingDeg)}`);
   let currentLat = $derived(formatCoordinates(location.lat, true));
   let currentLong = $derived(formatCoordinates(location.lng, false));

@@ -14,6 +14,7 @@
     missionPathsStore
   } from '../stores/mapStore';
   import { mavLocationStore, mavHeadingStore, mavAltitudeStore, mavModeStore, mavTypeStore } from '../stores/mavlinkStore';
+  import { smoothLocationStore, smoothHeadingStore } from '../lib/smooth-telemetry';
   import { sendMavlinkCommand, setFlightMode, setPositionLocal, repositionRelative } from '../lib/mavlink-client';
   import { isGuidedLabel, isAirVehicle, isPX4 } from '../lib/flight-modes';
   import { missionSegmentPaths, stopsAt, type PathNode, type PathPoint } from '../lib/spline-path';
@@ -65,7 +66,7 @@
 
   let { id = 'map' }: Props = $props();
 
-  let mavLocation: L.LatLng | { lat: number; lng: number } = $derived($mavLocationStore);
+  let mavLocation: L.LatLng | { lat: number; lng: number } = $derived($smoothLocationStore);
   let win = $derived($mapWindowStore);
   let isFullscreen = $state(false);
   let hideOverlay = $derived(isFullscreen ? false : win ? !win.overlay : true);
@@ -1436,7 +1437,7 @@
 
   function updateMavLeg() {
     if (!L || !leafletMap) return;
-    const mav = get(mavLocationStore) as L.LatLng | null;
+    const mav = get(smoothLocationStore) as L.LatLng | null;
     const target = mav ? markers.get(get(missionIndexStore)) : undefined;
     if (!mav || !target) {
       mavLegLine?.remove();
@@ -1485,11 +1486,11 @@
   });
 
   $effect.pre(() => {
-    mavHeading = $mavHeadingStore;
+    mavHeading = $smoothHeadingStore;
     untrack(() => updateMAVMarker());
   });
   $effect.pre(() => {
-    void $mavLocationStore;
+    void $smoothLocationStore;
     untrack(() => updateMAVMarker());
   });
   $effect.pre(() => {

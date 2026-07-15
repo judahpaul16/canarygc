@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy, untrack } from 'svelte';
-  import { mavHeadingStore, mavLocationStore } from '../stores/mavlinkStore';
+  import { mavLocationStore } from '../stores/mavlinkStore';
+  import { smoothLocationStore, smoothHeadingStore } from '../lib/smooth-telemetry';
   import { mapZoomStore, lockViewStore, mapTypeStore, threeDMapStore, mapWindowStore, mapFullscreenStore, missionPathsStore } from '../stores/mapStore';
   import 'maplibre-gl/dist/maplibre-gl.css';
   import { mavIconStore } from '../stores/customizationStore';
@@ -520,8 +521,8 @@
   });
 
   $effect(() => {
-    const loc = $mavLocationStore;
-    const heading = $mavHeadingStore;
+    const loc = $smoothLocationStore;
+    const heading = $smoothHeadingStore;
     const icon = $mavIconStore;
     const m = map;
     untrack(() => {
