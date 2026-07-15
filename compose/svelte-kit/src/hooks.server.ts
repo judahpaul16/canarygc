@@ -1,4 +1,4 @@
-import { lucia } from "$lib/server/auth";
+import { lucia, secureCookie } from "$lib/server/auth";
 import { redirect } from "@sveltejs/kit";
 import type { Handle } from "@sveltejs/kit";
 // Booting the MAVLink module starts its link supervisor with the server, so
@@ -29,14 +29,16 @@ export const handle: Handle = async ({ event, resolve }) => {
 			const sessionCookie = lucia.createSessionCookie(session.id);
 			event.cookies.set(sessionCookie.name, sessionCookie.value, {
 				path: ".",
-				...sessionCookie.attributes
+				...sessionCookie.attributes,
+				secure: secureCookie(event)
 			});
 		}
 		if (!session) {
 			const sessionCookie = lucia.createBlankSessionCookie();
 			event.cookies.set(sessionCookie.name, sessionCookie.value, {
 				path: ".",
-				...sessionCookie.attributes
+				...sessionCookie.attributes,
+				secure: secureCookie(event)
 			});
 		}
 		event.locals.user = user;

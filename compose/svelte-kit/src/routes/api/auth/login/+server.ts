@@ -1,4 +1,4 @@
-import { lucia } from "$lib/server/auth";
+import { lucia, secureCookie } from "$lib/server/auth";
 import { verify } from "@node-rs/argon2";
 import { db } from "$lib/server/db";
 import type { RequestHandler } from '@sveltejs/kit';
@@ -87,7 +87,8 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
         const sessionCookie = lucia.createSessionCookie(session.id);
         event.cookies.set(sessionCookie.name, sessionCookie.value, {
             path: "/",
-            ...sessionCookie.attributes
+            ...sessionCookie.attributes,
+            secure: secureCookie(event)
         });
     } catch (e) {
         return new Response(JSON.stringify({ message: (e as Error).message }), {

@@ -1,4 +1,4 @@
-import { lucia } from "$lib/server/auth";
+import { lucia, secureCookie } from "$lib/server/auth";
 import type { RequestHandler } from '@sveltejs/kit';
 
 export const POST: RequestHandler = async (event): Promise<Response> => {
@@ -8,7 +8,8 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
     const sessionCookie = lucia.createBlankSessionCookie();
     event.cookies.set(sessionCookie.name, sessionCookie.value, {
         path: "/",
-        ...sessionCookie.attributes
+        ...sessionCookie.attributes,
+        secure: secureCookie(event)
     });
     return new Response(JSON.stringify({ message: "Logged out" }), {
         status: 200,
