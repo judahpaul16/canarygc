@@ -29,7 +29,13 @@ if [[ "$1" != "--install-only" && "$1" != "--simulation" ]]; then
     sudo ufw allow 5173
     sudo ufw allow 3000
     echo "y" | sudo ufw reload
-    
+
+    # Keep the WiFi control link responsive: disable power management on wlan0.
+    wlan_con=$(nmcli -t -f NAME,DEVICE connection show --active 2>/dev/null | awk -F: '$2=="wlan0"{print $1; exit}')
+    if [ -n "$wlan_con" ]; then
+        sudo nmcli connection modify "$wlan_con" 802-11-wireless.powersave 2
+    fi
+
     # Setup 4G networking if available
     modem=$(mmcli -L | grep -oP '/org/freedesktop/ModemManager1/Modem/\K[0-9]+')
     sudo mmcli -m $modem --simple-connect='apn=simbase,ip-type=ipv4v6' # Replace 'simbase' with your carrier's APN
