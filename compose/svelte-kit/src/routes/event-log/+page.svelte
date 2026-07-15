@@ -4,6 +4,7 @@
     import { sendMavlinkCommand } from '../../lib/mavlink-client';
     import { commandCatalog, paramHint, parseConsoleInput } from '../../lib/mav-console';
     import { mspCommandCatalog, mspParamHint, parseMspConsoleInput, describeMspResponse } from '../../lib/msp-console';
+    import { get } from 'svelte/store';
 
     // A Betaflight or INAV board speaks MSP, not MAVLink, so it carries no MAVLink
     // heartbeat; the console below sends MSP commands to it instead of MAVLink
@@ -11,6 +12,10 @@
     let fcIsMsp = $derived($fcProtocolStore === 'msp');
 
     const HEARTBEAT_FLASH_MS = 2000;
+    // The live MAVLink feed can push many messages a second; the log samples the
+    // store on this cadence so it stays readable and never blocks the main thread
+    // re-parsing and re-rendering every line on every message.
+    const LOG_RENDER_INTERVAL_MS = 150;
 
     let logContainer: HTMLElement | undefined = $state();
     let showTimeSync = $state(false);
@@ -19,7 +24,54 @@
     let showSysStatus = $state(false);
     let searchTerm = $state('');
 
-    let logs = $derived($mavlinkLogStore);
+    type LogTab = 'live' | 'flights';
+    let activeTab = $state<LogTab>('live');
+    let flightLogs = $state<{ name: string; size: number; modified: string }[]>([]);
+    let flightLogsLoading = $state(false);
+
+    async function loadFlightLogs() {
+        flightLogsLoading = true;
+        try {
+            const res = await fetch('/api/flight-log/list');
+            flightLogs = res.ok ? await res.json() : [];
+        } catch {
+            flightLogs = [];
+        }
+        flightLogsLoading = false;
+    }
+
+    function openTab(tab: LogTab) {
+        activeTab = tab;
+        if (tab === 'flights') loadFlightLogs();
+    }
+
+    function removeFlightLog(name: string) {
+        showModal({
+            title: 'Delete Flight Log',
+            content: `Delete the recording "${name}"? This cannot be undone.`,
+            confirmation: true,
+            onConfirm: async () => {
+                await fetch(`/api/flight-log/delete?name=${encodeURIComponent(name)}`, { method: 'DELETE' });
+                loadFlightLogs();
+            }
+        });
+    }
+
+    function formatBytes(n: number): string {
+        if (n < 1024) return `${n} B`;
+        if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+        return `${(n / 1024 / 1024).toFixed(1)} MB`;
+    }
+
+    let logs = $state<string[]>(get(mavlinkLogStore));
+    $effect(() => {
+        const sample = () => {
+            logs = get(mavlinkLogStore);
+        };
+        sample();
+        const id = setInterval(sample, LOG_RENDER_INTERVAL_MS);
+        return () => clearInterval(id);
+    });
     let systemState = $derived($mavStateStore);
     const heartbeatInfo = 'HEARTBEAT is a message sent by the autopilot to communicate its presence and status to the GCS.';
 
@@ -330,7 +382,11 @@
     >
         <div class="event-log rounded-2xl h-full flex flex-col p-5">
             <div class="log-head flex items-center justify-between gap-4 mb-4">
-                <h2 class="text-xl">{fcIsMsp ? 'Flight Controller Events' : 'MAVLink Events'}</h2>
+                <div class="log-tabs flex gap-2">
+                    <button class="tab-btn" class:active={activeTab === 'live'} onclick={() => openTab('live')}>{fcIsMsp ? 'Flight Controller Events' : 'MAVLink Events'}</button>
+                    <button class="tab-btn" class:active={activeTab === 'flights'} onclick={() => openTab('flights')}>Flight Logs</button>
+                </div>
+                {#if activeTab === 'live'}
                 <div class="filters flex gap-4 justify-center items-center">
                     <input type="text" class="form-input" placeholder="Search" bind:value={searchTerm}/>
                     <!-- These toggles hide high-rate MAVLink message types. A
@@ -359,6 +415,7 @@
                         </button>
                     </div>
                 </div>
+                {/if}
                 <div class="system-state w-fit flex">
                     System State:<p class="text-[#61cd89] ml-1 mr-2">{systemState}</p>
                     {#if !fcIsMsp}
@@ -373,6 +430,7 @@
                 </div>
             </div>
             {#snippet hl(text: string)}{#each segments(text) as seg, i (i)}{#if seg.hit}<mark>{seg.text}</mark>{:else}{seg.text}{/if}{/each}{/snippet}
+            {#if activeTab === 'live'}
             <div class="log-view" bind:this={logContainer}>
                 {#each visibleLogs as item (item.raw)}
                     <div class="log-line" style="--accent: {item.parsed.color}">
@@ -417,6 +475,41 @@
                 </div>
                 <div class="console-hint" class:console-error={consoleError !== ''}>{consoleError || hintLine}</div>
             </div>
+            {:else}
+            <div class="flight-logs">
+                <div class="fl-head">
+                    <p class="fl-desc">The station records each flight's live telemetry and event stream to a file for later review. A break in the link rolls over to a new recording, so each flight lands in its own file.</p>
+                    <button class="btn btn-primary bg-blue-400 hover:bg-blue-500 relative shrink-0" onclick={loadFlightLogs} aria-label="Refresh recordings">
+                        <i class="fas fa-sync"></i>
+                        <div class="tooltip">Refresh</div>
+                    </button>
+                </div>
+                {#if flightLogsLoading}
+                    <div class="log-empty">Loading recordings...</div>
+                {:else if flightLogs.length === 0}
+                    <div class="log-empty">No recordings yet. Files appear here once telemetry is flowing.</div>
+                {:else}
+                    <table class="fl-table">
+                        <thead>
+                            <tr><th>Recording</th><th>Size</th><th>Recorded</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                            {#each flightLogs as f (f.name)}
+                                <tr>
+                                    <td class="fl-name">{f.name}</td>
+                                    <td>{formatBytes(f.size)}</td>
+                                    <td>{new Date(f.modified).toLocaleString()}</td>
+                                    <td class="fl-actions">
+                                        <a class="fl-btn" href={`/api/flight-log/download?name=${encodeURIComponent(f.name)}`} download aria-label="Download {f.name}"><i class="fas fa-download"></i></a>
+                                        <button class="fl-btn fl-del" onclick={() => removeFlightLog(f.name)} aria-label="Delete {f.name}"><i class="fas fa-trash-alt"></i></button>
+                                    </td>
+                                </tr>
+                            {/each}
+                        </tbody>
+                    </table>
+                {/if}
+            </div>
+            {/if}
         </div>
     </div>
 </div>
@@ -427,7 +520,75 @@
       background-color: var(--secondaryColor);
     }
 
-    h2, span, label, .system-state {
+    .tab-btn {
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        color: var(--fontColor);
+        opacity: 0.55;
+        font-size: 1.1rem;
+        padding: 0.25rem 0.25rem 0.4rem;
+        cursor: pointer;
+    }
+    .tab-btn.active {
+        opacity: 1;
+        border-bottom-color: var(--appColor, #4a9eff);
+    }
+    .flight-logs {
+        flex: 1;
+        overflow: auto;
+        color: var(--fontColor);
+    }
+    .fl-head {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    .fl-desc {
+        font-size: 0.85rem;
+        opacity: 0.75;
+    }
+    .fl-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85rem;
+    }
+    .fl-table th, .fl-table td {
+        text-align: left;
+        padding: 0.5rem 0.75rem;
+        border-bottom: 1px solid rgba(127, 127, 127, 0.18);
+    }
+    .fl-table th {
+        opacity: 0.6;
+        font-weight: 500;
+    }
+    .fl-name {
+        font-family: ui-monospace, monospace;
+        word-break: break-all;
+    }
+    .fl-actions {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: flex-end;
+    }
+    .fl-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 0.5rem;
+        background: var(--appColor, #4a9eff);
+        color: #fff;
+        border: none;
+        cursor: pointer;
+    }
+    .fl-btn.fl-del {
+        background: #f87171;
+    }
+
+    span, label, .system-state {
         color: var(--fontColor);
     }
 

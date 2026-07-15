@@ -360,9 +360,9 @@
           const actions = JSON.parse(loadedMission.actions);
           missionPlanTitleStore.set(loadedMission.title);
           missionPlanActionsStore.set(actions);
-          // Re-sync the vehicle once it has identified itself, so the mission is
+          // Re-sync the vehicle once it has identified itself, so the plan is
           // resolved into wire-ready items for the connected autopilot. Sending
-          // the raw stored actions re-uploads unset commands the vehicle rejects
+          // the raw stored plan re-uploads unset commands the vehicle rejects
           // on every page load.
           for (let i = 0; i < 20 && get(mavModelStore) === 'UNKNOWN'; i++) {
             await new Promise((resolve) => setTimeout(resolve, 500));
@@ -683,6 +683,40 @@
     }
   };
 
+  // The ground station keeps its own black box: the live log is batched to a
+  // per-flight session file on the server. The client records because it holds
+  // the unified view of both MAVLink and MSP events, and a gap in the stream
+  // rolls over to a fresh session so each flight lands in its own file.
+  const FLIGHT_LOG_FLUSH_MS = 3000;
+  const FLIGHT_LOG_GAP_MS = 90000;
+  let flightLogId = '';
+  let flightLogAt = 0;
+  let flightLogBuffer: string[] = [];
+
+  function recordFlightLine(line: string) {
+    const now = Date.now();
+    if (!flightLogId || now - flightLogAt > FLIGHT_LOG_GAP_MS) {
+      flightLogId = `flight-${new Date(now).toISOString().replace(/[:.]/g, '-')}`;
+    }
+    flightLogAt = now;
+    flightLogBuffer.push(line.replace(/\n+$/, ''));
+  }
+
+  async function flushFlightLog() {
+    if (flightLogBuffer.length === 0 || !flightLogId) return;
+    const lines = flightLogBuffer;
+    flightLogBuffer = [];
+    try {
+      await fetch('/api/flight-log/append', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: flightLogId, lines })
+      });
+    } catch {
+      flightLogBuffer = lines.concat(flightLogBuffer);
+    }
+  }
+
   async function getLogs(text: string) {
     // truncate old logs to save memory
     logs = logs.slice(-LOG_HISTORY_LIMIT);
@@ -691,6 +725,7 @@
 
     logs = [...logs, text];
     mavlinkLogStore.set(logs);
+    recordFlightLine(text);
 
     // Find which message type this is and process it
     for (const [messageType, handler] of Object.entries(messageHandlers)) {
@@ -732,6 +767,7 @@
     window.addEventListener('scroll', refreshCookie);
 
     const statusCheckInterval = setInterval(checkOnlineStatus, HEARTBEAT_POLL_MS);
+    const flightLogInterval = setInterval(flushFlightLog, FLIGHT_LOG_FLUSH_MS);
 
     const teardownCallouts = initCallouts();
     const teardownAlerts = initAlerts();
@@ -740,6 +776,8 @@
       clearTimeout(startupTimer);
       clearInterval(checkCookieInterval);
       clearInterval(statusCheckInterval);
+      clearInterval(flightLogInterval);
+      void flushFlightLog();
       window.removeEventListener('mousemove', refreshCookie);
       window.removeEventListener('keydown', refreshCookie);
       window.removeEventListener('click', refreshCookie);

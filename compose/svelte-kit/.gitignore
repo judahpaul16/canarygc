@@ -24,3 +24,6 @@ vite.config.ts.timestamp-*
 # Playwright
 /test-results
 /playwright-report
+
+# Ground-station flight recordings (black box)
+flight-logs/
