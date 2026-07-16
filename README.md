@@ -91,6 +91,7 @@ The reference hardware build (Raspberry Pi 4B, Holybro S500 V2, camera, and 4G m
 * **Pre-flight safety checks.** Before a mission starts, every waypoint is validated against an altitude ceiling and floor, a home-relative geofence radius, and the fetched airspace, and each leg is checked for passing through a zone. Restricted airspace, or a waypoint past a limit, blocks the launch; controlled airspace prompts for confirmation.
 * **Audible callouts.** Spoken telemetry callouts (arm/disarm, mode changes, battery, GPS, failsafe, link loss) over the browser speech API, with an on/off toggle that defaults on.
 * **Email alerts.** Enable per-event alerts (arm/disarm, mode change, failsafe, low battery, GPS or link loss, and more); each fires an email with the live coordinates and telemetry.
+* **Lost-operator failsafe.** When the vehicle is armed and no operator has been connected for a configured window (set in Integrations), the station commands the recovery itself: return to launch for a copter, rover, or sub, and the synthesized autoland approach for a fixed wing.
 * **Color-coded event log.** The `/event-log` stream colors each MAVLink event by message type and severity, with per-message filters, search highlighting, and one-click log download.
 * **MAVLink command console.** A console under the event stream sends raw `MAV_CMD`s with autocomplete over the detected autopilot's command set, per-command parameter hints, input validation, and history; the resulting `COMMAND_ACK` shows up in the stream above it.
 * **Flight controller firmware.** A Firmware tab flashes all four stacks. It detects a connected Betaflight or INAV board over the MultiWii Serial Protocol (MSP), browses the live INAV, Betaflight, ArduPilot, and PX4 catalogs, and flashes: an INAV target hex or a Betaflight cloud build over USB DFU, an ArduPilot `.apj` or PX4 `.px4` over the autopilot's own serial bootloader (CRC-verified), or any Intel HEX. It can reboot a board into its DFU bootloader first, and each provider explains release versus target.
@@ -105,58 +106,37 @@ The reference hardware build (Raspberry Pi 4B, Holybro S500 V2, camera, and 4G m
 
 ---
 
-## ❓ Why Not Just Use Mission Planner, QGC, or APM Planner (with Tailscale)?
+## ❓ Why Not Just Run Mission Planner or QGC over a VPN?
 
-You might ask:
-“Why not just run an existing GCS (Mission Planner, QGC, APM Planner), and connect over Tailscale, either from a laptop, or running the GCS directly on the Raspberry Pi?”
+A GCS setup has two links: the GCS-to-autopilot link that carries the command
+and control traffic, and whatever carries the operator's view. A desktop GCS
+merges them. The laptop is the ground station, so the aircraft's C2 link
+stretches over the internet to wherever that laptop is, and every cell blip is
+a GCS-loss event for the autopilot. The laptop sleeps, roams, or crashes, and
+the aircraft just lost its ground station mid-mission.
 
-> **TL;DR:**
-> Traditional GCS software is designed for *desktop-based, short-range* semi-manual operation.
-> CanaryGC is purpose-built for *embedded, LTE-connected, persistent, remote UAV control*, where every watt and packet counts.
+CanaryGC splits the two links. The ground station rides the airframe and
+heartbeats the flight controller at 1 Hz over a short serial link, so the
+autopilot's GCS failsafe watches the companion computer, a failure genuinely
+worth reacting to. The internet hop carries only the operator's browser
+session, and losing it is handled at the layer that can see it:
 
-### Running GCS on a laptop (with Tailscale to the drone):
+* An autonomous mission continues onboard, unaffected, with the battery,
+  geofence, and EKF failsafes still active. The browser reconnects on its own
+  when coverage returns.
+* Manual control runs a deadman: the gamepad and companion-guidance streams
+  release the craft to the flight controller's own failsafe when the operator
+  goes quiet.
+* The lost-operator failsafe commands a recovery when nobody has been connected
+  for a configured window: return to launch for a copter, rover, or sub, and
+  the synthesized autoland approach for a fixed wing.
 
-1. **No Always-On Link**
-   The GCS must be running on your laptop. If your laptop disconnects (or sleeps), telemetry is lost.
-   CanaryGC runs *on the drone itself*, providing a persistent link, always available to any browser.
-
-2. **Laptop Required**
-   You must boot a laptop and connect Tailscale. CanaryGC works from any phone, tablet, or computer, no special software needed.
-
-3. **Tailscale Reliability**
-   VPN tunnels can be fragile over LTE or CG-NAT. CanaryGC supports public-IP SIMs or static tunnels with no VPN dependency.
-
----
-
-### Running GCS **directly on the Pi** (with Tailscale + VNC / RDP):
-
-1. **GUI Overhead**
-   Traditional GCS software (QGC, Mission Planner, APM Planner) is designed as a desktop GUI app (Qt/X11). Running it on the Pi requires installing and running a full desktop environment (X11 server, GPU stack, window manager). This adds CPU and memory load, increases system complexity, and draws more power, reducing flight time.
-
-2. **Remote Desktop Limitations**
-   Accessing the Pi’s GUI remotely (via Tailscale + VNC/RDP) requires constant encoding and streaming of the desktop image, adding CPU load, using bandwidth, and introducing lag. Over LTE links, this results in poor responsiveness and unreliable control, unacceptable for UAV operations.
-
-3. **Battery & Performance Impact**
-   The additional CPU/GPU usage from running a desktop GCS and streaming remote sessions directly reduces battery life. It also impacts system responsiveness for other critical tasks (LTE modem handling, telemetry routing, camera streaming).
-
-4. **Reliability Risks**
-   Desktop-based GCS apps are not designed for connection interruptions or lossy networks. VNC/RDP sessions can freeze or drop if connectivity is poor. Recovery often requires manual intervention, not ideal for autonomous or long-range flights.
-
-5. **Increased Maintenance**
-   Installing and maintaining a full desktop stack and GUI-based GCS on the Pi adds software complexity, increases boot time, and introduces more failure points. Field systems should be simple and robust.
-
----
-
-### Why CanaryGC’s Web-Native, Headless Design Is Better
-
-CanaryGC is designed for **headless, remote-first UAV deployments**:
-
-* It runs as a lightweight background service, no X11, no desktop.
-* The Pi can run a minimal OS, saving power and booting faster.
-* Users connect via a web browser, no VNC or desktop tunnels needed.
-* The Pi streams only telemetry and control data, not full-screen images, making it far more efficient over LTE links.
-* The interface gracefully handles network interruptions and reconnects.
-* It works from any device (phone, tablet, laptop) with a browser, ideal for field operations.
+Running the desktop GCS on the Pi itself (over VNC or RDP) avoids the laptop
+but streams a desktop image over LTE: a full X11 stack on the companion,
+constant frame encoding, and control through a laggy remote session. A headless
+web GCS streams telemetry and commands instead of pixels, runs with no desktop
+stack, and serves any browser, so the field device is whatever is in your
+pocket.
 
 ---
 

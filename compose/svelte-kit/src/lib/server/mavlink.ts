@@ -40,6 +40,23 @@ const MISSION_MAX_COUNT_TRIES = 3;
 // forged or wrong-key packets cannot fill the event log.
 const SIG_WARN_INTERVAL_MS = 5000;
 
+// Latest structured telemetry for server-side flows that run with no browser
+// attached: identity from HEARTBEAT, position from GLOBAL_POSITION_INT, home
+// from HOME_POSITION. Names use the MAVLink enum spellings, which the flight
+// mode helpers match.
+export interface VehicleSnapshot {
+    typeName: string;
+    modelName: string;
+    baseMode: number;
+    heartbeatAt: number;
+    position: { lat: number; lon: number; at: number } | null;
+    home: { lat: number; lon: number; at: number } | null;
+}
+
+function emptySnapshot(): VehicleSnapshot {
+    return { typeName: '', modelName: '', baseMode: 0, heartbeatAt: 0, position: null, home: null };
+}
+
 interface MavlinkState {
     port: SerialPort | Socket | null;
     reader: MavLinkPacketParser | null;
@@ -49,6 +66,7 @@ interface MavlinkState {
     logs: string[];
     newLogs: string[];
     latestHeartbeat: string;
+    snapshot: VehicleSnapshot;
     supervisor: ReturnType<typeof setInterval> | null;
     gcsBeat: ReturnType<typeof setInterval> | null;
     lastErrorMessage: string;
@@ -82,6 +100,7 @@ const state: MavlinkState = (g.__canarygcMavlink ??= {
     logs: [],
     newLogs: [],
     latestHeartbeat: '',
+    snapshot: emptySnapshot(),
     supervisor: null,
     gcsBeat: null,
     lastErrorMessage: '',
@@ -95,6 +114,9 @@ const state: MavlinkState = (g.__canarygcMavlink ??= {
     lastSigWarnAt: 0,
     missionUpload: null
 });
+// A dev-server reload reuses the cached state object, which may predate fields
+// added since; seed any missing ones.
+state.snapshot ??= emptySnapshot();
 
 function superviseLink(): void {
     if (state.suspended) return;
@@ -148,6 +170,16 @@ const newLogs = state.newLogs;
 
 export function latestHeartbeat(): string {
     return state.latestHeartbeat;
+}
+
+export function vehicleSnapshot(): VehicleSnapshot {
+    return { ...state.snapshot };
+}
+
+// Station-originated events enter the same log stream the vehicle telemetry
+// rides, so they reach the event log and every SSE consumer.
+export function pushStationLog(text: string): void {
+    pushLog(text);
 }
 
 // A firmware upload needs the autopilot's serial device to itself; suspend
@@ -356,6 +388,23 @@ function setupPacketReader(): void {
             // its heartbeat must never shadow the vehicle's.
             if (clazz.MSG_NAME === 'HEARTBEAT' && (sanitizedData as { type?: number }).type !== 6) {
                 state.latestHeartbeat = logEntry;
+                const hb = sanitizedData as { type: number; autopilot: number; baseMode: number };
+                state.snapshot.typeName = minimal.MavType[hb.type] ?? '';
+                state.snapshot.modelName = minimal.MavAutopilot[hb.autopilot] ?? '';
+                state.snapshot.baseMode = hb.baseMode ?? 0;
+                state.snapshot.heartbeatAt = Date.now();
+            }
+            if (clazz.MSG_NAME === 'GLOBAL_POSITION_INT') {
+                const p = sanitizedData as { lat: number; lon: number };
+                if (p.lat !== 0 || p.lon !== 0) {
+                    state.snapshot.position = { lat: p.lat / 1e7, lon: p.lon / 1e7, at: Date.now() };
+                }
+            }
+            if (clazz.MSG_NAME === 'HOME_POSITION') {
+                const h = sanitizedData as { latitude: number; longitude: number };
+                if (h.latitude !== 0 || h.longitude !== 0) {
+                    state.snapshot.home = { lat: h.latitude / 1e7, lon: h.longitude / 1e7, at: Date.now() };
+                }
             }
             // Drive the mission-upload handshake: the vehicle requests each item
             // in turn and acks the completed plan.

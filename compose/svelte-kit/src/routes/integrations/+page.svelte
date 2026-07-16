@@ -27,6 +27,7 @@
   let ai = $state<{ baseUrl: string; model: string; apiKey: string }>({ baseUrl: '', model: '', apiKey: '' });
   let aiKeySet = $state(false);
   let mavlink = $state<{ signingKey: string; signingLinkId: string; signingStrict: boolean }>({ signingKey: '', signingLinkId: '1', signingStrict: false });
+  let failsafe = $state<{ lostOperatorMinutes: string }>({ lostOperatorMinutes: '0' });
   let mavKeyVisible = $state(false);
   // Fills a strong random passphrase and reveals it so the operator can copy the
   // same value onto the autopilot; both ends must share it for signing to secure
@@ -68,7 +69,8 @@
     tiles: 'map tiles basemap maptiler key light dark satellite url preset xyz',
     camera: 'camera video feed source stream live rtsp rtmp srt usb v4l2 capture fpv betaflight mediamtx pi',
     ai: 'ai assistant pid tuning llm openai litellm ollama api key model base url gpt tune',
-    mavlink: 'mavlink signing security authentication key passphrase sign verify replay tamper link id strict command injection'
+    mavlink: 'mavlink signing security authentication key passphrase sign verify replay tamper link id strict command injection',
+    failsafe: 'failsafe lost operator link loss rtl return autoland recovery timeout minutes unattended'
   };
 
   function panelVisible(panel: keyof typeof PANEL_KEYWORDS): boolean {
@@ -129,6 +131,7 @@
       if (data.camera) camera = { kind: data.camera.kind ?? 'pi', url: data.camera.url ?? '', device: data.camera.device ?? '/dev/video0' };
       if (data.ai) { ai = { baseUrl: data.ai.baseUrl ?? '', model: data.ai.model ?? '', apiKey: '' }; aiKeySet = data.ai.keySet ?? false; }
       if (data.mavlink) { mavlink = { signingKey: '', signingLinkId: String(data.mavlink.signingLinkId ?? '1'), signingStrict: Boolean(data.mavlink.signingStrict) }; mavlinkKeySet = data.mavlink.signingKeySet ?? false; }
+      if (data.failsafe) failsafe = { lostOperatorMinutes: String(data.failsafe.lostOperatorMinutes ?? 0) };
     } catch {
       notify({ title: 'Load failed', content: 'Could not load integration settings.', type: 'warning' });
     } finally {
@@ -142,7 +145,7 @@
       const res = await fetch('/api/integrations', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email, smtp, openaip, altitudeAngel, maptiler, tiles: tileOverrides(), camera, ai, mavlink })
+        body: JSON.stringify({ email, smtp, openaip, altitudeAngel, maptiler, tiles: tileOverrides(), camera, ai, mavlink, failsafe: { lostOperatorMinutes: Number(failsafe.lostOperatorMinutes) || 0 } })
       });
       if (res.ok) {
         const data = await res.json();
@@ -223,7 +226,7 @@
     <div class="panel"><p class="muted">Loading...</p></div>
   {:else}
     <form onsubmit={(e) => { e.preventDefault(); save(); }}>
-      {#if filter.trim() && !panelVisible('operator') && !panelVisible('smtp') && !panelVisible('airspace') && !panelVisible('tiles') && !panelVisible('camera') && !panelVisible('ai') && !panelVisible('mavlink')}
+      {#if filter.trim() && !panelVisible('operator') && !panelVisible('smtp') && !panelVisible('airspace') && !panelVisible('tiles') && !panelVisible('camera') && !panelVisible('ai') && !panelVisible('mavlink') && !panelVisible('failsafe')}
         <div class="panel"><p class="muted">No settings match "{filter}".</p></div>
       {/if}
       <div class="settings-grid">
@@ -410,6 +413,23 @@
         {#if mavlinkKeySet}
           <button type="button" class="mini" onclick={disableSigning} disabled={saving}>Turn off signing</button>
         {/if}
+      </section>
+      {/if}
+
+      {#if panelVisible('failsafe')}
+      <section class="panel">
+        <div class="panel-head">
+          <span class="icon-chip"><i class="fas fa-life-ring"></i></span>
+          <div>
+            <h2>Lost-operator failsafe</h2>
+            <p class="muted">When the vehicle is armed and no operator has been connected for the window below, the station commands the recovery itself: return to launch for a copter, rover, or sub, and the autoland approach for a fixed wing.</p>
+          </div>
+        </div>
+        <div class="field">
+          <label for="fs-minutes">Minutes without an operator</label>
+          <input id="fs-minutes" type="number" min="0" max="720" step="1" bind:value={failsafe.lostOperatorMinutes} autocomplete="off" placeholder="0" />
+          <p class="hint">0 turns the failsafe off. The window starts when the last connected page closes and resets the moment one reconnects.</p>
+        </div>
       </section>
       {/if}
       </div>

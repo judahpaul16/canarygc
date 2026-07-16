@@ -1,5 +1,6 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { subscribeLogs, mavlinkConfigured, latestHeartbeat } from '$lib/server/mavlink';
+import { operatorStreamOpened, operatorStreamClosed } from '$lib/server/operator-failsafe';
 
 // Server-Sent Events telemetry stream. Each MAVLink log line is pushed the
 // instant it is parsed, so the client renders a fresh fix rather than draining
@@ -11,6 +12,9 @@ export const GET: RequestHandler = async () => {
 
     const stream = new ReadableStream({
         start(controller) {
+            // Each open telemetry stream marks an operator as present; the
+            // lost-operator failsafe watches for the last one closing.
+            operatorStreamOpened();
             const encoder = new TextEncoder();
             const send = (obj: unknown) => {
                 try {
@@ -39,6 +43,7 @@ export const GET: RequestHandler = async () => {
             }, 15000);
         },
         cancel() {
+            operatorStreamClosed();
             unsubscribe?.();
             if (keepalive) clearInterval(keepalive);
         }

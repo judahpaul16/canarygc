@@ -3,7 +3,9 @@ import { redirect } from "@sveltejs/kit";
 import type { Handle } from "@sveltejs/kit";
 // Booting the MAVLink module starts its link supervisor with the server, so
 // the station holds the autopilot connection without a browser session open.
+// The operator-failsafe module starts its lost-operator watchdog the same way.
 import "$lib/server/mavlink";
+import "$lib/server/operator-failsafe";
 import { initCameraSource } from "$lib/server/mediamtx";
 
 const PUBLIC_PAGES = new Set(["/", "/login", "/register", "/version", "/forgot-password", "/reset-password"]);

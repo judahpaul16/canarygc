@@ -57,6 +57,9 @@ export const GET: RequestHandler = async (event) => {
             signingKeySet: Boolean((await getSetting('mavlink.signingKey')) ?? process.env.MAVLINK_SIGNING_KEY),
             signingLinkId: (await getSetting('mavlink.signingLinkId')) ?? '1',
             signingStrict: (await getSetting('mavlink.signingStrict')) === 'true'
+        },
+        failsafe: {
+            lostOperatorMinutes: Number((await getSetting('failsafe.lostOperatorMinutes')) ?? 0)
         }
     });
 };
@@ -135,6 +138,12 @@ export const POST: RequestHandler = async (event) => {
     if (mavlinkChanged) await refreshSigningConfig();
     // Push the new key to the connected vehicle so both ends share it from one save.
     const signingPushed = signingKeySet ? await provisionVehicleSigning() : null;
+
+    const failsafe = body.failsafe ?? {};
+    if (failsafe.lostOperatorMinutes !== undefined) {
+        const minutes = Math.max(0, Math.round(Number(failsafe.lostOperatorMinutes) || 0));
+        await setSetting('failsafe.lostOperatorMinutes', String(minutes));
+    }
 
     return json({ message: 'Saved', cameraApplied, signingPushed });
 };
