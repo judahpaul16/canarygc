@@ -47,6 +47,13 @@
   import { notify, type NotificationType } from '../lib/overlays';
   import { callout, initCallouts, stopCallouts } from '../lib/callouts';
   import { initAlerts } from '../lib/alerts';
+  import {
+    loadDismissedNotams,
+    notamDetailLine,
+    recordDismissedNotam,
+    unseenNotams,
+    type Notam
+  } from '../lib/notams';
   import { decodeMode, isArmed, isPX4 } from '../lib/flight-modes';
   import { normalizeMission } from '../lib/mission-commands';
   import { decodeParameterValue, requestParameters, sendMavlinkCommand } from '../lib/mavlink-client';
@@ -723,6 +730,43 @@
     }
   }
 
+  // Temporary flight restrictions over the operating area, shown as persistent
+  // notices that stay until dismissed. A dismissed notice is remembered so it
+  // never reappears, and each id shows at most one live toast.
+  const NOTAM_CHECK_MS = 5 * 60 * 1000;
+  let notamDismissed = new Set<string>();
+  const notamShown = new Set<string>();
+
+  async function checkNotams() {
+    if (!loggedIn || isNavHidden) return;
+    const loc = get(mavLocationStore);
+    if (!loc) return;
+    let payload: { notams?: Notam[] };
+    try {
+      const res = await fetch(`/api/notams?lat=${loc.lat}&lon=${loc.lng}`);
+      if (!res.ok) return;
+      payload = await res.json();
+    } catch {
+      return;
+    }
+    for (const n of unseenNotams(payload.notams ?? [], notamDismissed)) {
+      if (notamShown.has(n.id)) continue;
+      notamShown.add(n.id);
+      const detail = notamDetailLine(n);
+      notify({
+        title: `Flight restriction ${n.id}`,
+        content: detail ? `${n.type}: ${n.description}<br>${detail}` : `${n.type}: ${n.description}`,
+        type: 'warning',
+        persistent: true,
+        link: { href: n.link, label: 'FAA detail' },
+        onDismiss: () => {
+          notamDismissed.add(n.id);
+          recordDismissedNotam(n.id);
+        }
+      });
+    }
+  }
+
   async function getLogs(text: string) {
     // truncate old logs to save memory
     logs = logs.slice(-LOG_HISTORY_LIMIT);
@@ -774,6 +818,9 @@
 
     const statusCheckInterval = setInterval(checkOnlineStatus, HEARTBEAT_POLL_MS);
     const flightLogInterval = setInterval(flushFlightLog, FLIGHT_LOG_FLUSH_MS);
+    notamDismissed = loadDismissedNotams();
+    const notamInterval = setInterval(() => void checkNotams(), NOTAM_CHECK_MS);
+    void checkNotams();
 
     const teardownCallouts = initCallouts();
     const teardownAlerts = initAlerts();
@@ -783,6 +830,7 @@
       clearInterval(checkCookieInterval);
       clearInterval(statusCheckInterval);
       clearInterval(flightLogInterval);
+      clearInterval(notamInterval);
       void flushFlightLog();
       window.removeEventListener('mousemove', refreshCookie);
       window.removeEventListener('keydown', refreshCookie);

@@ -11,9 +11,11 @@
     type: NotificationType;
     duration: number;
     persistent: boolean;
+    onDismiss?: () => void;
+    link?: { href: string; label: string };
   }
 
-  let { id, title, content, type, duration, persistent }: Props = $props();
+  let { id, title, content, type, duration, persistent, link }: Props = $props();
 
   const ICONS: Record<NotificationType, string> = {
     info: 'fa-circle-info',
@@ -80,6 +82,9 @@
       <div class="toast-title">{title}</div>
       <!-- eslint-disable-next-line svelte/no-at-html-tags -- safeContent is escaped above; only <br> survives -->
       <div class="toast-content">{@html safeContent}</div>
+      {#if link}
+        <a class="toast-link" href={link.href} target="_blank" rel="noopener noreferrer">{link.label}</a>
+      {/if}
     </div>
     <button class="toast-close" onclick={() => dismissToast(id)} aria-label="Dismiss">&times;</button>
   </div>
@@ -142,6 +147,14 @@
     margin-top: 0.15rem;
     line-height: 1.35;
     overflow-wrap: anywhere;
+  }
+  .toast-link {
+    display: inline-block;
+    margin-top: 0.3rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--primaryColor);
+    text-decoration: underline;
   }
   .toast-close {
     flex-shrink: 0;

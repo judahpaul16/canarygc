@@ -39,6 +39,10 @@ export interface NotifyOptions {
   // A persistent toast has no auto-dismiss timer; the caller holds the
   // returned close() and calls it when the action it narrates completes.
   persistent?: boolean;
+  // Runs when the toast is dismissed, by the close button or the caller.
+  onDismiss?: () => void;
+  // Rendered as a trusted anchor below the content; the caller sets the href.
+  link?: { href: string; label: string };
 }
 
 const NOTIFY_DURATION_MS = 6_000;
@@ -113,7 +117,9 @@ export function notify(options: NotifyOptions): () => void {
     content: options.content,
     type: options.type ?? 'info',
     duration,
-    persistent
+    persistent,
+    onDismiss: options.onDismiss,
+    link: options.link
   });
   return () => dismissToast(id);
 }

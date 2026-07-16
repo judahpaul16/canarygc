@@ -9,6 +9,10 @@ export interface Toast {
   // Milliseconds before auto-dismiss; 0 means the toast stays until closed.
   duration: number;
   persistent: boolean;
+  // Runs when the toast is dismissed, by the close button or the caller.
+  onDismiss?: () => void;
+  // Rendered as a trusted anchor below the content; the caller sets the href.
+  link?: { href: string; label: string };
 }
 
 // At most this many toasts stack at once; the oldest auto-dismissing one is
@@ -34,5 +38,15 @@ export function pushToast(toast: Omit<Toast, 'id'>): number {
 }
 
 export function dismissToast(id: number): void {
-  toastStore.update((list) => list.filter((t) => t.id !== id));
+  toastStore.update((list) => {
+    const toast = list.find((t) => t.id === id);
+    if (toast?.onDismiss) {
+      try {
+        toast.onDismiss();
+      } catch {
+        // A dismissal hook must never block removing the toast.
+      }
+    }
+    return list.filter((t) => t.id !== id);
+  });
 }
