@@ -12,7 +12,7 @@ import { parseTfrDetail, tfrLink, type Notam, type TfrDetail } from '$lib/notams
 const TFR_URL = 'https://tfr.faa.gov/tfrapi/exportTfrList';
 const CENSUS_URL = 'https://geocoding.geo.census.gov/geocoder/geographies/coordinates';
 
-const TFR_TTL_MS = 15 * 60 * 1000;
+const TFR_TTL_MS = 5 * 60 * 1000;
 const STATE_TTL_MS = 24 * 60 * 60 * 1000;
 const DETAIL_TTL_MS = 6 * 60 * 60 * 1000;
 // A busy state rarely holds more than a handful of active TFRs; the cap bounds
