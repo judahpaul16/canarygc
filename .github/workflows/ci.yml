@@ -48,12 +48,21 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_PAT || secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          # Baseline is the newest tag that already has a release, so a commit
-          # whose release creation failed on an earlier run is reprocessed and
-          # its release backfilled (its tag push having already succeeded).
+          # One paginated list, not a per-tag view, so a transient 5xx on a
+          # single lookup cannot misread the baseline as older than it is.
+          RELEASED=$(mktemp)
+          n=0
+          until gh api --paginate "repos/${GITHUB_REPOSITORY}/releases" --jq '.[].tag_name' > "$RELEASED"; do
+            n=$((n + 1))
+            if [ "$n" -ge 5 ]; then echo "release list failed after $n attempts" >&2; exit 1; fi
+            echo "release list failed, retry $n in ${n}0s" >&2
+            sleep "${n}0"
+          done
+          has_release() { grep -qxF "$1" "$RELEASED"; }
+
           LATEST_TAG=v0.0.0
           for t in $(git tag --list 'v[0-9]*' --sort=-v:refname); do
-            if gh release view "$t" >/dev/null 2>&1; then LATEST_TAG="$t"; break; fi
+            if has_release "$t"; then LATEST_TAG="$t"; break; fi
           done
 
           ACCUM=${LATEST_TAG#v}
@@ -88,12 +97,13 @@ jobs:
               git push origin "$V"
             fi
 
-            if ! gh release view "$V" >/dev/null 2>&1; then
+            if ! has_release "$V"; then
               n=0
-              until gh release create "$V" --target "$SHA" --title "$V" --notes "- ${SHA:0:7} ${SUBJECT}"; do
+              until OUT=$(gh release create "$V" --target "$SHA" --title "$V" --notes "- ${SHA:0:7} ${SUBJECT}" 2>&1); do
+                if printf '%s' "$OUT" | grep -qi "already exists"; then break; fi
                 n=$((n + 1))
-                if [ "$n" -ge 5 ]; then echo "release create $V failed after $n attempts" >&2; exit 1; fi
-                echo "release create $V failed, retry $n in ${n}0s" >&2
+                if [ "$n" -ge 5 ]; then echo "release create $V failed after $n attempts: $OUT" >&2; exit 1; fi
+                echo "release create $V failed, retry $n in ${n}0s: $OUT" >&2
                 sleep "${n}0"
               done
             fi
