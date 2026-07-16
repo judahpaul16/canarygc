@@ -6,7 +6,7 @@
 
 # 🚁 Canary Ground Control 📡
 
-[![CI/CD](https://github.com/judahpaul16/canarygc/actions/workflows/ci.yml/badge.svg)](https://github.com/judahpaul16/canarygc/actions/workflows/ci.yml)
+[![CI/CD](https://github.com/judahpaul16/canarygc/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/judahpaul16/canarygc/actions/workflows/ci.yml?query=branch%3Amain)
 ![Raspberry Pi Version](https://img.shields.io/badge/Raspberry_Pi-3B%20%2F%204B%20%2F%205%20%2F%20CM4%20%2F%20CM5-red?style=flat-square&logo=raspberry-pi)
 ![OS](https://img.shields.io/badge/OS-64--bit%20Linux%20%28arm64%20%2F%20x86__64%29-blue?style=flat-square&logo=linux)
 ![Docker Compose Version](https://img.shields.io/badge/Docker%20Compose-v2.27.1-blue?style=flat-square&logo=docker)
@@ -269,6 +269,12 @@ The app reads its configuration from environment variables (see the root `.env.e
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | SMTP for password-reset and alert email. |
 
 The airspace keys and SMTP settings are also editable in-app under **Integrations**, which stores them in the database and takes precedence over the environment.
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers the development setup, the CI gates, the commit markers that drive versioning, and the branch workflow.
 
 ---
 
