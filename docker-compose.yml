@@ -6,6 +6,17 @@
 x-app-env: &app-env
   OPENAIP_API_KEY: ${OPENAIP_API_KEY:-}
   VITE_ALTITUDE_ANGEL_API_KEY: ${VITE_ALTITUDE_ANGEL_API_KEY:-}
+  MAPTILER_KEY: ${MAPTILER_KEY:-}
+  AI_API_KEY: ${AI_API_KEY:-}
+  AI_BASE_URL: ${AI_BASE_URL:-}
+  AI_MODEL: ${AI_MODEL:-}
+  MAVLINK_SIGNING_KEY: ${MAVLINK_SIGNING_KEY:-}
+  SMTP_HOST: ${SMTP_HOST:-}
+  SMTP_PORT: ${SMTP_PORT:-}
+  SMTP_SECURE: ${SMTP_SECURE:-}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASS: ${SMTP_PASS:-}
+  MAIL_FROM: ${MAIL_FROM:-}
   MSP_SERIAL_PATH: ${MSP_SERIAL_PATH:-}
   MSP_BAUD: ${MSP_BAUD:-115200}
   MSP_TCP_HOST: ${MSP_TCP_HOST:-}
@@ -77,6 +88,8 @@ services:
     environment:
       <<: *app-env
       DATABASE_PATH: ${DATABASE_PATH:-/app/src/data.db}
+      # Inside the data volume, so flight logs survive container recreates.
+      FLIGHT_LOG_PATH: ${FLIGHT_LOG_PATH:-/app/src/flight-logs}
       NODE_ENV: production
       MEDIAMTX_API_URL: ${MEDIAMTX_API_URL:-http://host.docker.internal:9997}
     extra_hosts:

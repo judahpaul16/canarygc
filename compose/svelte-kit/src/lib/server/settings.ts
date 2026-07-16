@@ -30,15 +30,16 @@ export interface SmtpConfig {
 }
 
 // SMTP settings come from the integrations table first, then the environment as
-// a fallback, matching the host/port/secure/user/pass/from shape.
+// a fallback, matching the host/port/secure/user/pass/from shape. An empty
+// value at either level means unset, so it falls through to the next default.
 export async function getSmtpConfig(): Promise<SmtpConfig | null> {
   const s = await getSettings('smtp.');
-  const host = s['smtp.host'] ?? process.env.SMTP_HOST ?? '';
-  const user = s['smtp.user'] ?? process.env.SMTP_USER ?? '';
-  const pass = s['smtp.pass'] ?? process.env.SMTP_PASS ?? '';
-  const port = Number(s['smtp.port'] ?? process.env.SMTP_PORT ?? 587);
-  const from = s['smtp.from'] ?? process.env.MAIL_FROM ?? user;
-  const secureRaw = s['smtp.secure'] ?? process.env.SMTP_SECURE ?? (port === 465 ? 'true' : 'false');
+  const host = s['smtp.host'] || process.env.SMTP_HOST || '';
+  const user = s['smtp.user'] || process.env.SMTP_USER || '';
+  const pass = s['smtp.pass'] || process.env.SMTP_PASS || '';
+  const port = Number(s['smtp.port'] || process.env.SMTP_PORT || 587);
+  const from = s['smtp.from'] || process.env.MAIL_FROM || user;
+  const secureRaw = s['smtp.secure'] || process.env.SMTP_SECURE || (port === 465 ? 'true' : 'false');
   if (!host || !user || !pass) return null;
   return { host, port, secure: secureRaw === 'true', user, pass, from };
 }

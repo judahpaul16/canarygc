@@ -23,11 +23,13 @@ export const POST: RequestHandler = async (event) => {
 		);
 	}
 
-	const baseUrl = ((await getSetting('ai.baseUrl')) ?? process.env.AI_BASE_URL ?? 'https://api.openai.com/v1').replace(
+	// An empty setting or environment value means unset, so it falls through to
+	// the default rather than producing a blank endpoint or model.
+	const baseUrl = ((await getSetting('ai.baseUrl')) || process.env.AI_BASE_URL || 'https://api.openai.com/v1').replace(
 		/\/+$/,
 		''
 	);
-	const model = (await getSetting('ai.model')) ?? process.env.AI_MODEL ?? 'gpt-4o-mini';
+	const model = (await getSetting('ai.model')) || process.env.AI_MODEL || 'gpt-4o-mini';
 
 	const context = (await event.request.json()) as TuningContext;
 	if (!context || !Array.isArray(context.pids) || context.pids.length === 0) {
