@@ -370,6 +370,10 @@ function setupPacketReader(): void {
         if (firstPacket) {
             state.lastErrorMessage = '';
             pushLog('MAVLink connection initialized');
+            // A real board streams nothing until asked (its stream-rate
+            // parameters commonly sit at zero), so every consumed message gets
+            // an explicit interval as soon as the link produces traffic.
+            setTimeout(() => requestTelemetryStreams().catch(() => {}), 1000);
         }
         state.online = true;
         state.lastPacketAt = Date.now();
@@ -437,6 +441,25 @@ function handlePortError(err: Error): void {
     if (err.message !== state.lastErrorMessage) {
         state.lastErrorMessage = err.message;
         pushLog(`MAVLink connection error: ${err.message}`);
+    }
+}
+
+// The telemetry the app consumes, streamed at fixed rates so the link behaves
+// the same on a serial autopilot as on a SITL: attitude drives the HUD and the
+// marker, position the map, and the rest the dashboard and alerts.
+const TELEMETRY_INTERVALS: [messageId: number, intervalUs: number][] = [
+    [common.Attitude.MSG_ID, 100_000],
+    [common.GlobalPositionInt.MSG_ID, 200_000],
+    [common.GpsRawInt.MSG_ID, 1_000_000],
+    [common.BatteryStatus.MSG_ID, 1_000_000],
+    [common.Vibration.MSG_ID, 1_000_000],
+    [common.MissionCurrent.MSG_ID, 1_000_000],
+    [common.HomePosition.MSG_ID, 2_000_000]
+];
+
+async function requestTelemetryStreams(): Promise<void> {
+    for (const [messageId, intervalUs] of TELEMETRY_INTERVALS) {
+        await sendMavlinkCommand('SET_MESSAGE_INTERVAL', [messageId, intervalUs], true);
     }
 }
 
