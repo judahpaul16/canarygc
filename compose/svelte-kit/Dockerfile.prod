@@ -1,5 +1,11 @@
 FROM node:26-alpine AS build
 
+# Baked into the prerendered /version page; a build without them reports dev.
+ARG CANARYGC_VERSION
+ARG GITHUB_SHA
+ENV CANARYGC_VERSION=$CANARYGC_VERSION
+ENV GITHUB_SHA=$GITHUB_SHA
+
 WORKDIR /app
 
 COPY package*.json ./
