@@ -82,6 +82,8 @@ jobs:
             SHA=${line%% *}
             SUBJECT=${line#* }
 
+            if echo "$SUBJECT" | grep -qiE '\[(skip ci|ci skip)\]'; then continue; fi
+
             if echo "$SUBJECT" | grep -qi "\[major update\]"; then
               MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0
             elif echo "$SUBJECT" | grep -qi "\[minor update\]"; then
