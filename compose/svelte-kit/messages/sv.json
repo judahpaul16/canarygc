@@ -1,0 +1,20 @@
+{
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "common_confirm": "Bekräfta",
+  "common_cancel": "Avbryt",
+  "nav_dashboard": "Instrumentpanel",
+  "nav_mission_planner": "Uppdragsplanerare",
+  "nav_event_log": "Händelselogg",
+  "nav_parameters": "Fordonsparametrar",
+  "nav_calibration": "Sensorkalibrering",
+  "nav_firmware": "Firmware",
+  "nav_integrations": "Integrationer",
+  "nav_alerts": "Varningar",
+  "nav_logout": "Logga ut",
+  "nav_login": "Logga in",
+  "nav_dark_mode": "Växla mörkt läge",
+  "nav_audio_callouts": "Växla ljudmeddelanden",
+  "nav_language": "Språk",
+  "nav_audio_on": "Ljudmeddelanden på",
+  "nav_audio_off": "Ljudmeddelanden av"
+}

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "common_confirm": "Bestätigen",
+  "common_cancel": "Abbrechen",
+  "nav_dashboard": "Dashboard",
+  "nav_mission_planner": "Missionsplaner",
+  "nav_event_log": "Ereignisprotokoll",
+  "nav_parameters": "Fahrzeugparameter",
+  "nav_calibration": "Sensorkalibrierung",
+  "nav_firmware": "Firmware",
+  "nav_integrations": "Integrationen",
+  "nav_alerts": "Warnungen",
+  "nav_logout": "Abmelden",
+  "nav_login": "Anmelden",
+  "nav_dark_mode": "Dunkelmodus umschalten",
+  "nav_audio_callouts": "Audioansagen umschalten",
+  "nav_language": "Sprache",
+  "nav_audio_on": "Audioansagen ein",
+  "nav_audio_off": "Audioansagen aus"
+}

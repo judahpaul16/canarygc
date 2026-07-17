@@ -45,6 +45,7 @@
   import GuidancePanel from '../components/GuidancePanel.svelte';
   import Map from '../components/Map.svelte';
   import { locales, getLocale, setLocale, type Locale } from '$lib/paraglide/runtime';
+  import { m } from '$lib/paraglide/messages';
   import { notify, type NotificationType } from '../lib/overlays';
   import { callout, initCallouts, stopCallouts } from '../lib/callouts';
   import { initAlerts } from '../lib/alerts';
@@ -936,45 +937,45 @@
         {#if loggedIn}
         <a href="/dashboard" class="nav-button mb-4 {currentPath === '/dashboard' ? 'active' : ''}">
           <i class="nav-icon fas fa-tachometer-alt"></i>
-          <div class="tooltip text-white">Dashboard</div>
+          <div class="tooltip text-white">{m.nav_dashboard()}</div>
         </a>
         <a href="/mission-planner" class="nav-button mb-4 {currentPath === '/mission-planner' ? 'active' : ''}">
           <i class="nav-icon fas fa-route"></i>
-          <div class="tooltip text-white">Mission Planner</div>
+          <div class="tooltip text-white">{m.nav_mission_planner()}</div>
         </a>
         <a href="/event-log" class="nav-button mb-4 {currentPath === '/event-log' ? 'active' : ''}">
           <i class="nav-icon fas fa-bars-staggered"></i>
-          <div class="tooltip text-white">Event Log</div>
+          <div class="tooltip text-white">{m.nav_event_log()}</div>
         </a>
         <a href="/parameters" class="nav-button mb-4 {currentPath === '/parameters' ? 'active' : ''}">
           <i class="nav-icon fas fa-cog"></i>
-          <div class="tooltip text-white">Vehicle Parameters</div>
+          <div class="tooltip text-white">{m.nav_parameters()}</div>
         </a>
         <a href="/calibration" class="nav-button mb-4 {currentPath === '/calibration' ? 'active' : ''}">
           <i class="nav-icon fas fa-crosshairs"></i>
-          <div class="tooltip text-white">Sensor Calibration</div>
+          <div class="tooltip text-white">{m.nav_calibration()}</div>
         </a>
         <a href="/firmware" class="nav-button mb-4 {currentPath === '/firmware' ? 'active' : ''}">
           <i class="nav-icon fas fa-microchip"></i>
-          <div class="tooltip text-white">Firmware</div>
+          <div class="tooltip text-white">{m.nav_firmware()}</div>
         </a>
         <a href="/integrations" class="nav-button mb-4 {currentPath === '/integrations' ? 'active' : ''}">
           <i class="nav-icon fas fa-plug"></i>
-          <div class="tooltip text-white">Integrations</div>
+          <div class="tooltip text-white">{m.nav_integrations()}</div>
         </a>
         <a href="/alerts" class="nav-button mb-4 {currentPath === '/alerts' ? 'active' : ''}">
           <i class="nav-icon fas fa-bell"></i>
-          <div class="tooltip text-white">Alerts</div>
+          <div class="tooltip text-white">{m.nav_alerts()}</div>
         </a>
         <div class="separator h-[2px] w-[80%] rounded-2xl mb-4"></div>
         <a href="/login" onclick={(e) => { e.preventDefault(); handleLogout(); }} class="nav-button mb-4">
           <i class="nav-icon fas fa-sign-out-alt"></i>
-          <div class="tooltip text-white">Logout</div>
+          <div class="tooltip text-white">{m.nav_logout()}</div>
         </a>
         {:else}
         <a href="/login" class="nav-button mb-4 {currentPath === '/login' ? 'active' : ''}">
           <i class="nav-icon fas fa-sign-in-alt"></i>
-          <div class="tooltip text-white">Login</div>
+          <div class="tooltip text-white">{m.nav_login()}</div>
         </a>
         {/if}
       </div>
@@ -982,16 +983,16 @@
         <div class="separator h-[2px] w-[80%] mb-1 rounded-2xl"></div>
         <button class="nav-button" onclick={toggleAudioCallouts}>
           <i class="nav-icon fas {$audioCalloutsStore ? 'fa-volume-up' : 'fa-volume-mute'}"></i>
-          <div class="tooltip text-white">Toggle Audio Callouts</div>
+          <div class="tooltip text-white">{m.nav_audio_callouts()}</div>
         </button>
         <button class="nav-button" aria-label="Dark Mode" onclick={toggleDarkMode}>
           <i class="nav-icon fas {darkMode ? 'fa-sun' : 'fa-moon'}"></i>
-          <div class="tooltip text-white">Toggle Dark Mode</div>
+          <div class="tooltip text-white">{m.nav_dark_mode()}</div>
         </button>
         <div class="lang-picker">
           <button class="nav-button" aria-label="Language" aria-haspopup="listbox" aria-expanded={langOpen} onclick={() => (langOpen = !langOpen)}>
             <i class="nav-icon fas fa-globe"></i>
-            <div class="tooltip text-white">Language</div>
+            <div class="tooltip text-white">{m.nav_language()}</div>
           </button>
           {#if langOpen}
             <ul class="lang-menu" role="listbox">
@@ -1022,35 +1023,35 @@
       <div class={`mobile-nav-links ${isNavOpen ? 'block' : 'hidden'} flex flex-col items-center mt-4`}>
         {#if loggedIn}
           <a href="/dashboard" onclick={(e) => { e.preventDefault(); handleNavigation('/dashboard'); }} class="nav-button mb-4 {currentPath === '/dashboard' ? 'active' : ''}">
-            <i class="nav-icon fas fa-tachometer-alt"></i>&nbsp;&nbsp;Dashboard
+            <i class="nav-icon fas fa-tachometer-alt"></i>&nbsp;&nbsp;{m.nav_dashboard()}
           </a>
           <a href="/mission-planner" onclick={(e) => { e.preventDefault(); handleNavigation('/mission-planner'); }} class="nav-button mb-4 {currentPath === '/mission-planner' ? 'active' : ''}">
-            <i class="nav-icon fas fa-route"></i>&nbsp;&nbsp;Mission Planner
+            <i class="nav-icon fas fa-route"></i>&nbsp;&nbsp;{m.nav_mission_planner()}
           </a>
           <a href="/event-log" onclick={(e) => { e.preventDefault(); handleNavigation('/event-log'); }} class="nav-button mb-4 {currentPath === '/event-log' ? 'active' : ''}">
-            <i class="nav-icon fas fa-bars-staggered"></i>&nbsp;&nbsp;Event Log
+            <i class="nav-icon fas fa-bars-staggered"></i>&nbsp;&nbsp;{m.nav_event_log()}
           </a>
           <a href="/parameters" onclick={(e) => { e.preventDefault(); handleNavigation('/parameters'); }} class="nav-button mb-4 {currentPath === '/parameters' ? 'active' : ''}">
-            <i class="nav-icon fas fa-cog"></i>&nbsp;&nbsp;Vehicle Parameters
+            <i class="nav-icon fas fa-cog"></i>&nbsp;&nbsp;{m.nav_parameters()}
           </a>
           <a href="/calibration" onclick={(e) => { e.preventDefault(); handleNavigation('/calibration'); }} class="nav-button mb-4 {currentPath === '/calibration' ? 'active' : ''}">
-            <i class="nav-icon fas fa-crosshairs"></i>&nbsp;&nbsp;Sensor Calibration
+            <i class="nav-icon fas fa-crosshairs"></i>&nbsp;&nbsp;{m.nav_calibration()}
           </a>
           <a href="/firmware" onclick={(e) => { e.preventDefault(); handleNavigation('/firmware'); }} class="nav-button mb-4 {currentPath === '/firmware' ? 'active' : ''}">
-            <i class="nav-icon fas fa-microchip"></i>&nbsp;&nbsp;Firmware
+            <i class="nav-icon fas fa-microchip"></i>&nbsp;&nbsp;{m.nav_firmware()}
           </a>
           <a href="/integrations" onclick={(e) => { e.preventDefault(); handleNavigation('/integrations'); }} class="nav-button mb-4 {currentPath === '/integrations' ? 'active' : ''}">
-            <i class="nav-icon fas fa-plug"></i>&nbsp;&nbsp;Integrations
+            <i class="nav-icon fas fa-plug"></i>&nbsp;&nbsp;{m.nav_integrations()}
           </a>
           <a href="/alerts" onclick={(e) => { e.preventDefault(); handleNavigation('/alerts'); }} class="nav-button mb-4 {currentPath === '/alerts' ? 'active' : ''}">
-            <i class="nav-icon fas fa-bell"></i>&nbsp;&nbsp;Alerts
+            <i class="nav-icon fas fa-bell"></i>&nbsp;&nbsp;{m.nav_alerts()}
           </a>
           <button onclick={toggleAudioCallouts} class="nav-button mb-4" type="button">
-            <i class="nav-icon fas {$audioCalloutsStore ? 'fa-volume-up' : 'fa-volume-mute'}"></i>&nbsp;&nbsp;Audio Callouts {$audioCalloutsStore ? 'On' : 'Off'}
+            <i class="nav-icon fas {$audioCalloutsStore ? 'fa-volume-up' : 'fa-volume-mute'}"></i>&nbsp;&nbsp;{$audioCalloutsStore ? m.nav_audio_on() : m.nav_audio_off()}
           </button>
           <div class="lang-picker mb-4">
             <button class="nav-button" type="button" aria-haspopup="listbox" aria-expanded={langOpen} onclick={() => (langOpen = !langOpen)}>
-              <i class="nav-icon fas fa-globe"></i>&nbsp;&nbsp;Language
+              <i class="nav-icon fas fa-globe"></i>&nbsp;&nbsp;{m.nav_language()}
             </button>
             {#if langOpen}
               <ul class="lang-menu lang-menu-mobile" role="listbox">
@@ -1065,11 +1066,11 @@
             {/if}
           </div>
           <button onclick={(e) => { e.preventDefault(); handleLogout(); }} class="nav-button mb-4" type="button">
-            <i class="nav-icon fas fa-sign-out-alt"></i>&nbsp;&nbsp;Logout
+            <i class="nav-icon fas fa-sign-out-alt"></i>&nbsp;&nbsp;{m.nav_logout()}
           </button>
         {:else}
           <a href="/login" onclick={(e) => { e.preventDefault(); handleNavigation('/login'); }} class="nav-button mb-4 {currentPath === '/login' ? 'active' : ''}">
-            <i class="nav-icon fas fa-sign-in-alt"></i>&nbsp;&nbsp;Login
+            <i class="nav-icon fas fa-sign-in-alt"></i>&nbsp;&nbsp;{m.nav_login()}
           </a>
         {/if}
       </div>
