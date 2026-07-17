@@ -73,10 +73,6 @@ services:
   app:
     profiles: ["production"]
     image: ghcr.io/judahpaul16/canarygc:latest
-    pull_policy: missing
-    build:
-      context: ./compose/svelte-kit
-      dockerfile: Dockerfile.prod
     devices:
       - "/dev/ttyACM0:/dev/ttyACM0"
     ports:
