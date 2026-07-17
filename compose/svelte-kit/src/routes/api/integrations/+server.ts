@@ -4,6 +4,7 @@ import { getSetting, getSettings, setSetting } from '$lib/server/settings';
 import { applyCameraSource } from '$lib/server/mediamtx';
 import { refreshSigningConfig, provisionVehicleSigning } from '$lib/server/mavlink';
 import type { CameraSourceKind } from '$lib/camera-source';
+import { baseLocale, isLocale } from '$lib/paraglide/runtime';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -38,6 +39,7 @@ export const GET: RequestHandler = async (event) => {
         openaipSet: Boolean(openaip),
         altitudeAngelSet: Boolean(altitudeAngel),
         maptiler: (await getSetting('integration.maptiler')) ?? '',
+        uiLocale: (await getSetting('ui.locale')) ?? baseLocale,
         tiles: {
             light: (await getSetting('tiles.light')) ?? '',
             dark: (await getSetting('tiles.dark')) ?? '',
@@ -87,6 +89,7 @@ export const POST: RequestHandler = async (event) => {
 
     // Map tile settings are public config, so a blank value clears the override.
     if (typeof body.maptiler === 'string') await setSetting('integration.maptiler', body.maptiler.trim());
+    if (typeof body.uiLocale === 'string' && isLocale(body.uiLocale)) await setSetting('ui.locale', body.uiLocale);
     const tiles = body.tiles ?? {};
     if (typeof tiles.light === 'string') await setSetting('tiles.light', tiles.light.trim());
     if (typeof tiles.dark === 'string') await setSetting('tiles.dark', tiles.dark.trim());

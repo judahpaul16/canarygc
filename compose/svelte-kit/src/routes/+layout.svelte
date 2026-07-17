@@ -44,6 +44,7 @@
   import Offline from '../components/Offline.svelte';
   import GuidancePanel from '../components/GuidancePanel.svelte';
   import Map from '../components/Map.svelte';
+  import { locales, getLocale, setLocale, type Locale } from '$lib/paraglide/runtime';
   import { notify, type NotificationType } from '../lib/overlays';
   import { callout, initCallouts, stopCallouts } from '../lib/callouts';
   import { initAlerts } from '../lib/alerts';
@@ -877,6 +878,29 @@
 
   // The nav column scrolls, so its tooltips are fixed-positioned to escape the
   // scroll container's clip and placed beside their button on hover.
+  const LOCALE_NAMES: Record<string, string> = {
+    en: 'English', de: 'Deutsch', es: 'Español', fr: 'Français', it: 'Italiano',
+    nl: 'Nederlands', pl: 'Polski', pt: 'Português', ru: 'Русский', sv: 'Svenska',
+    tr: 'Türkçe', uk: 'Українська', ja: '日本語', ko: '한국어',
+    'zh-CN': '简体中文', 'zh-TW': '繁體中文'
+  };
+  const currentLocale = getLocale();
+  let langOpen = $state(false);
+  function localeName(code: string): string {
+    return LOCALE_NAMES[code] ?? code;
+  }
+  async function chooseLocale(code: Locale) {
+    langOpen = false;
+    if (code === currentLocale) return;
+    // Persist for server-side flows (alert and reset emails) with no request cookie.
+    await fetch('/api/integrations', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ uiLocale: code })
+    }).catch(() => undefined);
+    setLocale(code);
+  }
+
   function navTooltips(container: HTMLElement) {
     function place(e: Event) {
       const btn = (e.target as HTMLElement).closest('.nav-button') as HTMLElement | null;
@@ -964,6 +988,23 @@
           <i class="nav-icon fas {darkMode ? 'fa-sun' : 'fa-moon'}"></i>
           <div class="tooltip text-white">Toggle Dark Mode</div>
         </button>
+        <div class="lang-picker">
+          <button class="nav-button" aria-label="Language" aria-haspopup="listbox" aria-expanded={langOpen} onclick={() => (langOpen = !langOpen)}>
+            <i class="nav-icon fas fa-globe"></i>
+            <div class="tooltip text-white">Language</div>
+          </button>
+          {#if langOpen}
+            <ul class="lang-menu" role="listbox">
+              {#each locales as code (code)}
+                <li>
+                  <button type="button" role="option" aria-selected={code === currentLocale} class:selected={code === currentLocale} onclick={() => chooseLocale(code)}>
+                    {localeName(code)}
+                  </button>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
       </div>
     </nav>
 
@@ -1007,6 +1048,22 @@
           <button onclick={toggleAudioCallouts} class="nav-button mb-4" type="button">
             <i class="nav-icon fas {$audioCalloutsStore ? 'fa-volume-up' : 'fa-volume-mute'}"></i>&nbsp;&nbsp;Audio Callouts {$audioCalloutsStore ? 'On' : 'Off'}
           </button>
+          <div class="lang-picker mb-4">
+            <button class="nav-button" type="button" aria-haspopup="listbox" aria-expanded={langOpen} onclick={() => (langOpen = !langOpen)}>
+              <i class="nav-icon fas fa-globe"></i>&nbsp;&nbsp;Language
+            </button>
+            {#if langOpen}
+              <ul class="lang-menu lang-menu-mobile" role="listbox">
+                {#each locales as code (code)}
+                  <li>
+                    <button type="button" role="option" aria-selected={code === currentLocale} class:selected={code === currentLocale} onclick={() => chooseLocale(code)}>
+                      {localeName(code)}
+                    </button>
+                  </li>
+                {/each}
+              </ul>
+            {/if}
+          </div>
           <button onclick={(e) => { e.preventDefault(); handleLogout(); }} class="nav-button mb-4" type="button">
             <i class="nav-icon fas fa-sign-out-alt"></i>&nbsp;&nbsp;Logout
           </button>
@@ -1131,6 +1188,53 @@
   .nav-button:hover .tooltip {
     opacity: 1;
     visibility: visible;
+  }
+
+  .lang-picker {
+    position: relative;
+  }
+  .lang-menu {
+    position: absolute;
+    left: calc(100% + 12px);
+    bottom: 0;
+    list-style: none;
+    margin: 0;
+    padding: 0.25rem;
+    background: var(--secondaryColor);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-control);
+    min-width: 8.5rem;
+    z-index: 60;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  }
+  .lang-menu li {
+    margin: 0;
+  }
+  .lang-menu button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.4rem 0.6rem;
+    border: none;
+    background: transparent;
+    color: #cfd3d8;
+    border-radius: var(--radius-control);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .lang-menu button:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+  .lang-menu button.selected {
+    color: #fff;
+    font-weight: 600;
+  }
+  .lang-menu-mobile {
+    left: 0;
+    bottom: auto;
+    top: 100%;
+    margin-top: 0.25rem;
   }
 
   /* Mobile Styles */
