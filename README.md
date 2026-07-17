@@ -203,7 +203,7 @@ The schema recreates empty on the next boot, and the app then prompts for first-
 docker compose --profile production up -d app webrtc
 ```
 
-Add `--build` to build the image from source instead of pulling it. The app is served at `http://localhost:3000`.
+The app is served at `http://localhost:3000`.
 
 ### Gates
 
