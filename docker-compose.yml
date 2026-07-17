@@ -69,10 +69,11 @@ services:
       # so the dashboard link stays idle instead of dialing a missing SITL.
       MAVLINK_TCP_HOST: ""
 
-  # Production: built Node server on the Pi, talks to the autopilot over UART.
+  # Production: the published app image, talking to the autopilot over USB serial.
   app:
     profiles: ["production"]
-    image: ${CANARYGC_IMAGE:-canarygc-app}
+    image: ghcr.io/judahpaul16/canarygc:latest
+    pull_policy: missing
     build:
       context: ./compose/svelte-kit
       dockerfile: Dockerfile.prod

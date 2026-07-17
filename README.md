@@ -197,13 +197,13 @@ docker restart canarygc_app
 
 The schema recreates empty on the next boot, and the app then prompts for first-run operator setup.
 
-**Production** builds the Node server image and runs the WebRTC camera bridge, talking to a real autopilot over UART:
+**Production** pulls the published app image (`ghcr.io/judahpaul16/canarygc`) and runs the WebRTC camera bridge, talking to a real autopilot over USB serial (`/dev/ttyACM0`):
 
 ```bash
 docker compose --profile production up -d app webrtc
 ```
 
-The app is served at `http://localhost:3000`.
+Add `--build` to build the image from source instead of pulling it. The app is served at `http://localhost:3000`.
 
 ### Gates
 
