@@ -28,6 +28,12 @@ function airspaceKind(zone: AirspaceZone): string {
 }
 
 function airspaceImplication(zone: AirspaceZone): string {
+  if (zone.regime === 'eu') {
+    if (zone.restricted) {
+      return 'UAS geographical zone: operation is prohibited or requires prior authorization.';
+    }
+    return 'UAS geographical zone: check the applicable conditions before flying.';
+  }
   if (zone.restricted) return 'No-fly. Entry requires prior authorization.';
   if (/moa|military|warning|alert/i.test(zone.type ?? '')) {
     return 'Special-use airspace. Check activity and use caution.';

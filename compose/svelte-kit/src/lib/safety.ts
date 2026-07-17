@@ -30,6 +30,7 @@ export interface AirspaceZone {
   upper?: string; // upper limit description, e.g. "10000 ft MSL"
   lowerM?: number; // lower limit in meters (0 = surface); the zone starts here
   upperM?: number; // upper limit in meters; undefined = no defined ceiling
+  regime?: 'us' | 'eu'; // which regulator's rules apply, e.g. FAA/LAANC vs EASA
 }
 
 export interface SafetyLimits {

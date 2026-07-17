@@ -2,6 +2,7 @@ import type { AirspaceZone } from '$lib/safety';
 import type { Building, CeilingCell, Obstacle } from '$lib/hazards';
 import { getSetting } from './settings';
 import { cached, bboxKey } from './geocache';
+import { regionalSourcesForBbox, bboxWithinCoverage } from './airspace-sources';
 
 // Airspace, FAA hazard, and OSM building lookups shared by the overlay API
 // routes and the server-side flows that plan with no browser attached. Every
@@ -169,36 +170,129 @@ async function fetchFaa(bbox: string): Promise<AirspaceZone[]> {
   return results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
 }
 
+const ALTITUDE_ANGEL_URL = 'https://api.altitudeangel.com/v2/mapdata/geojson';
+
+// Altitude Angel's global map data, used only when a key is configured. It
+// aggregates national restrictions, so region-preferring merge drops it inside a
+// national source's coverage to avoid drawing the same zone twice.
+async function fetchAltitudeAngel(bbox: string, key: string): Promise<AirspaceZone[]> {
+  const [minLon, minLat, maxLon, maxLat] = bbox.split(',').map(Number);
+  const query = new URLSearchParams({
+    n: String(maxLat),
+    e: String(maxLon),
+    s: String(minLat),
+    w: String(minLon)
+  });
+  const res = await fetch(`${ALTITUDE_ANGEL_URL}?${query}`, {
+    headers: { Authorization: `X-AA-ApiKey ${key}` }
+  });
+  if (!res.ok) throw new Error(`Altitude Angel responded ${res.status}`);
+  const data = await res.json();
+  const features: GeoFeature[] = Array.isArray(data?.features) ? data.features : [];
+  return features.flatMap((f) => {
+    const p = (f.properties ?? {}) as { name?: string; title?: string; category?: string; type?: string };
+    const category = `${p.category ?? ''} ${p.type ?? ''}`.toUpperCase();
+    return polygonZones(f, {
+      name: p.name || p.title || 'Airspace',
+      restricted: RESTRICTED_KEYWORDS.some((kw) => category.includes(kw))
+    });
+  });
+}
+
 export interface AirspaceResult {
   zones: AirspaceZone[];
-  source: 'openaip' | 'faa' | 'none';
+  source: 'openaip' | 'altitudeangel' | 'faa' | 'none';
   configured: boolean;
+  regional: string[];
+  attributions: string[];
   error?: string;
 }
 
-// OpenAIP when a key is configured, falling back to the FAA's keyless public
-// layers when the key is unset or OpenAIP returns nothing.
+// Regional keyless national sources always contribute where their coverage
+// intersects the bbox. A source whose coverage fully contains the bbox is the
+// authoritative national publication there and supersedes OpenAIP and Altitude
+// Angel; otherwise OpenAIP (keyed), Altitude Angel (keyed), then the FAA's
+// keyless US layers fill in. Promise.allSettled keeps one failing feed from
+// blanking the rest.
 export async function airspaceForBbox(bbox: string): Promise<AirspaceResult> {
-  const apiKey = (await getSetting('integration.openaip')) || process.env.OPENAIP_API_KEY;
+  const openaipKey = (await getSetting('integration.openaip')) || process.env.OPENAIP_API_KEY;
+  const altitudeAngelKey =
+    (await getSetting('integration.altitude_angel')) || process.env.VITE_ALTITUDE_ANGEL_API_KEY;
 
-  if (apiKey) {
+  const applicable = regionalSourcesForBbox(bbox);
+  const authoritative = applicable.some((s) => bboxWithinCoverage(s.coverage, bbox));
+
+  const regionalSettled = await Promise.allSettled(
+    applicable.map((s) => cached(bboxKey(`airspace-${s.id}`, bbox), AIRSPACE_TTL_MS, () => s.fetch(bbox)))
+  );
+
+  const zones: AirspaceZone[] = [];
+  const regional: string[] = [];
+  const attributions: string[] = [];
+  applicable.forEach((s, i) => {
+    const r = regionalSettled[i];
+    if (r.status === 'fulfilled' && r.value.length > 0) {
+      zones.push(...r.value);
+      regional.push(s.id);
+      attributions.push(s.attribution);
+    } else if (r.status === 'rejected') {
+      console.error(`${s.id} airspace fetch failed:`, r.reason);
+    }
+  });
+
+  let source: AirspaceResult['source'] = 'none';
+
+  if (!authoritative && openaipKey) {
     try {
-      const zones = await cached(bboxKey('airspace-openaip', bbox), AIRSPACE_TTL_MS, () =>
-        fetchOpenAip(bbox, apiKey)
+      const openaip = await cached(bboxKey('airspace-openaip', bbox), AIRSPACE_TTL_MS, () =>
+        fetchOpenAip(bbox, openaipKey)
       );
-      if (zones.length > 0) return { zones, source: 'openaip', configured: true };
+      if (openaip.length > 0) {
+        zones.push(...openaip);
+        source = 'openaip';
+      }
     } catch (error) {
       console.error('OpenAIP fetch failed:', error);
     }
   }
 
-  try {
-    const zones = await cached(bboxKey('airspace-faa', bbox), AIRSPACE_TTL_MS, () => fetchFaa(bbox));
-    return { zones, source: 'faa', configured: Boolean(apiKey) };
-  } catch (error) {
-    console.error('FAA airspace fetch failed:', error);
-    return { zones: [], source: 'none', configured: Boolean(apiKey), error: (error as Error).message };
+  if (!authoritative && altitudeAngelKey) {
+    try {
+      const aa = await cached(bboxKey('airspace-altitudeangel', bbox), AIRSPACE_TTL_MS, () =>
+        fetchAltitudeAngel(bbox, altitudeAngelKey)
+      );
+      if (aa.length > 0) {
+        zones.push(...aa);
+        attributions.push('Altitude Angel');
+        if (source === 'none') source = 'altitudeangel';
+      }
+    } catch (error) {
+      console.error('Altitude Angel fetch failed:', error);
+    }
   }
+
+  let error: string | undefined;
+  if (source === 'none') {
+    try {
+      const faa = await cached(bboxKey('airspace-faa', bbox), AIRSPACE_TTL_MS, () => fetchFaa(bbox));
+      if (faa.length > 0) {
+        zones.push(...faa);
+        source = 'faa';
+      }
+    } catch (e) {
+      console.error('FAA airspace fetch failed:', e);
+      error = (e as Error).message;
+    }
+  }
+
+  return {
+    zones,
+    source,
+    configured: Boolean(openaipKey),
+    regional,
+    attributions,
+    ...(zones.length === 0 && error ? { error } : {})
+  };
 }
 
 async function fetchCeilings(bbox: string): Promise<CeilingCell[]> {

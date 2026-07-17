@@ -37,6 +37,7 @@
   import { showModal, notify } from '../lib/overlays';
   import {
     airspaceZonesStore,
+    airspaceAttributionsStore,
     showAirspaceStore,
     ceilingCellsStore,
     showCeilingsStore,
@@ -957,10 +958,15 @@
   }
 
   let airspaceLayer: L.LayerGroup | null = null;
+  let airspaceAttribution: string | null = null;
 
   function renderAirspace() {
     if (!L || !leafletMap) return;
     airspaceLayer?.remove();
+    if (airspaceAttribution) {
+      leafletMap.attributionControl?.removeAttribution(airspaceAttribution);
+      airspaceAttribution = null;
+    }
     if (!get(showAirspaceStore) || hideOverlay) {
       airspaceLayer = null;
       return;
@@ -980,6 +986,12 @@
     }
     group.addTo(leafletMap);
     airspaceLayer = group;
+
+    const attributions = get(airspaceAttributionsStore);
+    if (attributions.length > 0) {
+      airspaceAttribution = `Airspace: ${attributions.join(', ')}`;
+      leafletMap.attributionControl?.addAttribution(airspaceAttribution);
+    }
   }
 
   function toggleMap() {

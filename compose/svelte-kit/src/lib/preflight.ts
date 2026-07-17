@@ -2,6 +2,7 @@ import { get } from 'svelte/store';
 import {
   safetyLimitsStore,
   airspaceZonesStore,
+  airspaceAttributionsStore,
   ceilingCellsStore,
   obstaclesStore
 } from '../stores/safetyStore';
@@ -43,6 +44,7 @@ export async function fetchAirspaceForBbox(bbox: string): Promise<AirspaceZone[]
     const data = await res.json();
     const zones: AirspaceZone[] = data.zones ?? [];
     airspaceZonesStore.set(zones);
+    airspaceAttributionsStore.set(data.attributions ?? []);
     return zones;
   } catch {
     return get(airspaceZonesStore);
