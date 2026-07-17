@@ -936,13 +936,21 @@
     const lat = latlng.lat.toFixed(6);
     const lon = latlng.lng.toFixed(6);
     const coords = `${lat}, ${lon}`;
+    // LAANC and B4UFLY are US programs, so drop them when this spot's airspace
+    // is a non-US (EASA) geographical zone.
+    const point = { lat: latlng.lat, lon: latlng.lng };
+    const usActions = get(airspaceZonesStore).some(
+      (z) => z.regime === 'eu' && pointInPolygon(point, z.polygon)
+    )
+      ? ''
+      : `<a class="am-action" href="https://www.aloft.ai/feature/laanc/" target="_blank" rel="noopener"><i class="fas fa-tower-broadcast"></i> Request LAANC</a>` +
+        `<a class="am-action" href="https://www.faa.gov/uas/recreational_fliers/where_can_i_fly/b4ufly/" target="_blank" rel="noopener"><i class="fas fa-plane-up"></i> FAA B4UFLY</a>`;
     const content =
       `<div class="airspace-modal">${sections.map((s) => `<div class="am-section" style="border-left-color:${s.accent}">${s.html}</div>`).join('')}` +
       `<div class="am-coords"><span><i class="fas fa-location-dot"></i> ${coords}</span>` +
       `<button type="button" class="am-copy" onclick="navigator.clipboard&&navigator.clipboard.writeText('${coords}')"><i class="fas fa-copy"></i> Copy</button></div>` +
       `<div class="am-actions">` +
-      `<a class="am-action" href="https://www.aloft.ai/feature/laanc/" target="_blank" rel="noopener"><i class="fas fa-tower-broadcast"></i> Request LAANC</a>` +
-      `<a class="am-action" href="https://www.faa.gov/uas/recreational_fliers/where_can_i_fly/b4ufly/" target="_blank" rel="noopener"><i class="fas fa-plane-up"></i> FAA B4UFLY</a>` +
+      usActions +
       `<a class="am-action" href="https://www.google.com/maps?q=${lat},${lon}" target="_blank" rel="noopener"><i class="fas fa-map-location-dot"></i> Open in Maps</a>` +
       `</div></div>`;
     showModal({ title: 'Airspace & hazards', content, html: true, notification: true });
