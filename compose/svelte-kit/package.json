@@ -10,7 +10,7 @@
 		"check": "npm run i18n:compile && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"lint": "eslint .",
-		"test": "npm run i18n:compile && vitest run",
+		"test": "npm run i18n:compile && node scripts/check-locale-parity.mjs && vitest run",
 		"test:e2e": "playwright test"
 	},
 	"devDependencies": {
