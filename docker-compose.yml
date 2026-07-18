@@ -39,7 +39,7 @@ x-app-dev: &app-dev
   deploy:
     resources:
       limits:
-        memory: 700m
+        memory: 2g
   restart: always
 
 services:
