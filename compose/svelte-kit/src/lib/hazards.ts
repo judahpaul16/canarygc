@@ -1,3 +1,5 @@
+import { m } from '$lib/paraglide/messages';
+
 export interface CeilingCell {
   ceilingFt: number;
   airport: string;
@@ -64,21 +66,21 @@ function esc(value: string): string {
 // Values come from the FAA feeds, so escape them before they reach a popup's
 // innerHTML.
 export function ceilingPopupHtml(cell: CeilingCell): string {
-  const heading = cell.airport ? `${cell.airport} grid` : 'LAANC grid';
+  const heading = cell.airport ? m.hz_airport_grid({ airport: cell.airport }) : m.hz_laanc_grid();
   const body =
     cell.ceilingFt === 0
-      ? 'LAANC authorization is not available in this square; flying here needs a manual FAA authorization.'
+      ? m.hz_ceil_zero()
       : cell.laanc
-        ? `LAANC can authorize UAS flight up to ${cell.ceilingFt} ft AGL in this square; above that needs further FAA coordination.`
-        : `The pre-approved ceiling here is ${cell.ceilingFt} ft AGL, and this facility does not offer LAANC, so authorization is manual.`;
-  return `<strong>${esc(heading)}</strong><br>Ceiling: ${cell.ceilingFt} ft AGL (${Math.round(feetToMeters(cell.ceilingFt))} m)<br><em>${esc(body)}</em>`;
+        ? m.hz_ceil_laanc({ ft: cell.ceilingFt })
+        : m.hz_ceil_manual({ ft: cell.ceilingFt });
+  return `<strong>${esc(heading)}</strong><br>${m.hz_ceiling()}: ${cell.ceilingFt} ft AGL (${Math.round(feetToMeters(cell.ceilingFt))} m)<br><em>${esc(body)}</em>`;
 }
 
 export function obstaclePopupHtml(obstacle: Obstacle): string {
   return (
     `<strong>${esc(obstacle.type)}</strong>` +
-    `<br>Height: ${obstacle.aglFt} ft AGL (${Math.round(feetToMeters(obstacle.aglFt))} m)` +
-    `<br>Top: ${obstacle.amslFt} ft MSL` +
-    `<br><em>Keep clear; heights come from the FAA obstacle file.</em>`
+    `<br>${m.hz_height()}: ${obstacle.aglFt} ft AGL (${Math.round(feetToMeters(obstacle.aglFt))} m)` +
+    `<br>${m.hz_top()}: ${obstacle.amslFt} ft MSL` +
+    `<br><em>${m.hz_keep_clear()}</em>`
   );
 }

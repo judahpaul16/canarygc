@@ -5,6 +5,7 @@ import { applyCameraSource } from '$lib/server/mediamtx';
 import { refreshSigningConfig, provisionVehicleSigning } from '$lib/server/mavlink';
 import type { CameraSourceKind } from '$lib/camera-source';
 import { baseLocale, isLocale } from '$lib/paraglide/runtime';
+import { m } from '$lib/paraglide/messages';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -19,7 +20,7 @@ async function operatorEmail(userId: string): Promise<string> {
 }
 
 export const GET: RequestHandler = async (event) => {
-    if (!event.locals.user) return json({ message: 'Unauthorized' }, 401);
+    if (!event.locals.user) return json({ message: m.api_unauthorized() }, 401);
 
     const smtp = await getSettings('smtp.');
     const openaip = (await getSetting('integration.openaip')) ?? process.env.OPENAIP_API_KEY ?? '';
@@ -67,7 +68,7 @@ export const GET: RequestHandler = async (event) => {
 };
 
 export const POST: RequestHandler = async (event) => {
-    if (!event.locals.user) return json({ message: 'Unauthorized' }, 401);
+    if (!event.locals.user) return json({ message: m.api_unauthorized() }, 401);
 
     const body = await event.request.json();
 
@@ -148,5 +149,5 @@ export const POST: RequestHandler = async (event) => {
         await setSetting('failsafe.lostOperatorMinutes', String(minutes));
     }
 
-    return json({ message: 'Saved', cameraApplied, signingPushed });
+    return json({ message: m.api_saved(), cameraApplied, signingPushed });
 };

@@ -12,6 +12,7 @@
     smoothAltitudeStore,
     smoothSpeedStore
   } from '../lib/smooth-telemetry';
+  import { m } from '$lib/paraglide/messages';
 
   let { compact = false, transparent = false }: { compact?: boolean; transparent?: boolean } =
     $props();
@@ -75,7 +76,7 @@
 </script>
 
 <div class="hud" class:transparent class:compact>
-  <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Attitude indicator" class:over-video={transparent}>
+  <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" role="img" aria-label={m.hud_attitude()} class:over-video={transparent}>
     <defs>
       <clipPath id="hud-clip"><rect x="0" y="0" width="320" height="180" /></clipPath>
     </defs>
@@ -154,12 +155,12 @@
     <!-- Status chips (bottom). The mode chip is dropped when it carries nothing
          beyond the arm state: an MSP board reports only armed/disarmed, not a
          separate flight mode, so it would otherwise repeat the arm chip. -->
-    <text x="46" y="172" class="chip" fill={armed ? '#f87171' : '#4ade80'}>{armed ? 'ARMED' : 'DISARMED'}</text>
+    <text x="46" y="172" class="chip" fill={armed ? '#f87171' : '#4ade80'}>{armed ? m.hud_armed() : m.hud_disarmed()}</text>
     {#if mode && mode !== 'Unknown' && mode !== 'Armed' && mode !== 'Disarmed'}
       <text x={CX} y="172" class="chip" text-anchor="middle" fill="#e5e7eb">{mode}</text>
     {/if}
     <text x="274" y="172" class="chip" text-anchor="end" fill={batteryColor}>
-      {battery === null ? 'BATT --' : `BATT ${battery}%`} · {sats.total} SAT
+      {battery === null ? m.hud_batt_none() : m.hud_batt({ percent: battery })} · {sats.total} {m.hud_sat()}
     </text>
   </svg>
 </div>

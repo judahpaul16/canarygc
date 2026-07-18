@@ -1,5 +1,6 @@
 <script lang="ts">
   import { firstGamepad } from '../lib/gamepad-control';
+  import { m } from '$lib/paraglide/messages';
 
   let { onStart, onCancel }: { onStart: () => void; onCancel: () => void } = $props();
 
@@ -32,21 +33,21 @@
 </script>
 
 <div class="elevated-surface fixed inset-0 flex items-center justify-center z-50 bg-[#00000090] p-4 backdrop-blur-sm">
-  <button type="button" aria-label="Close dialog" class="absolute inset-0 h-full w-full cursor-default" onclick={onCancel}></button>
+  <button type="button" aria-label={m.modal_close_dialog()} class="absolute inset-0 h-full w-full cursor-default" onclick={onCancel}></button>
   <div class="container relative z-10 rounded-2xl shadow-2xl w-full max-w-md" role="dialog" aria-modal="true">
     <div class="relative border-b" style="border-color: rgb(from var(--fontColor) r g b / 0.12);">
-      <div class="px-5 py-3 text-lg font-semibold">Connect a gamepad</div>
-      <button onclick={onCancel} aria-label="Close" class="absolute top-2.5 right-3 opacity-60 hover:opacity-100 text-2xl leading-none">&times;</button>
+      <div class="px-5 py-3 text-lg font-semibold">{m.gc_title()}</div>
+      <button onclick={onCancel} aria-label={m.common_close()} class="absolute top-2.5 right-3 opacity-60 hover:opacity-100 text-2xl leading-none">&times;</button>
     </div>
     <div class="px-5 py-4">
       <ol class="steps">
         <li>
           <i class="fas fa-plug"></i>
-          Plug the gamepad in over USB, or pair it through your system's Bluetooth settings.
+          {m.gc_step_plug()}
         </li>
         <li>
           <i class="fas fa-gamepad"></i>
-          Press any button on it so the browser can see it.
+          {m.gc_step_press()}
         </li>
       </ol>
       {#if pad}
@@ -59,13 +60,13 @@
             <div class="stick">
               <div class="dot" style="transform: translate({axes[0] * 14}px, {axes[1] * 14}px)"></div>
             </div>
-            <span class="stick-label">Throttle / Yaw</span>
+            <span class="stick-label">{m.gc_throttle_yaw()}</span>
           </div>
           <div class="stick-wrap">
             <div class="stick">
               <div class="dot" style="transform: translate({(axes[2] ?? 0) * 14}px, {(axes[3] ?? 0) * 14}px)"></div>
             </div>
-            <span class="stick-label">Pitch / Roll</span>
+            <span class="stick-label">{m.gc_pitch_roll()}</span>
           </div>
         </div>
         <div class="btn-lights">
@@ -73,11 +74,11 @@
             <span class="light {pressed ? 'on' : ''}"></span>
           {/each}
         </div>
-        <p class="hint">Move the sticks and press buttons to confirm the input reaches the browser.</p>
+        <p class="hint">{m.gc_confirm_input()}</p>
       {:else}
         <div class="status waiting">
           <i class="fas fa-circle-notch fa-spin"></i>
-          <span>Waiting for a gamepad&hellip;</span>
+          <span>{m.gc_waiting()}</span>
         </div>
       {/if}
     </div>
@@ -88,9 +89,9 @@
         onclick={onStart}
         class="bg-blue-500 px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 mr-2 disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        Start flying
+        {m.gc_start_flying()}
       </button>
-      <button type="button" onclick={onCancel} class="bg-gray-500 px-4 py-2 rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400">Cancel</button>
+      <button type="button" onclick={onCancel} class="bg-gray-500 px-4 py-2 rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400">{m.common_cancel()}</button>
     </div>
   </div>
 </div>

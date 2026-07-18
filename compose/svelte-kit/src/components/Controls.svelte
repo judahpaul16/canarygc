@@ -6,6 +6,7 @@
   import { isSubmarine, isGroundOrSurface, isPlane } from '../lib/flight-modes';
   import { applyMaxSpeed, goToVertical, verticalStep, yawStep } from '../lib/vehicle-nudges';
   import { gamepadActiveStore, toggleGamepad } from '../lib/gamepad-session';
+  import { m } from '$lib/paraglide/messages';
 
   let maxSpeed: string = $state('');
   let altitudeSetPoint: string = $state('');
@@ -34,8 +35,8 @@
   >
   <button
     class="gamepad-btn"
-    aria-label="Toggle gamepad flight"
-    data-tip={gamepadActive ? 'Stop gamepad flight' : 'Fly with a gamepad'}
+    aria-label={m.controls_gamepad_toggle()}
+    data-tip={gamepadActive ? m.controls_gamepad_stop() : m.controls_gamepad_fly()}
     data-tip-pos="left"
     onclick={toggleGamepad}
   >
@@ -47,12 +48,12 @@
       <span class="text-xs text-gray-400">
         <a href="https://en.wikipedia.org/wiki/Dilution_of_precision_(navigation)" target="_blank">
           <i class="far fa-question-circle relative">
-            <div class="tooltip">&lt; 1:	Ideal
-              <br><br>1 - 2:	Excellent
-              <br><br>2 - 5:	Good
-              <br><br>5 - 10:	Moderate
-              <br><br>10 - 20:	Fair
-              <br><br>&gt; 20:	Poor
+            <div class="tooltip">&lt; 1:	{m.controls_dop_ideal()}
+              <br><br>1 - 2:	{m.controls_dop_excellent()}
+              <br><br>2 - 5:	{m.controls_dop_good()}
+              <br><br>5 - 10:	{m.controls_dop_moderate()}
+              <br><br>10 - 20:	{m.controls_dop_fair()}
+              <br><br>&gt; 20:	{m.controls_dop_poor()}
             </div>
           </i>
         </a>
@@ -61,7 +62,7 @@
         </span>
       </span>
       <span class="text-xs text-gray-400">
-        # Sats: <span class="{mavSatellite.total < 6 ? 'text-red-300' : 'text-green-300'}">
+        {m.controls_sats()} <span class="{mavSatellite.total < 6 ? 'text-red-300' : 'text-green-300'}">
         {mavSatellite.total}</span>
       </span>
     </div>
@@ -74,13 +75,13 @@
     <div class="inputs column h-full flex flex-col items-center justify-center text-center min-w-[150px] overflow-auto gap-2 self-center">
       <form>
         <div id="max-speed-container" class="flex flex-col items-center">
-          <div class="label text-sm mb-1">Max Speed<span class="text-xs text-gray-400 mt-1 ml-1">(m/s)</span></div>
+          <div class="label text-sm mb-1">{m.controls_max_speed()}<span class="text-xs text-gray-400 mt-1 ml-1">(m/s)</span></div>
           <input type="number" min="0" class="form-input mb-2" placeholder="10 m/s" bind:value={maxSpeed} />
         </div>
         {#if !surface}
           <div class="flex flex-col items-center justify-center">
             <div class="label text-sm mb-1">
-              {submarine ? 'Go to Depth' : 'Go to Altitude'}<span class="text-xs text-gray-400 mt-1 ml-1">(m)</span>
+              {submarine ? m.controls_go_to_depth() : m.controls_go_to_altitude()}<span class="text-xs text-gray-400 mt-1 ml-1">(m)</span>
             </div>
             <input type="number" min="0" max="100" class="form-input" placeholder="100 m" bind:value={altitudeSetPoint} />
           </div>
@@ -90,7 +91,7 @@
             e.preventDefault();
             setSpeedAndVertical();
           }}>
-          Set
+          {m.controls_set()}
         </button>
       </form>
     </div>
@@ -98,14 +99,14 @@
       <div class="separator"></div>
       <div class="alt-btns column flex flex-col items-center justify-center text-center space-y-4">
         <div class="flex flex-col items-center">
-          <div class="label text-sm mb-1" title={submarine ? 'Ascend' : 'Altitude Up'}>{submarine ? 'Ascend' : 'Altitude Up'}</div>
-          <button class="alt-button rounded-full" aria-label={submarine ? 'Ascend' : 'Altitude up'} onclick={() => verticalStep(true)}>
+          <div class="label text-sm mb-1" title={submarine ? m.controls_ascend() : m.controls_altitude_up()}>{submarine ? m.controls_ascend() : m.controls_altitude_up()}</div>
+          <button class="alt-button rounded-full" aria-label={submarine ? m.controls_ascend() : m.controls_altitude_up()} onclick={() => verticalStep(true)}>
             <i class="alt-up fas fa-arrow-up"></i>
           </button>
         </div>
         <div class="flex flex-col items-center justify-center">
-          <div class="label text-sm mb-1" title={submarine ? 'Descend' : 'Altitude Down'}>{submarine ? 'Descend' : 'Altitude Down'}</div>
-          <button class="alt-button rounded-full" aria-label={submarine ? 'Descend' : 'Altitude down'} onclick={() => verticalStep(false)}>
+          <div class="label text-sm mb-1" title={submarine ? m.controls_descend() : m.controls_altitude_down()}>{submarine ? m.controls_descend() : m.controls_altitude_down()}</div>
+          <button class="alt-button rounded-full" aria-label={submarine ? m.controls_descend() : m.controls_altitude_down()} onclick={() => verticalStep(false)}>
               <i class="alt-down fas fa-arrow-down"></i>
           </button>
         </div>
@@ -115,14 +116,14 @@
     <div class="separator"></div>
     <div class="rotate-btns column flex flex-col items-center justify-center text-center space-y-4">
       <div id="rotate-left-button" class="flex flex-col items-center">
-        <div class="label text-sm mb-1">Rotate Left</div>
-        <button class="rotate-button rotate-left rounded-full" aria-label="Rotate left" onclick={() => yawStep(-1)}>
+        <div class="label text-sm mb-1">{m.controls_rotate_left()}</div>
+        <button class="rotate-button rotate-left rounded-full" aria-label={m.controls_rotate_left()} onclick={() => yawStep(-1)}>
           <i class="fas fa-rotate-left"></i>
         </button>
       </div>
       <div class="flex flex-col items-center">
-        <div class="label text-sm mb-1">Rotate Right</div>
-        <button class="rotate-button rotate-right rounded-full" aria-label="Rotate right" onclick={() => yawStep(1)}>
+        <div class="label text-sm mb-1">{m.controls_rotate_right()}</div>
+        <button class="rotate-button rotate-right rounded-full" aria-label={m.controls_rotate_right()} onclick={() => yawStep(1)}>
           <i class="fas fa-rotate-right"></i>
         </button>
       </div>

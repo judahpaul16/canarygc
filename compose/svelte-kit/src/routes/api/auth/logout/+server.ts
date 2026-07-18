@@ -1,5 +1,6 @@
 import { lucia, secureCookie } from "$lib/server/auth";
 import type { RequestHandler } from '@sveltejs/kit';
+import { m } from '$lib/paraglide/messages';
 
 export const POST: RequestHandler = async (event): Promise<Response> => {
     if (event.locals.session) {
@@ -11,7 +12,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
         ...sessionCookie.attributes,
         secure: secureCookie(event)
     });
-    return new Response(JSON.stringify({ message: "Logged out" }), {
+    return new Response(JSON.stringify({ message: m.api_logged_out() }), {
         status: 200,
         headers: { "content-type": "application/json" }
     });

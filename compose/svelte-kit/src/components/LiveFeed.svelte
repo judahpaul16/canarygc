@@ -4,6 +4,7 @@
   import { showModal } from '../lib/overlays';
   import Hud from './Hud.svelte';
   import { feedViewStore, setFeedView, reportFeedAvailability, type FeedView } from '../stores/feedViewStore';
+  import { m } from '$lib/paraglide/messages';
 
   let { compact = false }: { compact?: boolean } = $props();
   let containerAspect = 16 / 9;
@@ -15,17 +16,17 @@
   const showHud = $derived(view === 'hud' || view === 'hybrid');
 
   const VIEWS: { id: FeedView; icon: string; label: string }[] = [
-    { id: 'feed', icon: 'fa-video', label: 'Live feed' },
-    { id: 'hud', icon: 'fa-plane-up', label: 'Flight instruments' },
-    { id: 'hybrid', icon: 'fa-layer-group', label: 'Feed with instruments' }
+    { id: 'feed', icon: 'fa-video', label: m.lf_view_feed() },
+    { id: 'hud', icon: 'fa-plane-up', label: m.lf_view_hud() },
+    { id: 'hybrid', icon: 'fa-layer-group', label: m.lf_view_hybrid() }
   ];
 
   function toggleFullScreen(element: HTMLElement) {
     if (!document.fullscreenElement) {
       element.requestFullscreen().catch(err => {
         showModal({
-          title: 'Error',
-          content: `Error attempting to enable full-screen mode: ${err.message} (${err.name})`,
+          title: m.common_error(),
+          content: m.lf_fullscreen_error({ message: err.message, name: err.name }),
           notification: true,
         });
       });
@@ -111,8 +112,8 @@
       <!-- The static sits under the video (which covers it while the feed is up),
            so hybrid shows the static behind the instruments when the feed is down
            instead of the broken iframe. -->
-      <img id="no-signal" src="no-signal.gif" alt="No Signal" class="absolute top-0 w-full h-full object-cover z-10" />
-      <iframe allowfullscreen id="live-feed" title="Live Feed" src={feedSrc}></iframe>
+      <img id="no-signal" src="no-signal.gif" alt={m.lf_no_signal()} class="absolute top-0 w-full h-full object-cover z-10" />
+      <iframe allowfullscreen id="live-feed" title={m.lf_live_feed_title()} src={feedSrc}></iframe>
     {/if}
     {#if showHud}
       <div class="hud-layer" class:overlay={view === 'hybrid'}>
@@ -139,12 +140,12 @@
 
   {#if !compact}
     {#if view === 'feed'}
-      <div class="caution-text opacity-[50%] text-md absolute bottom-2 left-2 bg-[#252525cf] px-2 py-1 mr-[0.5em] rounded-full z-20">Use Caution: The feed may be slightly delayed.</div>
+      <div class="caution-text opacity-[50%] text-md absolute bottom-2 left-2 bg-[#252525cf] px-2 py-1 mr-[0.5em] rounded-full z-20">{m.lf_caution()}</div>
     {/if}
-    <button class="chrome absolute top-2 right-14 p-2 px-[14px] rounded-full z-30 opacity-[60%]" aria-label="Rotate video" data-tip="Rotate video 180°" data-tip-pos="below" onclick={rotateVideo}>
+    <button class="chrome absolute top-2 right-14 p-2 px-[14px] rounded-full z-30 opacity-[60%]" aria-label={m.lf_rotate_aria()} data-tip={m.lf_rotate_tip()} data-tip-pos="below" onclick={rotateVideo}>
       <i class="fas fa-sync-alt"></i>
     </button>
-    <button class="chrome absolute top-2 right-2 p-2 px-[14px] rounded-full z-30 opacity-[60%]" aria-label="Toggle fullscreen" data-tip="Toggle fullscreen" data-tip-pos="below" onclick={handleFullScreen}>
+    <button class="chrome absolute top-2 right-2 p-2 px-[14px] rounded-full z-30 opacity-[60%]" aria-label={m.lf_fullscreen()} data-tip={m.lf_fullscreen()} data-tip-pos="below" onclick={handleFullScreen}>
       <i class="fas fa-expand"></i>
     </button>
   {/if}

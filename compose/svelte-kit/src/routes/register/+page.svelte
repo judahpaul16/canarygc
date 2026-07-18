@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { loggedInStore } from '../../stores/authStore';
+  import { m } from '$lib/paraglide/messages';
   let email = $state('');
   let password = $state('');
   let confirmPassword = $state('');
@@ -20,11 +21,11 @@
 
   async function handleSubmit() {
     if (!email || !password) {
-      error = 'Please fill in all fields';
+      error = m.auth_fill_all_fields();
       return;
     }
     if (password !== confirmPassword) {
-      error = 'Passwords do not match';
+      error = m.auth_passwords_no_match();
       return;
     }
     const response = await fetch('/api/auth/register', {
@@ -38,7 +39,7 @@
       window.location.href = '/dashboard';
     } else {
       const responseText = await response.json();
-      error = `Error: ${responseText.message}`;
+      error = m.auth_error({ message: responseText.message });
     }
   }
 
@@ -57,13 +58,13 @@
   }
 
   function getPasswordStrengthText(strength: number): string {
-    const texts = ['Weak', 'Fair', 'Good', 'Strong'];
-    return texts[strength - 1] || 'Too Weak';
+    const texts = [m.auth_strength_weak(), m.auth_strength_fair(), m.auth_strength_good(), m.auth_strength_strong()];
+    return texts[strength - 1] || m.auth_strength_too_weak();
   }
 </script>
 
 <svelte:head>
-  <title>Canary Ground Control - Set up</title>
+  <title>{m.auth_register_page_title()}</title>
 </svelte:head>
 
 <div
@@ -72,8 +73,8 @@
   <div class="card glass">
     <div class="brand">
       <img src="logo.png" alt="Canary Ground Control" class="logo" />
-      <h1>Set up your station</h1>
-      <p class="sub">Create the operator account to get started.</p>
+      <h1>{m.auth_register_heading()}</h1>
+      <p class="sub">{m.auth_register_sub()}</p>
     </div>
 
     {#if error}
@@ -81,10 +82,10 @@
     {/if}
 
     <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
-      <label for="email">Email</label>
+      <label for="email">{m.auth_email()}</label>
       <input type="email" id="email" bind:value={email} autocomplete="username" required />
 
-      <label for="password">Password</label>
+      <label for="password">{m.auth_password()}</label>
       <input type="password" id="password" bind:value={password} autocomplete="new-password" required />
       <div class="strength">
         <span class="strength-label">{getPasswordStrengthText(passwordStrength)}</span>
@@ -95,9 +96,9 @@
           ></div>
         </div>
       </div>
-      <p class="hint">Aim for 10+ characters with a mix of cases, numbers and symbols.</p>
+      <p class="hint">{m.auth_password_hint()}</p>
 
-      <label for="confirmPassword">Confirm password</label>
+      <label for="confirmPassword">{m.auth_confirm_password()}</label>
       <input
         type="password"
         id="confirmPassword"
@@ -106,7 +107,7 @@
         required
       />
 
-      <button type="submit" class="cta">Create operator account <i class="fas fa-arrow-right"></i></button>
+      <button type="submit" class="cta">{m.auth_create_account_button()} <i class="fas fa-arrow-right"></i></button>
     </form>
   </div>
 </div>

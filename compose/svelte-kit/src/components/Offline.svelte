@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { m } from '$lib/paraglide/messages';
 
   let isMinimized = $state(false);
   let reconnecting = $state(false);
@@ -40,7 +41,7 @@
             <button
               class="absolute right-2 top-2 p-2 hover:bg-opacity-20 hover:bg-black rounded-full transition-colors"
               onclick={toggleMinimize}
-              aria-label={isMinimized ? "Maximize" : "Minimize"}
+              aria-label={isMinimized ? m.common_maximize() : m.common_minimize()}
             >
               {#if isMinimized}
                 <i class="fas fa-angle-up"></i>
@@ -50,22 +51,22 @@
             </button>
             <div class="p-4 pl-0 text-lg text-center font-semibold">
                 <i class="fas fa-circle-notch fa-spin mr-1"></i>
-                Reconnecting...
+                {m.offline_reconnecting()}
             </div>
         </div>
         {#if !isMinimized}
           <div class="px-4 py-2 text-center">
               <p class="text-sm">
-                  The vehicle link dropped. Reconnect to redial it, or keep working from the last-known telemetry.
+                  {m.offline_link_dropped()}
               </p>
           </div>
           <div class="px-4 pb-3 pt-1 flex flex-wrap justify-center gap-2">
               <button class="reconnect px-3 py-1.5 text-white rounded-lg font-semibold disabled:opacity-60" onclick={reconnect} disabled={reconnecting}>
                   <i class="fas {reconnecting ? 'fa-circle-notch fa-spin' : 'fa-rotate'} mr-1"></i>
-                  {reconnecting ? 'Reconnecting...' : 'Reconnect'}
+                  {reconnecting ? m.offline_reconnecting() : m.offline_reconnect()}
               </button>
               <button class="ghost px-3 py-1.5 rounded-lg" onclick={() => window.location.reload()}>
-                  Refresh Window
+                  {m.offline_refresh_window()}
               </button>
           </div>
         {/if}

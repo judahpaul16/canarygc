@@ -3,6 +3,7 @@ import { redirect } from "@sveltejs/kit";
 import type { Handle } from "@sveltejs/kit";
 import { sequence } from "@sveltejs/kit/hooks";
 import { paraglideMiddleware } from "$lib/paraglide/server";
+import { m } from "$lib/paraglide/messages";
 // Booting the MAVLink module starts its link supervisor with the server, so
 // the station holds the autopilot connection without a browser session open.
 // The operator-failsafe module starts its lost-operator watchdog the same way.
@@ -55,7 +56,7 @@ const handleAuth: Handle = async ({ event, resolve }) => {
 	const { pathname } = event.url;
 	if (!event.locals.session && !isPublic(pathname)) {
 		if (pathname.startsWith("/api/")) {
-			return new Response(JSON.stringify({ message: "Unauthorized" }), {
+			return new Response(JSON.stringify({ message: m.api_unauthorized() }), {
 				status: 401,
 				headers: { "content-type": "application/json" }
 			});

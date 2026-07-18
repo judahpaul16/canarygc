@@ -27,6 +27,7 @@
     stopInavMission
   } from '../lib/guidance-session';
   import { optimizePath, startSurveyCapture, startOrbitCapture, startCorridorCapture, startSarCapture, startStructureScanCapture } from '../lib/plan-actions';
+  import { m } from '$lib/paraglide/messages';
 
   const GRIPPER_SERVO_CHANNEL = 9;
   const GRIPPER_OPEN_PWM_US = 1050;
@@ -90,14 +91,14 @@
 
   function stopMission() {
     showModal({
-      title: 'Stop Mission',
-      content: 'Are you sure you want to stop the flight?',
+      title: m.mp_stop_title(),
+      content: m.mp_stop_confirm(),
       confirmation: true,
       onConfirm: async () => {
         await setFlightMode('RTL');
         notify({
-          title: 'Mission Stopped',
-          content: 'The mission has been stopped.<br>Returning to launch.',
+          title: m.mp_stopped_title(),
+          content: m.mp_stopped_body(),
         });
       },
     });
@@ -105,14 +106,14 @@
 
   function pauseMission() {
     showModal({
-      title: 'Pause Mission',
-      content: 'Are you sure you want to pause the flight?',
+      title: m.mp_pause_title(),
+      content: m.mp_pause_confirm(),
       confirmation: true,
       onConfirm: async () => {
         await setFlightMode('LOITER');
         notify({
-          title: 'Mission Paused',
-          content: 'The mission has been paused.',
+          title: m.mp_paused_title(),
+          content: m.mp_paused_body(),
         });
       },
     });
@@ -120,8 +121,8 @@
 
   function releasePayload() {
     showModal({
-      title: 'Confirm Release Payload',
-      content: 'Are you sure you want to release the payload?\nUse caution and ensure the drop zone is clear.',
+      title: m.mp_release_title(),
+      content: m.mp_release_confirm(),
       confirmation: true,
       onConfirm: async () => {
         if (!isGuidedLabel(mavMode)) await setFlightMode('GUIDED');
@@ -170,8 +171,8 @@
 
   async function removeAction(id: string) {
     showModal({
-      title: "Delete Action",
-      content: "Are you sure you want to delete this action?",
+      title: m.mp_delete_action(),
+      content: m.mp_delete_confirm(),
       confirmation: true,
       onConfirm: () => {
         handleRemove(parseInt(id));
@@ -305,40 +306,40 @@
 >
   <div class="container">
     <div class="head">
-    <input type="text" class="text-md font-bold ml-4 focus:outline-none" placeholder="Untitled Mission" id="mission-plan-title" bind:value={title} oninput={(event) => updateTitle(event)} />
+    <input type="text" class="text-md font-bold ml-4 focus:outline-none" placeholder={m.mp_untitled()} id="mission-plan-title" bind:value={title} oninput={(event) => updateTitle(event)} />
     <div class="mission-btns flex items-center gap-2 text-sm">
       <a href="https://ardupilot.org/planner/docs/common-planning-a-mission-with-waypoints-and-events.html" target="_blank" class="text-[#61cd89] hover:underline mr-2">
         <i class="fas fa-question-circle"></i>
-        How do I create a mission plan?
+        {m.mp_how_to()}
       </a>
-      <button class="px-2 py-1 bg-[#d9a21b] rounded-lg hover:bg-[#f5c518]" aria-label="Survey pattern" onclick={startSurveyCapture}>
+      <button class="px-2 py-1 bg-[#d9a21b] rounded-lg hover:bg-[#f5c518]" aria-label={m.mp_survey_pattern()} onclick={startSurveyCapture}>
         <i class="fas fa-vector-square"></i>
-        <div class="tooltip">Survey Pattern</div>
+        <div class="tooltip">{m.mp_survey_pattern()}</div>
       </button>
-      <button class="px-2 py-1 bg-[#38bdf8] rounded-lg hover:bg-[#6fd1ff]" aria-label="Orbit pattern" onclick={startOrbitCapture}>
+      <button class="px-2 py-1 bg-[#38bdf8] rounded-lg hover:bg-[#6fd1ff]" aria-label={m.mp_orbit_pattern()} onclick={startOrbitCapture}>
         <i class="fas fa-circle-notch"></i>
-        <div class="tooltip">Orbit Pattern</div>
+        <div class="tooltip">{m.mp_orbit_pattern()}</div>
       </button>
-      <button class="px-2 py-1 bg-[#2dd4bf] rounded-lg hover:bg-[#5ee7d5]" aria-label="Corridor pattern" onclick={startCorridorCapture}>
+      <button class="px-2 py-1 bg-[#2dd4bf] rounded-lg hover:bg-[#5ee7d5]" aria-label={m.mp_corridor_pattern()} onclick={startCorridorCapture}>
         <i class="fas fa-road"></i>
-        <div class="tooltip">Corridor Pattern</div>
+        <div class="tooltip">{m.mp_corridor_pattern()}</div>
       </button>
-      <button class="px-2 py-1 bg-[#fb923c] rounded-lg hover:bg-[#fdb974]" aria-label="Search pattern" onclick={startSarCapture}>
+      <button class="px-2 py-1 bg-[#fb923c] rounded-lg hover:bg-[#fdb974]" aria-label={m.mp_search_pattern()} onclick={startSarCapture}>
         <i class="fas fa-magnifying-glass-location"></i>
-        <div class="tooltip">Search Pattern</div>
+        <div class="tooltip">{m.mp_search_pattern()}</div>
       </button>
-      <button class="px-2 py-1 bg-[#f472b6] rounded-lg hover:bg-[#f9a8d4]" aria-label="Structure scan" onclick={startStructureScanCapture}>
+      <button class="px-2 py-1 bg-[#f472b6] rounded-lg hover:bg-[#f9a8d4]" aria-label={m.mp_structure_scan()} onclick={startStructureScanCapture}>
         <i class="fas fa-building"></i>
-        <div class="tooltip">Structure Scan</div>
+        <div class="tooltip">{m.mp_structure_scan()}</div>
       </button>
-      <button class="px-2 py-1 bg-[#a06be0] rounded-lg hover:bg-[#c07bff]" aria-label="Optimize path" onclick={optimizePath}>
+      <button class="px-2 py-1 bg-[#a06be0] rounded-lg hover:bg-[#c07bff]" aria-label={m.mp_optimize_path()} onclick={optimizePath}>
         <i class="fas fa-wand-magic-sparkles"></i>
-        <div class="tooltip">Optimize Path</div>
+        <div class="tooltip">{m.mp_optimize_path()}</div>
       </button>
       <span class="btn-divider"></span>
       <button class="px-2 py-1 bg-[#588ae7] rounded-lg hover:bg-[#6f9ff9]" onclick={() => {releasePayload()}}>
           <i class="fas fa-parachute-box"></i>
-          <div class="tooltip">Release Payload</div>
+          <div class="tooltip">{m.mp_release_payload()}</div>
       </button>
       {#if systemState === 'STANDBY' || !isArmed}
         <button class="px-2 py-1 bg-[#6366f1] rounded-lg hover:bg-[#818cf8]"
@@ -346,7 +347,7 @@
           onclick={() => {takeoffWithConfirm()}}
         >
           <i class="fas fa-plane-departure"></i>
-          <div class="tooltip">Initiate Takeoff</div>
+          <div class="tooltip">{m.mp_initiate_takeoff()}</div>
         </button>
       {:else}
         <button class="px-2 py-1 bg-[#6366f1] rounded-lg hover:bg-[#818cf8]"
@@ -354,7 +355,7 @@
           onclick={() => {landWithConfirm()}}
         >
           <i class="fas fa-plane-arrival"></i>
-          <div class="tooltip">Initiate Landing</div>
+          <div class="tooltip">{m.mp_initiate_landing()}</div>
         </button>
       {/if}
       {#if !isAutoLabel(mavMode) || systemState === 'STANDBY'}
@@ -363,7 +364,7 @@
           onclick={() => {flyPlan()}}
         >
           <i class="fas fa-play"></i>
-          <div class="tooltip">Start/Resume Mission</div>
+          <div class="tooltip">{m.mp_start_resume()}</div>
         </button>
       {:else}
         <button class="px-2 py-1 bg-[#da864e] rounded-lg hover:bg-[#ff995e]"
@@ -371,7 +372,7 @@
           onclick={() => {onPause()}}
         >
           <i class="fas fa-pause"></i>
-          <div class="tooltip">Pause Mission (Loiter)</div>
+          <div class="tooltip">{m.mp_pause_loiter()}</div>
         </button>
       {/if}
       <button class="px-2 py-1 bg-[#f87171] rounded-lg hover:bg-[#ff7e7e]"
@@ -379,13 +380,13 @@
           onclick={() => {endFlight()}}
         >
         <i class="fas fa-stop"></i>
-        <div class="tooltip">Stop Mission (RTL)</div>
+        <div class="tooltip">{m.mp_stop_rtl()}</div>
       </button>
     </div>
     </div>
     <p class="hint">
       <i class="fas fa-circle-info"></i>
-      Double-click the map to add a waypoint. Drag a marker to move it.
+      {m.mp_hint()}
     </p>
     <div class="column overflow-auto" id="mission-plan-actions">
       <div class="overflow-auto">
@@ -399,8 +400,8 @@
                   </div>
                   <div class="separator"></div>
                   <div class="form-input text-center">
-                      <label for="action" class="text-[9pt]">Action Type</label>
-                      <a href="https://ardupilot.org/copter/docs/mission-command-list.html" target="_blank" class="text-[#61cd89] ml-1" title="More Information">
+                      <label for="action" class="text-[9pt]">{m.mp_action_type()}</label>
+                      <a href="https://ardupilot.org/copter/docs/mission-command-list.html" target="_blank" class="text-[#61cd89] ml-1" title={m.common_more_info()}>
                           <i class="fas fa-info-circle text-[9pt]"></i>
                       </a>
                       <select class="mt-1" name="action" id="action-{index}-type" onchange={updateActionType} value={actions[Number(index)].type}>
@@ -409,46 +410,46 @@
                       {/each}
                       </select>
                       <div class="text-center flex justify-center items-center gap-2 mt-2">
-                        <label for="altitude" class="text-[9pt] mr-1">Altitude</label>
-                        <input type="number" min="0" max="100" name="altitude" id="altitude-{index}" class="altitude" placeholder="0 = current alt" value={String(actions[Number(index)].alt ?? '')} onchange={updateAltitude}>
+                        <label for="altitude" class="text-[9pt] mr-1">{m.mp_altitude()}</label>
+                        <input type="number" min="0" max="100" name="altitude" id="altitude-{index}" class="altitude" placeholder={m.mp_alt_placeholder()} value={String(actions[Number(index)].alt ?? '')} onchange={updateAltitude}>
                         <span class="text-xs text-gray-400">m</span>
                       </div>
                   </div>
                   <div class="separator"></div>
                   <div class="form-input text-center grid gap-1">
                     <h2 class="text-[9pt]">
-                      Coordinates
-                      <a href="https://www.latlong.net/" target="_blank" class="text-[#61cd89] ml-1" title="Get Coordinates">
+                      {m.mp_coordinates()}
+                      <a href="https://www.latlong.net/" target="_blank" class="text-[#61cd89] ml-1" title={m.mp_get_coords()}>
                         <i class="fas fa-info-circle"></i>
                       </a>
                     </h2>
                     <div class="flex justify-between items-center gap-1">
-                      <span class="text-[8pt] mr-2">Lat</span>
-                      <input type="number" step="0.00001" id="lat-{index}" placeholder="eg. 33.749" value={actions[Number(index)].lat} onchange={updateLat} />
+                      <span class="text-[8pt] mr-2">{m.mp_lat()}</span>
+                      <input type="number" step="0.00001" id="lat-{index}" placeholder={m.mp_lat_placeholder()} value={actions[Number(index)].lat} onchange={updateLat} />
                       <span class="text-lg text-gray-400">°</span>
                     </div>
                     <div class="flex justify-between items-center gap-1">
-                      <span class="text-[8pt] mr-2">Lon</span>
-                      <input type="number" step="0.00001" id="lon-{index}" placeholder="eg. -84.388" value={actions[Number(index)].lon} onchange={updateLon} />
+                      <span class="text-[8pt] mr-2">{m.mp_lon()}</span>
+                      <input type="number" step="0.00001" id="lon-{index}" placeholder={m.mp_lon_placeholder()} value={actions[Number(index)].lon} onchange={updateLon} />
                       <span class="text-lg text-gray-400">°</span>
                     </div>
                   </div>
                   <div class="separator"></div>
                   <div class="form-input text-center grid gap-1">
                     <h2 class="text-[9pt] mb-1">
-                      Parameters
-                      <a href="https://mavlink.io/en/messages/common.html#mav_commands" target="_blank" class="text-[#61cd89] ml-1" title="More Information">
+                      {m.mp_parameters()}
+                      <a href="https://mavlink.io/en/messages/common.html#mav_commands" target="_blank" class="text-[#61cd89] ml-1" title={m.common_more_info()}>
                         <i class="fas fa-info-circle"></i>
                       </a>
                       {#if !hasParams(actions[Number(index)]) && paramsOpen[Number(index)]}
                         <button
                           type="button"
                           class="params-cancel"
-                          title="Hide the parameter inputs"
-                          aria-label="Hide the parameter inputs"
+                          title={m.mp_hide_params()}
+                          aria-label={m.mp_hide_params()}
                           onclick={() => (paramsOpen[Number(index)] = false)}
                         >
-                          <i class="fas fa-xmark"></i> Cancel
+                          <i class="fas fa-xmark"></i> {m.common_cancel()}
                         </button>
                       {/if}
                     </h2>
@@ -456,38 +457,38 @@
                       <div class="flex justify-between items-center gap-3">
                         <div class="flex justify-between items-center gap-3">
                           <span class="text-[8pt]">P1</span>
-                          <input type="number" id="param1-{index}" placeholder="Empty" value={actions[Number(index)].param1} onchange={updateParam} />
+                          <input type="number" id="param1-{index}" placeholder={m.mp_empty()} value={actions[Number(index)].param1} onchange={updateParam} />
                         </div>
                         <div class="flex justify-between items-center gap-3">
                           <span class="text-[8pt]">P2</span>
-                          <input type="number" id="param2-{index}" placeholder="Empty" value={actions[Number(index)].param2} onchange={updateParam} />
+                          <input type="number" id="param2-{index}" placeholder={m.mp_empty()} value={actions[Number(index)].param2} onchange={updateParam} />
                         </div>
                       </div>
                       <div class="flex justify-between items-center gap-3">
                         <div class="flex justify-between items-center gap-3">
                           <span class="text-[8pt]">P3</span>
-                          <input type="number" id="param3-{index}" placeholder="Empty" value={actions[Number(index)].param3} onchange={updateParam} />
+                          <input type="number" id="param3-{index}" placeholder={m.mp_empty()} value={actions[Number(index)].param3} onchange={updateParam} />
                         </div>
                         <div class="flex justify-between items-center gap-3">
                           <span class="text-[8pt]">P4</span>
-                          <input type="number" id="param4-{index}" placeholder="Empty" value={actions[Number(index)].param4} onchange={updateParam} />
+                          <input type="number" id="param4-{index}" placeholder={m.mp_empty()} value={actions[Number(index)].param4} onchange={updateParam} />
                         </div>
                       </div>
                     {:else}
                       <button type="button" class="params-toggle" onclick={() => (paramsOpen[Number(index)] = true)}>
-                        <i class="fas fa-sliders"></i> Set parameters
+                        <i class="fas fa-sliders"></i> {m.mp_set_params()}
                       </button>
                     {/if}
                   </div>
                   <div class="separator"></div>
                   <div class="form-input flex flex-col gap-1 items-center justify-center">
-                      <h2 class="text-[9pt]">Additional Notes</h2>
-                      <textarea placeholder="Notes" value={actions[Number(index)].notes} id="notes-{index}" onchange={updateNotes}></textarea>
+                      <h2 class="text-[9pt]">{m.mp_additional_notes()}</h2>
+                      <textarea placeholder={m.mp_notes()} value={actions[Number(index)].notes} id="notes-{index}" onchange={updateNotes}></textarea>
                   </div>
                   <div class="separator"></div>
                   <button class="delete-action relative rounded-lg px-3 py-2 text-sm" onclick={() => removeAction(index)}>
                       <i class="fas fa-trash-alt text-red-400"></i>
-                      <span class="tooltip">Delete Action</span>
+                      <span class="tooltip">{m.mp_delete_action()}</span>
                   </button>
               </div>
               <hr>
@@ -497,7 +498,7 @@
       </div>
       <div class="flex justify-center">
         <button class="add-action rounded-lg px-4 py-2 my-4" onclick={addAction}>
-          <i class="fas fa-plus"></i>&nbsp;&nbsp;Add Action
+          <i class="fas fa-plus"></i>&nbsp;&nbsp;{m.mp_add_action()}
         </button>
       </div>
     </div>

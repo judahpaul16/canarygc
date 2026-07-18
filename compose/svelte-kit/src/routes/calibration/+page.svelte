@@ -5,9 +5,9 @@
   import {
     calCommand,
     ACCEL_POSITIONS,
-    ACCEL_POSITION_LABEL,
     type CalKind
   } from '../../lib/calibration';
+  import { m } from '$lib/paraglide/messages';
   import { isPX4 } from '../../lib/flight-modes';
   import { sendMavlinkCommand, writeParameter } from '../../lib/mavlink-client';
   import { notify } from '../../lib/overlays';
@@ -51,28 +51,29 @@
   interface CalCard {
     kind: CalKind;
     icon: string;
-    title: string;
-    desc: string;
+    title: () => string;
+    desc: () => string;
+    start: () => string;
   }
 
   const CARDS: CalCard[] = [
-    { kind: 'compass', icon: 'fa-compass', title: 'Compass', desc: 'Rotate the vehicle through all axes until it completes.' },
-    { kind: 'gyro', icon: 'fa-arrows-rotate', title: 'Gyroscope', desc: 'Keep the vehicle still on a level surface.' },
-    { kind: 'level', icon: 'fa-ruler-horizontal', title: 'Level Horizon', desc: 'Set the level attitude with the vehicle sitting flat.' }
+    { kind: 'compass', icon: 'fa-compass', title: m.cal_compass_title, desc: m.cal_compass_desc, start: m.cal_start_compass },
+    { kind: 'gyro', icon: 'fa-arrows-rotate', title: m.cal_gyro_title, desc: m.cal_gyro_desc, start: m.cal_start_gyro },
+    { kind: 'level', icon: 'fa-ruler-horizontal', title: m.cal_level_title, desc: m.cal_level_desc, start: m.cal_start_level }
   ];
 
-  const ACCEL_POSITION_DESC: Record<string, string> = {
-    level: 'Flat on a level surface, wings horizontal, nose forward.',
-    left: 'Rolled onto the left wing: left wingtip down, right wingtip up.',
-    right: 'Rolled onto the right wing: right wingtip down, left wingtip up.',
-    nosedown: 'Pitched nose straight down, tail up, held vertical.',
-    noseup: 'Pitched nose straight up, tail down, held vertical.',
-    back: 'Upside down on its back, belly up, wings horizontal.'
+  const ACCEL_POSITION_LABEL: Record<string, () => string> = {
+    level: m.cal_pos_level, left: m.cal_pos_left, right: m.cal_pos_right,
+    nosedown: m.cal_pos_nosedown, noseup: m.cal_pos_noseup, back: m.cal_pos_back
+  };
+  const ACCEL_POSITION_DESC: Record<string, () => string> = {
+    level: m.cal_desc_level, left: m.cal_desc_left, right: m.cal_desc_right,
+    nosedown: m.cal_desc_nosedown, noseup: m.cal_desc_noseup, back: m.cal_desc_back
   };
 
   async function start(kind: CalKind) {
     if (armed) {
-      notify({ title: 'Disarm first', content: 'Calibration runs only while the vehicle is disarmed.', type: 'warning' });
+      notify({ title: m.cal_disarm_first_title(), content: m.cal_disarm_run_body(), type: 'warning' });
       return;
     }
     resetCalibration();
@@ -86,15 +87,15 @@
         });
         const data = await res.json();
         if (res.ok) {
-          notify({ title: 'Calibration', content: data.message });
+          notify({ title: m.cal_result_title(), content: data.message });
           calibrationStore.update((s) => ({ ...s, progress: 100, status: 'done' }));
         } else {
           calibrationStore.update((s) => ({ ...s, status: 'failed' }));
-          notify({ title: 'Could not start', content: data.message ?? data.error, type: 'error' });
+          notify({ title: m.cal_could_not_start(), content: data.message ?? data.error, type: 'error' });
         }
       } catch (error) {
         calibrationStore.update((s) => ({ ...s, status: 'failed' }));
-        notify({ title: 'Could not start', content: (error as Error).message, type: 'error' });
+        notify({ title: m.cal_could_not_start(), content: (error as Error).message, type: 'error' });
       }
       return;
     }
@@ -102,7 +103,7 @@
     const ok = await sendMavlinkCommand(c.command, c.params, { cmdLong: c.cmdLong });
     if (!ok) {
       calibrationStore.update((s) => ({ ...s, status: 'failed' }));
-      notify({ title: 'Could not start', content: 'The autopilot did not accept the calibration command.', type: 'error' });
+      notify({ title: m.cal_could_not_start(), content: m.cal_cmd_rejected(), type: 'error' });
     }
   }
 
@@ -120,25 +121,25 @@
   let escEnabled = $state(false);
   async function enableEscCal() {
     if (armed) {
-      notify({ title: 'Disarm first', content: 'Arm ESC calibration only while disarmed and with propellers removed.', type: 'warning' });
+      notify({ title: m.cal_disarm_first_title(), content: m.cal_disarm_esc_body(), type: 'warning' });
       return;
     }
     if (!escParam) {
-      notify({ title: 'Parameter unavailable', content: 'ESC_CALIBRATION was not found on this vehicle; it may still be loading.', type: 'warning' });
+      notify({ title: m.cal_param_unavail_title(), content: m.cal_param_unavail_body(), type: 'warning' });
       return;
     }
     const ok = await writeParameter('ESC_CALIBRATION', 3, escParam.param_type);
     if (ok) {
       escEnabled = true;
-      notify({ title: 'Semi-automatic ESC calibration armed', content: 'Remove propellers, then power-cycle with the throttle held high and follow the steps.', type: 'info' });
+      notify({ title: m.cal_esc_armed_title(), content: m.cal_esc_armed_body(), type: 'info' });
     } else {
-      notify({ title: 'Could not arm', content: 'The autopilot did not accept the parameter write.', type: 'error' });
+      notify({ title: m.cal_could_not_arm(), content: m.cal_param_rejected(), type: 'error' });
     }
   }
 </script>
 
 <svelte:head>
-  <title>Canary Ground Control - Calibration</title>
+  <title>{m.cal_page_title()}</title>
 </svelte:head>
 
 <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">
@@ -146,12 +147,12 @@
     <div class="settings rounded-2xl h-full p-6 overflow-y-auto">
       <div class="content">
         <header class="head">
-          <h1><i class="fas fa-crosshairs"></i> Sensor Calibration</h1>
-          <p>Calibrate the sensors on the connected {px4 ? 'PX4' : 'ArduPilot'} vehicle. Run each on a disarmed vehicle and follow the prompts. Progress streams live from the autopilot.</p>
+          <h1><i class="fas fa-crosshairs"></i> {m.nav_calibration()}</h1>
+          <p>{m.cal_intro({ vehicle: px4 ? 'PX4' : 'ArduPilot' })}</p>
         </header>
 
         {#if armed}
-          <div class="armed-warn"><i class="fas fa-triangle-exclamation"></i> The vehicle is armed. Disarm it before calibrating.</div>
+          <div class="armed-warn"><i class="fas fa-triangle-exclamation"></i> {m.cal_armed_warn()}</div>
         {/if}
 
         <div class="cal-grid">
@@ -159,25 +160,25 @@
             <div class="panel-head">
               <span class="icon-chip"><i class="fas fa-cube"></i></span>
               <div>
-                <h2>Accelerometer</h2>
-                <p class="muted">Hold the vehicle in each of the six orientations as prompted.</p>
+                <h2>{m.cal_accel_title()}</h2>
+                <p class="muted">{m.cal_accel_desc()}</p>
               </div>
             </div>
             <div class="poses">
               {#each ACCEL_POSITIONS as pos (pos)}
                 <div class="pose-tile" class:current={cal.active === 'accel' && cal.orientation === pos}>
-                  <img class="pose-img" src="/calibration/accel-{pos}.png" alt="Aircraft held {ACCEL_POSITION_LABEL[pos]}" />
-                  <span class="pose-label">{ACCEL_POSITION_LABEL[pos]}</span>
-                  <span class="pose-desc">{ACCEL_POSITION_DESC[pos]}</span>
+                  <img class="pose-img" src="/calibration/accel-{pos}.png" alt={m.cal_pose_alt({ label: ACCEL_POSITION_LABEL[pos]() })} />
+                  <span class="pose-label">{ACCEL_POSITION_LABEL[pos]()}</span>
+                  <span class="pose-desc">{ACCEL_POSITION_DESC[pos]()}</span>
                 </div>
               {/each}
             </div>
             {#if cal.active === 'accel' && cal.status === 'running'}
               <div class="bar"><div class="fill" style="width: {cal.progress}%"></div></div>
-              <p class="hint">{cal.orientation ? `Hold: ${ACCEL_POSITION_LABEL[cal.orientation as keyof typeof ACCEL_POSITION_LABEL] ?? cal.orientation}` : 'Starting...'} ({cal.progress}%)</p>
+              <p class="hint">{cal.orientation ? m.cal_hold({ label: ACCEL_POSITION_LABEL[cal.orientation]?.() ?? cal.orientation }) : m.cal_starting()} ({cal.progress}%)</p>
             {/if}
             <button class="cta" disabled={armed || (cal.active === 'accel' && cal.status === 'running')} onclick={() => start('accel')}>
-              <i class="fas fa-play"></i> {cal.active === 'accel' && cal.status === 'done' ? 'Calibrated' : 'Start accelerometer'}
+              <i class="fas fa-play"></i> {cal.active === 'accel' && cal.status === 'done' ? m.cal_calibrated() : m.cal_start_accel()}
             </button>
           </section>
 
@@ -186,20 +187,20 @@
               <div class="panel-head">
                 <span class="icon-chip"><i class="fas {card.icon}"></i></span>
                 <div>
-                  <h2>{card.title}</h2>
-                  <p class="muted">{card.desc}</p>
+                  <h2>{card.title()}</h2>
+                  <p class="muted">{card.desc()}</p>
                 </div>
               </div>
               {#if cal.active === card.kind && cal.status === 'running'}
                 <div class="bar"><div class="fill" style="width: {cal.progress}%"></div></div>
-                <p class="hint">Calibrating... ({cal.progress}%)</p>
+                <p class="hint">{m.cal_calibrating()} ({cal.progress}%)</p>
               {:else if cal.active === card.kind && cal.status === 'done'}
-                <p class="hint ok-text"><i class="fas fa-circle-check"></i> Done</p>
+                <p class="hint ok-text"><i class="fas fa-circle-check"></i> {m.cal_done()}</p>
               {:else if cal.active === card.kind && cal.status === 'failed'}
-                <p class="hint bad-text"><i class="fas fa-circle-xmark"></i> Failed, try again</p>
+                <p class="hint bad-text"><i class="fas fa-circle-xmark"></i> {m.cal_failed()}</p>
               {/if}
               <button class="cta" disabled={armed || (cal.active === card.kind && cal.status === 'running')} onclick={() => start(card.kind)}>
-                <i class="fas fa-play"></i> Start {card.title.toLowerCase()}
+                <i class="fas fa-play"></i> {card.start()}
               </button>
             </section>
           {/each}
@@ -209,11 +210,11 @@
             <div class="panel-head">
               <span class="icon-chip"><i class="fas fa-plug-circle-bolt"></i></span>
               <div>
-                <h2>ESC Calibration</h2>
-                <p class="muted">Set the throttle endpoints on every ESC so the motors respond together.</p>
+                <h2>{m.cal_esc_title()}</h2>
+                <p class="muted">{m.cal_esc_desc()}</p>
               </div>
             </div>
-            <div class="esc-warn"><i class="fas fa-triangle-exclamation"></i> Remove all propellers before you begin. The motors can spin at full throttle.</div>
+            <div class="esc-warn"><i class="fas fa-triangle-exclamation"></i> {m.cal_esc_warn()}</div>
             <div class="esc-body">
               <div class="esc-scene" aria-hidden="true">
                 <div class="quad">
@@ -232,21 +233,21 @@
                 <div class="beeps"><span></span><span></span><span></span><span></span></div>
               </div>
               <ol class="esc-steps">
-                <li>Remove all propellers and disconnect the battery.</li>
-                <li>Hold the transmitter throttle at maximum.</li>
-                <li>Connect the battery and wait for the ready tones.</li>
-                <li>Power-cycle the battery while the throttle stays high.</li>
-                <li>Listen for the beeps that confirm the maximum endpoint.</li>
-                <li>Lower the throttle to minimum; a long tone confirms the minimum.</li>
-                <li>Raise the throttle slightly to confirm the motors spin together, then disconnect.</li>
+                <li>{m.cal_esc_step1()}</li>
+                <li>{m.cal_esc_step2()}</li>
+                <li>{m.cal_esc_step3()}</li>
+                <li>{m.cal_esc_step4()}</li>
+                <li>{m.cal_esc_step5()}</li>
+                <li>{m.cal_esc_step6()}</li>
+                <li>{m.cal_esc_step7()}</li>
               </ol>
             </div>
             {#if px4}
-              <p class="hint">On PX4, run ESC calibration from the actuator setup, disarmed and with propellers removed.</p>
+              <p class="hint">{m.cal_esc_px4()}</p>
             {:else if escEnabled}
-              <p class="hint ok-text"><i class="fas fa-circle-check"></i> Semi-automatic mode armed. Power-cycle to run it.</p>
+              <p class="hint ok-text"><i class="fas fa-circle-check"></i> {m.cal_esc_armed_hint()}</p>
             {:else}
-              <button class="cta" disabled={armed} onclick={enableEscCal}><i class="fas fa-bolt"></i> Arm semi-automatic mode</button>
+              <button class="cta" disabled={armed} onclick={enableEscCal}><i class="fas fa-bolt"></i> {m.cal_esc_arm_btn()}</button>
             {/if}
           </section>
 
@@ -254,8 +255,8 @@
             <div class="panel-head">
               <span class="icon-chip"><i class="fas fa-fan"></i></span>
               <div>
-                <h2>Motor output</h2>
-                <p class="muted">Live PWM per output.</p>
+                <h2>{m.cal_motor_title()}</h2>
+                <p class="muted">{m.cal_motor_desc()}</p>
               </div>
             </div>
             <MotorOutput />
@@ -267,13 +268,13 @@
           <div class="panel-head">
             <span class="icon-chip"><i class="fas fa-terminal"></i></span>
             <div>
-              <h2>Status</h2>
-              <p class="muted">Live calibration messages from the autopilot.</p>
+              <h2>{m.cal_status_title()}</h2>
+              <p class="muted">{m.cal_status_desc()}</p>
             </div>
           </div>
           <div class="log">
             {#if cal.log.length === 0}
-              <p class="muted">No calibration running.</p>
+              <p class="muted">{m.cal_no_run()}</p>
             {:else}
               {#each cal.log as line, i (i)}<div class="log-line">{line}</div>{/each}
             {/if}

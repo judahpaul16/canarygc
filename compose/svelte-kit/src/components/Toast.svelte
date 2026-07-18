@@ -3,6 +3,7 @@
   import { fly } from 'svelte/transition';
   import { dismissToast } from '../stores/toastStore';
   import type { NotificationType } from '../lib/overlays';
+  import { m } from '$lib/paraglide/messages';
 
   interface Props {
     id: number;
@@ -86,7 +87,7 @@
         <a class="toast-link" href={link.href} target="_blank" rel="noopener noreferrer">{link.label}</a>
       {/if}
     </div>
-    <button class="toast-close" onclick={() => dismissToast(id)} aria-label="Dismiss">&times;</button>
+    <button class="toast-close" onclick={() => dismissToast(id)} aria-label={m.common_dismiss()}>&times;</button>
   </div>
   {#if timed}
     <div class="toast-track"><div class="toast-progress" style="width: {progress}%"></div></div>

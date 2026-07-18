@@ -6,13 +6,14 @@
   import ManageMissionPlans from '../../components/ManageMissionPlans.svelte';
   import { mavLocationStore } from '../../stores/mavlinkStore';
   import { mapShell } from '../../lib/map-window';
+  import { m } from '$lib/paraglide/messages';
 
   let mavLocation = $derived($mavLocationStore);
 
 </script>
 
 <svelte:head>
-  <title>Canary Ground Control - Dashboard</title>
+  <title>{m.page_title_dashboard()}</title>
 </svelte:head>
 
 <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">

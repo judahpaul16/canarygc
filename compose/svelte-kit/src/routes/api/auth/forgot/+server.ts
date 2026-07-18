@@ -4,6 +4,8 @@ import { randomBytes, createHash } from "node:crypto";
 import type { RequestHandler } from '@sveltejs/kit';
 import type { DatabaseUser } from "$lib/server/db";
 import { lockedMs, noteFailure } from "$lib/server/rate-limit";
+import { m } from '$lib/paraglide/messages';
+import { operatorLocale } from '$lib/server/locale';
 
 const RESET_TTL_MS = 60 * 60 * 1000;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -16,7 +18,7 @@ function json(message: string, status: number): Response {
 }
 
 export const POST: RequestHandler = async (event): Promise<Response> => {
-    const generic = json("If that email is on file, a reset link is on its way.", 200);
+    const generic = json(m.api_reset_generic(), 200);
 
     // Cap reset requests per client so a known operator email cannot be flooded
     // with reset mail; a rate-limited client gets the same generic reply.
@@ -48,16 +50,20 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
     });
 
     const link = `${event.url.origin}/reset-password?token=${token}`;
+    const locale = await operatorLocale();
+    const intro = m.email_reset_body(undefined, { locale });
+    const linkText = m.email_reset_link_text(undefined, { locale });
+    const expiry = m.email_reset_expiry(undefined, { locale });
     try {
         await sendMail({
             to: email,
-            subject: "Reset your CanaryGC password",
-            text: `A password reset was requested for your CanaryGC operator account.\n\nReset your password: ${link}\n\nThis link expires in one hour. If you did not request it, ignore this email.`,
-            html: `<p>A password reset was requested for your CanaryGC operator account.</p><p><a href="${link}">Reset your password</a></p><p>This link expires in one hour. If you did not request it, ignore this email.</p>`
+            subject: m.email_reset_subject(undefined, { locale }),
+            text: `${intro}\n\n${linkText}: ${link}\n\n${expiry}`,
+            html: `<p>${intro}</p><p><a href="${link}">${linkText}</a></p><p>${expiry}</p>`
         });
     } catch (e) {
         console.error("Password reset email failed:", (e as Error).message);
-        return json("Email could not be sent. Check the SMTP settings under Integrations.", 500);
+        return json(m.api_reset_email_failed(), 500);
     }
 
     return generic;

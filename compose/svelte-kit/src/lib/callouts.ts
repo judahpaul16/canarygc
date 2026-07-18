@@ -9,6 +9,8 @@ import {
 } from '../stores/mavlinkStore';
 import { missionCompleteStore } from '../stores/missionPlanStore';
 import { audioCalloutsStore } from '../stores/customizationStore';
+import { m } from '$lib/paraglide/messages';
+import { getLocale } from '$lib/paraglide/runtime';
 
 // Spoken telemetry callouts, modeled on Mission Planner's speech option and
 // GPWS-style annunciation: short standardized phrases on state transitions,
@@ -35,6 +37,7 @@ export function callout(phrase: string, critical = false): void {
 
   const utterance = new SpeechSynthesisUtterance(phrase);
   utterance.rate = CALLOUT_RATE;
+  utterance.lang = getLocale();
   if (critical) window.speechSynthesis.cancel();
   window.speechSynthesis.speak(utterance);
 }
@@ -45,26 +48,27 @@ export function stopCallouts(): void {
   }
 }
 
-const MODE_PHRASES: Record<string, string> = {
-  RTL: 'Return to launch',
-  'AUTO.RTL': 'Return to launch',
-  SMART_RTL: 'Smart return to launch',
-  AUTO: 'Auto mission',
-  'AUTO.MISSION': 'Auto mission',
-  'AUTO.TAKEOFF': 'Takeoff',
-  GUIDED: 'Guided',
-  LOITER: 'Loiter',
-  'AUTO.LOITER': 'Loiter',
-  LAND: 'Landing',
-  'AUTO.LAND': 'Landing',
-  STABILIZE: 'Stabilize',
-  ALT_HOLD: 'Altitude hold',
-  POSHOLD: 'Position hold',
-  BRAKE: 'Brake'
+const MODE_PHRASES: Record<string, () => string> = {
+  RTL: m.callout_mode_rtl,
+  'AUTO.RTL': m.callout_mode_rtl,
+  SMART_RTL: m.callout_mode_smart_rtl,
+  AUTO: m.callout_mode_auto,
+  'AUTO.MISSION': m.callout_mode_auto,
+  'AUTO.TAKEOFF': m.callout_mode_takeoff,
+  GUIDED: m.callout_mode_guided,
+  LOITER: m.callout_mode_loiter,
+  'AUTO.LOITER': m.callout_mode_loiter,
+  LAND: m.callout_mode_land,
+  'AUTO.LAND': m.callout_mode_land,
+  STABILIZE: m.callout_mode_stabilize,
+  ALT_HOLD: m.callout_mode_alt_hold,
+  POSHOLD: m.callout_mode_poshold,
+  BRAKE: m.callout_mode_brake
 };
 
 function modePhrase(mode: string): string {
-  return MODE_PHRASES[mode] ?? `Mode ${mode.replace(/_/g, ' ').toLowerCase()}`;
+  const phrase = MODE_PHRASES[mode];
+  return phrase ? phrase() : m.callout_mode_generic({ mode: mode.replace(/_/g, ' ').toLowerCase() });
 }
 
 // Subscribes to the telemetry stores and speaks a callout on each meaningful
@@ -83,7 +87,7 @@ export function initCallouts(): () => void {
   const unsubscribers = [
     mavArmedStateStore.subscribe((armed) => {
       if (!armedInit) return void (armedInit = true);
-      callout(armed ? 'Armed' : 'Disarmed');
+      callout(armed ? m.callout_armed() : m.callout_disarmed());
     }),
 
     mavModeStore.subscribe((mode) => {
@@ -97,23 +101,23 @@ export function initCallouts(): () => void {
         prevComplete = done;
         return;
       }
-      if (done && !prevComplete) callout('Mission complete');
+      if (done && !prevComplete) callout(m.callout_mission_complete());
       prevComplete = done;
     }),
 
     mavStateStore.subscribe((state) => {
       if (!stateInit) return void (stateInit = true);
-      if (state === 'Critical') callout('Warning, failsafe', true);
-      else if (state === 'Emergency') callout('Emergency', true);
+      if (state === 'Critical') callout(m.callout_failsafe(), true);
+      else if (state === 'Emergency') callout(m.callout_emergency(), true);
     }),
 
     mavBatteryStore.subscribe((percent) => {
       if (percent === null) return;
       if (percent <= BATTERY_CRITICAL_PERCENT && batteryFloor > BATTERY_CRITICAL_PERCENT) {
-        callout('Battery critical, land now', true);
+        callout(m.callout_battery_critical(), true);
         batteryFloor = BATTERY_CRITICAL_PERCENT;
       } else if (percent <= BATTERY_LOW_PERCENT && batteryFloor > BATTERY_LOW_PERCENT) {
-        callout('Battery low');
+        callout(m.callout_battery_low());
         batteryFloor = BATTERY_LOW_PERCENT;
       } else if (percent > BATTERY_LOW_PERCENT + 5) {
         batteryFloor = 100;
@@ -129,12 +133,12 @@ export function initCallouts(): () => void {
       }
       if (ok === gpsOk) return;
       gpsOk = ok;
-      callout(ok ? 'GPS fix acquired' : 'GPS signal lost', !ok);
+      callout(ok ? m.callout_gps_acquired() : m.callout_gps_lost(), !ok);
     }),
 
     onlineStore.subscribe((online) => {
       if (!onlineInit) return void (onlineInit = true);
-      callout(online ? 'Link restored' : 'Link lost');
+      callout(online ? m.callout_link_restored() : m.callout_link_lost());
     })
   ];
 

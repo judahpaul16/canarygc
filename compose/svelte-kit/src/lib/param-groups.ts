@@ -1,65 +1,66 @@
 import { get } from 'svelte/store';
 import { mavModelStore } from '../stores/mavlinkStore';
 import { isPX4 } from './flight-modes';
+import { m } from '$lib/paraglide/messages';
 
 export interface ParamGroup {
   key: string;
-  label: string;
+  label: () => string;
   icon: string;
-  blurb: string;
+  blurb: () => string;
   prefixes: { ardupilot: string[]; px4: string[] };
 }
 
 // Curated one-line descriptions for the parameters an operator most often
 // reaches for inside each group, keyed by exact parameter id.
-export const PARAM_HELP: Record<string, string> = {
-  FS_THR_ENABLE: 'Action when the RC link is lost (throttle failsafe).',
-  FS_THR_VALUE: 'PWM below which the throttle channel counts as RC loss.',
-  FS_GCS_ENABLE: 'Action when the ground-station heartbeat is lost.',
-  FS_EKF_ACTION: 'Action when the EKF position estimate fails.',
-  FS_OPTIONS: 'Bitmask of failsafe continuation options.',
-  FS_CRASH_CHECK: 'Disarm automatically when a crash is detected.',
-  BATT_FS_LOW_ACT: 'Action taken at the low-battery threshold.',
-  BATT_FS_CRT_ACT: 'Action taken at the critical-battery threshold.',
-  NAV_RCL_ACT: 'Action when the RC link is lost.',
-  NAV_DLL_ACT: 'Action when the data link (ground station) is lost.',
-  COM_LOW_BAT_ACT: 'Action taken as the battery drains.',
-  COM_RC_LOSS_T: 'Seconds without RC before the failsafe triggers.',
-  GF_ACTION: 'Action when the geofence is breached.',
-  LOG_BACKEND_TYPE: 'Where logs are written (SD card, MAVLink, or both).',
-  LOG_BITMASK: 'Which message groups are recorded to the log.',
-  LOG_DISARMED: 'Keep logging while the vehicle is disarmed.',
-  LOG_FILE_DSRMROT: 'Start a new log file each time the vehicle disarms.',
-  SDLOG_MODE: 'When the SD-card logger records (armed, from boot, or always).',
-  SDLOG_PROFILE: 'Which topic profile the logger records.',
-  OSD_TYPE: 'On-screen-display backend driving the video overlay.',
-  OSD_CHAN: 'RC channel that switches OSD screens.',
-  OSD_UNITS: 'Measurement units shown on the overlay.',
-  BATT_MONITOR: 'Battery monitor type and source.',
-  BATT_CAPACITY: 'Pack capacity in mAh used for the remaining estimate.',
-  BATT_LOW_VOLT: 'Voltage that triggers the low-battery failsafe.',
-  BATT_CRT_VOLT: 'Voltage that triggers the critical-battery failsafe.',
-  BAT_LOW_THR: 'Remaining fraction that triggers the low-battery warning.',
-  BAT_CRIT_THR: 'Remaining fraction that triggers the critical action.',
-  BAT_EMERGEN_THR: 'Remaining fraction that triggers the emergency landing.',
-  FENCE_ENABLE: 'Turn the geofence on or off.',
-  FENCE_ALT_MAX: 'Maximum altitude the fence allows.',
-  FENCE_RADIUS: 'Radius of the circular fence around home.',
-  FENCE_ACTION: 'Action when the fence is breached.',
-  GF_MAX_HOR_DIST: 'Maximum horizontal distance from home before the fence acts.',
-  GF_MAX_VER_DIST: 'Maximum altitude before the fence acts.',
-  RTL_ALT: 'Altitude the vehicle climbs to before returning home.',
-  RTL_LOIT_TIME: 'Time to loiter above home before landing.',
-  RTL_RETURN_ALT: 'Altitude the vehicle returns at during RTL.',
-  RTL_DESCEND_ALT: 'Altitude the vehicle descends to before the final landing.'
+export const PARAM_HELP: Record<string, () => string> = {
+  FS_THR_ENABLE: m.param_help_fs_thr_enable,
+  FS_THR_VALUE: m.param_help_fs_thr_value,
+  FS_GCS_ENABLE: m.param_help_fs_gcs_enable,
+  FS_EKF_ACTION: m.param_help_fs_ekf_action,
+  FS_OPTIONS: m.param_help_fs_options,
+  FS_CRASH_CHECK: m.param_help_fs_crash_check,
+  BATT_FS_LOW_ACT: m.param_help_batt_fs_low_act,
+  BATT_FS_CRT_ACT: m.param_help_batt_fs_crt_act,
+  NAV_RCL_ACT: m.param_help_nav_rcl_act,
+  NAV_DLL_ACT: m.param_help_nav_dll_act,
+  COM_LOW_BAT_ACT: m.param_help_com_low_bat_act,
+  COM_RC_LOSS_T: m.param_help_com_rc_loss_t,
+  GF_ACTION: m.param_help_gf_action,
+  LOG_BACKEND_TYPE: m.param_help_log_backend_type,
+  LOG_BITMASK: m.param_help_log_bitmask,
+  LOG_DISARMED: m.param_help_log_disarmed,
+  LOG_FILE_DSRMROT: m.param_help_log_file_dsrmrot,
+  SDLOG_MODE: m.param_help_sdlog_mode,
+  SDLOG_PROFILE: m.param_help_sdlog_profile,
+  OSD_TYPE: m.param_help_osd_type,
+  OSD_CHAN: m.param_help_osd_chan,
+  OSD_UNITS: m.param_help_osd_units,
+  BATT_MONITOR: m.param_help_batt_monitor,
+  BATT_CAPACITY: m.param_help_batt_capacity,
+  BATT_LOW_VOLT: m.param_help_batt_low_volt,
+  BATT_CRT_VOLT: m.param_help_batt_crt_volt,
+  BAT_LOW_THR: m.param_help_bat_low_thr,
+  BAT_CRIT_THR: m.param_help_bat_crit_thr,
+  BAT_EMERGEN_THR: m.param_help_bat_emergen_thr,
+  FENCE_ENABLE: m.param_help_fence_enable,
+  FENCE_ALT_MAX: m.param_help_fence_alt_max,
+  FENCE_RADIUS: m.param_help_fence_radius,
+  FENCE_ACTION: m.param_help_fence_action,
+  GF_MAX_HOR_DIST: m.param_help_gf_max_hor_dist,
+  GF_MAX_VER_DIST: m.param_help_gf_max_ver_dist,
+  RTL_ALT: m.param_help_rtl_alt,
+  RTL_LOIT_TIME: m.param_help_rtl_loit_time,
+  RTL_RETURN_ALT: m.param_help_rtl_return_alt,
+  RTL_DESCEND_ALT: m.param_help_rtl_descend_alt
 };
 
 export const PARAM_GROUPS: ParamGroup[] = [
   {
     key: 'failsafe',
-    label: 'Failsafe',
+    label: m.param_group_failsafe,
     icon: 'fa-shield-halved',
-    blurb: 'What the vehicle does when RC, the ground link, the battery, or position estimation fails.',
+    blurb: m.param_group_failsafe_blurb,
     prefixes: {
       ardupilot: ['FS_', 'BATT_FS'],
       px4: ['NAV_RCL', 'NAV_DLL', 'COM_LOW_BAT', 'COM_RC_LOSS', 'COM_POSCTL_NAVL', 'COM_OBL']
@@ -67,37 +68,37 @@ export const PARAM_GROUPS: ParamGroup[] = [
   },
   {
     key: 'logging',
-    label: 'Logging',
+    label: m.param_group_logging,
     icon: 'fa-box-archive',
-    blurb: 'Flight-log (blackbox) recording: where logs are written and which messages they capture.',
+    blurb: m.param_group_logging_blurb,
     prefixes: { ardupilot: ['LOG_'], px4: ['SDLOG_'] }
   },
   {
     key: 'osd',
-    label: 'OSD',
+    label: m.param_group_osd,
     icon: 'fa-tv',
-    blurb: 'On-screen-display overlay drawn over the FPV video feed.',
+    blurb: m.param_group_osd_blurb,
     prefixes: { ardupilot: ['OSD_'], px4: ['OSD_'] }
   },
   {
     key: 'battery',
-    label: 'Battery',
+    label: m.param_group_battery,
     icon: 'fa-battery-half',
-    blurb: 'Battery monitoring, capacity, and the voltage thresholds that arm the failsafes.',
+    blurb: m.param_group_battery_blurb,
     prefixes: { ardupilot: ['BATT_'], px4: ['BAT_', 'BAT1_'] }
   },
   {
     key: 'geofence',
-    label: 'Geofence',
+    label: m.param_group_geofence,
     icon: 'fa-draw-polygon',
-    blurb: 'Virtual boundary the vehicle refuses to cross, and what it does at the edge.',
+    blurb: m.param_group_geofence_blurb,
     prefixes: { ardupilot: ['FENCE_'], px4: ['GF_'] }
   },
   {
     key: 'return',
-    label: 'Return',
+    label: m.param_group_return,
     icon: 'fa-house',
-    blurb: 'Return-to-launch behavior: the climb, the path home, and the landing sequence.',
+    blurb: m.param_group_return_blurb,
     prefixes: { ardupilot: ['RTL_'], px4: ['RTL_'] }
   }
 ];
@@ -116,5 +117,5 @@ export function paramInGroup(
 }
 
 export function helpFor(paramId: string): string | undefined {
-  return PARAM_HELP[paramId.replace(/^"|"$/g, '').toUpperCase()];
+  return PARAM_HELP[paramId.replace(/^"|"$/g, '').toUpperCase()]?.();
 }

@@ -22,6 +22,7 @@
   import { darkModeStore } from '../stores/customizationStore';
   import { markersStore } from '../stores/mapStore';
   import { get } from 'svelte/store';
+  import { m } from '$lib/paraglide/messages';
 
   import { showModal, notify } from '../lib/overlays';
   import { sendMavlinkCommand, setFlightMode } from '../lib/mavlink-client';
@@ -178,21 +179,21 @@
   function confirmCalibration() {
     if (isPX4()) {
       notify({
-        title: 'Not available on PX4',
-        content: 'Yaw-referenced compass calibration uses an ArduPilot command. Calibrate PX4 sensors from the Sensor Calibration page.',
+        title: m.stats_px4_calib_title(),
+        content: m.stats_px4_calib_body(),
         type: 'warning'
       });
       goto('/calibration');
       return;
     }
     showModal({
-      title: 'Sensor Calibration',
-      content: 'Are you sure you want to calibrate the sensors? If so please manually specify the current heading (direction) of the MAV in degrees.',
+      title: m.nav_calibration(),
+      content: m.stats_calib_body(),
       confirmation: true,
       inputs: [
         {
           type: 'number',
-          placeholder: 'Current Heading',
+          placeholder: m.stats_calib_heading(),
           required: true,
         }
       ],
@@ -207,14 +208,14 @@
 
   function stopMission() {
     showModal({
-      title: 'Stop Mission',
-      content: 'Are you sure you want to stop the mission?',
+      title: m.stats_stop_title(),
+      content: m.stats_stop_body(),
       confirmation: true,
       onConfirm: async () => {
         await setFlightMode('RTL');
         notify({
-          title: 'Mission Stopped',
-          content: 'The mission has been stopped.<br>Returning to launch.',
+          title: m.stats_stopped_title(),
+          content: m.stats_stopped_body(),
         });
       },
     });
@@ -222,14 +223,14 @@
 
   function pauseMission() {
     showModal({
-      title: 'Pause Mission',
-      content: 'Are you sure you want to pause the mission?',
+      title: m.stats_pause_title(),
+      content: m.stats_pause_body(),
       confirmation: true,
       onConfirm: async () => {
         await setFlightMode('GUIDED');
         notify({
-          title: 'Mission Paused',
-          content: 'The mission has been paused.',
+          title: m.stats_paused_title(),
+          content: m.stats_paused_body(),
         });
       },
     });
@@ -237,8 +238,8 @@
 
   function releasePayload() {
     showModal({
-      title: 'Confirm Release Payload',
-      content: 'Are you sure you want to release the payload?\nUse caution and ensure the drop zone is clear.',
+      title: m.stats_release_title(),
+      content: m.stats_release_body(),
       confirmation: true,
       onConfirm: async () => {
         if (!isGuidedLabel(mavMode)) await setFlightMode('GUIDED');
@@ -289,8 +290,8 @@
 
   function clearLoadedPlan() {
     showModal({
-      title: 'Clear Mission Plan',
-      content: 'Are you sure you want to clear the loaded mission plan? It is removed from the dashboard and cleared from the flight controller.',
+      title: m.stats_clear_title(),
+      content: m.stats_clear_body(),
       confirmation: true,
       onConfirm: async () => {
         if (!fcIsMsp) {
@@ -307,8 +308,8 @@
         missionPlanActionsStore.set({});
         missionCompleteStore.set(true);
         notify({
-          title: 'Mission Plan Cleared',
-          content: 'The loaded mission plan has been cleared.',
+          title: m.stats_cleared_title(),
+          content: m.stats_cleared_body(),
           duration: 3000
         });
       }
@@ -320,28 +321,28 @@
   class="elevated-surface stats p-4 rounded-2xl flex flex-col space-y-2 h-full overflow-y-auto overflow-x-hidden text-sm"
 >
   <h2 class="text-lg font-bold">
-    <a href="https://mavlink.io/en/messages/common.html#MAV_AUTOPILOT" target="_blank" title="More Information">
+    <a href="https://mavlink.io/en/messages/common.html#MAV_AUTOPILOT" target="_blank" title={m.common_more_info()}>
       <i class="fas fa-info-circle text-gray-500 hover:text-[#62bbff] mr-[0.2em]"></i>
     </a>
-    <span class="text-gray-500">Autopilot Model:</span>&nbsp;{mavModel}
+    <span class="text-gray-500">{m.stats_autopilot_model()}</span>&nbsp;{mavModel}
   </h2>
   <hr />
   <div class="h-full flex flex-col justify-evenly">
     <div class="grid grid-cols-2 gap-2">
-      <div>MAV Type: {mavType}</div>
-      <div>System State: {systemState}</div>
-      <div>Speed: {speed} m/s</div>
-      <div>Altitude: {altitude} m</div>
-      <div class="battery-status {batteryStatus === null ? 'red' : ''} {batteryStatus !== null && batteryStatus < 20 ? 'red' : batteryStatus !== null && batteryStatus < 50 ? 'yellow' : 'green'}">Battery Status: {batteryStatus !== null ? batteryStatus : '--'}%</div>
-      <div>Mode: <span  class="text-orange-400">{mavMode}</span></div>
+      <div>{m.stats_mav_type({ type: mavType })}</div>
+      <div>{m.stats_system_state({ state: systemState })}</div>
+      <div>{m.stats_speed({ speed })}</div>
+      <div>{m.stats_altitude({ altitude })}</div>
+      <div class="battery-status {batteryStatus === null ? 'red' : ''} {batteryStatus !== null && batteryStatus < 20 ? 'red' : batteryStatus !== null && batteryStatus < 50 ? 'yellow' : 'green'}">{m.stats_battery({ percent: batteryStatus !== null ? batteryStatus : '--' })}</div>
+      <div>{m.stats_mode()} <span class="text-orange-400">{mavMode}</span></div>
     </div>
     <hr class="my-3" />
-      <div class="w-full mb-2">Loaded Mission Plan:
+      <div class="w-full mb-2">{m.stats_loaded_plan()}
         <span class="text-[#66e1ff] {darkMode ? '' : 'brightness-90'}" title={missionPlanTitle}>
-          {missionPlanTitle || 'No mission plan loaded.'}
+          {missionPlanTitle || m.stats_no_plan()}
         </span>
         {#if missionLoaded}
-          <button class="clear-plan" onclick={clearLoadedPlan} title="Clear loaded plan" aria-label="Clear loaded mission plan">
+          <button class="clear-plan" onclick={clearLoadedPlan} title={m.stats_clear_plan_tip()} aria-label={m.stats_clear_plan_aria()}>
             <i class="fas fa-times"></i>
           </button>
         {/if}
@@ -349,8 +350,8 @@
       <div class="flex flex-col items-center justify-end">
         <div class="w-full">
           <span>
-            Mission Progress: {systemState === 'Unknown' ? '--' : isAutoLabel(mavMode) ? missionProgress : 0}% (ETA {eta})
-            <span class="text-[#66e1ff]"> {isAutoLabel(mavMode) ? (parseFloat(remainingDistance.toFixed(2)) || 0) : 0} m remaining</span>
+            {m.stats_mission_progress({ percent: systemState === 'Unknown' ? '--' : isAutoLabel(mavMode) ? missionProgress : 0, eta })}
+            <span class="text-[#66e1ff]"> {m.stats_remaining({ meters: isAutoLabel(mavMode) ? (parseFloat(remainingDistance.toFixed(2)) || 0) : 0 })}</span>
           </span>
           <div class="progress-bar rounded-full h-2.5 mt-3">
             <div class="progress-bar-inner h-2.5 rounded-full" style="width: {isAutoLabel(mavMode) ? missionProgress : 0}%;"></div>
@@ -360,27 +361,27 @@
           <div class="relative group">
             <button class="circular-button" onclick={confirmCalibration}>
               <i class="far fa-compass text-[#ffa704] fa-spin"></i>
-              <div class="tooltip text-white">Calibrate Sensors</div>
+              <div class="tooltip text-white">{m.stats_tip_calibrate()}</div>
             </button>
           </div>
           <div class="relative group">
             <button class="circular-button" onclick={releasePayload} disabled={fcIsMsp}>
               <i class="fas fa-parachute-box"></i>
-              <div class="tooltip text-white">Release Payload</div>
+              <div class="tooltip text-white">{m.stats_tip_release()}</div>
             </button>
           </div>
           {#if systemState === 'STANDBY' || !isArmed}
             <div class="relative group flex flex-col items-center">
               <button class="circular-button" onclick={takeoffWithConfirm} disabled={isAutoLabel(mavMode) && systemState !== 'STANDBY'}>
                 <i class="fas fa-plane-departure"></i>
-                <div class="tooltip text-white">Initiate Takeoff</div>
+                <div class="tooltip text-white">{m.stats_tip_takeoff()}</div>
               </button>
             </div>
           {:else}
             <div class="relative group flex flex-col items-center">
               <button class="circular-button" onclick={landWithConfirm} disabled={isAutoLabel(mavMode) || mavMode.includes('LAND')}>
                 <i class="fas fa-plane-arrival"></i>
-                <div class="tooltip text-white">Initiate Landing</div>
+                <div class="tooltip text-white">{m.stats_tip_land()}</div>
               </button>
             </div>
           {/if}
@@ -391,7 +392,7 @@
                 disabled={(isAutoLabel(mavMode) && systemState !== 'STANDBY') || (!missionLoaded && !fcIsMsp)}
               >
                 <i class="fas fa-play"></i>
-                <div class="tooltip text-white">Start/Resume Mission</div>
+                <div class="tooltip text-white">{m.stats_tip_start()}</div>
               </button>
             </div>
           {:else}
@@ -401,7 +402,7 @@
                 disabled={!isAutoLabel(mavMode) && !fcIsMsp}
               >
                 <i class="fas fa-pause"></i>
-                <div class="tooltip text-white">Pause Mission (Loiter)</div>
+                <div class="tooltip text-white">{m.stats_tip_pause()}</div>
               </button>
             </div>
           {/if}
@@ -411,7 +412,7 @@
               disabled={(!isAutoLabel(mavMode) || !missionLoaded) && !fcIsMsp}
             >
               <i class="fas fa-stop text-red-400"></i>
-              <div class="tooltip text-white">Stop Mission (RTL)</div>
+              <div class="tooltip text-white">{m.stats_tip_stop()}</div>
             </button>
           </div>
         </div>

@@ -5,6 +5,7 @@ import type { RequestHandler } from '@sveltejs/kit';
 import { lockedMs, noteFailure, clearFailures } from "$lib/server/rate-limit";
 
 import type { DatabaseUser } from "$lib/server/db";
+import { m } from '$lib/paraglide/messages';
 
 function json(message: string, status: number, headers: Record<string, string> = {}): Response {
     return new Response(JSON.stringify({ message }), {
@@ -43,7 +44,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
         }
         const lockMs = lockedMs(`login:${rateKey}`);
         if (lockMs > 0) {
-            return json("Too many failed attempts. Try again later.", 429, {
+            return json(m.api_too_many_attempts(), 429, {
                 "Retry-After": String(Math.ceil(lockMs / 1000))
             });
         }
@@ -53,7 +54,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
             username.length < USERNAME_MIN ||
             username.length > USERNAME_MAX
         ) {
-            return new Response(JSON.stringify({ message: "Invalid username" }), {
+            return new Response(JSON.stringify({ message: m.api_invalid_username() }), {
                 status: 400,
                 headers: {
                     "content-type": "application/json"
@@ -61,7 +62,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
             });
         }
         if (typeof password !== "string" || password.length < PASSWORD_MIN || password.length > PASSWORD_MAX) {
-            return new Response(JSON.stringify({ message: "Invalid password" }), {
+            return new Response(JSON.stringify({ message: m.api_invalid_password() }), {
                 status: 400,
                 headers: {
                     "content-type": "application/json"
@@ -73,13 +74,13 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
         const existingUser = result.rows[0] as unknown as DatabaseUser | undefined;
         if (!existingUser) {
             noteFailure(`login:${rateKey}`);
-            return json("Incorrect username or password", 400);
+            return json(m.api_incorrect_credentials(), 400);
         }
 
         const validPassword = await verify(existingUser.password_hash, password, ARGON2_OPTIONS);
         if (!validPassword) {
             noteFailure(`login:${rateKey}`);
-            return json("Incorrect username or password", 400);
+            return json(m.api_incorrect_credentials(), 400);
         }
 
         clearFailures(`login:${rateKey}`);
@@ -99,7 +100,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
         });
     }
 
-    return new Response(JSON.stringify({ message: "Success" }), {
+    return new Response(JSON.stringify({ message: m.api_success() }), {
         status: 200,
         headers: {
             "content-type": "application/json"

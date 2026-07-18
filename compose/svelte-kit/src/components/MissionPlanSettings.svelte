@@ -17,6 +17,7 @@
     import { readMissionFile } from '../lib/mission-import';
     import { isPX4 } from '../lib/flight-modes';
     import { mavModelStore, fcProtocolStore } from '../stores/mavlinkStore';
+    import { m } from '$lib/paraglide/messages';
 
     const SAVE_FEEDBACK_MS = 3000;
 
@@ -43,7 +44,7 @@
 
     async function commitMissionPlan() {
         let title = get(missionPlanTitleStore);
-        if (title === "") title = "Untitled Mission Plan";
+        if (title === "") title = m.mps_untitled_plan();
         await handleSave(title, actions);
     }
 
@@ -57,13 +58,12 @@
             return;
         }
         showModal({
-            title: "Optimize path before saving?",
-            content:
-                "Optimize Path checks the route against airspace, obstacles, and buildings, and adjusts waypoints and heights to clear them. Saving also loads the plan, overwriting the one currently loaded.",
+            title: m.mps_optimize_title(),
+            content: m.mps_optimize_body(),
             confirmation: true,
-            confirmLabel: "Optimize, then save",
-            cancelLabel: "Save without optimizing",
-            inputs: [{ type: 'checkbox', placeholder: "Don't show this again", required: false }],
+            confirmLabel: m.mps_optimize_save(),
+            cancelLabel: m.mps_save_without(),
+            inputs: [{ type: 'checkbox', placeholder: m.mps_dont_show(), required: false }],
             onConfirm: async (values) => {
                 rememberSkip(values);
                 await optimizePath();
@@ -86,8 +86,8 @@
 
         if (get(mavModelStore) !== 'INAV') {
             notify({
-                title: 'Mission saved',
-                content: 'Plan saved. Press Start to fly it.',
+                title: m.mps_saved_title(),
+                content: m.mps_saved_body(),
                 duration: SAVE_FEEDBACK_MS,
             });
             return;
@@ -105,16 +105,16 @@
             });
             const data = await response.json();
             if (response.ok) {
-                notify({ title: 'Mission uploaded', content: data.message, duration: SAVE_FEEDBACK_MS });
+                notify({ title: m.mps_uploaded_title(), content: data.message, duration: SAVE_FEEDBACK_MS });
             } else {
                 showModal({
-                    title: 'Mission upload failed',
-                    content: data.message ?? data.error ?? 'The flight controller rejected the mission.',
+                    title: m.mps_upload_failed_title(),
+                    content: data.message ?? data.error ?? m.mps_upload_rejected(),
                     notification: true,
                 });
             }
         } catch (error) {
-            showModal({ title: 'Mission upload failed', content: (error as Error).message, notification: true });
+            showModal({ title: m.mps_upload_failed_title(), content: (error as Error).message, notification: true });
         }
     }
 
@@ -166,7 +166,7 @@
         const { items, warnings } = normalizeMission(actions, isPX4(get(mavModelStore)));
         if (warnings.length > 0) {
             notify({
-                title: "Mission adjusted for PX4",
+                title: m.mps_px4_adjusted_title(),
                 content: warnings.join("<br>"),
                 duration: SAVE_FEEDBACK_MS * 2,
             });
@@ -240,15 +240,15 @@
                 },
             }).catch((error) => {
                 showModal({
-                    title: "Error",
+                    title: m.common_error(),
                     content: error.message,
                     notification: true,
                 });
             });
             if (response) {
                 notify({
-                    title: "Mission Plan Saved",
-                    content: "The mission plan has been saved.",
+                    title: m.mps_plan_saved_title(),
+                    content: m.mps_plan_saved_body(),
                     duration: SAVE_FEEDBACK_MS,
                 });
             }
@@ -277,8 +277,8 @@
         });
         if (response) {
             notify({
-                title: "Mission Plan Updated",
-                content: "The mission plan has been updated.",
+                title: m.mps_plan_updated_title(),
+                content: m.mps_plan_updated_body(),
                 duration: SAVE_FEEDBACK_MS,
             });
         }
@@ -295,13 +295,13 @@
                 const { title, actions: imported } = await readMissionFile(file);
                 await handleSave(title, imported);
                 notify({
-                    title: "Mission Imported",
-                    content: `Loaded ${Object.keys(imported).length} items from ${file.name}.`,
+                    title: m.mps_imported_title(),
+                    content: m.mps_imported_body({ count: Object.keys(imported).length, file: file.name }),
                     duration: SAVE_FEEDBACK_MS,
                 });
             } catch (err) {
                 showModal({
-                    title: "Import Failed",
+                    title: m.mps_import_failed_title(),
                     content: (err as Error).message,
                     notification: true,
                 });
@@ -329,28 +329,28 @@
 >
     <button onclick={openVehicleLocationModal}>
         <i class="fas fa-home text-[#ffc64a]"></i>
-        Set home / start point
+        {m.vl_modal_title()}
     </button>
     <button onclick={toggleMissionPlans}>
         <i class="fas fa-globe text-[#5398e6]"></i>
-        Manage Missions
+        {m.mps_manage_missions()}
     </button>
     <button onclick={saveMissionPlan}>
         <i class="fas fa-save text-[#61cd89]"></i>
-        Save & Load Mission
+        {m.mps_save_load()}
     </button>
     <button onclick={confirmClear}>
         <i class="fas fa-trash-alt text-[#f87171]"></i>
-        Clear Mission
+        {m.mps_clear_mission()}
     </button>
     <div id="import-export" class="flex items-center justify-center gap-2">
         <button onclick={importPlan}>
             <i class="fas fa-upload"></i>
-            <span class="text-[8.5pt]">Import Mission</span>
+            <span class="text-[8.5pt]">{m.mps_import_mission()}</span>
         </button>
         <button onclick={exportMissionPlan}>
             <i class="fas fa-download"></i>
-            <span class="text-[8.5pt]">Export Mission</span>
+            <span class="text-[8.5pt]">{m.mps_export_mission()}</span>
         </button>
     </div>
 </section>

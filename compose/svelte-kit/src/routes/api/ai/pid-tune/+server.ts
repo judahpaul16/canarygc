@@ -1,6 +1,7 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { getSetting } from '$lib/server/settings';
 import { buildTuningPrompt, parseTuningResponse, type TuningContext } from '$lib/pid-tuning';
+import { m } from '$lib/paraglide/messages';
 
 function json(data: unknown, status = 200): Response {
 	return new Response(JSON.stringify(data), {
@@ -13,12 +14,12 @@ function json(data: unknown, status = 200): Response {
 // gateway that speaks the same wire format) to review the current PID gains
 // against recent vibration and attitude telemetry.
 export const POST: RequestHandler = async (event) => {
-	if (!event.locals.user) return json({ message: 'Unauthorized' }, 401);
+	if (!event.locals.user) return json({ message: m.api_unauthorized() }, 401);
 
 	const apiKey = (await getSetting('ai.apiKey')) ?? process.env.AI_API_KEY ?? '';
 	if (!apiKey) {
 		return json(
-			{ message: 'The AI assistant is not configured. Add an API key on the Integrations page.' },
+			{ message: m.api_ai_not_configured() },
 			400
 		);
 	}
@@ -33,7 +34,7 @@ export const POST: RequestHandler = async (event) => {
 
 	const context = (await event.request.json()) as TuningContext;
 	if (!context || !Array.isArray(context.pids) || context.pids.length === 0) {
-		return json({ message: 'No PID parameters were provided. Refresh parameters and try again.' }, 400);
+		return json({ message: m.api_no_pids() }, 400);
 	}
 
 	const { system, user } = buildTuningPrompt(context);
@@ -54,12 +55,12 @@ export const POST: RequestHandler = async (event) => {
 			})
 		});
 		if (!response.ok) {
-			return json({ message: `The tuning provider rejected the request (${response.status}).` }, 502);
+			return json({ message: m.api_tuning_rejected({ status: response.status }) }, 502);
 		}
 		const data = await response.json();
 		content = data?.choices?.[0]?.message?.content ?? '';
 	} catch (err) {
-		return json({ message: `Could not reach the tuning provider: ${(err as Error).message}` }, 502);
+		return json({ message: m.api_tuning_unreachable({ error: (err as Error).message }) }, 502);
 	}
 
 	try {

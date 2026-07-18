@@ -2,6 +2,7 @@ import { get } from 'svelte/store';
 import { mavModelStore, mavLocationStore, mavAltitudeAmslStore, mavlinkParamStore } from '../stores/mavlinkStore';
 import { strategyFor, isPX4, isPlane, MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, type FlightMode } from './flight-modes';
 import { notify } from './overlays';
+import { m } from '$lib/paraglide/messages';
 
 export interface CommandOptions {
   cmdLong?: boolean;
@@ -116,8 +117,8 @@ export async function takeoff(altitudeM: number): Promise<boolean> {
 export async function setPositionLocal(x: number | string, y: number | string, z: number | string): Promise<boolean> {
   if (isPX4(get(mavModelStore))) {
     notify({
-      title: 'Not available on PX4',
-      content: 'Manual position nudges require ArduPilot GUIDED mode. Use a mission or RC control for PX4 vehicles.',
+      title: m.mc_not_available_px4_title(),
+      content: m.mc_not_available_px4_body(),
       type: 'warning'
     });
     return false;

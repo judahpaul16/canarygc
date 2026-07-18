@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { notify, showModal } from '../../lib/overlays';
+  import { m } from '$lib/paraglide/messages';
   import Select from '../../components/Select.svelte';
 
   interface FcIdentity { variant: string; firmware: string; version: string; apiVersion: string; boardIdentifier: string; targetName: string; boardName: string; }
@@ -89,9 +90,9 @@
         identity = data;
         autoSelectTarget(data);
       }
-      else notify({ title: 'No flight controller', content: data.error ?? 'Could not reach the FC.', type: 'warning' });
+      else notify({ title: m.fw_no_fc_title(), content: data.error ?? m.fw_no_fc_body(), type: 'warning' });
     } catch {
-      notify({ title: 'Detect failed', content: 'Could not reach the flight controller.', type: 'warning' });
+      notify({ title: m.fw_detect_failed_title(), content: m.fw_detect_failed_body(), type: 'warning' });
     } finally {
       detecting = false;
     }
@@ -120,17 +121,17 @@
 
   function rebootToBootloader() {
     showModal({
-      title: 'Reboot to bootloader',
-      content: 'This restarts the connected flight controller into its DFU bootloader so it can be flashed. It will disconnect from telemetry until it is flashed or power-cycled. Continue?',
+      title: m.fw_reboot_title(),
+      content: m.fw_reboot_body(),
       confirmation: true,
       confirmLabel: 'Reboot',
       onConfirm: async () => {
         try {
           await fetch('/api/msp/reboot-bootloader', { method: 'POST' });
           identity = null;
-          notify({ title: 'Rebooting', content: 'The flight controller is entering DFU mode.', duration: 4000 });
+          notify({ title: m.fw_rebooting_title(), content: m.fw_rebooting_body(), duration: 4000 });
         } catch {
-          notify({ title: 'Reboot failed', content: 'Could not send the reboot command.', type: 'warning' });
+          notify({ title: m.fw_reboot_failed_title(), content: m.fw_reboot_failed_body(), type: 'warning' });
         }
       }
     });
@@ -149,10 +150,10 @@
 
   function confirmFlash(label: string, body: Record<string, unknown>, note = '') {
     showModal({
-      title: 'Flash firmware',
-      content: `About to flash ${label}.${note ? ` ${note}` : ''} Do not disconnect power during the flash. Continue?`,
+      title: m.fw_flash_title(),
+      content: m.fw_flash_confirm({ label, note: note ? ` ${note}` : '' }),
       confirmation: true,
-      confirmLabel: 'Flash',
+      confirmLabel: m.fw_flash_btn(),
       onConfirm: () => runFlash(label, body)
     });
   }
@@ -170,15 +171,15 @@
       });
       const data = await res.json();
       flashOk = res.ok && data.success;
-      flashLog = data.output ?? data.error ?? (flashOk ? 'Flash complete.' : 'Flash failed.');
+      flashLog = data.output ?? data.error ?? (flashOk ? m.fw_flash_complete_log() : m.fw_flash_failed_log());
       notify({
-        title: flashOk ? 'Flash complete' : 'Flash failed',
-        content: flashOk ? `${label} was flashed.` : 'See the flash log for details.',
+        title: flashOk ? m.fw_flash_complete_title() : m.fw_flash_failed_title(),
+        content: flashOk ? m.fw_flashed({ label }) : m.fw_see_log(),
         type: flashOk ? 'success' : 'warning'
       });
     } catch {
       flashOk = false;
-      flashLog = 'Network error while flashing.';
+      flashLog = m.fw_flash_network_error();
     } finally {
       flashing = false;
     }
@@ -186,7 +187,7 @@
 </script>
 
 <svelte:head>
-  <title>Canary Ground Control - Firmware</title>
+  <title>{m.fw_page_title()}</title>
 </svelte:head>
 
 <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">
@@ -194,35 +195,32 @@
     <div class="settings rounded-2xl h-full overflow-y-auto">
       <div class="content">
         <header class="head">
-          <h1><i class="fas fa-microchip"></i> Firmware</h1>
-          <p>
-            Flash the firmware of a connected flight controller. A <strong>release</strong> is a firmware
-            version; a <strong>target</strong> (or board) is the exact flight controller model it is built
-            for, so pick both. Betaflight and INAV flash over USB DFU; ArduPilot and PX4 upload over the
-            autopilot's own bootloader through its serial link.
-          </p>
+          <h1><i class="fas fa-microchip"></i> {m.nav_firmware()}</h1>
+          <!-- eslint-disable-next-line svelte/no-at-html-tags -- static app copy with inline markup -->
+          <p>{@html m.fw_intro()}</p>
         </header>
 
         <section class="panel fc-panel">
           <div class="fc-row">
             <span class="icon-chip small"><i class="fas fa-plug"></i></span>
             <div class="fc-text">
-              <h2>Flight controller (MSP)</h2>
+              <h2>{m.fw_fc_msp_title()}</h2>
               {#if !configured}
-                <p class="muted">Set <code>MSP_SERIAL_PATH</code> to a Betaflight or INAV board's serial device to enable detection.</p>
+                <!-- eslint-disable-next-line svelte/no-at-html-tags -- static app copy with inline markup -->
+                <p class="muted">{@html m.fw_fc_not_configured()}</p>
               {:else if identity}
-                <p class="muted">{identity.firmware} {identity.version} · variant {identity.variant} · MSP API {identity.apiVersion}{#if identity.targetName || identity.boardName} · board {identity.boardName || identity.targetName}{/if}</p>
+                <p class="muted">{m.fw_fc_identity({ firmware: identity.firmware, version: identity.version, variant: identity.variant, api: identity.apiVersion })}{#if identity.targetName || identity.boardName}{m.fw_fc_board_suffix({ board: identity.boardName || identity.targetName })}{/if}</p>
               {:else}
-                <p class="muted">Reads the firmware name and version over the MultiWii Serial Protocol.</p>
+                <p class="muted">{m.fw_fc_reads()}</p>
               {/if}
             </div>
             {#if configured}
               <div class="fc-actions">
                 <button class="ghost" onclick={detect} disabled={detecting}>
-                  <i class="fas fa-magnifying-glass"></i> {detecting ? 'Detecting...' : 'Detect'}
+                  <i class="fas fa-magnifying-glass"></i> {detecting ? m.fw_detecting() : m.fw_detect()}
                 </button>
                 <button class="ghost warn" onclick={rebootToBootloader}>
-                  <i class="fas fa-power-off"></i> Bootloader
+                  <i class="fas fa-power-off"></i> {m.fw_bootloader()}
                 </button>
               </div>
             {/if}
@@ -230,7 +228,7 @@
         </section>
 
         {#if catalogsLoading}
-          <section class="panel"><p class="muted">Loading firmware catalogs...</p></section>
+          <section class="panel"><p class="muted">{m.fw_catalogs_loading()}</p></section>
         {:else}
           <div class="catalog-grid">
             <section class="panel">
@@ -238,26 +236,26 @@
                 <span class="icon-chip"><i class="fas fa-paper-plane"></i></span>
                 <div>
                   <h2>INAV</h2>
-                  <p class="muted">Official per-target hex from the INAV release, flashed over DFU.</p>
+                  <p class="muted">{m.fw_inav_desc()}</p>
                 </div>
               </div>
               {#if inavReleases.length === 0}
-                <p class="muted">The INAV release catalog is unreachable right now.</p>
+                <p class="muted">{m.fw_inav_unreachable()}</p>
               {:else}
                 <div class="fields">
                   <div class="field">
-                    <span>Release</span>
+                    <span>{m.fw_release()}</span>
                     <Select
                       bind:value={inavTag}
                       options={inavReleases.map((r) => ({ value: r.tag, label: `${r.release} (${r.date})` }))}
                     />
                   </div>
                   <div class="field">
-                    <span>Target</span>
+                    <span>{m.fw_target()}</span>
                     <Select
                       bind:value={inavTarget}
                       searchable
-                      placeholder="Search {inavTargets.length} targets"
+                      placeholder={m.fw_search_targets({ count: inavTargets.length })}
                       options={inavTargets.map((t) => ({ value: t, label: t }))}
                     />
                   </div>
@@ -266,9 +264,9 @@
                   <button
                     class="cta"
                     disabled={flashing || !inavTag || !inavTargets.includes(inavTarget)}
-                    onclick={() => confirmFlash(`INAV ${inavTag} for ${inavTarget}`, { source: 'inav', tag: inavTag, target: inavTarget }, 'The board must be in DFU bootloader mode.')}
+                    onclick={() => confirmFlash(m.fw_flash_label({ name: `INAV ${inavTag}`, target: inavTarget }), { source: 'inav', tag: inavTag, target: inavTarget }, m.fw_note_dfu())}
                   >
-                    <i class="fas fa-bolt"></i> Flash
+                    <i class="fas fa-bolt"></i> {m.fw_flash_btn()}
                   </button>
                 </div>
               {/if}
@@ -279,37 +277,37 @@
                 <span class="icon-chip"><i class="fas fa-cubes"></i></span>
                 <div>
                   <h2>Betaflight</h2>
-                  <p class="muted">Built on demand by the Betaflight cloud, then flashed over DFU. A fresh build takes about a minute.</p>
+                  <p class="muted">{m.fw_betaflight_desc()}</p>
                 </div>
               </div>
               {#if !betaflight}
-                <p class="muted">The Betaflight catalog is unreachable right now.</p>
+                <p class="muted">{m.fw_betaflight_unreachable()}</p>
               {:else}
                 <div class="fields">
                   <div class="field">
-                    <span>Release</span>
+                    <span>{m.fw_release()}</span>
                     <Select bind:value={bfRelease} options={bfReleaseOptions} />
                   </div>
                   <div class="field">
-                    <span>Target</span>
+                    <span>{m.fw_target()}</span>
                     <Select
                       bind:value={bfTarget}
                       searchable
-                      placeholder="Search {betaflight.targets.length} targets"
+                      placeholder={m.fw_search_targets({ count: betaflight.targets.length })}
                       options={bfTargetOptions}
                     />
                   </div>
                 </div>
                 <div class="panel-actions">
                   <a class="side-link" href="https://build.betaflight.com" target="_blank" rel="noreferrer">
-                    <i class="fas fa-up-right-from-square"></i> Custom builds
+                    <i class="fas fa-up-right-from-square"></i> {m.fw_custom_builds()}
                   </a>
                   <button
                     class="cta"
                     disabled={flashing || !bfRelease || !bfTargetValid}
-                    onclick={() => confirmFlash(`Betaflight ${bfRelease} for ${bfTarget}`, { source: 'betaflight', release: bfRelease, target: bfTarget }, 'The firmware builds in the Betaflight cloud first, then the board must be in DFU bootloader mode.')}
+                    onclick={() => confirmFlash(m.fw_flash_label({ name: `Betaflight ${bfRelease}`, target: bfTarget }), { source: 'betaflight', release: bfRelease, target: bfTarget }, m.fw_note_betaflight())}
                   >
-                    <i class="fas fa-bolt"></i> Build & Flash
+                    <i class="fas fa-bolt"></i> {m.fw_build_flash()}
                   </button>
                 </div>
               {/if}
@@ -320,15 +318,15 @@
                 <span class="icon-chip"><i class="fas fa-helicopter"></i></span>
                 <div>
                   <h2>ArduPilot</h2>
-                  <p class="muted">Latest stable per board, uploaded over the autopilot's serial bootloader.</p>
+                  <p class="muted">{m.fw_ardupilot_desc()}</p>
                 </div>
               </div>
               {#if !ardupilot}
-                <p class="muted">The ArduPilot manifest is unreachable right now.</p>
+                <p class="muted">{m.fw_ardupilot_unreachable()}</p>
               {:else}
                 <div class="fields">
                   <div class="field">
-                    <span>Vehicle</span>
+                    <span>{m.fw_vehicle()}</span>
                     <Select
                       bind:value={apVehicle}
                       options={Object.keys(ardupilot).map((v) => ({ value: v, label: v }))}
@@ -336,11 +334,11 @@
                     />
                   </div>
                   <div class="field">
-                    <span>Board</span>
+                    <span>{m.fw_board()}</span>
                     <Select
                       bind:value={apBoard}
                       searchable
-                      placeholder="Search {apBoards.length} boards"
+                      placeholder={m.fw_search_boards({ count: apBoards.length })}
                       options={apBoards.map((b) => ({ value: b.platform, label: b.brand || b.platform }))}
                     />
                   </div>
@@ -350,9 +348,9 @@
                   <button
                     class="cta"
                     disabled={flashing || !apSelected}
-                    onclick={() => apSelected && confirmFlash(`ArduPilot ${apVehicle} ${apSelected.version} for ${apBoard}`, { source: 'ardupilot', url: apSelected.url }, 'The autopilot reboots into its bootloader and reconnects after the upload.')}
+                    onclick={() => apSelected && confirmFlash(m.fw_flash_label({ name: `ArduPilot ${apVehicle} ${apSelected.version}`, target: apBoard }), { source: 'ardupilot', url: apSelected.url }, m.fw_note_autopilot())}
                   >
-                    <i class="fas fa-bolt"></i> Flash
+                    <i class="fas fa-bolt"></i> {m.fw_flash_btn()}
                   </button>
                 </div>
               {/if}
@@ -363,15 +361,15 @@
                 <span class="icon-chip"><i class="fas fa-jet-fighter-up"></i></span>
                 <div>
                   <h2>PX4</h2>
-                  <p class="muted">Release .px4 images per board, uploaded over the autopilot's serial bootloader.</p>
+                  <p class="muted">{m.fw_px4_desc()}</p>
                 </div>
               </div>
               {#if px4Releases.length === 0}
-                <p class="muted">The PX4 release catalog is unreachable right now.</p>
+                <p class="muted">{m.fw_px4_unreachable()}</p>
               {:else}
                 <div class="fields">
                   <div class="field">
-                    <span>Release</span>
+                    <span>{m.fw_release()}</span>
                     <Select
                       bind:value={px4Tag}
                       options={px4Releases.map((r) => ({ value: r.tag, label: `${r.release} (${r.date})` }))}
@@ -379,11 +377,11 @@
                     />
                   </div>
                   <div class="field">
-                    <span>Board</span>
+                    <span>{m.fw_board()}</span>
                     <Select
                       bind:value={px4Board}
                       searchable
-                      placeholder="Search {px4Boards.length} boards"
+                      placeholder={m.fw_search_boards({ count: px4Boards.length })}
                       options={px4Boards.map((b) => ({ value: b.board, label: b.board }))}
                     />
                   </div>
@@ -392,9 +390,9 @@
                   <button
                     class="cta"
                     disabled={flashing || !px4Selected}
-                    onclick={() => px4Selected && confirmFlash(`PX4 ${px4Tag} for ${px4Board}`, { source: 'px4', url: px4Selected.url }, 'The autopilot reboots into its bootloader and reconnects after the upload.')}
+                    onclick={() => px4Selected && confirmFlash(m.fw_flash_label({ name: `PX4 ${px4Tag}`, target: px4Board }), { source: 'px4', url: px4Selected.url }, m.fw_note_autopilot())}
                   >
-                    <i class="fas fa-bolt"></i> Flash
+                    <i class="fas fa-bolt"></i> {m.fw_flash_btn()}
                   </button>
                 </div>
               {/if}
@@ -406,8 +404,8 @@
           <div class="panel-head">
             <span class="icon-chip"><i class="fas fa-file-arrow-up"></i></span>
             <div>
-              <h2>Flash a HEX file</h2>
-              <p class="muted">Any Intel HEX, including a custom Betaflight cloud build, flashed over DFU.</p>
+              <h2>{m.fw_hex_title()}</h2>
+              <p class="muted">{m.fw_hex_desc()}</p>
             </div>
           </div>
           <div class="hex-row">
@@ -418,9 +416,9 @@
             <button
               class="cta"
               disabled={flashing || !hexContent}
-              onclick={() => confirmFlash(hexName, { source: 'hex', hex: hexContent }, 'The board must be in DFU bootloader mode.')}
+              onclick={() => confirmFlash(hexName, { source: 'hex', hex: hexContent }, m.fw_note_dfu())}
             >
-              <i class="fas fa-bolt"></i> Flash
+              <i class="fas fa-bolt"></i> {m.fw_flash_btn()}
             </button>
           </div>
         </section>
@@ -431,14 +429,14 @@
               <span class="icon-chip"><i class="fas fa-terminal"></i></span>
               <div>
                 <h2>
-                  Flash log
+                  {m.fw_flash_log()}
                   {#if flashing}<span class="running">{flashLabel}...</span>
-                  {:else if flashOk === true}<span class="ok">success</span>
-                  {:else if flashOk === false}<span class="fail">failed</span>{/if}
+                  {:else if flashOk === true}<span class="ok">{m.fw_success()}</span>
+                  {:else if flashOk === false}<span class="fail">{m.fw_failed_lower()}</span>{/if}
                 </h2>
               </div>
             </div>
-            <pre class="log">{flashing ? `Flashing ${flashLabel}...` : flashLog}</pre>
+            <pre class="log">{flashing ? m.fw_flashing({ label: flashLabel }) : flashLog}</pre>
           </section>
         {/if}
       </div>
@@ -457,7 +455,7 @@
   .head h1 { font-size: 1.6rem; font-weight: 800; display: flex; align-items: center; gap: 0.6rem; }
   .head h1 i { color: #f5c518; }
   .head p { opacity: 0.7; font-size: 0.9rem; margin-top: 0.35rem; max-width: 62rem; }
-  .head strong { color: #f5c518; font-weight: 600; }
+  .head :global(strong) { color: #f5c518; font-weight: 600; }
 
   .panel {
     background-color: rgb(from var(--tertiaryColor) r g b / 0.32);
@@ -481,7 +479,7 @@
   .icon-chip.small { width: 32px; height: 32px; font-size: 0.85rem; }
   .panel h2 { font-size: 0.95rem; font-weight: 700; line-height: 1.2; display: flex; align-items: center; gap: 0.5rem; }
   .muted { opacity: 0.65; font-size: 0.8rem; margin-top: 0.2rem; }
-  code { font-family: ui-monospace, monospace; background: rgb(from var(--fontColor) r g b / 0.1); padding: 0.05rem 0.3rem; border-radius: 4px; }
+  .content :global(code) { font-family: ui-monospace, monospace; background: rgb(from var(--fontColor) r g b / 0.1); padding: 0.05rem 0.3rem; border-radius: 4px; }
 
   .fc-panel { padding: 0.85rem 1.25rem; }
   .fc-row { display: flex; align-items: center; gap: 0.8rem; }

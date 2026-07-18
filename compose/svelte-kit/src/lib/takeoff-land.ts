@@ -10,6 +10,7 @@ import {
   stopInavMission,
   stopGuidance
 } from './guidance-session';
+import { m } from '$lib/paraglide/messages';
 
 // Each firmware flies its own way: a MAVLink autopilot takes off and lands
 // through its own commands, INAV runs its onboard takeoff and mission over MSP,
@@ -24,13 +25,13 @@ function fcIsInav(): boolean {
 
 function initTakeoff(): void {
   showModal({
-    title: 'Confirm Takeoff',
-    content: 'Are you sure you want to initiate takeoff? If so please specify the altitude.',
+    title: m.tl_confirm_takeoff_title(),
+    content: m.tl_confirm_takeoff_body(),
     confirmation: true,
     inputs: [
       {
         type: 'number',
-        placeholder: 'Altitude (m)',
+        placeholder: m.tl_altitude_placeholder(),
         required: true
       }
     ],
@@ -44,17 +45,17 @@ function initLanding(): void {
   if (isPlane()) {
     const hasSequence = planeHasLandingSequence();
     showModal({
-      title: 'Confirm Landing',
+      title: m.tl_confirm_landing_title(),
       content: hasSequence
-        ? 'The mission jumps to its landing sequence and the plane flies the approach down to touchdown.'
-        : 'The loaded mission has no Land action. With the box checked, a landing approach into the launch point uploads on the spot, placed clear of obstacles, terrain, and restricted airspace where map data allows, and the plane flies it down to touchdown; unchecked, the plane returns to launch and loiters overhead until you land it.',
+        ? m.tl_landing_sequence()
+        : m.tl_landing_autoland(),
       confirmation: true,
       inputs: hasSequence
         ? null
         : [
             {
               type: 'checkbox',
-              placeholder: 'Autoland at the launch point',
+              placeholder: m.tl_autoland_checkbox(),
               value: 'true',
               required: false
             }
@@ -62,10 +63,10 @@ function initLanding(): void {
       onConfirm: async (values) => {
         const landing = await landNow(hasSequence || values[0] === 'true');
         notify({
-          title: landing ? 'Landing' : 'Returning to launch',
+          title: landing ? m.tl_landing() : m.tl_returning(),
           content: landing
-            ? 'The plane is flying the landing approach down to touchdown.'
-            : 'The plane loiters over the launch point until you land it.',
+            ? m.tl_landing_body()
+            : m.tl_returning_body(),
           type: landing ? 'success' : 'warning'
         });
       }
@@ -73,8 +74,8 @@ function initLanding(): void {
     return;
   }
   showModal({
-    title: 'Confirm Landing',
-    content: 'Are you sure you want to land the MAV?',
+    title: m.tl_confirm_landing_title(),
+    content: m.tl_confirm_land_mav(),
     confirmation: true,
     onConfirm: async () => {
       await landNow();
