@@ -2,6 +2,7 @@ import { get } from 'svelte/store';
 import {
   safetyLimitsStore,
   airspaceZonesStore,
+  airspaceAttributionsStore,
   ceilingCellsStore,
   obstaclesStore
 } from '../stores/safetyStore';
@@ -14,6 +15,7 @@ import {
   type Hazards
 } from './safety';
 import { showModal } from './overlays';
+import { m } from '$lib/paraglide/messages';
 import type { Building } from './hazards';
 import type { MissionPlanActions } from '../stores/missionPlanStore';
 
@@ -43,6 +45,7 @@ export async function fetchAirspaceForBbox(bbox: string): Promise<AirspaceZone[]
     const data = await res.json();
     const zones: AirspaceZone[] = data.zones ?? [];
     airspaceZonesStore.set(zones);
+    airspaceAttributionsStore.set(data.attributions ?? []);
     return zones;
   } catch {
     return get(airspaceZonesStore);
@@ -107,15 +110,15 @@ export async function preflightCheck(actions: MissionPlanActions): Promise<boole
   return new Promise<boolean>((resolve) => {
     if (hasBlockingViolation(violations)) {
       showModal({
-        title: 'Pre-flight check failed',
-        content: `This mission cannot be started safely:\n\n${formatViolations(violations)}`,
+        title: m.pf_check_failed_title(),
+        content: `${m.pf_cannot_start()}\n\n${formatViolations(violations)}`,
         notification: true,
         onClose: () => resolve(false)
       });
     } else {
       showModal({
-        title: 'Pre-flight warnings',
-        content: `${formatViolations(violations)}\n\nStart the mission anyway?`,
+        title: m.pf_warnings_title(),
+        content: `${formatViolations(violations)}\n\n${m.pf_start_anyway()}`,
         confirmation: true,
         onConfirm: () => resolve(true),
         onCancel: () => resolve(false),

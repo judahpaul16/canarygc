@@ -1,4 +1,5 @@
 import type { AirspaceZone } from './safety';
+import { m } from '$lib/paraglide/messages';
 
 export const AIRSPACE_RESTRICTED_COLOR = '#f24e4e';
 export const AIRSPACE_CONTROLLED_COLOR = '#e7b908';
@@ -24,24 +25,30 @@ export function airspaceColor(zone: AirspaceZone): string {
 }
 
 function airspaceKind(zone: AirspaceZone): string {
-  return zone.type ?? (zone.restricted ? 'Restricted airspace' : 'Controlled airspace');
+  return zone.type ?? (zone.restricted ? m.as_restricted_airspace() : m.as_controlled_airspace());
 }
 
 function airspaceImplication(zone: AirspaceZone): string {
-  if (zone.restricted) return 'No-fly. Entry requires prior authorization.';
+  if (zone.regime === 'eu') {
+    if (zone.restricted) {
+      return m.as_impl_eu_restricted();
+    }
+    return m.as_impl_eu_controlled();
+  }
+  if (zone.restricted) return m.as_impl_restricted();
   if (/moa|military|warning|alert/i.test(zone.type ?? '')) {
-    return 'Special-use airspace. Check activity and use caution.';
+    return m.as_impl_special();
   }
   if (/class\s*a/i.test(zone.type ?? '')) {
-    return `High-altitude airspace from ${zone.lower ?? '18,000 ft MSL'} up; far above UAS operating altitudes, so it is not a factor for low-altitude flight.`;
+    return m.as_impl_class_a({ lower: zone.lower ?? '18,000 ft MSL' });
   }
   if (zone.lower === 'Surface') {
-    return 'Controlled airspace down to the surface, so a UAS needs authorization (e.g. LAANC) here even at low altitude.';
+    return m.as_impl_surface();
   }
   if (zone.lower) {
-    return `Controlled airspace above ${zone.lower}; below that a UAS is in uncontrolled Class G. Authorization (e.g. LAANC) is needed only at or above the floor.`;
+    return m.as_impl_above({ lower: zone.lower });
   }
-  return 'Controlled airspace. UAS operations need authorization (e.g. LAANC).';
+  return m.as_impl_controlled();
 }
 
 const HTML_ENTITIES: Record<string, string> = {
@@ -59,8 +66,8 @@ function esc(value: string): string {
 // Zone names and altitudes come from the FAA/OpenAIP feeds, so escape them
 // before they reach a Leaflet or MapLibre popup's innerHTML.
 export function airspacePopupHtml(zone: AirspaceZone): string {
-  const floor = zone.lower ? `<br>Floor: ${esc(zone.lower)}` : '';
-  const ceiling = zone.upper ? `<br>Ceiling: ${esc(zone.upper)}` : '';
+  const floor = zone.lower ? `<br>${m.as_floor()}: ${esc(zone.lower)}` : '';
+  const ceiling = zone.upper ? `<br>${m.as_ceiling()}: ${esc(zone.upper)}` : '';
   return (
     `<strong>${esc(zone.name)}</strong><br>${esc(airspaceKind(zone))}` +
     floor +

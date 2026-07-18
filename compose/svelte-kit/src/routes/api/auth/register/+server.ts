@@ -3,6 +3,7 @@ import { generateId } from "lucia";
 import { hash } from "@node-rs/argon2";
 import { db } from "$lib/server/db";
 import type { RequestHandler } from '@sveltejs/kit';
+import { m } from '$lib/paraglide/messages';
 
 const ARGON2_OPTIONS = {
     memoryCost: 19456,
@@ -28,7 +29,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
         username.length < USERNAME_MIN ||
         username.length > USERNAME_MAX
     ) {
-        return new Response(JSON.stringify({ message: "Invalid username" }), {
+        return new Response(JSON.stringify({ message: m.api_invalid_username() }), {
             status: 400,
             headers: {
                 "content-type": "application/json"
@@ -36,7 +37,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
         });
     }
     if (typeof password !== "string" || password.length < PASSWORD_MIN || password.length > PASSWORD_MAX) {
-        return new Response(JSON.stringify({ message: "Invalid password" }), {
+        return new Response(JSON.stringify({ message: m.api_invalid_password() }), {
             status: 400,
             headers: {
                 "content-type": "application/json"
@@ -44,7 +45,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
         });
     }
     if (typeof email !== "string" || !EMAIL_RE.test(email)) {
-        return new Response(JSON.stringify({ message: "Invalid email" }), {
+        return new Response(JSON.stringify({ message: m.api_invalid_email() }), {
             status: 400,
             headers: {
                 "content-type": "application/json"
@@ -56,7 +57,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
     // once any account exists, new signups are refused.
     const existing = await db.execute("SELECT id FROM user LIMIT 1");
     if (existing.rows.length > 0) {
-        return new Response(JSON.stringify({ message: "Registration is closed: an operator account already exists" }), {
+        return new Response(JSON.stringify({ message: m.api_registration_closed() }), {
             status: 403,
             headers: {
                 "content-type": "application/json"

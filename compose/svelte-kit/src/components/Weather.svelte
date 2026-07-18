@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import weatherCodes from '../lib/weathercodes.json';
   import { mavLocationStore } from '../stores/mavlinkStore';
+  import { m } from '$lib/paraglide/messages';
 
   type WeatherCode = {
     day: {
@@ -19,6 +20,42 @@
   };
 
   const weatherCodesTyped: WeatherCodes = weatherCodes as WeatherCodes;
+
+  // The weathercodes.json descriptions are English data; map each to its
+  // translated message so the summary follows the selected locale.
+  const WEATHER_DESC: Record<string, () => string> = {
+    'Clear': m.weather_desc_clear,
+    'Mainly Clear': m.weather_desc_mainly_clear,
+    'Sunny': m.weather_desc_sunny,
+    'Mainly Sunny': m.weather_desc_mainly_sunny,
+    'Partly Cloudy': m.weather_desc_partly_cloudy,
+    'Cloudy': m.weather_desc_cloudy,
+    'Foggy': m.weather_desc_foggy,
+    'Rime Fog': m.weather_desc_rime_fog,
+    'Light Drizzle': m.weather_desc_light_drizzle,
+    'Drizzle': m.weather_desc_drizzle,
+    'Heavy Drizzle': m.weather_desc_heavy_drizzle,
+    'Light Freezing Drizzle': m.weather_desc_light_freezing_drizzle,
+    'Freezing Drizzle': m.weather_desc_freezing_drizzle,
+    'Light Rain': m.weather_desc_light_rain,
+    'Rain': m.weather_desc_rain,
+    'Heavy Rain': m.weather_desc_heavy_rain,
+    'Light Freezing Rain': m.weather_desc_light_freezing_rain,
+    'Freezing Rain': m.weather_desc_freezing_rain,
+    'Light Showers': m.weather_desc_light_showers,
+    'Showers': m.weather_desc_showers,
+    'Heavy Showers': m.weather_desc_heavy_showers,
+    'Light Snow': m.weather_desc_light_snow,
+    'Snow': m.weather_desc_snow,
+    'Heavy Snow': m.weather_desc_heavy_snow,
+    'Snow Grains': m.weather_desc_snow_grains,
+    'Light Snow Showers': m.weather_desc_light_snow_showers,
+    'Snow Showers': m.weather_desc_snow_showers,
+    'Thunderstorm': m.weather_desc_thunderstorm,
+    'Thunderstorm With Hail': m.weather_desc_thunderstorm_hail,
+    'Light Thunderstorms With Hail': m.weather_desc_light_thunderstorms_hail
+  };
+  const describeWeather = (desc: string): string => (WEATHER_DESC[desc] ?? (() => desc))();
 
   interface Props {
     isDashboard?: boolean;
@@ -48,10 +85,10 @@
         const weatherCode = weatherCodesTyped[weathercode];
 
         if (weatherCode) {
-          weatherDescription = isDaytime ? weatherCode.day.description : weatherCode.night.description;
+          weatherDescription = describeWeather(isDaytime ? weatherCode.day.description : weatherCode.night.description);
           weatherImage = isDaytime ? weatherCode.day.image : weatherCode.night.image;
         } else {
-          weatherDescription = 'Unknown weather';
+          weatherDescription = m.weather_unknown();
           weatherImage = '';
         }
 
@@ -83,10 +120,10 @@
           windDirection += '° NW';
         }
       } else {
-        error = weatherData.reason || 'Failed to fetch weather data';
+        error = weatherData.reason || m.weather_fetch_error();
       }
     } catch (err) {
-      error = (err as Error).message || 'Failed to fetch weather data';
+      error = (err as Error).message || m.weather_fetch_error();
     }
   }
 
@@ -105,29 +142,29 @@
     {#if error}
       <div class="error">{error}</div>
     {:else}
-      <div class="weather-detail wind">Wind Speed: {windSpeed} m/s</div>
-      <div class="weather-detail wind">Wind Direction: {windDirection}</div>
+      <div class="weather-detail wind">{m.weather_wind_speed({ speed: windSpeed })}</div>
+      <div class="weather-detail wind">{m.weather_wind_direction({ direction: windDirection })}</div>
       <img src={weatherImage} alt={weatherDescription} class="weather-icon" />
       <div class="weather-summary">{weatherDescription}</div>
-      <div class="weather-detail rain">Rain Chance: {rainChance}</div>
-      <div class="weather-detail temp">Temp: {temperature}</div>
+      <div class="weather-detail rain">{m.weather_rain_chance({ chance: rainChance })}</div>
+      <div class="weather-detail temp">{m.weather_temp({ temp: temperature })}</div>
     {/if}
   </div>
 {:else}
   <div
     class="weather rounded-2xl h-full overflow-y-auto p-4"
   >
-  <div class="weather-header">Weather Advisory</div>
+  <div class="weather-header">{m.weather_advisory()}</div>
     {#if error}
       <div class="error">{error}</div>
     {:else}
-      <div class="weather-detail wind">Wind Speed: {windSpeed} m/s</div>
-      <div class="weather-detail wind">Wind Direction: {windDirection}</div>
+      <div class="weather-detail wind">{m.weather_wind_speed({ speed: windSpeed })}</div>
+      <div class="weather-detail wind">{m.weather_wind_direction({ direction: windDirection })}</div>
       <div class="weather-summary">{weatherDescription}</div>
-      <div class="weather-detail rain">Rain Chance: {rainChance}</div>
-      <div class="weather-detail temp">Temp: {temperature}</div>
+      <div class="weather-detail rain">{m.weather_rain_chance({ chance: rainChance })}</div>
+      <div class="weather-detail temp">{m.weather_temp({ temp: temperature })}</div>
     {/if}
-    <div class="location-badge"><i class="fas fa-location-dot"></i> Based on MAV location</div>
+    <div class="location-badge"><i class="fas fa-location-dot"></i> {m.weather_based_on()}</div>
   </div>
 {/if}
 

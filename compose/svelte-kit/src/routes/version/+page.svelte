@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { m } from '$lib/paraglide/messages';
 
   let { data } = $props();
   onMount(() => {
     const prevTitle = document.title;
-    document.title = 'Build info - Canary Ground Control';
+    document.title = m.ver_page_title();
     const robots = document.createElement('meta');
     robots.name = 'robots';
     robots.content = 'noindex';
@@ -16,9 +17,9 @@
   });
 
   const rows = $derived([
-    { label: 'Version', value: data.version },
-    { label: 'Commit', value: data.commit },
-    { label: 'Built at', value: data.buildDate }
+    { label: m.ver_version(), value: data.version },
+    { label: m.ver_commit(), value: data.commit },
+    { label: m.ver_built_at(), value: data.buildDate }
   ]);
 </script>
 
@@ -28,7 +29,7 @@
     class="w-full max-w-md rounded-2xl border p-6 shadow-md"
     style="background-color: var(--primaryColor); color: var(--fontColor); border-color: var(--secondaryColor);"
   >
-    <h1 class="text-xl font-bold">Build info</h1>
+    <h1 class="text-xl font-bold">{m.ver_build_info()}</h1>
     <p class="mt-1 text-sm opacity-60">Canary Ground Control</p>
     <dl class="mt-5 text-sm">
       {#each rows as row, i (row.label)}
@@ -38,7 +39,7 @@
         </div>
       {/each}
     </dl>
-    <a href="/" class="mt-6 inline-block text-sm font-semibold text-[#62bbff] hover:underline">&larr; Back to home</a>
+    <a href="/" class="mt-6 inline-block text-sm font-semibold text-[#62bbff] hover:underline">&larr; {m.ver_back_home()}</a>
   </div>
   </div>
 </div>

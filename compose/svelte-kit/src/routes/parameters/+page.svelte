@@ -13,6 +13,7 @@
     import { encodeParameterValue } from '../../lib/mavlink-client';
     import { PARAM_GROUPS, paramInGroup, helpFor, type ParamGroup } from '../../lib/param-groups';
     import { collectPidParams, type TuningRecommendation, type TuningResult } from '../../lib/pid-tuning';
+    import { m } from '$lib/paraglide/messages';
 
     const loading: Writable<boolean> = writable(false);
     const success: Writable<string | null> = writable(null);
@@ -122,11 +123,11 @@
             });
 
             if (!response.ok) throw new Error(await response.text());
-            success.set(`Parameter ${cleanId} written successfully`);
+            success.set(m.param_write_success({ id: cleanId }));
             modified.update(modified => modified.filter(param_id => param_id !== cleanId));
             setTimeout(() => success.set(null), 5000);
         } catch (err) {
-            error.set(`Failed to write parameter ${id}: ${(err as Error).message}`);
+            error.set(m.param_write_error({ id, error: (err as Error).message }));
             setTimeout(() => error.set(null), 5000);
         }
     }
@@ -136,7 +137,7 @@
         tuningResult = null;
         const pids = collectPidParams(allParams, $mavModelStore);
         if (pids.length === 0) {
-            tuningError = 'No PID parameters are loaded yet. Refresh parameters and try again.';
+            tuningError = m.param_tune_no_pids();
             return;
         }
         aiTuning = true;
@@ -153,7 +154,7 @@
             });
             const data = await response.json();
             if (!response.ok) {
-                tuningError = data.message ?? 'The tuning request failed.';
+                tuningError = data.message ?? m.param_tune_failed();
                 return;
             }
             tuningResult = data as TuningResult;
@@ -169,7 +170,7 @@
             (p) => p.param_id.replace(/^"|"$/g, '') === rec.param_id
         );
         if (!current) {
-            error.set(`Parameter ${rec.param_id} is not loaded, cannot apply.`);
+            error.set(m.param_tune_not_loaded({ id: rec.param_id }));
             return;
         }
         writeParameter(rec.param_id, rec.suggested, current.param_type);
@@ -224,7 +225,7 @@
                             await writeParameter(param.param_id, param.param_value, param.param_type);
                         }
                     } catch (err) {
-                        error.set(`Failed to import parameters: ${(err as Error).message}`);
+                        error.set(m.param_import_error({ error: (err as Error).message }));
                     }
                 };
                 reader.readAsText(file);
@@ -243,14 +244,14 @@
                 <!-- Header -->
                 <div class="page-head flex justify-between items-center mb-6">
                     <h2 class="text-2xl font-bold" style="color: var(--fontColor)">
-                        Vehicle Parameters
+                        {m.param_title()}
                         <a target="_blank" href="https://ardupilot.org/dev/docs/mavlink-get-set-params.html" class="relative text-blue-500">
                             <i class="fa-solid fa-square-arrow-up-right"></i>
-                            <span class="tooltip">ArduPilot Reference</span>
+                            <span class="tooltip">{m.param_ardupilot_ref()}</span>
                         </a>
                         <a target="_blank" href="https://docs.px4.io/v1.11/en/advanced_config/parameter_reference.html" class="relative text-blue-500">
                             <i class="fa-solid fa-square-arrow-up-right"></i>
-                            <span class="tooltip">PX4 Reference</span>
+                            <span class="tooltip">{m.param_px4_ref()}</span>
                         </a>
                     </h2>
                     <div class="space-x-2 text-sm">
@@ -260,7 +261,7 @@
                             disabled={$loading}
                         >
                             <i class="fa-solid fa-download"></i>
-                            <span class="tooltip">Export Parameters</span>
+                            <span class="tooltip">{m.param_export()}</span>
                         </button>
                         <button 
                             class="relative px-4 py-2 bg-[#f89d47] text-white rounded-lg hover:bg-[#ec9c33] transition-colors"
@@ -268,7 +269,7 @@
                             disabled={$loading}
                         >
                             <i class="fa-solid fa-upload"></i>
-                            <span class="tooltip">Import Parameters</span>
+                            <span class="tooltip">{m.param_import()}</span>
                         </button>
                         <button
                             class="relative px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
@@ -276,7 +277,7 @@
                             disabled={$loading}
                         >
                             <i class="fa-solid fa-sync"></i>
-                            <span class="tooltip">Refresh Parameters</span>
+                            <span class="tooltip">{m.param_refresh()}</span>
                         </button>
                         <button
                             class="relative px-4 py-2 bg-[#8b5cf6] text-white rounded-lg hover:bg-[#7c3aed] transition-colors"
@@ -284,7 +285,7 @@
                             disabled={$loading || aiTuning}
                         >
                             <i class="fa-solid {aiTuning ? 'fa-spinner fa-spin' : 'fa-robot'}"></i>
-                            <span class="tooltip">AI PID Tune</span>
+                            <span class="tooltip">{m.param_ai_tune()}</span>
                         </button>
                     </div>
                 </div>
@@ -297,7 +298,7 @@
                             class="group-chip {activeGroup === null ? 'active' : ''}"
                             onclick={() => (activeGroup = null)}
                         >
-                            <i class="fa-solid fa-list"></i> All
+                            <i class="fa-solid fa-list"></i> {m.param_all()}
                         </button>
                         {#each availableGroups as group (group.key)}
                             <button
@@ -305,12 +306,12 @@
                                 class="group-chip {activeGroup === group.key ? 'active' : ''}"
                                 onclick={() => (activeGroup = activeGroup === group.key ? null : group.key)}
                             >
-                                <i class="fa-solid {group.icon}"></i> {group.label}
+                                <i class="fa-solid {group.icon}"></i> {group.label()}
                             </button>
                         {/each}
                     </div>
                     {#if activeGroupDef}
-                        <p class="group-blurb mb-4">{activeGroupDef.blurb}</p>
+                        <p class="group-blurb mb-4">{activeGroupDef.blurb()}</p>
                     {/if}
                 {/if}
 
@@ -319,7 +320,7 @@
                     <input
                         type="text"
                         bind:value={searchTerm}
-                        placeholder="Search parameters..."
+                        placeholder={m.param_search_placeholder()}
                         class="w-full p-2 rounded-lg search border focus:border-blue-500 focus:outline-none"
                     />
                 </div>
@@ -328,7 +329,7 @@
                 {#if $success}
                     <div class="bg-green-500 text-white p-4 rounded-lg mb-4 relative" id="success">
                         {$success}
-                        <button class="absolute top-0 right-0 p-4" aria-label="Dismiss" onclick={() => success.set(null)}>
+                        <button class="absolute top-0 right-0 p-4" aria-label={m.common_dismiss()} onclick={() => success.set(null)}>
                             <i class="fas fa-xmark"></i>
                         </button>
                     </div>
@@ -338,7 +339,7 @@
                 {#if $error}
                     <div class="bg-red-500 text-white p-4 rounded-lg mb-4 relative" id="error">
                         {$error}
-                        <button class="absolute top-0 right-0 p-4" aria-label="Dismiss" onclick={() => error.set(null)}>
+                        <button class="absolute top-0 right-0 p-4" aria-label={m.common_dismiss()} onclick={() => error.set(null)}>
                             <i class="fas fa-xmark"></i>
                         </button>
                     </div>
@@ -346,17 +347,17 @@
 
                 <!-- Parameter List -->
                 {#if fcIsMsp}
-                    <p class="msp-hint flex-grow">{$mavModelStore} settings live in the Betaflight or INAV Configurator.</p>
+                    <p class="msp-hint flex-grow">{m.param_msp_hint({ model: $mavModelStore })}</p>
                 {:else}
                 <div class="param-list flex-grow overflow-y-auto">
                     <table class="w-full text-white">
                         <thead class="sticky top-0" style={ $darkModeStore ? 'background-color: #1f2937' : 'background-color: slategrey' }>
                             <tr>
-                                <th class="text-left p-2">Parameter</th>
-                                <th class="text-left p-2">Value</th>
-                                <th class="text-left p-2">Type</th>
-                                <th class="text-left p-2">Actions</th>
-                                <th class="text-left p-2">Status</th>
+                                <th class="text-left p-2">{m.param_th_parameter()}</th>
+                                <th class="text-left p-2">{m.param_th_value()}</th>
+                                <th class="text-left p-2">{m.param_th_type()}</th>
+                                <th class="text-left p-2">{m.param_th_actions()}</th>
+                                <th class="text-left p-2">{m.param_th_status()}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -377,18 +378,18 @@
                                                 onchange={(e) => handleParameterChange(e, param.param_id, param.param_type)}
                                             />
                                         </td>
-                                        <td class="p-2 param_type">{PARAM_TYPES[param.param_type] ?? 'unknown'}</td>
+                                        <td class="p-2 param_type">{PARAM_TYPES[param.param_type] ?? m.param_type_unknown()}</td>
                                         <td class="p-2">
                                             <button 
                                                 class="px-2 py-1 bg-[#1aac6e] rounded-lg hover:bg-[#2a7757] transition-colors"
                                                 onclick={() => writeParameter(param.param_id, param.param_value, param.param_type)}
                                             >
-                                                Save
+                                                {m.param_save()}
                                             </button>
                                         </td>
                                         <td class="p-2">
-                                            <span class="text-orange-400" hidden={!$modified.includes(param.param_id)}>Modified</span>
-                                            <span class="text-green-400" hidden={$modified.includes(param.param_id)}>Saved</span>
+                                            <span class="text-orange-400" hidden={!$modified.includes(param.param_id)}>{m.param_modified()}</span>
+                                            <span class="text-green-400" hidden={$modified.includes(param.param_id)}>{m.param_saved()}</span>
                                         </td>
                                     </tr>
                                 {/each}
@@ -414,8 +415,8 @@
     >
         <div class="ai-modal" role="dialog" aria-modal="true" tabindex="-1">
             <div class="ai-modal-head">
-                <h3><i class="fa-solid fa-robot"></i> AI PID tuning</h3>
-                <button class="ai-close" aria-label="Close" onclick={closeTuning}><i class="fas fa-xmark"></i></button>
+                <h3><i class="fa-solid fa-robot"></i> {m.param_ai_modal_title()}</h3>
+                <button class="ai-close" aria-label={m.common_close()} onclick={closeTuning}><i class="fas fa-xmark"></i></button>
             </div>
             {#if tuningError}
                 <p class="ai-error">{tuningError}</p>
@@ -424,7 +425,7 @@
                     <p class="ai-summary">{tuningResult.summary}</p>
                 {/if}
                 {#if tuningResult.recommendations.length === 0}
-                    <p class="ai-summary">The assistant found no gains worth changing right now.</p>
+                    <p class="ai-summary">{m.param_ai_no_recs()}</p>
                 {:else}
                     <div class="ai-recs">
                         {#each tuningResult.recommendations as rec (rec.param_id)}
@@ -432,17 +433,17 @@
                                 <div class="ai-rec-main">
                                     <span class="ai-rec-id">{rec.param_id}</span>
                                     <span class="ai-rec-change">{rec.current} <i class="fa-solid fa-arrow-right"></i> {rec.suggested}</span>
-                                    <button class="ai-apply" onclick={() => applyRecommendation(rec)}>Apply</button>
+                                    <button class="ai-apply" onclick={() => applyRecommendation(rec)}>{m.param_apply()}</button>
                                 </div>
                                 {#if rec.reason}<p class="ai-rec-reason">{rec.reason}</p>{/if}
                             </div>
                         {/each}
                     </div>
                     <div class="ai-modal-foot">
-                        <button class="ai-apply-all" onclick={applyAllRecommendations}>Apply all</button>
+                        <button class="ai-apply-all" onclick={applyAllRecommendations}>{m.param_apply_all()}</button>
                     </div>
                 {/if}
-                <p class="ai-disclaimer">Review each change against your airframe. Re-test in a controlled hover before flying hard.</p>
+                <p class="ai-disclaimer">{m.param_ai_disclaimer()}</p>
             {/if}
         </div>
     </div>

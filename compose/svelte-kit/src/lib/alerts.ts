@@ -60,7 +60,7 @@ function telemetrySnapshot(): AlertTelemetry {
   };
 }
 
-async function dispatch(type: string, description: string): Promise<void> {
+async function dispatch(type: string, params: Record<string, string | number> = {}): Promise<void> {
   if (!enabled.has(type)) return;
   const now = Date.now();
   if (lastSentAt[type] && now - lastSentAt[type] < MIN_REPEAT_MS) return;
@@ -69,7 +69,7 @@ async function dispatch(type: string, description: string): Promise<void> {
     await fetch('/api/alerts/notify', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ type, description, telemetry: telemetrySnapshot() })
+      body: JSON.stringify({ type, params, telemetry: telemetrySnapshot() })
     });
   } catch {
     /* best-effort */
@@ -101,15 +101,15 @@ export function initAlerts(): () => void {
     mavArmedStateStore.subscribe((armed) => {
       if (!armedInit) return void (armedInit = true);
       if (!armed && wasAirborne && get(mavAltitudeStore) > CRASH_MIN_ALT_M) {
-        dispatch('crash', `Unexpected disarm at ${get(mavAltitudeStore).toFixed(0)} m; a crash is likely.`);
+        dispatch('crash', { alt: get(mavAltitudeStore).toFixed(0) });
       }
       if (!armed) wasAirborne = false;
-      dispatch(armed ? 'armed' : 'disarmed', armed ? 'The vehicle armed.' : 'The vehicle disarmed.');
+      dispatch(armed ? 'armed' : 'disarmed');
     }),
 
     mavModeStore.subscribe((mode) => {
       if (!modeInit) return void (modeInit = true);
-      if (mode && mode !== 'Unknown') dispatch('mode', `Flight mode changed to ${mode}.`);
+      if (mode && mode !== 'Unknown') dispatch('mode', { mode });
     }),
 
     missionCompleteStore.subscribe((done) => {
@@ -118,23 +118,23 @@ export function initAlerts(): () => void {
         prevComplete = done;
         return;
       }
-      if (done && !prevComplete) dispatch('mission_complete', 'The mission finished.');
+      if (done && !prevComplete) dispatch('mission_complete');
       prevComplete = done;
     }),
 
     mavStateStore.subscribe((state) => {
       if (!stateInit) return void (stateInit = true);
-      if (state === 'Critical') dispatch('failsafe', 'The vehicle entered a failsafe state.');
-      else if (state === 'Emergency') dispatch('emergency', 'The vehicle reported an emergency.');
+      if (state === 'Critical') dispatch('failsafe');
+      else if (state === 'Emergency') dispatch('emergency');
     }),
 
     mavBatteryStore.subscribe((percent) => {
       if (percent === null) return;
       if (percent <= BATTERY_CRITICAL_PERCENT && batteryFloor > BATTERY_CRITICAL_PERCENT) {
-        dispatch('battery_critical', `Battery critical at ${percent}%.`);
+        dispatch('battery_critical', { percent });
         batteryFloor = BATTERY_CRITICAL_PERCENT;
       } else if (percent <= BATTERY_LOW_PERCENT && batteryFloor > BATTERY_LOW_PERCENT) {
-        dispatch('battery_low', `Battery low at ${percent}%.`);
+        dispatch('battery_low', { percent });
         batteryFloor = BATTERY_LOW_PERCENT;
       } else if (percent > BATTERY_LOW_PERCENT + 5) {
         batteryFloor = 100;
@@ -150,15 +150,12 @@ export function initAlerts(): () => void {
       }
       if (ok === gpsOk) return;
       gpsOk = ok;
-      dispatch(
-        ok ? 'gps_acquired' : 'gps_lost',
-        ok ? `GPS fix acquired (${sat.total} satellites).` : `GPS signal lost (${sat.total} satellites).`
-      );
+      dispatch(ok ? 'gps_acquired' : 'gps_lost', { sats: sat.total });
     }),
 
     onlineStore.subscribe((online) => {
       if (!onlineInit) return void (onlineInit = true);
-      dispatch(online ? 'link_restored' : 'link_lost', online ? 'Telemetry link restored.' : 'Telemetry link lost.');
+      dispatch(online ? 'link_restored' : 'link_lost');
     })
   ];
 

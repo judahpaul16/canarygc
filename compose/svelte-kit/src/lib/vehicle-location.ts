@@ -5,6 +5,7 @@
 import { mavLocationStore } from '../stores/mavlinkStore';
 import { sendMavlinkCommand } from './mavlink-client';
 import { showModal, notify } from './overlays';
+import { m } from '$lib/paraglide/messages';
 
 const DEGREES_TO_E7 = 1e7;
 
@@ -21,9 +22,9 @@ async function setHomeOnly(lat: number, lon: number, alt: number): Promise<void>
 	}
 	const ok = await sendMavlinkCommand('DO_SET_HOME', [useCurrent, 0, 0, 0, latE7, lonE7, altM]);
 	if (ok) {
-		notify({ title: 'Home set', content: useCurrent ? 'Home set to the current position.' : 'Home set to the entered point.', duration: 5000 });
+		notify({ title: m.vl_home_set(), content: useCurrent ? m.vl_home_current() : m.vl_home_entered(), duration: 5000 });
 	} else {
-		showModal({ title: 'Could not set home', content: 'The vehicle rejected the home location.', notification: true });
+		showModal({ title: m.vl_home_fail_title(), content: m.vl_home_fail_body(), notification: true });
 	}
 }
 
@@ -35,29 +36,28 @@ async function setOriginAndHome(lat: number, lon: number, alt: number): Promise<
 		});
 		if (res.ok) {
 			mavLocationStore.set({ lat, lng: lon });
-			notify({ title: 'Start point set', content: 'Origin and home set on the vehicle; local moves now reference this point.', duration: 5000 });
+			notify({ title: m.vl_start_set(), content: m.vl_start_set_body(), duration: 5000 });
 		} else if (res.status === 503) {
-			notify({ title: 'No vehicle connected', content: 'Connect the autopilot, then set the start point.', type: 'warning' });
+			notify({ title: m.vl_no_vehicle_title(), content: m.vl_no_vehicle_body(), type: 'warning' });
 		} else {
-			notify({ title: 'Could not set the start point', content: await res.text(), type: 'warning' });
+			notify({ title: m.vl_start_fail_title(), content: await res.text(), type: 'warning' });
 		}
 	} catch {
-		notify({ title: 'Could not set the start point', content: 'Network error reaching the vehicle.', type: 'warning' });
+		notify({ title: m.vl_start_fail_title(), content: m.vl_network_error(), type: 'warning' });
 	}
 }
 
 export function openVehicleLocationModal(): void {
 	showModal({
-		title: 'Set home / start point',
-		content:
-			'Home is where the vehicle returns in RTL; leave latitude and longitude blank to use the current position. No-GPS mode also sets the global origin to this point so a vehicle with no GPS flies in local position referenced to it. Use the takeoff spot; leave altitude at 0 unless you know the field elevation.',
+		title: m.vl_modal_title(),
+		content: m.vl_modal_body(),
 		confirmation: true,
-		confirmLabel: 'Set location',
+		confirmLabel: m.vl_set_location_btn(),
 		inputs: [
-			{ type: 'number', placeholder: 'e.g. 33.7911', required: false, label: 'Latitude' },
-			{ type: 'number', placeholder: 'e.g. -84.3713', required: false, label: 'Longitude' },
-			{ type: 'number', placeholder: '0', required: false, label: 'Altitude (m AMSL)' },
-			{ type: 'checkbox', placeholder: 'No-GPS mode: also set the global origin for local flying', required: false }
+			{ type: 'number', placeholder: m.vl_latitude_placeholder(), required: false, label: m.vl_latitude_label() },
+			{ type: 'number', placeholder: m.vl_longitude_placeholder(), required: false, label: m.vl_longitude_label() },
+			{ type: 'number', placeholder: '0', required: false, label: m.vl_altitude_label() },
+			{ type: 'checkbox', placeholder: m.vl_no_gps_check(), required: false }
 		],
 		onConfirm: async (values) => {
 			const lat = parseFloat(values[0]);
@@ -66,7 +66,7 @@ export function openVehicleLocationModal(): void {
 			const noGps = values[3] === 'true';
 			if (noGps) {
 				if (Number.isNaN(lat) || Number.isNaN(lon)) {
-					notify({ title: 'Invalid coordinates', content: 'No-GPS mode needs a numeric latitude and longitude for the origin.', type: 'warning' });
+					notify({ title: m.vl_invalid_coords_title(), content: m.vl_invalid_coords_body(), type: 'warning' });
 					return;
 				}
 				await setOriginAndHome(lat, lon, alt);

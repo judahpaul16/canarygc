@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { m } from '$lib/paraglide/messages';
   let email = $state('');
   let error = $state('');
   let sent = $state(false);
@@ -6,7 +7,7 @@
 
   async function handleSubmit() {
     if (!email) {
-      error = 'Please enter your email';
+      error = m.auth_enter_email();
       return;
     }
     error = '';
@@ -21,10 +22,10 @@
         sent = true;
       } else {
         const data = await response.json();
-        error = data.message ?? 'Something went wrong.';
+        error = data.message ?? m.auth_something_wrong();
       }
     } catch {
-      error = 'Network error. Please try again.';
+      error = m.auth_network_error();
     } finally {
       submitting = false;
     }
@@ -32,7 +33,7 @@
 </script>
 
 <svelte:head>
-  <title>Canary Ground Control - Reset password</title>
+  <title>{m.auth_forgot_page_title()}</title>
 </svelte:head>
 
 <div
@@ -41,8 +42,8 @@
   <div class="card glass">
     <div class="brand">
       <img src="logo.png" alt="Canary Ground Control" class="logo" />
-      <h1>Reset your password</h1>
-      <p class="sub">We will email you a secure reset link.</p>
+      <h1>{m.auth_forgot_heading()}</h1>
+      <p class="sub">{m.auth_forgot_sub()}</p>
     </div>
 
     {#if error}
@@ -51,20 +52,20 @@
 
     {#if sent}
       <div class="notice">
-        <i class="fas fa-envelope-circle-check"></i> If that email is on file, a reset link is on its way. Check your inbox.
+        <i class="fas fa-envelope-circle-check"></i> {m.auth_reset_sent()}
       </div>
     {:else}
       <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
-        <label for="email">Email</label>
+        <label for="email">{m.auth_email()}</label>
         <input type="email" id="email" bind:value={email} autocomplete="email" required />
 
         <button type="submit" class="cta" disabled={submitting}>
-          {submitting ? 'Sending...' : 'Send reset link'} <i class="fas fa-paper-plane"></i>
+          {submitting ? m.auth_sending() : m.auth_send_reset_button()} <i class="fas fa-paper-plane"></i>
         </button>
       </form>
     {/if}
 
-    <a class="back" href="/login">Back to log in</a>
+    <a class="back" href="/login">{m.auth_back_to_login()}</a>
   </div>
 </div>
 

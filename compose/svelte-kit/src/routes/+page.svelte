@@ -1,48 +1,49 @@
 <script lang="ts">
   import { openVehicleLocationModal } from '../lib/vehicle-location';
+  import { m } from '$lib/paraglide/messages';
 
   let { data } = $props();
   const features = [
     {
       icon: 'fa-satellite-dish',
-      title: 'Live telemetry & control',
-      desc: 'Attitude, position, battery and GPS over MAVLink, with arm, disarm and flight-mode control.',
+      title: m.home_feat_telemetry_title(),
+      desc: m.home_feat_telemetry_desc(),
       wide: true
     },
     {
       icon: 'fa-route',
-      title: 'Mission planner',
-      desc: 'Plot and edit waypoints on synced 2D and 3D maps.'
+      title: m.home_feat_planner_title(),
+      desc: m.home_feat_planner_desc()
     },
     {
       icon: 'fa-shield-halved',
-      title: 'Airspace & pre-flight safety',
-      desc: 'Restricted-airspace overlays with geofence, altitude and no-fly-zone checks before launch.'
+      title: m.home_feat_safety_title(),
+      desc: m.home_feat_safety_desc()
     },
     {
       icon: 'fa-volume-high',
-      title: 'Audible callouts',
-      desc: 'Spoken alerts for arming, mode changes, low battery, GPS and link loss.'
+      title: m.home_feat_callouts_title(),
+      desc: m.home_feat_callouts_desc()
     },
     {
       icon: 'fa-microchip',
-      title: 'ArduPilot & PX4',
-      desc: 'Both autopilot stacks, detected and encoded automatically.'
+      title: m.home_feat_stacks_title(),
+      desc: m.home_feat_stacks_desc()
     },
     {
       icon: 'fa-video',
-      title: 'On-board camera',
-      desc: 'Live video from the aircraft, streamed to the browser over WebRTC.'
+      title: m.home_feat_camera_title(),
+      desc: m.home_feat_camera_desc()
     },
     {
       icon: 'fa-wand-magic-sparkles',
-      title: 'Smart path optimization',
-      desc: 'One-click routing that shortens the flight and steers legs clear of restricted airspace.'
+      title: m.home_feat_optimize_title(),
+      desc: m.home_feat_optimize_desc()
     },
     {
       icon: 'fa-file-import',
-      title: 'Mission import',
-      desc: 'Load QGroundControl .plan and Mission Planner .waypoints files straight into the planner.'
+      title: m.home_feat_import_title(),
+      desc: m.home_feat_import_desc()
     }
   ];
 
@@ -79,24 +80,25 @@
     <header class="hero glass">
       <img src="logo.png" alt="Canary Ground Control" class="logo" />
       <h1>Canary Ground Control</h1>
-      <p class="tagline">Web-native ground control for autonomous flight, running on the aircraft itself.</p>
+      <p class="tagline">{m.home_tagline()}</p>
 
       {#if data.user}
-        <p class="state-note">Signed in as <strong>{data.user.username}</strong>.</p>
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -- username is the operator's own account name, wrapped in the translated string's <strong> -->
+        <p class="state-note">{@html m.home_signed_in({ username: data.user.username })}</p>
         <div class="cta-row">
-          <a href="/dashboard" class="cta">Open dashboard <i class="fas fa-arrow-right"></i></a>
+          <a href="/dashboard" class="cta">{m.home_open_dashboard()} <i class="fas fa-arrow-right"></i></a>
           <button type="button" class="cta cta-ghost" onclick={openVehicleLocationModal}>
-            <i class="fas fa-location-crosshairs"></i> Set home / start point
+            <i class="fas fa-location-crosshairs"></i> {m.vl_modal_title()}
           </button>
         </div>
       {:else if data.operatorExists}
-        <p class="state-note">Sign in to reach the station.</p>
-        <a href="/login" class="cta">Log in <i class="fas fa-arrow-right"></i></a>
+        <p class="state-note">{m.home_sign_in_note()}</p>
+        <a href="/login" class="cta">{m.auth_login_button()} <i class="fas fa-arrow-right"></i></a>
       {:else}
         <p class="firstrun-note">
-          <i class="fas fa-circle-plus"></i> No operator account exists yet. Create one to get started.
+          <i class="fas fa-circle-plus"></i> {m.home_firstrun_note()}
         </p>
-        <a href="/register" class="cta">Create operator account <i class="fas fa-arrow-right"></i></a>
+        <a href="/register" class="cta">{m.auth_create_account_button()} <i class="fas fa-arrow-right"></i></a>
       {/if}
     </header>
 
@@ -120,7 +122,7 @@
         </ul>
       </div>
       <div class="res-col safety">
-        <h2><i class="fas fa-triangle-exclamation"></i> Safety</h2>
+        <h2><i class="fas fa-triangle-exclamation"></i> {m.home_safety_heading()}</h2>
         <ul>
           {#each safetyLinks as link (link.href)}
             <li><a href={link.href} target="_blank" rel="noopener noreferrer">{link.text}</a></li>

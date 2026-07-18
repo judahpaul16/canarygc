@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { loggedInStore } from '../../stores/authStore';
+  import { m } from '$lib/paraglide/messages';
   let email = $state('');
   let password = $state('');
   let error = $state('');
@@ -17,7 +18,7 @@
 
   async function handleSubmit() {
     if (!email || !password) {
-      error = 'Please fill in all fields';
+      error = m.auth_fill_all_fields();
       return;
     }
     const response = await fetch('/api/auth/login', {
@@ -31,13 +32,13 @@
       window.location.href = '/dashboard';
     } else {
       const responseText = await response.json();
-      error = `Error: ${responseText.message}`;
+      error = m.auth_error({ message: responseText.message });
     }
   }
 </script>
 
 <svelte:head>
-  <title>Canary Ground Control - Login</title>
+  <title>{m.auth_login_page_title()}</title>
 </svelte:head>
 
 <div
@@ -46,8 +47,8 @@
   <div class="card glass">
     <div class="brand">
       <img src="logo.png" alt="Canary Ground Control" class="logo" />
-      <h1>Log in to Canary</h1>
-      <p class="sub">Ground control for autonomous flight.</p>
+      <h1>{m.auth_login_heading()}</h1>
+      <p class="sub">{m.auth_tagline()}</p>
     </div>
 
     {#if error}
@@ -55,15 +56,15 @@
     {/if}
 
     <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
-      <label for="email">Email</label>
+      <label for="email">{m.auth_email()}</label>
       <input type="email" id="email" bind:value={email} autocomplete="username" required />
 
-      <label for="password">Password</label>
+      <label for="password">{m.auth_password()}</label>
       <input type="password" id="password" bind:value={password} autocomplete="current-password" required />
 
-      <button type="submit" class="cta">Log in <i class="fas fa-arrow-right"></i></button>
+      <button type="submit" class="cta">{m.auth_login_button()} <i class="fas fa-arrow-right"></i></button>
     </form>
-    <a class="forgot" href="/forgot-password">Forgot your password?</a>
+    <a class="forgot" href="/forgot-password">{m.auth_forgot_link()}</a>
   </div>
 </div>
 

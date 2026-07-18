@@ -37,6 +37,7 @@
   import { showModal, notify } from '../lib/overlays';
   import {
     airspaceZonesStore,
+    airspaceAttributionsStore,
     showAirspaceStore,
     ceilingCellsStore,
     showCeilingsStore,
@@ -59,6 +60,7 @@
   import { mapWindowStore, mapShellStore, mapPanelStore, mapFullscreenStore, type MapRect } from '../stores/mapStore';
   import { loggedInStore } from '../stores/authStore';
   import { trafficStore, showTrafficStore, upsertTraffic, type TrafficContact } from '../stores/trafficStore';
+  import { m } from '$lib/paraglide/messages';
   import 'leaflet/dist/leaflet.css';
 
   interface Props {
@@ -497,7 +499,7 @@
     function updateLocationDisplay(loc: L.LatLng | { lat: number; lng: number }) {
         const locationDisplay = document.querySelector('#location-display');
         if (!locationDisplay) return;
-        locationDisplay.textContent = `MAV Location: ${loc.lat.toFixed(6)}°, ${loc.lng.toFixed(6)}°, Yaw Angle: ${mavHeading}°, Altitude: ${get(mavAltitudeStore)}m`;
+        locationDisplay.textContent = m.map_status({ lat: loc.lat.toFixed(6), lon: loc.lng.toFixed(6), yaw: mavHeading, alt: get(mavAltitudeStore) });
     }
     updateLocationDisplay(mavLocation);
 
@@ -669,14 +671,14 @@
     if (!get(patternCaptureStore)) return;
     patternCaptureStore.set(null);
     clearPatternPreview();
-    notify({ title: 'Pattern canceled', content: 'No waypoints were added.', type: 'info' });
+    notify({ title: m.map_pattern_canceled_title(), content: m.map_pattern_canceled_body(), type: 'info' });
   }
 
   function appendPatternWaypoints(points: PatternPoint[]) {
     if (!points.length) {
       notify({
-        title: 'Pattern',
-        content: 'Those parameters produce no waypoints; check the spacing against the area size.',
+        title: m.map_pattern_title(),
+        content: m.map_pattern_no_wp_body(),
         type: 'warning'
       });
       return;
@@ -695,7 +697,7 @@
       })),
       L.latLng(points[0].lat, points[0].lon)
     );
-    notify({ title: 'Pattern added', content: `${points.length} waypoints appended to the plan.`, type: 'success' });
+    notify({ title: m.map_pattern_added_title(), content: m.map_pattern_added_body({ count: points.length }), type: 'success' });
   }
 
   const isClockwise = (v: string) => v.trim().toLowerCase() !== 'ccw';
@@ -708,18 +710,18 @@
 
     if (capture.kind === 'survey') {
       if (capture.corners.length < 3) {
-        notify({ title: 'Survey pattern', content: 'A survey area needs at least three corners.', type: 'warning' });
+        notify({ title: m.pa_survey_title(), content: m.map_survey_min_corners(), type: 'warning' });
         return;
       }
       showModal({
-        title: 'Survey pattern',
-        content: 'Serpentine transects across the drawn area.',
+        title: m.pa_survey_title(),
+        content: m.map_survey_desc(),
         confirmation: true,
-        confirmLabel: 'Generate',
+        confirmLabel: m.map_generate(),
         inputs: [
-          { type: 'number', label: 'Transect spacing (m)', placeholder: 'e.g. 25', required: true },
-          { type: 'number', label: 'Grid angle from north (deg)', placeholder: 'e.g. 0', required: true },
-          { type: 'number', label: 'Altitude (m)', placeholder: 'e.g. 40', required: true }
+          { type: 'number', label: m.map_transect_spacing(), placeholder: m.map_ph_25(), required: true },
+          { type: 'number', label: m.map_grid_angle(), placeholder: m.map_ph_0(), required: true },
+          { type: 'number', label: m.map_altitude_m(), placeholder: m.map_ph_40(), required: true }
         ],
         onConfirm: (values) => {
           appendPatternWaypoints(
@@ -732,18 +734,18 @@
 
     if (capture.kind === 'corridor') {
       if (capture.corners.length < 2) {
-        notify({ title: 'Corridor pattern', content: 'A corridor needs at least two path points.', type: 'warning' });
+        notify({ title: m.pa_corridor_title(), content: m.map_corridor_min_points(), type: 'warning' });
         return;
       }
       showModal({
-        title: 'Corridor pattern',
-        content: 'Parallel lanes that sweep a strip along the drawn path.',
+        title: m.pa_corridor_title(),
+        content: m.map_corridor_desc(),
         confirmation: true,
-        confirmLabel: 'Generate',
+        confirmLabel: m.map_generate(),
         inputs: [
-          { type: 'number', label: 'Corridor width (m)', placeholder: 'e.g. 60', required: true },
-          { type: 'number', label: 'Lane spacing (m)', placeholder: 'e.g. 20', required: true },
-          { type: 'number', label: 'Altitude (m)', placeholder: 'e.g. 40', required: true }
+          { type: 'number', label: m.map_corridor_width(), placeholder: m.map_ph_60(), required: true },
+          { type: 'number', label: m.map_lane_spacing(), placeholder: m.map_ph_20(), required: true },
+          { type: 'number', label: m.map_altitude_m(), placeholder: m.map_ph_40(), required: true }
         ],
         onConfirm: (values) => {
           appendPatternWaypoints(
@@ -756,15 +758,15 @@
 
     if (capture.kind === 'sar') {
       showModal({
-        title: 'Search pattern',
-        content: 'An expanding square outward from the datum.',
+        title: m.pa_sar_title(),
+        content: m.map_sar_desc(),
         confirmation: true,
-        confirmLabel: 'Generate',
+        confirmLabel: m.map_generate(),
         inputs: [
-          { type: 'number', label: 'Track spacing (m)', placeholder: 'e.g. 30', required: true },
-          { type: 'number', label: 'Number of legs', placeholder: 'e.g. 12', required: true },
-          { type: 'number', label: 'Altitude (m)', placeholder: 'e.g. 40', required: true },
-          { type: 'text', label: 'Direction', placeholder: 'cw or ccw', required: true }
+          { type: 'number', label: m.map_track_spacing(), placeholder: m.map_ph_30(), required: true },
+          { type: 'number', label: m.map_num_legs(), placeholder: m.map_ph_12(), required: true },
+          { type: 'number', label: m.map_altitude_m(), placeholder: m.map_ph_40(), required: true },
+          { type: 'text', label: m.map_direction(), placeholder: m.map_dir_hint(), required: true }
         ],
         onConfirm: (values) => {
           appendPatternWaypoints(
@@ -777,17 +779,17 @@
 
     if (capture.kind === 'structure') {
       showModal({
-        title: 'Structure scan',
-        content: 'Stacked orbit rings that spiral up the structure.',
+        title: m.pa_structure_title(),
+        content: m.map_structure_desc(),
         confirmation: true,
-        confirmLabel: 'Generate',
+        confirmLabel: m.map_generate(),
         inputs: [
-          { type: 'number', label: 'Radius (m)', placeholder: 'e.g. 25', required: true },
-          { type: 'number', label: 'Waypoints per ring', placeholder: 'e.g. 12', required: true },
-          { type: 'number', label: 'Base altitude (m)', placeholder: 'e.g. 10', required: true },
-          { type: 'number', label: 'Number of layers', placeholder: 'e.g. 5', required: true },
-          { type: 'number', label: 'Height per layer (m)', placeholder: 'e.g. 5', required: true },
-          { type: 'text', label: 'Direction', placeholder: 'cw or ccw', required: true }
+          { type: 'number', label: m.map_radius(), placeholder: m.map_ph_25(), required: true },
+          { type: 'number', label: m.map_wp_per_ring(), placeholder: m.map_ph_12(), required: true },
+          { type: 'number', label: m.map_base_altitude(), placeholder: m.map_ph_10(), required: true },
+          { type: 'number', label: m.map_num_layers(), placeholder: m.map_ph_5(), required: true },
+          { type: 'number', label: m.map_layer_height(), placeholder: m.map_ph_5(), required: true },
+          { type: 'text', label: m.map_direction(), placeholder: m.map_dir_hint(), required: true }
         ],
         onConfirm: (values) => {
           appendPatternWaypoints(
@@ -799,15 +801,15 @@
     }
 
     showModal({
-      title: 'Orbit pattern',
-      content: 'A ring of waypoints around the clicked center.',
+      title: m.pa_orbit_title(),
+      content: m.map_orbit_desc(),
       confirmation: true,
-      confirmLabel: 'Generate',
+      confirmLabel: m.map_generate(),
       inputs: [
-        { type: 'number', label: 'Radius (m)', placeholder: 'e.g. 50', required: true },
-        { type: 'number', label: 'Waypoints around the circle', placeholder: 'e.g. 12', required: true },
-        { type: 'number', label: 'Altitude (m)', placeholder: 'e.g. 30', required: true },
-        { type: 'text', label: 'Direction', placeholder: 'cw or ccw', required: true }
+        { type: 'number', label: m.map_radius(), placeholder: m.map_ph_50(), required: true },
+        { type: 'number', label: m.map_wp_around_circle(), placeholder: m.map_ph_12(), required: true },
+        { type: 'number', label: m.map_altitude_m(), placeholder: m.map_ph_30(), required: true },
+        { type: 'text', label: m.map_direction(), placeholder: m.map_dir_hint(), required: true }
       ],
       onConfirm: (values) => {
         appendPatternWaypoints(
@@ -834,13 +836,13 @@
   const FEATURE_HIT_PX = 16;
 
   const MAV_ICONS = [
-    { src: '/map/here.png', label: 'Arrow' },
-    { src: '/map/mav-plane.png', label: 'Plane' },
-    { src: '/map/mav-jet.png', label: 'Jet' },
-    { src: '/map/mav-quad.png', label: 'Quadcopter' },
-    { src: '/map/mav-hex.png', label: 'Hexacopter' },
-    { src: '/map/mav-boat.png', label: 'Boat' },
-    { src: '/map/mav-rover.png', label: 'Rover' }
+    { src: '/map/here.png', label: m.map_icon_arrow() },
+    { src: '/map/mav-plane.png', label: m.map_icon_plane() },
+    { src: '/map/mav-jet.png', label: m.map_icon_jet() },
+    { src: '/map/mav-quad.png', label: m.map_icon_quad() },
+    { src: '/map/mav-hex.png', label: m.map_icon_hex() },
+    { src: '/map/mav-boat.png', label: m.map_icon_boat() },
+    { src: '/map/mav-rover.png', label: m.map_icon_rover() }
   ];
 
   function mavMarkerSectionHtml(): string {
@@ -849,7 +851,7 @@
       (icon) =>
         `<button type="button" class="am-icon${icon.src === current ? ' am-icon-active' : ''}" data-mav-icon="${icon.src}" title="${icon.label}" aria-label="${icon.label}"><img src="${icon.src}" alt="${icon.label}"></button>`
     ).join('');
-    return `<strong>${get(mavTypeStore) || 'Vehicle'} position</strong><br><span class="am-note">Vehicle marker:</span><div class="am-icons">${buttons}</div>`;
+    return `<strong>${m.map_position_label({ type: get(mavTypeStore) || m.map_vehicle() })}</strong><br><span class="am-note">${m.map_vehicle_marker()}</span><div class="am-icons">${buttons}</div>`;
   }
 
   // The modal body is injected HTML, so the icon buttons resolve through one
@@ -922,9 +924,9 @@
     }
     markers.forEach((marker, index) => {
       const ll = marker.getLatLng();
-      if (withinHit(ll.lat, ll.lng)) missionHits.push(`Waypoint ${index}: ${actions[index]?.type ?? ''}`);
+      if (withinHit(ll.lat, ll.lng)) missionHits.push(m.map_waypoint_hit({ index, type: actions[index]?.type ?? '' }));
     });
-    if (missionHits.length) sections.push({ html: `<strong>Mission</strong><br>${missionHits.join('<br>')}`, accent: '#61cd89' });
+    if (missionHits.length) sections.push({ html: `<strong>${m.map_mission()}</strong><br>${missionHits.join('<br>')}`, accent: '#61cd89' });
 
     return sections;
   }
@@ -935,16 +937,24 @@
     const lat = latlng.lat.toFixed(6);
     const lon = latlng.lng.toFixed(6);
     const coords = `${lat}, ${lon}`;
+    // LAANC and B4UFLY are US programs, so drop them when this spot's airspace
+    // is a non-US (EASA) geographical zone.
+    const point = { lat: latlng.lat, lon: latlng.lng };
+    const usActions = get(airspaceZonesStore).some(
+      (z) => z.regime === 'eu' && pointInPolygon(point, z.polygon)
+    )
+      ? ''
+      : `<a class="am-action" href="https://www.aloft.ai/feature/laanc/" target="_blank" rel="noopener"><i class="fas fa-tower-broadcast"></i> ${m.map_request_laanc()}</a>` +
+        `<a class="am-action" href="https://www.faa.gov/uas/recreational_fliers/where_can_i_fly/b4ufly/" target="_blank" rel="noopener"><i class="fas fa-plane-up"></i> ${m.map_faa_b4ufly()}</a>`;
     const content =
       `<div class="airspace-modal">${sections.map((s) => `<div class="am-section" style="border-left-color:${s.accent}">${s.html}</div>`).join('')}` +
       `<div class="am-coords"><span><i class="fas fa-location-dot"></i> ${coords}</span>` +
-      `<button type="button" class="am-copy" onclick="navigator.clipboard&&navigator.clipboard.writeText('${coords}')"><i class="fas fa-copy"></i> Copy</button></div>` +
+      `<button type="button" class="am-copy" onclick="navigator.clipboard&&navigator.clipboard.writeText('${coords}')"><i class="fas fa-copy"></i> ${m.map_copy()}</button></div>` +
       `<div class="am-actions">` +
-      `<a class="am-action" href="https://www.aloft.ai/feature/laanc/" target="_blank" rel="noopener"><i class="fas fa-tower-broadcast"></i> Request LAANC</a>` +
-      `<a class="am-action" href="https://www.faa.gov/uas/recreational_fliers/where_can_i_fly/b4ufly/" target="_blank" rel="noopener"><i class="fas fa-plane-up"></i> FAA B4UFLY</a>` +
-      `<a class="am-action" href="https://www.google.com/maps?q=${lat},${lon}" target="_blank" rel="noopener"><i class="fas fa-map-location-dot"></i> Open in Maps</a>` +
+      usActions +
+      `<a class="am-action" href="https://www.google.com/maps?q=${lat},${lon}" target="_blank" rel="noopener"><i class="fas fa-map-location-dot"></i> ${m.map_open_maps()}</a>` +
       `</div></div>`;
-    showModal({ title: 'Airspace & hazards', content, html: true, notification: true });
+    showModal({ title: m.map_airspace_hazards(), content, html: true, notification: true });
     return true;
   }
 
@@ -957,10 +967,15 @@
   }
 
   let airspaceLayer: L.LayerGroup | null = null;
+  let airspaceAttribution: string | null = null;
 
   function renderAirspace() {
     if (!L || !leafletMap) return;
     airspaceLayer?.remove();
+    if (airspaceAttribution) {
+      leafletMap.attributionControl?.removeAttribution(airspaceAttribution);
+      airspaceAttribution = null;
+    }
     if (!get(showAirspaceStore) || hideOverlay) {
       airspaceLayer = null;
       return;
@@ -980,6 +995,12 @@
     }
     group.addTo(leafletMap);
     airspaceLayer = group;
+
+    const attributions = get(airspaceAttributionsStore);
+    if (attributions.length > 0) {
+      airspaceAttribution = m.map_airspace_credit({ sources: attributions.join(', ') });
+      leafletMap.attributionControl?.addAttribution(airspaceAttribution);
+    }
   }
 
   function toggleMap() {
@@ -1071,11 +1092,11 @@
 
   function trafficPopupHtml(c: TrafficContact): string {
     const esc = (v: string) => v.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
-    const alt = c.altM === null ? 'unknown' : `${Math.round(c.altM)} m (${Math.round(c.altM / M_PER_FT)} ft)`;
-    const speed = c.speedMps === null ? 'unknown' : `${Math.round(c.speedMps)} m/s`;
-    const heading = c.headingDeg === null ? 'unknown' : `${Math.round(c.headingDeg)}°`;
-    const source = c.source === 'vehicle' ? 'onboard ADS-B receiver' : 'network feed';
-    return `<b>${esc(c.callsign)}</b><br>Altitude: ${alt}<br>Speed: ${speed}<br>Track: ${heading}<br>Source: ${source}`;
+    const alt = c.altM === null ? m.map_unknown() : `${Math.round(c.altM)} m (${Math.round(c.altM / M_PER_FT)} ft)`;
+    const speed = c.speedMps === null ? m.map_unknown() : `${Math.round(c.speedMps)} m/s`;
+    const heading = c.headingDeg === null ? m.map_unknown() : `${Math.round(c.headingDeg)}°`;
+    const source = c.source === 'vehicle' ? m.map_source_onboard() : m.map_source_network();
+    return `<b>${esc(c.callsign)}</b><br>${m.map_tr_altitude()}: ${alt}<br>${m.map_tr_speed()}: ${speed}<br>${m.map_tr_track()}: ${heading}<br>${m.map_tr_source()}: ${source}`;
   }
 
   // Contacts arrive per ADSB_VEHICLE message and per network poll, so markers
@@ -1196,8 +1217,8 @@
     if (!document.fullscreenElement) {
       element.requestFullscreen().catch(err => {
         showModal({
-          title: 'Error',
-          content: `Error attempting to enable full-screen mode: ${err.message} (${err.name})`,
+          title: m.common_error(),
+          content: m.lf_fullscreen_error({ message: err.message, name: err.name }),
           notification: true,
         });
       });
@@ -2193,23 +2214,23 @@
   {#if isFullscreen || win}
     <div class="window-frame">
   <div class="map-controls absolute top-2.5 right-2.5 z-[1] flex flex-col gap-2">
-    <button class="map-btn" aria-label="Toggle fullscreen" data-tip={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'} data-tip-pos="left" onclick={handleFullScreen}>
+    <button class="map-btn" aria-label={m.map_toggle_fullscreen()} data-tip={isFullscreen ? m.map_exit_fullscreen() : m.map_enter_fullscreen()} data-tip-pos="left" onclick={handleFullScreen}>
       <i class="fas fa-expand"></i>
     </button>
-    <button class="map-btn {lockPulse ? 'lock-pulse' : ''}" aria-label="Toggle map lock" data-tip={lockView ? 'Unlock map (stop following the vehicle)' : 'Lock map to the vehicle'} data-tip-pos="left" onclick={toggleLockView}>
+    <button class="map-btn {lockPulse ? 'lock-pulse' : ''}" aria-label={m.map_toggle_lock()} data-tip={lockView ? m.map_unlock() : m.map_lock()} data-tip-pos="left" onclick={toggleLockView}>
       <i class="fas {lockView ? 'fa-lock text-[#f5c518]' : 'fa-lock-open'}"></i>
     </button>
     {#if !hideOverlay}
-      <button class="map-btn" aria-label="Toggle airspace overlay" data-tip="{$showAirspaceStore ? 'Hide' : 'Show'} airspace zones" data-tip-pos="left" onclick={toggleAirspace}>
+      <button class="map-btn" aria-label={m.map_toggle_airspace()} data-tip={$showAirspaceStore ? m.map_airspace_hide() : m.map_airspace_show()} data-tip-pos="left" onclick={toggleAirspace}>
         <i class="fas fa-tower-broadcast {$showAirspaceStore ? 'text-[#f24e4e]' : ''}"></i>
       </button>
-      <button class="map-btn" aria-label="Toggle LAANC ceiling grid" data-tip="{$showCeilingsStore ? 'Hide' : 'Show'} LAANC ceiling grid (pre-approved altitude per square)" data-tip-pos="left" onclick={toggleCeilings}>
+      <button class="map-btn" aria-label={m.map_toggle_ceiling()} data-tip={$showCeilingsStore ? m.map_ceiling_hide() : m.map_ceiling_show()} data-tip-pos="left" onclick={toggleCeilings}>
         <i class="fas fa-border-all {$showCeilingsStore ? 'text-[#22c55e]' : ''}"></i>
       </button>
-      <button class="map-btn" aria-label="Toggle obstacles" data-tip="{$showObstaclesStore ? 'Hide' : 'Show'} obstacles (FAA towers and tall structures)" data-tip-pos="left" onclick={toggleObstacles}>
+      <button class="map-btn" aria-label={m.map_toggle_obstacles()} data-tip={$showObstaclesStore ? m.map_obstacles_hide() : m.map_obstacles_show()} data-tip-pos="left" onclick={toggleObstacles}>
         <i class="fas fa-tower-observation {$showObstaclesStore ? 'text-[#f97316]' : ''}"></i>
       </button>
-      <button class="map-btn" aria-label="Toggle live air traffic" data-tip="{$showTrafficStore ? 'Hide' : 'Show'} live air traffic (ADS-B)" data-tip-pos="left" onclick={toggleTraffic}>
+      <button class="map-btn" aria-label={m.map_toggle_traffic()} data-tip={$showTrafficStore ? m.map_traffic_hide() : m.map_traffic_show()} data-tip-pos="left" onclick={toggleTraffic}>
         <i class="fas fa-plane {$showTrafficStore ? 'text-[#38bdf8]' : ''}"></i>
       </button>
     {/if}
@@ -2218,7 +2239,7 @@
     <input type="checkbox" value="" class="sr-only peer" onclick={toggleMap}>
     <span class="text-white flex items-center gap-2">
       <i class="fas fa-map"></i>
-      <span>{mapType === '3D' ? '3D Buildings' : mapType === 'OpenStreetMap' ? 'Streets' : mapType}</span>
+      <span>{mapType === '3D' ? m.map_type_3d() : mapType === 'OpenStreetMap' ? m.map_type_streets() : mapType}</span>
     </span>
     <div class="relative w-16 h-6 ml-3 bg-[#2b7c3f rounded-full transition-colors peer-focus:outline-none" class:bg-blue-500={mapType === 'OpenStreetMap'} class:bg-green-500={mapType === 'Satellite'} class:bg-purple-500={mapType === '3D'}>
       <div class="absolute top-[2px] left-[2px] bg-white rounded-full h-5 w-5 transition-all duration-300" style:transform={mapType === 'OpenStreetMap' ? 'translateX(0)' : mapType === 'Satellite' ? 'translateX(100%)' : 'translateX(200%)'}></div>
@@ -2232,16 +2253,16 @@
         {#if statsDockOpen}
           <div class="dock-panel">
             <div class="dock-head">
-              <span><i class="fas fa-gauge-high"></i>Stats</span>
-              <button class="dock-min" aria-label="Minimize stats" data-tip="Minimize" data-tip-pos="left" onclick={() => (statsDockOpen = false)}>
+              <span><i class="fas fa-gauge-high"></i>{m.map_stats()}</span>
+              <button class="dock-min" aria-label={m.map_min_stats()} data-tip={m.common_minimize()} data-tip-pos="left" onclick={() => (statsDockOpen = false)}>
                 <i class="fas fa-chevron-down"></i>
               </button>
             </div>
             <div class="stats-body"><Stats /></div>
           </div>
         {:else}
-          <button class="dock-pill" aria-label="Show stats" onclick={openStatsDock}>
-            <i class="fas fa-gauge-high"></i><span>Stats</span><i class="fas fa-chevron-up chev"></i>
+          <button class="dock-pill" aria-label={m.map_show_stats()} onclick={openStatsDock}>
+            <i class="fas fa-gauge-high"></i><span>{m.map_stats()}</span><i class="fas fa-chevron-up chev"></i>
           </button>
         {/if}
       </div>
@@ -2250,16 +2271,16 @@
         {#if feedDockOpen}
           <div class="dock-panel">
             <div class="dock-head">
-              <span><i class="fas fa-video"></i>Live feed</span>
-              <button class="dock-min" aria-label="Minimize live feed" data-tip="Minimize" data-tip-pos="left" onclick={() => (feedDockOpen = false)}>
+              <span><i class="fas fa-video"></i>{m.map_live_feed()}</span>
+              <button class="dock-min" aria-label={m.map_min_feed()} data-tip={m.common_minimize()} data-tip-pos="left" onclick={() => (feedDockOpen = false)}>
                 <i class="fas fa-chevron-down"></i>
               </button>
             </div>
             <div class="feed-body"><LiveFeed compact /></div>
           </div>
         {:else}
-          <button class="dock-pill" aria-label="Show live feed" onclick={openFeedDock}>
-            <i class="fas fa-video"></i><span>Live feed</span><i class="fas fa-chevron-up chev"></i>
+          <button class="dock-pill" aria-label={m.map_show_feed()} onclick={openFeedDock}>
+            <i class="fas fa-video"></i><span>{m.map_live_feed()}</span><i class="fas fa-chevron-up chev"></i>
           </button>
         {/if}
       </div>
@@ -2268,57 +2289,57 @@
         {#if controlDockOpen}
           <div class="dock-panel">
             <div class="dock-head">
-              <span><i class="fas fa-gamepad"></i>Manual control</span>
+              <span><i class="fas fa-gamepad"></i>{m.map_manual_control()}</span>
               <div class="flex items-center gap-1">
                 <button
                   class="dock-min"
-                  aria-label="Toggle gamepad flight"
-                  data-tip={gamepadActive ? 'Stop gamepad flight' : 'Fly with a gamepad (MANUAL_CONTROL)'}
+                  aria-label={m.map_toggle_gamepad()}
+                  data-tip={gamepadActive ? m.map_stop_gamepad() : m.map_fly_gamepad()}
                   onclick={toggleGamepad}
                 >
                   <i class="fas fa-gamepad {gamepadActive ? 'text-[#61cd89]' : ''}"></i>
                 </button>
-                <button class="dock-min" aria-label="Minimize manual control" data-tip="Minimize" data-tip-pos="left" onclick={() => (controlDockOpen = false)}>
+                <button class="dock-min" aria-label={m.map_min_manual()} data-tip={m.common_minimize()} data-tip-pos="left" onclick={() => (controlDockOpen = false)}>
                   <i class="fas fa-chevron-down"></i>
                 </button>
               </div>
             </div>
             <div class="control-body">
               <div class="control-col">
-                <button class="ctl-btn" aria-label="Altitude up" data-tip="Climb {ALTITUDE_STEP_M} m" data-tip-pos="right" onclick={() => verticalStep(true, ALTITUDE_STEP_M)}>
+                <button class="ctl-btn" aria-label={m.map_altitude_up()} data-tip={m.map_climb({ step: ALTITUDE_STEP_M })} data-tip-pos="right" onclick={() => verticalStep(true, ALTITUDE_STEP_M)}>
                   <i class="fas fa-arrow-up"></i>
                 </button>
-                <button class="ctl-btn" aria-label="Altitude down" data-tip="Descend {ALTITUDE_STEP_M} m" data-tip-pos="right" onclick={() => verticalStep(false, ALTITUDE_STEP_M)}>
+                <button class="ctl-btn" aria-label={m.map_altitude_down()} data-tip={m.map_descend({ step: ALTITUDE_STEP_M })} data-tip-pos="right" onclick={() => verticalStep(false, ALTITUDE_STEP_M)}>
                   <i class="fas fa-arrow-down"></i>
                 </button>
               </div>
               {#if !plane}
               <DPad />
               <div class="control-col">
-                <button class="ctl-btn" aria-label="Rotate left" data-tip="Yaw left {YAW_STEP_DEG}°" data-tip-pos="left" onclick={() => yawStep(-1)}>
+                <button class="ctl-btn" aria-label={m.map_rotate_left()} data-tip={m.map_yaw_left({ step: YAW_STEP_DEG })} data-tip-pos="left" onclick={() => yawStep(-1)}>
                   <i class="fas fa-rotate-left"></i>
                 </button>
-                <button class="ctl-btn" aria-label="Rotate right" data-tip="Yaw right {YAW_STEP_DEG}°" data-tip-pos="left" onclick={() => yawStep(1)}>
+                <button class="ctl-btn" aria-label={m.map_rotate_right()} data-tip={m.map_yaw_right({ step: YAW_STEP_DEG })} data-tip-pos="left" onclick={() => yawStep(1)}>
                   <i class="fas fa-rotate-right"></i>
                 </button>
               </div>
               {:else}
               <div class="ctl-fields">
                 <label class="ctl-field">
-                  <span>Max speed (m/s)</span>
+                  <span>{m.map_max_speed()}</span>
                   <input type="number" min="0" placeholder="10" bind:value={dockMaxSpeed} />
                 </label>
                 <label class="ctl-field">
-                  <span>Go to altitude (m)</span>
+                  <span>{m.map_go_to_altitude()}</span>
                   <input type="number" min="0" placeholder="100" bind:value={dockAltitude} />
                 </label>
-                <button class="ctl-set" onclick={applyDockTargets}>Set</button>
+                <button class="ctl-set" onclick={applyDockTargets}>{m.map_set()}</button>
               </div>
               {/if}
             </div>
           </div>
         {:else}
-          <button class="dock-pill" aria-label="Show manual control" onclick={openControlDock}>
+          <button class="dock-pill" aria-label={m.map_show_manual()} onclick={openControlDock}>
             <i class="fas fa-gamepad"></i><span>Manual control</span><i class="fas fa-chevron-up chev"></i>
           </button>
         {/if}

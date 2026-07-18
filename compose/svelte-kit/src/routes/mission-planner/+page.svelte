@@ -6,6 +6,7 @@
     import MissionPlanSettings from '../../components/MissionPlanSettings.svelte';
     import { mavLocationStore } from '../../stores/mavlinkStore';
     import { mapWindow, mapShell } from '../../lib/map-window';
+    import { m } from '$lib/paraglide/messages';
 
     let mavLocation = $derived($mavLocationStore)
 
@@ -17,7 +18,7 @@
   </script>
   
   <sveltekit:head>
-    <title>Canary Ground Control - Dashboard</title>
+    <title>{m.page_title_dashboard()}</title>
   </sveltekit:head>
 
   <div class="dashboard-container h-full flex items-center justify-center min-h-[95vh] p-0">

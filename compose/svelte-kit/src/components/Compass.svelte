@@ -1,6 +1,7 @@
 <script lang="ts">
   import { mavLocationStore } from '../stores/mavlinkStore';
   import { smoothHeadingStore } from '../lib/smooth-telemetry';
+  import { m } from '$lib/paraglide/messages';
 
   interface Props {
     mavLocation?: L.LatLng | { lat: number; lng: number };
@@ -64,7 +65,7 @@
 <div class="compass" class:compact>
   <div class="heading-pill">{heading}</div>
 
-  <svg class="dial" viewBox="0 0 120 120" role="img" aria-label="Heading {heading}">
+  <svg class="dial" viewBox="0 0 120 120" role="img" aria-label={m.compass_heading_aria({ heading })}>
     <circle cx="60" cy="60" r="55" class="ring" />
     {#each TICKS as t (t)}
       <line
@@ -93,12 +94,12 @@
       id="lat-long"
       class="coords"
       class:copied
-      data-tip="Copy as decimal degrees"
-      aria-label="Copy coordinates as decimal degrees"
+      data-tip={m.compass_copy_tip()}
+      aria-label={m.compass_copy_aria()}
       onclick={copyCoordinates}
     >
       {#if copied}
-        <i class="fas fa-check"></i> Copied
+        <i class="fas fa-check"></i> {m.compass_copied()}
       {:else}
         {currentLat} {currentLong}
       {/if}

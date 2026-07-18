@@ -6,6 +6,7 @@ import { showModal, notify } from './overlays';
 import { optimizeMissionPath } from './path-planning';
 import { airspaceZonesStore, obstaclesStore, safetyLimitsStore } from '../stores/safetyStore';
 import { refreshAirspace, refreshHazards, refreshBuildings } from './preflight';
+import { m } from '$lib/paraglide/messages';
 
 const FEEDBACK_MS = 3000;
 
@@ -28,27 +29,26 @@ export async function optimizePath(): Promise<void> {
 	);
 	if (!result.changed) {
 		notify({
-			title: 'Path already clear',
-			content: 'No leg crosses restricted airspace, an obstacle, or a building at its altitude.',
+			title: m.pa_path_clear_title(),
+			content: m.pa_path_clear_body(),
 			duration: FEEDBACK_MS
 		});
 		return;
 	}
 	missionPlanActionsStore.set(result.actions);
-	const n = (count: number) => (count > 1 ? 's' : '');
 	const parts: string[] = [];
 	if (result.clearedLegs > 0) {
-		parts.push(`added ${result.addedWaypoints} waypoint${n(result.addedWaypoints)} to route around ${result.clearedLegs} hazard${n(result.clearedLegs)}`);
+		parts.push(m.pa_added_waypoints({ count: result.addedWaypoints, hazards: result.clearedLegs }));
 	}
 	if (result.raisedWaypoints > 0) {
-		parts.push(`raised ${result.raisedWaypoints} waypoint${n(result.raisedWaypoints)} to clear obstacles or buildings`);
+		parts.push(m.pa_raised_waypoints({ count: result.raisedWaypoints }));
 	}
 	if (result.movedWaypoints > 0) {
-		parts.push(`moved ${result.movedWaypoints} waypoint${n(result.movedWaypoints)} clear of restricted airspace`);
+		parts.push(m.pa_moved_waypoints({ count: result.movedWaypoints }));
 	}
 	notify({
-		title: 'Path adjusted for hazards',
-		content: `Path ${parts.join(', ')}. Review the plan before flying.`,
+		title: m.pa_adjusted_title(),
+		content: `${parts.join(' ')} ${m.pa_review_footer()}`,
 		duration: FEEDBACK_MS * 2
 	});
 }
@@ -68,8 +68,8 @@ export function startSurveyCapture(): void {
 	patternCaptureStore.set({ kind: 'survey', corners: [] });
 	holdInstruction(
 		notify({
-			title: 'Survey pattern',
-			content: 'Click the survey area corners on the map, then double-click to finish. Escape cancels.',
+			title: m.pa_survey_title(),
+			content: m.pa_survey_body(),
 			type: 'info',
 			persistent: true
 		})
@@ -80,8 +80,8 @@ export function startOrbitCapture(): void {
 	patternCaptureStore.set({ kind: 'orbit', corners: [] });
 	holdInstruction(
 		notify({
-			title: 'Orbit pattern',
-			content: 'Click the orbit center on the map. Escape cancels.',
+			title: m.pa_orbit_title(),
+			content: m.pa_orbit_body(),
 			type: 'info',
 			persistent: true
 		})
@@ -92,8 +92,8 @@ export function startCorridorCapture(): void {
 	patternCaptureStore.set({ kind: 'corridor', corners: [] });
 	holdInstruction(
 		notify({
-			title: 'Corridor pattern',
-			content: 'Click along the corridor path on the map, then double-click to finish. Escape cancels.',
+			title: m.pa_corridor_title(),
+			content: m.pa_corridor_body(),
 			type: 'info',
 			persistent: true
 		})
@@ -104,8 +104,8 @@ export function startSarCapture(): void {
 	patternCaptureStore.set({ kind: 'sar', corners: [] });
 	holdInstruction(
 		notify({
-			title: 'Search pattern',
-			content: 'Click the search datum (last-known point) on the map. Escape cancels.',
+			title: m.pa_sar_title(),
+			content: m.pa_sar_body(),
 			type: 'info',
 			persistent: true
 		})
@@ -116,8 +116,8 @@ export function startStructureScanCapture(): void {
 	patternCaptureStore.set({ kind: 'structure', corners: [] });
 	holdInstruction(
 		notify({
-			title: 'Structure scan',
-			content: 'Click the center of the structure on the map. Escape cancels.',
+			title: m.pa_structure_title(),
+			content: m.pa_structure_body(),
 			type: 'info',
 			persistent: true
 		})
@@ -158,13 +158,13 @@ async function removeAllActions(clearLoadedPlan: boolean): Promise<void> {
 
 export function confirmClear(): void {
 	showModal({
-		title: 'Clear Mission Plan',
-		content: 'Are you sure you want to clear the current mission plan? This action will remove all actions from the map. Check the box to also clear the mission plan on the flight controller.',
+		title: m.pa_clear_title(),
+		content: m.pa_clear_body(),
 		confirmation: true,
 		inputs: [
 			{
 				type: 'checkbox',
-				placeholder: 'Clear on Flight Controller',
+				placeholder: m.pa_clear_on_fc(),
 				required: false
 			}
 		],

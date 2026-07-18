@@ -4,6 +4,7 @@ node_modules
 .output
 .vercel
 /.svelte-kit
+/src/lib/paraglide
 /build
 
 # OS

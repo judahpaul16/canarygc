@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { m } from '$lib/paraglide/messages';
   let token = $state('');
   let password = $state('');
   let confirm = $state('');
@@ -13,15 +14,15 @@
 
   async function handleSubmit() {
     if (!password || password.length < 6) {
-      error = 'Password must be at least 6 characters';
+      error = m.auth_password_min_length();
       return;
     }
     if (password !== confirm) {
-      error = 'Passwords do not match';
+      error = m.auth_passwords_no_match();
       return;
     }
     if (!token) {
-      error = 'This reset link is invalid or has expired.';
+      error = m.auth_reset_link_invalid();
       return;
     }
     error = '';
@@ -37,10 +38,10 @@
         setTimeout(() => (window.location.href = '/login'), 2500);
       } else {
         const data = await response.json();
-        error = data.message ?? 'Something went wrong.';
+        error = data.message ?? m.auth_something_wrong();
       }
     } catch {
-      error = 'Network error. Please try again.';
+      error = m.auth_network_error();
     } finally {
       submitting = false;
     }
@@ -48,7 +49,7 @@
 </script>
 
 <svelte:head>
-  <title>Canary Ground Control - Set a new password</title>
+  <title>{m.auth_reset_page_title()}</title>
 </svelte:head>
 
 <div
@@ -57,8 +58,8 @@
   <div class="card glass">
     <div class="brand">
       <img src="logo.png" alt="Canary Ground Control" class="logo" />
-      <h1>Set a new password</h1>
-      <p class="sub">Choose a new password for your operator account.</p>
+      <h1>{m.auth_reset_heading()}</h1>
+      <p class="sub">{m.auth_reset_sub()}</p>
     </div>
 
     {#if error}
@@ -67,23 +68,23 @@
 
     {#if done}
       <div class="notice">
-        <i class="fas fa-circle-check"></i> Password updated. Redirecting you to log in...
+        <i class="fas fa-circle-check"></i> {m.auth_reset_done()}
       </div>
     {:else}
       <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
-        <label for="password">New password</label>
+        <label for="password">{m.auth_new_password()}</label>
         <input type="password" id="password" bind:value={password} autocomplete="new-password" required />
 
-        <label for="confirm">Confirm password</label>
+        <label for="confirm">{m.auth_confirm_password()}</label>
         <input type="password" id="confirm" bind:value={confirm} autocomplete="new-password" required />
 
         <button type="submit" class="cta" disabled={submitting}>
-          {submitting ? 'Saving...' : 'Update password'} <i class="fas fa-arrow-right"></i>
+          {submitting ? m.auth_saving() : m.auth_update_password_button()} <i class="fas fa-arrow-right"></i>
         </button>
       </form>
     {/if}
 
-    <a class="back" href="/login">Back to log in</a>
+    <a class="back" href="/login">{m.auth_back_to_login()}</a>
   </div>
 </div>
 

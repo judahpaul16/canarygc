@@ -6,13 +6,15 @@
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
-		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
+		"i18n:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --emit-ts-declarations",
+		"check": "npm run i18n:compile && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"lint": "eslint .",
-		"test": "vitest run",
+		"test": "npm run i18n:compile && node scripts/check-locale-parity.mjs && vitest run",
 		"test:e2e": "playwright test"
 	},
 	"devDependencies": {
+		"@inlang/paraglide-js": "^2.22.0",
 		"@playwright/test": "1.60.0",
 		"@sveltejs/adapter-node": "^5.5.7",
 		"@sveltejs/kit": "^2.69.2",

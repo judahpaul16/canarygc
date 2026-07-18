@@ -9,6 +9,7 @@ import {
 } from './geo';
 import { feetToMeters, type Building, type Obstacle } from './hazards';
 import type { AirspaceZone } from './safety';
+import { m } from '$lib/paraglide/messages';
 
 export const APPROACH_DISTANCE_M = 800;
 export const APPROACH_ALT_M = 60;
@@ -146,7 +147,7 @@ export async function pickApproach(
   const warnings: string[] = [];
   const homeElev = (await sampleElevations([home]))?.[0] ?? null;
   if (homeElev === null) {
-    warnings.push('Terrain data is unavailable, so the approach is not checked against ground height.');
+    warnings.push(m.la_terrain_unavailable());
   }
 
   const relTerrain = async (points: LatLon[]): Promise<number[] | null> => {
@@ -186,14 +187,12 @@ export async function pickApproach(
       (zone) => crossesZone(vehicle, approach, zone) || crossesZone(approach, home, zone)
     );
     for (const zone of crossed) {
-      warnings.push(`The approach crosses controlled airspace: ${zone.name}.`);
+      warnings.push(m.la_crosses_controlled({ zone: zone.name }));
     }
     return { approach, altM, distanceM, bearingDeg: bearing, clear: true, warnings };
   }
 
-  warnings.push(
-    'Every approach corridor crosses an obstacle, rising terrain, or restricted airspace; flying the direct approach, watch the descent.'
-  );
+  warnings.push(m.la_all_corridors_blocked());
   return {
     approach: destinationPoint(home, baseBearing, APPROACH_DISTANCE_M),
     altM: APPROACH_ALT_M,

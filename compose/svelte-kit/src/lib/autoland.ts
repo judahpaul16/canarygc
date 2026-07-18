@@ -4,6 +4,7 @@ import { isPX4, isPlane } from './flight-modes';
 import { writeParameter } from './mavlink-client';
 import { planeHasLandingSequence } from './landing';
 import type { RtlParamWrite } from './rtl-altitude';
+import { m } from '$lib/paraglide/messages';
 
 export interface AutolandPlan {
   // Only a fixed wing is asked: it cannot hover, so whether a return to
@@ -34,16 +35,16 @@ export function autolandPlan(
     const param = params.RTL_TYPE;
     return {
       ask: true,
-      label: 'Return behavior (RTL_TYPE)',
+      label: m.al_px4_label(),
       note: hasLandingSequence
-        ? 'This mission carries a landing pattern. RTL_TYPE (also editable from the Parameters page) decides whether a return flies it or heads home to loiter.'
-        : 'This mission has no Land action: the plane lands automatically only through a landing pattern in the mission, so a return loiters at the return point until you land it. Add a Land action to the end of the mission for an automatic landing.',
+        ? m.al_px4_note_seq()
+        : m.al_px4_note_noseq(),
       current: param ? param.param_value : null,
       choices: [
-        { value: 0, label: 'Return home directly' },
-        { value: 1, label: 'Nearest rally point or mission landing' },
-        { value: 2, label: 'Follow the mission path to its landing' },
-        { value: 3, label: 'Closest safe destination' }
+        { value: 0, label: m.al_px4_choice_0() },
+        { value: 1, label: m.al_px4_choice_1() },
+        { value: 2, label: m.al_px4_choice_2() },
+        { value: 3, label: m.al_px4_choice_3() }
       ],
       writes: (value) => (param ? [{ id: 'RTL_TYPE', value, type: param.param_type }] : [])
     };
@@ -52,16 +53,16 @@ export function autolandPlan(
   const param = params.RTL_AUTOLAND;
   return {
     ask: true,
-    label: 'Autoland on return (RTL_AUTOLAND)',
+    label: m.al_ap_label(),
     note: hasLandingSequence
-      ? 'This mission carries a landing sequence. RTL_AUTOLAND (also editable from the Parameters page) decides whether a return to launch flies it or loiters at the return point.'
-      : 'This mission has no Land action: a return to launch loiters overhead until you land the plane, and RTL_AUTOLAND acts only on a landing sequence in the mission. Add a Land action to the end of the mission for an automatic landing.',
+      ? m.al_ap_note_seq()
+      : m.al_ap_note_noseq(),
     current: param ? param.param_value : null,
     choices: [
-      { value: 0, label: 'Off: return and loiter' },
-      { value: 1, label: 'Return home, then fly the landing sequence' },
-      { value: 2, label: 'Go straight to the landing sequence' },
-      { value: 3, label: 'Landing sequence only for go-arounds' }
+      { value: 0, label: m.al_ap_choice_0() },
+      { value: 1, label: m.al_ap_choice_1() },
+      { value: 2, label: m.al_ap_choice_2() },
+      { value: 3, label: m.al_ap_choice_3() }
     ],
     writes: (value) => (param ? [{ id: 'RTL_AUTOLAND', value, type: param.param_type }] : [])
   };

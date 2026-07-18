@@ -7,6 +7,7 @@
     inavStatusStore,
     stopInavMission
   } from '../lib/guidance-session';
+  import { m } from '$lib/paraglide/messages';
 
   let guidanceRunning = $derived($guidanceRunningStore);
   let guidanceStatus = $derived($guidanceStatusStore);
@@ -17,36 +18,36 @@
 {#if guidanceRunning}
   <div class="guidance-panel">
     <div class="guidance-info">
-      <strong><i class="fas fa-satellite-dish"></i> Companion guidance</strong>
+      <strong><i class="fas fa-satellite-dish"></i> {m.gp_companion_guidance()}</strong>
       <span>
         {#if guidanceStatus}
           {guidanceStatus.phase === 'complete'
-            ? 'Holding final waypoint'
-            : `Waypoint ${guidanceStatus.index + 1} of ${guidanceStatus.count}`}
+            ? m.gp_holding_final()
+            : m.gp_waypoint_of({ index: guidanceStatus.index + 1, count: guidanceStatus.count })}
           {#if guidanceStatus.distanceM !== null}· {guidanceStatus.distanceM.toFixed(0)} m{/if}
         {:else}
-          Starting…
+          {m.gp_starting()}
         {/if}
       </span>
     </div>
     <button class="guidance-stop" onclick={stopGuidance}>
-      <i class="fas fa-hand"></i> Stop &amp; release
+      <i class="fas fa-hand"></i> {m.gp_stop_release()}
     </button>
   </div>
 {:else if inavRunning}
   <div class="guidance-panel">
     <div class="guidance-info">
-      <strong><i class="fas fa-route"></i> INAV mission</strong>
+      <strong><i class="fas fa-route"></i> {m.gp_inav_mission()}</strong>
       <span>
         {#if inavStatus}
-          {inavStatus.phase === 'failsafe' ? 'Failsafe: returning to home' : 'Flying the mission onboard'}
+          {inavStatus.phase === 'failsafe' ? m.gp_failsafe_returning() : m.gp_flying_onboard()}
         {:else}
-          Engaging…
+          {m.gp_engaging()}
         {/if}
       </span>
     </div>
     <button class="guidance-stop" onclick={stopInavMission}>
-      <i class="fas fa-hand"></i> Stop &amp; release
+      <i class="fas fa-hand"></i> {m.gp_stop_release()}
     </button>
   </div>
 {/if}

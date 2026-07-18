@@ -2,6 +2,7 @@ import { mount, unmount } from 'svelte';
 import Modal from '../components/Modal.svelte';
 import ToastHost from '../components/ToastHost.svelte';
 import { pushToast, dismissToast } from '../stores/toastStore';
+import { m } from '$lib/paraglide/messages';
 
 export interface ModalInput {
   type: string;
@@ -70,8 +71,8 @@ export function showModal(options: ModalOptions): () => void {
       isOpen: true,
       confirmation: options.confirmation ?? false,
       notification: options.notification ?? false,
-      confirmLabel: options.confirmLabel ?? 'Confirm',
-      cancelLabel: options.cancelLabel ?? 'Cancel',
+      confirmLabel: options.confirmLabel ?? m.common_confirm(),
+      cancelLabel: options.cancelLabel ?? m.common_cancel(),
       inputs: options.inputs ?? null,
       onConfirm: async (values: string[]) => {
         await options.onConfirm?.(values);

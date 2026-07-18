@@ -10,6 +10,7 @@ import { setFlightMode, takeoff } from './mavlink-client';
 import { preflightCheck } from './preflight';
 import { rtlAltitudeNow, applyRtlAltitude } from './rtl-altitude';
 import { autolandNow, applyAutoland } from './autoland';
+import { m } from '$lib/paraglide/messages';
 
 export const DEFAULT_TAKEOFF_ALT_M = 10;
 const TAKEOFF_SETTLE_DELAY_MS = 5000;
@@ -25,8 +26,8 @@ export function startMissionWithConfirm(): void {
   const autoland = autolandNow();
   const content = [
     rtl.ask
-      ? 'Are you sure you want to start the mission? Set the altitude in meters the vehicle uses when returning to launch, considering any obstacles between the mission area and the launch point.'
-      : 'Are you sure you want to start the mission?',
+      ? m.sm_confirm_rtl()
+      : m.sm_confirm(),
     ...(autoland.ask ? [autoland.note] : [])
   ].join('\n\n');
 
@@ -34,7 +35,7 @@ export function startMissionWithConfirm(): void {
   if (rtl.ask) {
     inputs.push({
       type: 'number',
-      label: 'Return altitude (m)',
+      label: m.sm_return_altitude_label(),
       placeholder: `${rtl.currentM ?? DEFAULT_TAKEOFF_ALT_M}`,
       required: true
     });
@@ -48,14 +49,14 @@ export function startMissionWithConfirm(): void {
       required: false,
       value: autoland.current === null ? '' : String(autoland.current),
       options: [
-        ...(autoland.current === null ? [{ value: '', label: 'Keep current setting' }] : []),
+        ...(autoland.current === null ? [{ value: '', label: m.sm_keep_current() }] : []),
         ...autoland.choices.map((choice) => ({ value: String(choice.value), label: choice.label }))
       ]
     });
   }
 
   showModal({
-    title: 'Start / Resume Mission',
+    title: m.sm_title(),
     content,
     confirmation: true,
     inputs: inputs.length > 0 ? inputs : null,
@@ -65,9 +66,8 @@ export function startMissionWithConfirm(): void {
       missionCompleteStore.set(false);
       if (rtl.ask && !(await applyRtlAltitude(parseInt(values[0])))) {
         notify({
-          title: 'Return altitude not set',
-          content:
-            'The vehicle has not published its return-altitude parameter yet, so it returns at its current setting.',
+          title: m.sm_rtl_not_set_title(),
+          content: m.sm_rtl_not_set_body(),
           type: 'warning'
         });
       }
@@ -75,9 +75,8 @@ export function startMissionWithConfirm(): void {
         const picked = values[autolandIndex];
         if (picked !== '' && Number(picked) !== autoland.current && !(await applyAutoland(Number(picked)))) {
           notify({
-            title: 'Return behavior not set',
-            content:
-              'The vehicle has not published its return parameter yet, so it returns at its current setting.',
+            title: m.sm_return_not_set_title(),
+            content: m.sm_return_not_set_body(),
             type: 'warning'
           });
         }
@@ -88,8 +87,8 @@ export function startMissionWithConfirm(): void {
       }
       await setFlightMode('AUTO');
       notify({
-        title: 'Mission Started',
-        content: 'The mission has been started.'
+        title: m.sm_started_title(),
+        content: m.sm_started_body()
       });
     }
   });

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { untrack } from 'svelte';
+  import { m } from '$lib/paraglide/messages';
 
   interface Props {
     title: string;
@@ -30,8 +31,8 @@
     isOpen = $bindable(false),
     confirmation = false,
     notification = false,
-    confirmLabel = 'Confirm',
-    cancelLabel = 'Cancel',
+    confirmLabel = m.common_confirm(),
+    cancelLabel = m.common_cancel(),
     inputs = null,
     onConfirm = () => {},
     onCancel = () => {},
@@ -69,7 +70,7 @@
         input.required && (input.type === 'checkbox' ? !checkboxValues[i] : !inputValues[i])
       );
       if (missing) {
-        validationError = 'Please complete all required fields.';
+        validationError = m.modal_required_fields();
         return;
       }
       inputs.forEach((input, i) => {
@@ -94,13 +95,13 @@
 {#if isOpen}
   <div class="elevated-surface fixed inset-0 flex items-center justify-center z-50 bg-[#00000090] p-4 backdrop-blur-sm"
   >
-    <button type="button" aria-label="Close dialog" class="absolute inset-0 h-full w-full cursor-default" onclick={closeModal}></button>
+    <button type="button" aria-label={m.modal_close_dialog()} class="absolute inset-0 h-full w-full cursor-default" onclick={closeModal}></button>
     <div class="container relative z-10 rounded-2xl shadow-2xl w-full {html ? 'max-w-lg' : 'max-w-md'}" role="dialog" aria-modal="true">
       <div class="relative border-b" style="border-color: rgb(from var(--fontColor) r g b / 0.12);">
         <div class="px-5 py-3 text-lg font-semibold">
           {title}
         </div>
-        <button onclick={closeModal} aria-label="Close" class="absolute top-2.5 right-3 opacity-60 hover:opacity-100 text-2xl leading-none">
+        <button onclick={closeModal} aria-label={m.common_close()} class="absolute top-2.5 right-3 opacity-60 hover:opacity-100 text-2xl leading-none">
           &times;
         </button>
       </div>
@@ -158,7 +159,7 @@
         {/if}
         {#if notification}
           <div class="flex justify-end px-4 py-2 border-t">
-            <button type="button" onclick={closeModal} class="bg-blue-500 px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400">Okay</button>
+            <button type="button" onclick={closeModal} class="bg-blue-500 px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400">{m.common_okay()}</button>
           </div>
         {/if}
       </form>

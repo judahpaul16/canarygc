@@ -7,6 +7,7 @@ import { isPX4, isPlane } from './flight-modes';
 import { mavArmedStateStore } from '../stores/mavlinkStore';
 import { notify, overlayTarget, showModal } from './overlays';
 import GamepadConnect from '../components/GamepadConnect.svelte';
+import { m } from '$lib/paraglide/messages';
 
 // One MANUAL_CONTROL stream for the whole app: the dashboard Controls button
 // and the fullscreen dock toggle both drive this session, so enabling from
@@ -31,13 +32,13 @@ function inFlight(): boolean {
 async function enterStickMode(attempt = 1): Promise<void> {
 	if (!get(gamepadActiveStore) || !inFlight()) return;
 	if (await setFlightMode('POSCTL')) {
-		const label = isPX4() ? 'Position' : isPlane() ? 'Cruise' : 'Loiter';
+		const label = isPX4() ? m.gpad_mode_position() : isPlane() ? m.gpad_mode_cruise() : m.gpad_mode_loiter();
 		const behavior = isPlane()
-			? 'the stick steers; release to hold heading, altitude, and airspeed'
-			: 'sticks steer, centered sticks hold position';
+			? m.gpad_behavior_plane()
+			: m.gpad_behavior_multi();
 		notify({
-			title: 'Gamepad flight active',
-			content: `Flying in ${label} mode: ${behavior}. A running mission is paused until resumed.`,
+			title: m.gpad_active_title(),
+			content: m.gpad_active_body({ label, behavior }),
 			type: 'info'
 		});
 		return;
@@ -47,8 +48,8 @@ async function enterStickMode(attempt = 1): Promise<void> {
 		return;
 	}
 	notify({
-		title: 'Mode switch rejected',
-		content: 'The vehicle refused its stick-flying mode; the gamepad stream continues in the current mode.',
+		title: m.gpad_mode_rejected_title(),
+		content: m.gpad_mode_rejected_body(),
 		type: 'warning'
 	});
 }
@@ -61,13 +62,13 @@ async function settleAfterStream(reason: 'stopped' | 'disconnected'): Promise<vo
 	if (inFlight()) {
 		await setFlightMode(isPX4() ? 'LOITER' : 'GUIDED');
 		notify({
-			title: 'Gamepad flight stopped',
-			content: 'The vehicle is holding position; fly from the app controls or resume the mission.',
+			title: m.gpad_stopped_title(),
+			content: m.gpad_stopped_body(),
 			type: 'info'
 		});
 	}
 	if (reason === 'disconnected') {
-		notify({ title: 'Gamepad disconnected', content: 'The stick stream stopped.', type: 'warning' });
+		notify({ title: m.gpad_disconnected_title(), content: m.gpad_disconnected_body(), type: 'warning' });
 	}
 }
 
@@ -105,8 +106,8 @@ function start(): boolean {
 		setTimeout(() => void enterStickMode(), MODE_SWITCH_DELAY_MS);
 	} else {
 		notify({
-			title: 'Gamepad streaming',
-			content: 'Input is reaching the vehicle. Stick flying engages automatically once it is armed.',
+			title: m.gpad_streaming_title(),
+			content: m.gpad_streaming_body(),
 			type: 'info'
 		});
 	}
@@ -120,31 +121,30 @@ function start(): boolean {
 // so it is gated behind a props-clear confirmation.
 function startMspGamepad(): void {
 	showModal({
-		title: 'Fly by gamepad over MSP',
-		content:
-			'The station arms and flies this craft by stick over MSP; no GPS needed. The motors spin when it arms, so keep the throttle down until you are ready.',
+		title: m.gpad_msp_title(),
+		content: m.gpad_msp_body(),
 		confirmation: true,
-		confirmLabel: 'Arm and fly',
-		inputs: [{ type: 'checkbox', placeholder: 'Props are clear and I am ready to arm', required: true }],
+		confirmLabel: m.gpad_arm_and_fly(),
+		inputs: [{ type: 'checkbox', placeholder: m.gpad_props_clear_check(), required: true }],
 		onConfirm: async (values) => {
 			if (values[0] !== 'true') return;
 			gamepadActiveStore.set(true);
-			notify({ title: 'Gamepad flight', content: 'Preparing the flight controller for station control.', type: 'info' });
+			notify({ title: m.gpad_flight_title(), content: m.gpad_preparing_body(), type: 'info' });
 			let data: { ok?: boolean; message?: string; error?: string };
 			try {
 				const res = await fetch('/api/msp/manual_start', { method: 'POST' });
 				data = await res.json();
 				if (!res.ok) {
 					showModal({
-						title: 'Gamepad flight failed',
-						content: data.message ?? data.error ?? 'The flight controller rejected station control.',
+						title: m.gpad_flight_failed_title(),
+						content: data.message ?? data.error ?? m.gpad_rejected_body(),
 						notification: true
 					});
 					gamepadActiveStore.set(false);
 					return;
 				}
 			} catch (error) {
-				showModal({ title: 'Gamepad flight failed', content: (error as Error).message, notification: true });
+				showModal({ title: m.gpad_flight_failed_title(), content: (error as Error).message, notification: true });
 				gamepadActiveStore.set(false);
 				return;
 			}
@@ -158,10 +158,10 @@ function startMspGamepad(): void {
 					gamepadActiveStore.set(false);
 					stop = null;
 					fetch('/api/msp/manual_stop', { method: 'POST' }).catch(() => {});
-					notify({ title: 'Gamepad flight stopped', content: 'Disarmed; control released to the flight controller.', type: 'info' });
+					notify({ title: m.gpad_stopped_title(), content: m.gpad_disarmed_body(), type: 'info' });
 				}
 			);
-			notify({ title: 'Gamepad flight active', content: data.message ?? 'Sticks fly the craft; raise the throttle to take off.', type: 'info' });
+			notify({ title: m.gpad_active_title(), content: data.message ?? m.gpad_msp_active_body(), type: 'info' });
 		}
 	});
 }

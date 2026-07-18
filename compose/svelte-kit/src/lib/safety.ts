@@ -1,6 +1,7 @@
 import { haversineMeters, pointInPolygon, pointToSegmentMeters, segmentIntersectsPolygon, type LatLon } from './geo';
 import { feetToMeters, type CeilingCell, type Obstacle } from './hazards';
 import type { MissionPlanActions, MissionPlanItem } from '../stores/missionPlanStore';
+import { m } from '$lib/paraglide/messages';
 
 // Pre-flight validation for a mission. These checks are advisory guards that
 // run before the vehicle is armed or a mission is started; they never replace
@@ -30,6 +31,7 @@ export interface AirspaceZone {
   upper?: string; // upper limit description, e.g. "10000 ft MSL"
   lowerM?: number; // lower limit in meters (0 = surface); the zone starts here
   upperM?: number; // upper limit in meters; undefined = no defined ceiling
+  regime?: 'us' | 'eu'; // which regulator's rules apply, e.g. FAA/LAANC vs EASA
 }
 
 export interface SafetyLimits {
@@ -73,7 +75,7 @@ export function validateMission(
     .sort((a, b) => a - b);
 
   if (indices.length === 0) {
-    violations.push({ severity: 'error', index: null, message: 'Mission has no waypoints.' });
+    violations.push({ severity: 'error', index: null, message: m.sv_no_waypoints() });
     return violations;
   }
 
@@ -87,14 +89,14 @@ export function validateMission(
       violations.push({
         severity: 'error',
         index: i,
-        message: `Waypoint ${i} altitude ${alt} m exceeds the ${limits.maxAltitudeM} m ceiling.`
+        message: m.sv_alt_exceeds({ index: i, alt, max: limits.maxAltitudeM })
       });
     }
     if (alt < limits.minAltitudeM) {
       violations.push({
         severity: 'error',
         index: i,
-        message: `Waypoint ${i} altitude ${alt} m is below the ${limits.minAltitudeM} m floor.`
+        message: m.sv_alt_below({ index: i, alt, min: limits.minAltitudeM })
       });
     }
 
@@ -104,7 +106,7 @@ export function validateMission(
         violations.push({
           severity: 'error',
           index: i,
-          message: `Waypoint ${i} is ${Math.round(distance)} m from home, past the ${limits.geofenceRadiusM} m geofence.`
+          message: m.sv_geofence({ index: i, distance: Math.round(distance), radius: limits.geofenceRadiusM })
         });
       }
     }
@@ -120,10 +122,12 @@ export function validateMission(
       violations.push({
         severity: zone.restricted ? 'error' : 'warning',
         index: i,
-        message: `Waypoint ${i} is inside ${zone.restricted ? 'restricted' : 'controlled'} airspace: ${zone.name}.`,
+        message: zone.restricted
+          ? m.sv_inside_restricted({ index: i, zone: zone.name })
+          : m.sv_inside_controlled({ index: i, zone: zone.name }),
         group: {
           key: `airspace:${zone.restricted ? 'restricted' : 'controlled'}:${zone.name}`,
-          noun: `inside ${zone.restricted ? 'restricted' : 'controlled'} airspace: ${zone.name}`
+          noun: zone.restricted ? m.sv_noun_restricted({ zone: zone.name }) : m.sv_noun_controlled({ zone: zone.name })
         }
       });
     }
@@ -131,21 +135,22 @@ export function validateMission(
     for (const cell of hazards.ceilings) {
       if (!pointInPolygon(point, cell.polygon)) continue;
       const ceilingM = feetToMeters(cell.ceilingFt);
+      const airportSuffix = cell.airport ? ` (${cell.airport})` : '';
       if (cell.ceilingFt === 0) {
         violations.push({
           severity: 'warning',
           index: i,
-          message: `Waypoint ${i} sits in a 0 ft LAANC grid square${cell.airport ? ` (${cell.airport})` : ''}; flying here needs manual FAA authorization.`,
+          message: m.sv_laanc_zero({ index: i, airport: airportSuffix }),
           group: {
             key: `laanc-zero:${cell.airport ?? ''}`,
-            noun: `in a 0 ft LAANC grid square${cell.airport ? ` (${cell.airport})` : ''}; flying here needs manual FAA authorization`
+            noun: m.sv_noun_laanc_zero({ airport: airportSuffix })
           }
         });
       } else if (alt > ceilingM) {
         violations.push({
           severity: 'warning',
           index: i,
-          message: `Waypoint ${i} altitude ${alt} m is above the ${cell.ceilingFt} ft (${Math.round(ceilingM)} m) LAANC ceiling here${cell.airport ? ` (${cell.airport})` : ''}.`
+          message: m.sv_laanc_ceiling({ index: i, alt, ft: cell.ceilingFt, meters: Math.round(ceilingM), airport: airportSuffix })
         });
       }
       break;
@@ -165,7 +170,9 @@ export function validateMission(
         violations.push({
           severity: zone.restricted ? 'error' : 'warning',
           index: to.i,
-          message: `The leg from waypoint ${from.i} to ${to.i} crosses ${zone.restricted ? 'restricted' : 'controlled'} airspace: ${zone.name}.`
+          message: zone.restricted
+            ? m.sv_leg_restricted({ from: from.i, to: to.i, zone: zone.name })
+            : m.sv_leg_controlled({ from: from.i, to: to.i, zone: zone.name })
         });
       }
     }
@@ -181,7 +188,14 @@ export function validateMission(
         violations.push({
           severity: 'warning',
           index: to.i,
-          message: `The leg from waypoint ${from.i} to ${to.i} passes ${Math.round(distance)} m from a ${Math.round(obstacleM)} m ${obstacle.type.toLowerCase()}; plan at least ${Math.round(obstacleM + OBSTACLE_CLEARANCE_M)} m there or route around it.`
+          message: m.sv_leg_obstacle({
+            from: from.i,
+            to: to.i,
+            distance: Math.round(distance),
+            height: Math.round(obstacleM),
+            type: obstacle.type.toLowerCase(),
+            min: Math.round(obstacleM + OBSTACLE_CLEARANCE_M)
+          })
         });
       }
     }
@@ -197,7 +211,7 @@ export function validateMission(
       violations.push({
         severity: 'warning',
         index: takeoffIndex,
-        message: `Takeoff altitude should be above 0 m so the vehicle climbs before flying the route.`
+        message: m.sv_takeoff_alt()
       });
     }
     const firstPositional = indices.find((i) => isPositional(actions[i]));
@@ -205,7 +219,7 @@ export function validateMission(
       violations.push({
         severity: 'warning',
         index: takeoffIndex,
-        message: `Takeoff should be the first command, but a waypoint comes before it.`
+        message: m.sv_takeoff_first()
       });
     }
   }
@@ -215,7 +229,7 @@ export function validateMission(
     violations.push({
       severity: 'warning',
       index: null,
-      message: `Mission does not end with Return-to-Launch or Land; the vehicle will hold at the final waypoint.`
+      message: m.sv_no_landing()
     });
   }
 
@@ -272,8 +286,8 @@ export function formatViolations(violations: SafetyViolation[]): string {
       const group = groups.get(line.slice(1))!;
       const label =
         group.indices.length === 1
-          ? `Waypoint ${group.indices[0]}`
-          : `Waypoints ${formatIndexRanges(group.indices)}`;
+          ? m.sv_label_one({ index: group.indices[0] })
+          : m.sv_label_many({ range: formatIndexRanges(group.indices) });
       return `${icon(group.severity)} ${label} ${group.noun}.`;
     })
     .join('\n');

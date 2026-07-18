@@ -8,6 +8,7 @@ import { get, writable } from 'svelte/store';
 import { missionPlanActionsStore } from '../stores/missionPlanStore';
 import { fcProtocolStore, fcFirmwareStore, mavSatelliteStore } from '../stores/mavlinkStore';
 import { showModal, notify, type ModalInput } from './overlays';
+import { m } from '$lib/paraglide/messages';
 
 const GPS_MIN_SATS = 6;
 
@@ -19,8 +20,8 @@ function inavHasNoFix(): boolean {
 	const sat = get(mavSatelliteStore);
 	if (sat.total >= GPS_MIN_SATS) return false;
 	showModal({
-		title: 'No GPS fix',
-		content: `The flight controller reports ${sat.total} satellite${sat.total === 1 ? '' : 's'}. A mission needs a GPS fix to navigate. Wait for a fix, or fly manually with the gamepad.`,
+		title: m.gs_no_gps_title(),
+		content: m.gs_no_gps_body({ count: sat.total }),
 		notification: true
 	});
 	return true;
@@ -110,7 +111,7 @@ async function pollStatus(): Promise<void> {
 			teardown();
 			if (status.lastError) {
 				notify({
-					title: status.phase === 'failsafe' ? 'Guidance failsafe' : 'Guidance ended',
+					title: status.phase === 'failsafe' ? m.gs_failsafe() : m.gs_ended(),
 					content: status.lastError,
 					type: status.phase === 'failsafe' ? 'warning' : 'info'
 				});
@@ -130,7 +131,7 @@ export async function startGuidance(waypoints: { lat: number; lon: number; altM:
 		});
 		const data = await res.json();
 		if (!res.ok) {
-			showModal({ title: 'Guidance failed', content: data.message ?? data.error, notification: true });
+			showModal({ title: m.gs_failed(), content: data.message ?? data.error, notification: true });
 			return;
 		}
 		guidanceRunningStore.set(true);
@@ -139,9 +140,9 @@ export async function startGuidance(waypoints: { lat: number; lon: number; altM:
 			fetch('/api/msp/guidance_heartbeat', { method: 'POST' }).catch(() => {});
 		}, HEARTBEAT_MS);
 		statusTimer = setInterval(pollStatus, STATUS_MS);
-		notify({ title: 'Guidance started', content: data.message });
+		notify({ title: m.gs_started(), content: data.message });
 	} catch (error) {
-		showModal({ title: 'Guidance failed', content: (error as Error).message, notification: true });
+		showModal({ title: m.gs_failed(), content: (error as Error).message, notification: true });
 	}
 }
 
@@ -152,7 +153,7 @@ export async function stopGuidance(): Promise<void> {
 		// Drop the client timers regardless.
 	}
 	teardown();
-	notify({ title: 'Guidance stopped', content: 'Control released to the flight controller.' });
+	notify({ title: m.gs_stopped(), content: m.gs_control_released() });
 }
 
 // Flies the loaded plan by companion guidance after a one-time safety
@@ -160,16 +161,15 @@ export async function stopGuidance(): Promise<void> {
 export function startGuidanceWithConfirm(): void {
 	const waypoints = planWaypoints();
 	if (waypoints.length === 0) {
-		notify({ title: 'No waypoints', content: 'Add positional waypoints to the plan first.', type: 'warning' });
+		notify({ title: m.gs_no_waypoints_title(), content: m.gs_no_waypoints_body(), type: 'warning' });
 		return;
 	}
 	showModal({
-		title: 'Fly by companion guidance',
-		content:
-			'The station steers this craft over MSP; it must already be airborne, armed, and in Angle + Altitude Hold. Keep the transmitter ready as a kill switch.',
+		title: m.gs_fly_companion_title(),
+		content: m.gs_fly_companion_body(),
 		confirmation: true,
-		confirmLabel: 'Start guidance',
-		inputs: [{ type: 'checkbox', placeholder: 'I bench-tested channel directions with props off', required: true }],
+		confirmLabel: m.gs_start_guidance_btn(),
+		inputs: [{ type: 'checkbox', placeholder: m.gs_bench_tested_check(), required: true }],
 		onConfirm: (values) => {
 			if (values[0] === 'true') startGuidance(waypoints);
 		}
@@ -210,7 +210,7 @@ async function inavPollStatus(): Promise<void> {
 			inavTeardown();
 			if (status.lastError) {
 				notify({
-					title: status.phase === 'failsafe' ? 'Mission failsafe' : 'Mission ended',
+					title: status.phase === 'failsafe' ? m.gs_mission_failsafe() : m.gs_mission_ended(),
 					content: status.lastError,
 					type: status.phase === 'failsafe' ? 'warning' : 'info'
 				});
@@ -239,13 +239,13 @@ async function postInav(path: string, body: unknown, startedTitle: string): Prom
 		});
 		const data = await res.json();
 		if (!res.ok) {
-			showModal({ title: 'Mission failed', content: data.message ?? data.error, notification: true });
+			showModal({ title: m.gs_mission_failed(), content: data.message ?? data.error, notification: true });
 			return;
 		}
 		beginInavSession();
 		notify({ title: startedTitle, content: data.message });
 	} catch (error) {
-		showModal({ title: 'Mission failed', content: (error as Error).message, notification: true });
+		showModal({ title: m.gs_mission_failed(), content: (error as Error).message, notification: true });
 	}
 }
 
@@ -256,13 +256,13 @@ export async function stopInavMission(): Promise<void> {
 		// Drop the client timers regardless.
 	}
 	inavTeardown();
-	notify({ title: 'Mission stopped', content: 'Control released to the flight controller.' });
+	notify({ title: m.gs_mission_stopped(), content: m.gs_control_released() });
 }
 
-const RTH_LANDING_CHOICES = [
-	{ value: '0', label: 'Never land (loiter overhead)' },
-	{ value: '1', label: 'Land after any return' },
-	{ value: '2', label: 'Land only on a failsafe return' }
+const rthLandingChoices = () => [
+	{ value: '0', label: m.gs_rth_never() },
+	{ value: '1', label: m.gs_rth_any() },
+	{ value: '2', label: m.gs_rth_failsafe() }
 ];
 
 // Uploads the loaded plan and engages it. INAV arms, auto-takes-off, flies the
@@ -272,7 +272,7 @@ const RTH_LANDING_CHOICES = [
 export async function startInavMissionWithConfirm(): Promise<void> {
 	const items = missionItemsForMsp();
 	if (items.length === 0) {
-		notify({ title: 'No mission', content: 'Add waypoints to the plan first.', type: 'warning' });
+		notify({ title: m.gs_no_mission_title(), content: m.gs_no_mission_body(), type: 'warning' });
 		return;
 	}
 	if (inavHasNoFix()) return;
@@ -286,30 +286,30 @@ export async function startInavMissionWithConfirm(): Promise<void> {
 	const askLanding = rth.platform === 'Airplane';
 	const current = rth.value ?? null;
 	const inputs: ModalInput[] = [
-		{ type: 'checkbox', placeholder: 'The area is clear and I am ready for an automatic takeoff', required: true }
+		{ type: 'checkbox', placeholder: m.gs_area_clear_check(), required: true }
 	];
 	if (askLanding) {
 		inputs.push({
 			type: 'select',
-			label: 'Landing after a return to home (nav_rth_allow_landing)',
+			label: m.gs_rth_landing_label(),
 			placeholder: '',
 			required: false,
 			value: current === null ? '' : String(current),
 			options: [
-				...(current === null ? [{ value: '', label: 'Keep current setting' }] : []),
-				...RTH_LANDING_CHOICES
+				...(current === null ? [{ value: '', label: m.sm_keep_current() }] : []),
+				...rthLandingChoices()
 			]
 		});
 	}
 	showModal({
-		title: 'Start INAV mission',
+		title: m.gs_start_inav_title(),
 		content:
-			'INAV arms and flies the uploaded mission on its own, including an automatic takeoff. Make sure the area is clear, the craft has a GPS fix, and the transmitter is ready as a kill switch.' +
+			m.gs_start_inav_body() +
 			(askLanding
-				? '\n\nOn a return to home the plane lands or loiters overhead per the setting below; it applies until the flight controller powers off.'
+				? '\n\n' + m.gs_start_inav_landing_note()
 				: ''),
 		confirmation: true,
-		confirmLabel: 'Start mission',
+		confirmLabel: m.gs_start_mission_btn(),
 		inputs,
 		onConfirm: async (values) => {
 			if (values[0] !== 'true') return;
@@ -324,13 +324,13 @@ export async function startInavMissionWithConfirm(): Promise<void> {
 					if (!res.ok) throw new Error('rejected');
 				} catch {
 					notify({
-						title: 'Landing setting not applied',
-						content: 'The flight controller rejected the change, so it returns at its current setting.',
+						title: m.gs_landing_not_applied_title(),
+						content: m.gs_landing_rejected_body(),
 						type: 'warning'
 					});
 				}
 			}
-			await postInav('/api/msp/inav_mission_start', { waypoints: items }, 'Mission engaged');
+			await postInav('/api/msp/inav_mission_start', { waypoints: items }, m.gs_mission_engaged());
 		}
 	});
 }
@@ -340,17 +340,16 @@ export async function startInavMissionWithConfirm(): Promise<void> {
 export function takeoffInavWithConfirm(): void {
 	if (inavHasNoFix()) return;
 	showModal({
-		title: 'Take off (INAV)',
-		content:
-			'INAV arms and climbs to the altitude under navigation, then holds position. Make sure the area is clear and the craft has a GPS fix.',
+		title: m.gs_takeoff_inav_title(),
+		content: m.gs_takeoff_inav_body(),
 		confirmation: true,
-		confirmLabel: 'Take off',
+		confirmLabel: m.gs_takeoff_btn(),
 		inputs: [
-			{ type: 'number', placeholder: 'Altitude (m)', required: true },
-			{ type: 'checkbox', placeholder: 'The area is clear and I am ready for an automatic takeoff', required: true }
+			{ type: 'number', placeholder: m.tl_altitude_placeholder(), required: true },
+			{ type: 'checkbox', placeholder: m.gs_area_clear_check(), required: true }
 		],
 		onConfirm: (values) => {
-			if (values[1] === 'true') postInav('/api/msp/inav_takeoff', { altM: Number(values[0]) }, 'Taking off');
+			if (values[1] === 'true') postInav('/api/msp/inav_takeoff', { altM: Number(values[0]) }, m.gs_taking_off());
 		}
 	});
 }

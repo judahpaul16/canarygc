@@ -4,6 +4,7 @@
   import { resolveTiles, TILE_PRESETS, MAPTILER_PRESETS, maptilerTileUrl } from '../../lib/tiles';
   import Select from '../../components/Select.svelte';
   import { mavVideoStreamStore } from '../../stores/mavlinkStore';
+  import { m } from '$lib/paraglide/messages';
   let loading = $state(true);
   let saving = $state(false);
   let filter = $state('');
@@ -41,9 +42,9 @@
   let mavlinkKeySet = $state(false);
 
   const CAMERA_KINDS = [
-    { value: 'pi', label: 'Raspberry Pi camera' },
-    { value: 'url', label: 'RTSP / RTMP / SRT URL' },
-    { value: 'usb', label: 'USB / V4L2 capture device' }
+    { value: 'pi', label: m.int_cam_pi() },
+    { value: 'url', label: m.int_cam_url() },
+    { value: 'usb', label: m.int_cam_usb() }
   ];
 
   const detectedStream = $derived($mavVideoStreamStore);
@@ -133,7 +134,7 @@
       if (data.mavlink) { mavlink = { signingKey: '', signingLinkId: String(data.mavlink.signingLinkId ?? '1'), signingStrict: Boolean(data.mavlink.signingStrict) }; mavlinkKeySet = data.mavlink.signingKeySet ?? false; }
       if (data.failsafe) failsafe = { lostOperatorMinutes: String(data.failsafe.lostOperatorMinutes ?? 0) };
     } catch {
-      notify({ title: 'Load failed', content: 'Could not load integration settings.', type: 'warning' });
+      notify({ title: m.int_load_failed_title(), content: m.int_load_failed_body(), type: 'warning' });
     } finally {
       loading = false;
     }
@@ -161,18 +162,18 @@
         openaip = '';
         altitudeAngel = '';
         cameraApplied = data.cameraApplied ?? null;
-        notify({ title: 'Integrations saved', content: 'Your integration settings have been updated.', duration: 3000 });
+        notify({ title: m.int_saved_title(), content: m.int_saved_body(), duration: 3000 });
         if (data.signingPushed && !data.signingPushed.ok) {
-          notify({ title: 'Vehicle not keyed yet', content: data.signingPushed.message, type: 'warning', duration: 5000 });
+          notify({ title: m.int_not_keyed_title(), content: data.signingPushed.message, type: 'warning', duration: 5000 });
         } else if (data.signingPushed) {
-          notify({ title: 'Vehicle keyed', content: data.signingPushed.message, duration: 4000 });
+          notify({ title: m.int_keyed_title(), content: data.signingPushed.message, duration: 4000 });
         }
       } else {
         const data = await res.json();
-        notify({ title: 'Save failed', content: data.message ?? 'Could not save settings.', type: 'warning' });
+        notify({ title: m.int_save_failed_title(), content: data.message ?? m.int_save_failed_body(), type: 'warning' });
       }
     } catch {
-      notify({ title: 'Save failed', content: 'Network error while saving.', type: 'warning' });
+      notify({ title: m.int_save_failed_title(), content: m.int_network_error(), type: 'warning' });
     } finally {
       saving = false;
     }
@@ -189,12 +190,12 @@
       if (res.ok) {
         mavlinkKeySet = false;
         mavlink = { signingKey: '', signingLinkId: mavlink.signingLinkId, signingStrict: false };
-        notify({ title: 'Signing disabled', content: 'MAVLink messages are sent and accepted unsigned.', duration: 3000 });
+        notify({ title: m.int_signing_disabled_title(), content: m.int_signing_disabled_body(), duration: 3000 });
       } else {
-        notify({ title: 'Save failed', content: 'Could not disable signing.', type: 'warning' });
+        notify({ title: m.int_save_failed_title(), content: m.int_disable_failed(), type: 'warning' });
       }
     } catch {
-      notify({ title: 'Save failed', content: 'Network error while saving.', type: 'warning' });
+      notify({ title: m.int_save_failed_title(), content: m.int_network_error(), type: 'warning' });
     } finally {
       saving = false;
     }
@@ -202,7 +203,7 @@
 </script>
 
 <svelte:head>
-  <title>Canary Ground Control - Integrations</title>
+  <title>{m.int_page_title()}</title>
 </svelte:head>
 
 <div
@@ -213,21 +214,21 @@
       <div class="content">
   <header class="head">
     <div class="head-row">
-      <h1><i class="fas fa-plug"></i> Integrations</h1>
+      <h1><i class="fas fa-plug"></i> {m.nav_integrations()}</h1>
       <div class="search">
         <i class="fas fa-magnifying-glass"></i>
-        <input bind:value={filter} placeholder="Search settings" aria-label="Search settings" />
+        <input bind:value={filter} placeholder={m.int_search()} aria-label={m.int_search()} />
       </div>
     </div>
-    <p>Connect external services. Secrets are stored on this station and never shown again after saving.</p>
+    <p>{m.int_intro()}</p>
   </header>
 
   {#if loading}
-    <div class="panel"><p class="muted">Loading...</p></div>
+    <div class="panel"><p class="muted">{m.common_loading()}</p></div>
   {:else}
     <form onsubmit={(e) => { e.preventDefault(); save(); }}>
       {#if filter.trim() && !panelVisible('operator') && !panelVisible('smtp') && !panelVisible('airspace') && !panelVisible('tiles') && !panelVisible('camera') && !panelVisible('ai') && !panelVisible('mavlink') && !panelVisible('failsafe')}
-        <div class="panel"><p class="muted">No settings match "{filter}".</p></div>
+        <div class="panel"><p class="muted">{m.int_no_match({ filter })}</p></div>
       {/if}
       <div class="settings-grid">
       <div class="col-main">
@@ -236,43 +237,43 @@
         <div class="panel-head">
           <span class="icon-chip"><i class="fas fa-envelope"></i></span>
           <div>
-            <h2>Email (SMTP)</h2>
-            <p class="muted">Regular SMTP to your own mail server. Powers password resets and alert emails.</p>
+            <h2>{m.int_smtp_title()}</h2>
+            <p class="muted">{m.int_smtp_desc()}</p>
           </div>
         </div>
         <div class="grid">
           <div class="field">
-            <label for="smtp-host">Host</label>
+            <label for="smtp-host">{m.int_host()}</label>
             <input id="smtp-host" bind:value={smtp.host} placeholder="mail.example.com" />
           </div>
           <div class="field narrow">
-            <label for="smtp-port">Port</label>
+            <label for="smtp-port">{m.int_port()}</label>
             <input id="smtp-port" bind:value={smtp.port} placeholder="587" inputmode="numeric" />
           </div>
         </div>
         <div class="grid">
           <div class="field">
-            <label for="smtp-user">Username</label>
+            <label for="smtp-user">{m.int_username()}</label>
             <input id="smtp-user" bind:value={smtp.user} autocomplete="off" placeholder="alerts@example.com" />
           </div>
           <div class="field">
-            <label for="smtp-pass">Password</label>
+            <label for="smtp-pass">{m.int_password()}</label>
             <input
               id="smtp-pass"
               type="password"
               bind:value={smtp.pass}
               autocomplete="new-password"
-              placeholder={passSet ? '•••••••• (saved)' : 'SMTP password'}
+              placeholder={passSet ? m.int_saved_placeholder() : m.int_smtp_pass_placeholder()}
             />
           </div>
         </div>
         <div class="grid">
           <div class="field">
-            <label for="smtp-from">From address</label>
+            <label for="smtp-from">{m.int_from()}</label>
             <input id="smtp-from" bind:value={smtp.from} placeholder="canary@example.com" />
           </div>
           <div class="field toggle-field">
-            <span class="toggle-label">TLS (port 465)</span>
+            <span class="toggle-label">{m.int_tls()}</span>
             <label class="switch">
               <input type="checkbox" bind:checked={smtp.secure} />
               <span class="slider"></span>
@@ -287,22 +288,22 @@
         <div class="panel-head">
           <span class="icon-chip"><i class="fas fa-map"></i></span>
           <div>
-            <h2>Map tiles</h2>
-            <p class="muted">A MapTiler key gives a rich dark basemap and a labeled hybrid satellite. Leave blank for keyless tiles. Each mode accepts a custom XYZ tile URL to override the default.</p>
+            <h2>{m.int_tiles_title()}</h2>
+            <p class="muted">{m.int_tiles_desc()}</p>
           </div>
         </div>
         <div class="field">
-          <label for="maptiler">MapTiler API key<a class="key-link" href="https://cloud.maptiler.com/account/keys/" target="_blank" rel="noopener">Get key <i class="fa-solid fa-square-arrow-up-right"></i></a></label>
-          <input id="maptiler" bind:value={maptiler} autocomplete="off" placeholder="MapTiler key (optional)" />
+          <label for="maptiler">{m.int_maptiler_key()}<a class="key-link" href="https://cloud.maptiler.com/account/keys/" target="_blank" rel="noopener">{m.int_get_key()} <i class="fa-solid fa-square-arrow-up-right"></i></a></label>
+          <input id="maptiler" bind:value={maptiler} autocomplete="off" placeholder={m.int_maptiler_placeholder()} />
         </div>
         {#each ['light', 'dark', 'satellite'] as const as mode (mode)}
           <div class="field">
-            <label for="tiles-{mode}">{mode[0].toUpperCase() + mode.slice(1)} basemap URL</label>
+            <label for="tiles-{mode}">{mode === 'light' ? m.int_basemap_light() : mode === 'dark' ? m.int_basemap_dark() : m.int_basemap_satellite()}</label>
             <div class="tile-row">
               <div class="preset">
                 <Select
                   bind:value={presetPick[mode]}
-                  placeholder="Preset..."
+                  placeholder={m.int_preset()}
                   groups={tilePresetGroups(mode)}
                   onchange={(v) => applyPreset(mode, v)}
                 />
@@ -319,41 +320,41 @@
         <div class="panel-head">
           <span class="icon-chip"><i class="fas fa-video"></i></span>
           <div>
-            <h2>Camera source</h2>
-            <p class="muted">The live feed serves one WebRTC stream; pick what feeds it. Applied to the running feed when you save.</p>
+            <h2>{m.int_camera_title()}</h2>
+            <p class="muted">{m.int_camera_desc()}</p>
           </div>
         </div>
         {#if detectedStream}
           <div class="detected">
             <div>
-              <span class="badge">detected</span>
-              The vehicle advertises a camera stream{detectedStream.name ? ` (${detectedStream.name})` : ''}:
+              <span class="badge">{m.int_detected()}</span>
+              {m.int_camera_advertises({ suffix: detectedStream.name ? ` (${detectedStream.name})` : '' })}
               <code class="uri">{detectedStream.uri}</code>
             </div>
-            <button type="button" class="mini" onclick={useDetectedStream}>Use this URL</button>
+            <button type="button" class="mini" onclick={useDetectedStream}>{m.int_use_url()}</button>
           </div>
         {/if}
         <div class="field">
-          <label for="camera-kind">Source type</label>
+          <label for="camera-kind">{m.int_source_type()}</label>
           <Select id="camera-kind" bind:value={camera.kind} options={CAMERA_KINDS} />
         </div>
         {#if camera.kind === 'url'}
           <div class="field">
-            <label for="camera-url">Stream URL</label>
+            <label for="camera-url">{m.int_stream_url()}</label>
             <input id="camera-url" bind:value={camera.url} autocomplete="off" placeholder="rtsp://user:pass@192.168.1.50:554/stream" />
-            <p class="hint">An IP camera, a companion computer, or a flight controller camera that advertises RTSP. MediaMTX transcodes it to WebRTC.</p>
+            <p class="hint">{m.int_stream_hint()}</p>
           </div>
         {:else if camera.kind === 'usb'}
           <div class="field">
-            <label for="camera-device">Capture device</label>
+            <label for="camera-device">{m.int_capture_device()}</label>
             <input id="camera-device" bind:value={camera.device} autocomplete="off" placeholder="/dev/video0" />
-            <p class="hint">A USB analog capture dongle (analog FPV) or an HDMI grabber (HDZero, DJI, or Walksnail digital FPV, including a Betaflight board's FPV feed). MediaMTX captures it with FFmpeg.</p>
+            <p class="hint">{m.int_capture_hint()}</p>
           </div>
         {:else}
-          <p class="hint">The Raspberry Pi CSI camera on the companion computer. No extra hardware.</p>
+          <p class="hint">{m.int_pi_hint()}</p>
         {/if}
         {#if cameraApplied !== null}
-          <p class="hint">{cameraApplied ? 'Applied to the live feed.' : 'Saved. It applies once the camera bridge is reachable.'}</p>
+          <p class="hint">{cameraApplied ? m.int_cam_applied() : m.int_cam_saved()}</p>
         {/if}
       </section>
       {/if}
@@ -363,21 +364,21 @@
         <div class="panel-head">
           <span class="icon-chip"><i class="fas fa-robot"></i></span>
           <div>
-            <h2>AI assistant</h2>
-            <p class="muted">Powers the PID tuning assistant on the Vehicle Parameters page. Any OpenAI-compatible endpoint works (OpenAI, LiteLLM, Ollama).</p>
+            <h2>{m.int_ai_title()}</h2>
+            <p class="muted">{m.int_ai_desc()}</p>
           </div>
         </div>
         <div class="field">
-          <label for="ai-key">API key {#if aiKeySet}<span class="badge">saved</span>{/if}</label>
-          <input id="ai-key" type="password" bind:value={ai.apiKey} autocomplete="off" placeholder={aiKeySet ? 'Leave blank to keep the saved key' : 'sk-...'} />
+          <label for="ai-key">{m.int_api_key()} {#if aiKeySet}<span class="badge">{m.int_badge_saved()}</span>{/if}</label>
+          <input id="ai-key" type="password" bind:value={ai.apiKey} autocomplete="off" placeholder={aiKeySet ? m.int_ai_key_set() : 'sk-...'} />
         </div>
         <div class="field">
-          <label for="ai-base">Base URL</label>
+          <label for="ai-base">{m.int_base_url()}</label>
           <input id="ai-base" bind:value={ai.baseUrl} autocomplete="off" placeholder="https://api.openai.com/v1" />
-          <p class="hint">The OpenAI-compatible base URL. Point it at a LiteLLM proxy or a local Ollama server to use another model.</p>
+          <p class="hint">{m.int_ai_base_hint()}</p>
         </div>
         <div class="field">
-          <label for="ai-model">Model</label>
+          <label for="ai-model">{m.int_model()}</label>
           <input id="ai-model" bind:value={ai.model} autocomplete="off" placeholder="gpt-4o-mini" />
         </div>
       </section>
@@ -388,30 +389,30 @@
         <div class="panel-head">
           <span class="icon-chip"><i class="fas fa-shield-halved"></i></span>
           <div>
-            <h2>MAVLink signing</h2>
-            <p class="muted">Authenticates the link with a shared passphrase so only a party that holds it can command the vehicle, and forged or replayed messages are rejected. Saving pushes the key to the connected vehicle, so one passphrase secures both ends.</p>
+            <h2>{m.int_mav_title()}</h2>
+            <p class="muted">{m.int_mav_desc()}</p>
           </div>
         </div>
         <div class="field">
-          <label for="mav-key">Signing passphrase {#if mavlinkKeySet}<span class="badge">active</span>{/if}<button type="button" class="key-link" onclick={generateSigningPassphrase}>Generate <i class="fa-solid fa-key"></i></button></label>
-          <input id="mav-key" type={mavKeyVisible ? 'text' : 'password'} bind:value={mavlink.signingKey} autocomplete="off" placeholder={mavlinkKeySet ? 'Leave blank to keep the active key' : 'Shared secret passphrase'} />
-          <p class="hint">Hashed to the 32-byte key with SHA-256, the same way QGroundControl and Mission Planner derive it.</p>
+          <label for="mav-key">{m.int_signing_passphrase()} {#if mavlinkKeySet}<span class="badge">{m.int_badge_active()}</span>{/if}<button type="button" class="key-link" onclick={generateSigningPassphrase}>{m.int_generate()} <i class="fa-solid fa-key"></i></button></label>
+          <input id="mav-key" type={mavKeyVisible ? 'text' : 'password'} bind:value={mavlink.signingKey} autocomplete="off" placeholder={mavlinkKeySet ? m.int_mav_key_set() : m.int_mav_key_placeholder()} />
+          <p class="hint">{m.int_mav_key_hint()}</p>
         </div>
         <div class="field">
-          <label for="mav-link">Link ID</label>
+          <label for="mav-link">{m.int_link_id()}</label>
           <input id="mav-link" type="number" min="0" max="255" bind:value={mavlink.signingLinkId} autocomplete="off" placeholder="1" />
-          <p class="hint">Identifies this ground station's channel to the vehicle. Leave at 1 unless another link already uses it.</p>
+          <p class="hint">{m.int_link_hint()}</p>
         </div>
         <div class="field toggle-field">
-          <span class="toggle-label">Reject unsigned messages (strict)</span>
+          <span class="toggle-label">{m.int_reject_unsigned()}</span>
           <label class="switch">
             <input type="checkbox" bind:checked={mavlink.signingStrict} />
             <span class="slider"></span>
           </label>
         </div>
-        <p class="hint">On: any unsigned message is dropped. Off: unsigned messages still pass, which keeps the link up while the autopilot is being set up.</p>
+        <p class="hint">{m.int_strict_hint()}</p>
         {#if mavlinkKeySet}
-          <button type="button" class="mini" onclick={disableSigning} disabled={saving}>Turn off signing</button>
+          <button type="button" class="mini" onclick={disableSigning} disabled={saving}>{m.int_turn_off_signing()}</button>
         {/if}
       </section>
       {/if}
@@ -421,14 +422,14 @@
         <div class="panel-head">
           <span class="icon-chip"><i class="fas fa-life-ring"></i></span>
           <div>
-            <h2>Lost-operator failsafe</h2>
-            <p class="muted">When the vehicle is armed and no operator has been connected for the window below, the station commands the recovery itself: return to launch for a copter, rover, or sub, and the autoland approach for a fixed wing.</p>
+            <h2>{m.int_failsafe_title()}</h2>
+            <p class="muted">{m.int_failsafe_desc()}</p>
           </div>
         </div>
         <div class="field">
-          <label for="fs-minutes">Minutes without an operator</label>
+          <label for="fs-minutes">{m.int_failsafe_minutes()}</label>
           <input id="fs-minutes" type="number" min="0" max="720" step="1" bind:value={failsafe.lostOperatorMinutes} autocomplete="off" placeholder="0" />
-          <p class="hint">0 turns the failsafe off. The window starts when the last connected page closes and resets the moment one reconnects.</p>
+          <p class="hint">{m.int_failsafe_hint()}</p>
         </div>
       </section>
       {/if}
@@ -440,12 +441,12 @@
         <div class="panel-head">
           <span class="icon-chip"><i class="fas fa-user-gear"></i></span>
           <div>
-            <h2>Operator</h2>
-            <p class="muted">Used for password resets and as the alert recipient.</p>
+            <h2>{m.int_operator_title()}</h2>
+            <p class="muted">{m.int_operator_desc()}</p>
           </div>
         </div>
         <div class="field">
-          <label for="email">Operator email</label>
+          <label for="email">{m.int_operator_email()}</label>
           <input type="email" id="email" bind:value={email} autocomplete="email" placeholder="operator@example.com" />
         </div>
       </section>
@@ -456,23 +457,23 @@
         <div class="panel-head">
           <span class="icon-chip"><i class="fas fa-tower-broadcast"></i></span>
           <div>
-            <h2>Airspace data</h2>
-            <p class="muted">Optional keys for worldwide airspace. Leave blank to use the keyless FAA fallback.</p>
+            <h2>{m.int_airspace_title()}</h2>
+            <p class="muted">{m.int_airspace_desc()}</p>
           </div>
         </div>
         <div class="field">
-          <label for="openaip">OpenAIP API key {#if openaipSet}<span class="badge">configured</span>{/if}<a class="key-link" href="https://www.openaip.net/" target="_blank" rel="noopener">Get key <i class="fa-solid fa-square-arrow-up-right"></i></a></label>
-          <input id="openaip" bind:value={openaip} autocomplete="off" placeholder={openaipSet ? '•••••••• (saved)' : 'OpenAIP key'} />
+          <label for="openaip">{m.int_openaip_key()} {#if openaipSet}<span class="badge">{m.int_badge_configured()}</span>{/if}<a class="key-link" href="https://www.openaip.net/" target="_blank" rel="noopener">{m.int_get_key()} <i class="fa-solid fa-square-arrow-up-right"></i></a></label>
+          <input id="openaip" bind:value={openaip} autocomplete="off" placeholder={openaipSet ? m.int_saved_placeholder() : m.int_openaip_placeholder()} />
         </div>
         <div class="field">
-          <label for="altitude-angel">Altitude Angel API key {#if altitudeAngelSet}<span class="badge">configured</span>{/if}<a class="key-link" href="https://developers.altitudeangel.com" target="_blank" rel="noopener">Get key <i class="fa-solid fa-square-arrow-up-right"></i></a></label>
-          <input id="altitude-angel" bind:value={altitudeAngel} autocomplete="off" placeholder={altitudeAngelSet ? '•••••••• (saved)' : 'Altitude Angel key'} />
+          <label for="altitude-angel">{m.int_altitude_key()} {#if altitudeAngelSet}<span class="badge">{m.int_badge_configured()}</span>{/if}<a class="key-link" href="https://developers.altitudeangel.com" target="_blank" rel="noopener">{m.int_get_key()} <i class="fa-solid fa-square-arrow-up-right"></i></a></label>
+          <input id="altitude-angel" bind:value={altitudeAngel} autocomplete="off" placeholder={altitudeAngelSet ? m.int_saved_placeholder() : m.int_altitude_placeholder()} />
         </div>
       </section>
       {/if}
       <div class="actions">
         <button type="submit" class="cta" disabled={saving}>
-          <i class="fas fa-floppy-disk"></i> {saving ? 'Saving...' : 'Save integrations'}
+          <i class="fas fa-floppy-disk"></i> {saving ? m.int_saving() : m.int_save()}
         </button>
       </div>
       </div>

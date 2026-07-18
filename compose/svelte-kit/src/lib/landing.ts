@@ -16,6 +16,7 @@ import { destinationPoint, type LatLon } from './geo';
 import { pickApproach, type ApproachPick } from './landing-approach';
 import { refreshAirspace, refreshHazards, refreshBuildings } from './preflight';
 import { sampleElevations } from './dem';
+import { m } from '$lib/paraglide/messages';
 
 const HOME_POSITION_MSG_ID = 242;
 const HOME_WAIT_MS = 5000;
@@ -154,8 +155,8 @@ async function planApproach(home: LatLon, vehicle: LatLon): Promise<ApproachPick
   ]);
   if (timedOut.hit) {
     notify({
-      title: 'Landing approach',
-      content: 'Some hazard data did not load in time, so parts of the approach go unchecked.',
+      title: m.landing_approach_title(),
+      content: m.landing_hazard_timeout(),
       type: 'warning'
     });
   }
@@ -169,7 +170,7 @@ async function planApproach(home: LatLon, vehicle: LatLon): Promise<ApproachPick
     sampleElevations
   );
   for (const warning of pick.warnings) {
-    notify({ title: 'Landing approach', content: warning, type: 'warning' });
+    notify({ title: m.landing_approach_title(), content: warning, type: 'warning' });
   }
   return pick;
 }

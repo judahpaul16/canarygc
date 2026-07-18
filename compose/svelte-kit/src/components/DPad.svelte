@@ -3,16 +3,17 @@
 
   import { setFlightMode, setPositionLocal, repositionRelative } from '../lib/mavlink-client';
   import { isGuidedLabel, isPX4 } from '../lib/flight-modes';
+  import { m } from '$lib/paraglide/messages';
 
   const MOVE_STEP_M = 1;
 
   type Dir = 'up' | 'right' | 'down' | 'left';
 
   const TIPS: Record<Dir, string> = {
-    up: `Move north ${MOVE_STEP_M} m`,
-    right: `Move east ${MOVE_STEP_M} m`,
-    down: `Move south ${MOVE_STEP_M} m`,
-    left: `Move west ${MOVE_STEP_M} m`
+    up: m.dpad_move_north_tip({ step: MOVE_STEP_M }),
+    right: m.dpad_move_east_tip({ step: MOVE_STEP_M }),
+    down: m.dpad_move_south_tip({ step: MOVE_STEP_M }),
+    left: m.dpad_move_west_tip({ step: MOVE_STEP_M })
   };
 
   // The arrow buttons are rotated 45 degrees, so a pseudo-element tooltip on
@@ -38,7 +39,7 @@
   <nav class="d-pad relative">
     <button
       class="up"
-      aria-label="Move north"
+      aria-label={m.dpad_move_north()}
       onmouseenter={() => (tipDir = 'up')}
       onmouseleave={() => (tipDir = null)}
       onfocus={() => (tipDir = 'up')}
@@ -49,7 +50,7 @@
     </button>
     <button
       class="right"
-      aria-label="Move east"
+      aria-label={m.dpad_move_east()}
       onmouseenter={() => (tipDir = 'right')}
       onmouseleave={() => (tipDir = null)}
       onfocus={() => (tipDir = 'right')}
@@ -60,7 +61,7 @@
     </button>
     <button
       class="down"
-      aria-label="Move south"
+      aria-label={m.dpad_move_south()}
       onmouseenter={() => (tipDir = 'down')}
       onmouseleave={() => (tipDir = null)}
       onfocus={() => (tipDir = 'down')}
@@ -71,7 +72,7 @@
     </button>
     <button
       class="left"
-      aria-label="Move west"
+      aria-label={m.dpad_move_west()}
       onmouseenter={() => (tipDir = 'left')}
       onmouseleave={() => (tipDir = null)}
       onfocus={() => (tipDir = 'left')}
@@ -80,7 +81,7 @@
     >
       <i class="fas fa-chevron-left"></i>
     </button>
-    <div class="center-circle" data-tip="World frame (N / E / S / W)">
+    <div class="center-circle" data-tip={m.dpad_world_frame()}>
       <span class="move-text">N/E/S/W</span>
     </div>
   </nav>

@@ -14,6 +14,7 @@
   import { readMissionFile } from "../lib/mission-import";
   import { toQgcWpl } from "../lib/mission-export";
   import { onMount } from "svelte";
+  import { m } from '$lib/paraglide/messages';
 
   interface Props {
     title?: string;
@@ -23,7 +24,7 @@
   }
 
   let {
-    title = "Manage Mission Plans",
+    title = m.mmp_title(),
     isModal = false,
     isOpen = $bindable(true),
     onCancel = () => {}
@@ -69,8 +70,8 @@
 
   async function loadMissionPlan(plan: { title: string; actions: MissionPlanActions }) {
     showModal({
-      title: "Load Mission Plan",
-      content: "Are you sure you want to load this mission plan? This action will overwrite the currently loaded mission plan.",
+      title: m.mmp_load_title(),
+      content: m.mmp_load_body(),
       confirmation: true,
       onConfirm: async () => {
         await handleLoad(plan.title, plan.actions);
@@ -126,7 +127,7 @@
     const { items, warnings } = normalizeMission(actions, isPX4(get(mavModelStore)));
     if (warnings.length > 0) {
         notify({
-            title: "Mission adjusted for PX4",
+            title: m.mmp_px4_title(),
             content: warnings.join("<br>"),
         });
     }
@@ -181,15 +182,15 @@
             },
           }).catch((error) => {
             showModal({
-              title: "Error",
+              title: m.common_error(),
               content: error.message,
               notification: true,
             });
           });
           if (response) {
             notify({
-              title: "Mission Plan Saved",
-              content: "The mission plan has been saved.",
+              title: m.mmp_saved_title(),
+              content: m.mmp_saved_body(),
               duration: 3000,
             });
           }
@@ -211,15 +212,15 @@
       },
     }).catch((error) => {
       showModal({
-        title: "Error",
+        title: m.common_error(),
         content: error.message,
         notification: true,
       });
     });
     if (response) {
       notify({
-        title: "Mission Plan Updated",
-        content: "The mission plan has been updated.",
+        title: m.mmp_updated_title(),
+        content: m.mmp_updated_body(),
         duration: 3000,
       });
     }
@@ -227,8 +228,8 @@
 
   async function deleteMissionPlan(title: string) {
     showModal({
-      title: "Delete Mission Plan",
-      content: "Are you sure you want to delete this mission plan?",
+      title: m.mmp_delete_title(),
+      content: m.mmp_delete_body(),
       confirmation: true,
       onConfirm: async () => {
         await handleDelete(title);
@@ -288,7 +289,7 @@
     anchor.download = `${name}.waypoints`;
     anchor.click();
     URL.revokeObjectURL(url);
-    notify({ title: "Mission Exported", content: `Saved ${name}.waypoints.`, duration: 3000 });
+    notify({ title: m.mmp_exported_title(), content: m.mmp_exported_body({ name }), duration: 3000 });
   }
 
   const closeModal = () => {
@@ -303,12 +304,12 @@
     <input
       class="search-input"
       type="text"
-      placeholder="Search plans"
-      aria-label="Search mission plans"
+      placeholder={m.mmp_search_placeholder()}
+      aria-label={m.mmp_search_aria()}
       bind:value={query}
     />
     {#if query}
-      <button class="search-clear" aria-label="Clear search" onclick={() => (query = "")}>&times;</button>
+      <button class="search-clear" aria-label={m.mmp_clear_search()} onclick={() => (query = "")}>&times;</button>
     {/if}
   </div>
 
@@ -319,14 +320,14 @@
           <div class="plan-info">
             <span class="plan-title" title={plan.title}>{plan.title}</span>
             <span class="plan-meta">
-              {itemCount(plan.actions)} item{itemCount(plan.actions) === 1 ? "" : "s"}{#if plan.title === loadedTitle} <span class="loaded-tag">loaded</span>{/if}
+              {itemCount(plan.actions)} {itemCount(plan.actions) === 1 ? m.mmp_item() : m.mmp_items()}{#if plan.title === loadedTitle} <span class="loaded-tag">{m.mmp_loaded_tag()}</span>{/if}
             </span>
           </div>
           <div class="plan-actions">
-            <button class="act load" aria-label="Load {plan.title}" title="Load" onclick={() => loadMissionPlan(plan)}>
+            <button class="act load" aria-label={m.mmp_load_aria({ title: plan.title })} title={m.mmp_action_load()} onclick={() => loadMissionPlan(plan)}>
               <i class="fas fa-cloud-arrow-up"></i>
             </button>
-            <button class="act del" aria-label="Delete {plan.title}" title="Delete" onclick={() => deleteMissionPlan(plan.title)}>
+            <button class="act del" aria-label={m.mmp_delete_aria({ title: plan.title })} title={m.mmp_action_delete()} onclick={() => deleteMissionPlan(plan.title)}>
               <i class="fas fa-trash-alt"></i>
             </button>
           </div>
@@ -334,18 +335,18 @@
       {/each}
     {:else}
       <li class="empty">
-        {missionPlans.length ? `No plans match “${query}”.` : "No mission plans yet."}
+        {missionPlans.length ? m.mmp_no_match({ query }) : m.mmp_none_yet()}
       </li>
     {/if}
   </ul>
 
   <div class="footer">
     <button class="foot-btn" onclick={importPlan}>
-      <i class="fas fa-upload"></i><span>Import</span>
+      <i class="fas fa-upload"></i><span>{m.mmp_import()}</span>
     </button>
     {#if loadedTitle}
       <button class="foot-btn" onclick={exportPlan}>
-        <i class="fas fa-download"></i><span>Export</span>
+        <i class="fas fa-download"></i><span>{m.mmp_export()}</span>
       </button>
     {/if}
   </div>
@@ -357,7 +358,7 @@
       <header class="panel-head">
         <span class="head-title">{title}</span>
         {#if missionPlans.length}<span class="head-count">{missionPlans.length}</span>{/if}
-        <button class="close" aria-label="Close" onclick={closeModal}>&times;</button>
+        <button class="close" aria-label={m.common_close()} onclick={closeModal}>&times;</button>
       </header>
       {@render body("scroll-modal")}
     </div>

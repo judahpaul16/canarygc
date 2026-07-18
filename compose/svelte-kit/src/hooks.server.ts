@@ -1,6 +1,9 @@
 import { lucia, secureCookie } from "$lib/server/auth";
 import { redirect } from "@sveltejs/kit";
 import type { Handle } from "@sveltejs/kit";
+import { sequence } from "@sveltejs/kit/hooks";
+import { paraglideMiddleware } from "$lib/paraglide/server";
+import { m } from "$lib/paraglide/messages";
 // Booting the MAVLink module starts its link supervisor with the server, so
 // the station holds the autopilot connection without a browser session open.
 // The operator-failsafe module starts its lost-operator watchdog the same way.
@@ -16,7 +19,7 @@ function isPublic(pathname: string): boolean {
 	return pathname.startsWith(PUBLIC_API_PREFIX);
 }
 
-export const handle: Handle = async ({ event, resolve }) => {
+const handleAuth: Handle = async ({ event, resolve }) => {
 	// Re-apply the saved camera source to MediaMTX once the DB is ready; guarded
 	// to run a single time per process.
 	void initCameraSource();
@@ -53,7 +56,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const { pathname } = event.url;
 	if (!event.locals.session && !isPublic(pathname)) {
 		if (pathname.startsWith("/api/")) {
-			return new Response(JSON.stringify({ message: "Unauthorized" }), {
+			return new Response(JSON.stringify({ message: m.api_unauthorized() }), {
 				status: 401,
 				headers: { "content-type": "application/json" }
 			});
@@ -63,3 +66,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	return resolve(event);
 };
+
+const handleParaglide: Handle = ({ event, resolve }) =>
+	paraglideMiddleware(event.request, ({ request, locale }) => {
+		event.request = request;
+		return resolve(event, {
+			transformPageChunk: ({ html }) => html.replace("%lang%", locale)
+		});
+	});
+
+// Paraglide first so the locale is set before the auth handle emits its 401 JSON.
+export const handle = sequence(handleParaglide, handleAuth);

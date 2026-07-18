@@ -40,6 +40,6 @@ export default [
 		}
 	},
 	{
-		ignores: ['build/', '.svelte-kit/', '.svelte-kit.old/', 'dist/']
+		ignores: ['build/', '.svelte-kit/', '.svelte-kit.old/', 'dist/', 'src/lib/paraglide/']
 	}
 ];

@@ -3,6 +3,7 @@
   import { notify } from '../../lib/overlays';
   import { refreshAlertConfig } from '../../lib/alerts';
   import { ALERT_TYPES } from '../../lib/alert-types';
+  import { m } from '$lib/paraglide/messages';
   let loading = $state(true);
   let saving = $state(false);
   let enabled = $state<Set<string>>(new Set());
@@ -13,7 +14,7 @@
       const data = await res.json();
       enabled = new Set<string>(data.enabled ?? []);
     } catch {
-      notify({ title: 'Load failed', content: 'Could not load alert settings.', type: 'warning' });
+      notify({ title: m.al_load_failed_title(), content: m.al_load_failed_body(), type: 'warning' });
     } finally {
       loading = false;
     }
@@ -36,13 +37,13 @@
       });
       if (res.ok) {
         await refreshAlertConfig();
-        notify({ title: 'Alerts saved', content: 'Your alert settings have been updated.', duration: 3000 });
+        notify({ title: m.al_saved_title(), content: m.al_saved_body(), duration: 3000 });
       } else {
         const data = await res.json();
-        notify({ title: 'Save failed', content: data.message ?? 'Could not save alerts.', type: 'warning' });
+        notify({ title: m.al_save_failed_title(), content: data.message ?? m.al_save_failed_body(), type: 'warning' });
       }
     } catch {
-      notify({ title: 'Save failed', content: 'Network error while saving.', type: 'warning' });
+      notify({ title: m.al_save_failed_title(), content: m.al_save_network(), type: 'warning' });
     } finally {
       saving = false;
     }
@@ -50,7 +51,7 @@
 </script>
 
 <svelte:head>
-  <title>Canary Ground Control - Alerts</title>
+  <title>{m.al_page_title()}</title>
 </svelte:head>
 
 <div
@@ -60,20 +61,21 @@
     <div class="settings rounded-2xl h-full p-6 overflow-y-auto">
       <div class="content">
   <header class="head">
-    <h1><i class="fas fa-bell"></i> Alerts</h1>
-    <p>Email the operator when the vehicle reports an event. Each email carries the live coordinates and telemetry, and is sent to the operator email using the SMTP set under <a href="/integrations">Integrations</a>.</p>
+    <h1><i class="fas fa-bell"></i> {m.al_heading()}</h1>
+    <!-- eslint-disable-next-line svelte/no-at-html-tags -- static app copy with one internal link -->
+    <p>{@html m.al_intro()}</p>
   </header>
 
   {#if loading}
-    <div class="panel"><p class="muted">Loading...</p></div>
+    <div class="panel"><p class="muted">{m.common_loading()}</p></div>
   {:else}
     <form onsubmit={(e) => { e.preventDefault(); save(); }}>
       <section class="panel">
         <div class="panel-head">
           <span class="icon-chip"><i class="fas fa-list-check"></i></span>
           <div>
-            <h2>Alert types</h2>
-            <p class="muted">Turn on the events you want emailed.</p>
+            <h2>{m.al_alert_types()}</h2>
+            <p class="muted">{m.al_turn_on()}</p>
           </div>
         </div>
         <div class="grid">
@@ -86,8 +88,8 @@
             >
               <i class="fas {alert.icon}"></i>
               <span class="alert-text">
-                <span class="alert-label">{alert.label}</span>
-                <span class="alert-desc">{alert.description}</span>
+                <span class="alert-label">{alert.label()}</span>
+                <span class="alert-desc">{alert.description()}</span>
               </span>
               <span class="switch"><span class="slider"></span></span>
             </button>
@@ -97,7 +99,7 @@
 
       <div class="actions">
         <button type="submit" class="cta" disabled={saving}>
-          <i class="fas fa-floppy-disk"></i> {saving ? 'Saving...' : 'Save alerts'}
+          <i class="fas fa-floppy-disk"></i> {saving ? m.auth_saving() : m.al_save_alerts()}
         </button>
       </div>
     </form>
@@ -146,12 +148,12 @@
     margin-top: 0.35rem;
   }
 
-  .head a {
+  .head :global(a) {
     color: #f5c518;
     text-decoration: none;
   }
 
-  .head a:hover {
+  .head :global(a:hover) {
     text-decoration: underline;
   }
 
