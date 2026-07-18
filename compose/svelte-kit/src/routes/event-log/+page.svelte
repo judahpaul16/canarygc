@@ -18,10 +18,10 @@
     const LOG_RENDER_INTERVAL_MS = 150;
 
     let logContainer: HTMLElement | undefined = $state();
-    let showTimeSync = $state(false);
-    let showParamValue = $state(false);
-    let showGPSRawInt = $state(false);
-    let showSysStatus = $state(false);
+    let stickToBottom = $state(true);
+    let shownTypes = $state<Set<string>>(new Set());
+    let filtersOpen = $state(false);
+    let filterEl: HTMLElement | undefined = $state();
     let searchTerm = $state('');
 
     type LogTab = 'live' | 'flights';
@@ -79,9 +79,29 @@
         if (logs[logs.length - 1]?.indexOf('HEARTBEAT') !== -1) triggerHeartbeat();
     });
 
+    function onLogScroll() {
+        if (!logContainer) return;
+        stickToBottom = logContainer.scrollHeight - logContainer.scrollTop - logContainer.clientHeight < 40;
+    }
+
+    function scrollToBottom() {
+        if (!logContainer) return;
+        logContainer.scrollTop = logContainer.scrollHeight;
+        stickToBottom = true;
+    }
+
     $effect(() => {
         void logs;
-        if (logContainer) logContainer.scrollTop = logContainer.scrollHeight;
+        if (logContainer && stickToBottom) logContainer.scrollTop = logContainer.scrollHeight;
+    });
+
+    $effect(() => {
+        if (!filtersOpen) return;
+        const close = (e: MouseEvent) => {
+            if (filterEl && !filterEl.contains(e.target as Node)) filtersOpen = false;
+        };
+        window.addEventListener('click', close);
+        return () => window.removeEventListener('click', close);
     });
 
     async function triggerHeartbeat() {
@@ -176,19 +196,41 @@
     }
 
     const ALWAYS_HIDDEN = ['HEARTBEAT', 'MISSION_CURRENT', '"command":512', 'GPS_RAW_INT'];
+    const ALWAYS_HIDDEN_NAMES = new Set(['HEARTBEAT', 'MISSION_CURRENT', 'GPS_RAW_INT']);
+
+    function logName(line: string): string {
+        const idx = line.indexOf('::');
+        return idx >= 0 ? line.slice(0, idx).replace(/\(\d+\)$/, '') : line;
+    }
+
+    // The mute toggles are the high-rate telemetry types this autopilot is
+    // actually emitting, derived from the live stream so the set matches the
+    // connected vehicle. Each stays muted until toggled on.
+    let filterableTypes = $derived.by(() => {
+        const present = new Set<string>();
+        for (const line of logs) {
+            const name = logName(line);
+            if (TELEMETRY.has(name) && !ALWAYS_HIDDEN_NAMES.has(name)) present.add(name);
+        }
+        return [...present].sort();
+    });
 
     let visibleLogs = $derived(
         logs
-            .filter((log) => {
-                if (ALWAYS_HIDDEN.some((h) => log.includes(h))) return false;
-                if (log.includes('TIMESYNC') && !showTimeSync) return false;
-                if (log.includes('PARAM_VALUE') && !showParamValue) return false;
-                if (log.includes('GLOBAL_POSITION_INT') && !showGPSRawInt) return false;
-                if (log.includes('BATTERY_STATUS') && !showSysStatus) return false;
+            .map((raw) => ({ raw, parsed: parseLog(raw) }))
+            .filter(({ raw, parsed }) => {
+                if (ALWAYS_HIDDEN.some((h) => raw.includes(h))) return false;
+                if (TELEMETRY.has(parsed.name) && !shownTypes.has(parsed.name)) return false;
                 return true;
             })
-            .map((raw) => ({ raw, parsed: parseLog(raw) }))
     );
+
+    function toggleType(name: string) {
+        const next = new Set(shownTypes);
+        if (next.has(name)) next.delete(name);
+        else next.add(name);
+        shownTypes = next;
+    }
 
     function clearLogs() {
         mavlinkLogStore.set([]);
@@ -387,21 +429,22 @@
                     <button class="tab-btn" class:active={activeTab === 'flights'} onclick={() => openTab('flights')}>Flight Logs</button>
                 </div>
                 {#if activeTab === 'live'}
-                <div class="filters flex gap-4 justify-center items-center">
-                    <input type="text" class="form-input" placeholder="Search" bind:value={searchTerm}/>
-                    <!-- These toggles hide high-rate MAVLink message types. A
-                         Betaflight or INAV board logs only low-rate state events,
-                         so the MSP path shows none of these. -->
-                    {#if !fcIsMsp}
-                    <div class="form-checkbox gap-2">
-                        <input type="checkbox" class="form-checkbox" name="Toggle TIMESYNC" bind:checked={showTimeSync}>
-                        <label for="Toggle TIMESYNC" class="mr-2">TIMESYNC</label>
-                        <input type="checkbox" class="form-checkbox" name="Toggle PARAM_VALUE" bind:checked={showParamValue}>
-                        <label for="Toggle PARAM_VALUE">PARAM_VALUE</label>
-                        <input type="checkbox" class="form-checkbox" name="Toggle GLOBAL_POSITION_INT" bind:checked={showGPSRawInt}>
-                        <label for="Toggle GLOBAL_POSITION_INT">GLOBAL_POSITION_INT</label>
-                        <input type="checkbox" class="form-checkbox" name="Toggle BATTERY_STATUS" bind:checked={showSysStatus}>
-                        <label for="Toggle BATTERY_STATUS">BATTERY_STATUS</label>
+                <div class="filters flex flex-1 gap-4 items-center">
+                    <input type="text" class="form-input flex-1" placeholder="Search" bind:value={searchTerm}/>
+                    {#if !fcIsMsp && filterableTypes.length}
+                    <div class="filter-dd" bind:this={filterEl}>
+                        <button type="button" class="filter-toggle" class:active={shownTypes.size > 0} onclick={() => (filtersOpen = !filtersOpen)}>
+                            <i class="fas fa-filter"></i>
+                            {#if shownTypes.size > 0}<span class="filter-count">{shownTypes.size}</span>{/if}
+                            <div class="tooltip">Message filters</div>
+                        </button>
+                        {#if filtersOpen}
+                        <div class="filter-menu">
+                            {#each filterableTypes as name (name)}
+                                <button type="button" class="type-chip" class:active={shownTypes.has(name)} onclick={() => toggleType(name)}>{name}</button>
+                            {/each}
+                        </div>
+                        {/if}
                     </div>
                     {/if}
                     <div class="btns flex gap-4">
@@ -431,7 +474,8 @@
             </div>
             {#snippet hl(text: string)}{#each segments(text) as seg, i (i)}{#if seg.hit}<mark>{seg.text}</mark>{:else}{seg.text}{/if}{/each}{/snippet}
             {#if activeTab === 'live'}
-            <div class="log-view" bind:this={logContainer}>
+            <div class="log-wrap">
+            <div class="log-view" bind:this={logContainer} onscroll={onLogScroll}>
                 {#each visibleLogs as item (item.raw)}
                     <div class="log-line" style="--accent: {item.parsed.color}">
                         <span class="log-name" style="color: {item.parsed.color}">{@render hl(item.parsed.name)}</span>{#if !item.parsed.plain}<span class="log-time">{item.parsed.time}</span><span class="log-body">{@render hl(item.parsed.body)}</span>{/if}
@@ -444,6 +488,12 @@
                             : 'No events yet.'}
                     </div>
                 {/if}
+            </div>
+            {#if !stickToBottom}
+                <button type="button" class="scroll-bottom" onclick={scrollToBottom} aria-label="Scroll to latest">
+                    <i class="fas fa-angles-down"></i>
+                </button>
+            {/if}
             </div>
             <div class="console">
                 {#if suggestions.length}
@@ -534,6 +584,98 @@
         opacity: 1;
         border-bottom-color: var(--appColor, #4a9eff);
     }
+    .type-chip {
+        background-color: var(--secondaryColor);
+        color: var(--fontColor);
+        border: 1px solid transparent;
+        border-radius: var(--radius-control);
+        padding: 0.15rem 0.55rem;
+        font-size: 0.7rem;
+        font-family: monospace;
+        opacity: 0.5;
+        cursor: pointer;
+    }
+    .type-chip:hover {
+        opacity: 0.8;
+    }
+    .type-chip.active {
+        opacity: 1;
+        border-color: var(--appColor, #4a9eff);
+        color: var(--appColor, #4a9eff);
+    }
+    .filter-dd {
+        position: relative;
+    }
+    .filter-toggle {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        background-color: var(--secondaryColor);
+        color: var(--fontColor);
+        border-radius: var(--radius-control);
+        padding: 0.4rem 0.7rem;
+        font-size: 0.8rem;
+        cursor: pointer;
+    }
+    .filter-toggle.active {
+        color: var(--appColor, #4a9eff);
+    }
+    .filter-count {
+        background: var(--appColor, #4a9eff);
+        color: #fff;
+        border-radius: 9999px;
+        font-size: 0.6rem;
+        line-height: 1;
+        padding: 0.15rem 0.35rem;
+        min-width: 1rem;
+        text-align: center;
+    }
+    .filter-menu {
+        position: absolute;
+        top: calc(100% + 0.4rem);
+        right: 0;
+        z-index: 50;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        width: max-content;
+        max-width: 24rem;
+        max-height: 45vh;
+        overflow-y: auto;
+        padding: 0.6rem;
+        background-color: var(--tertiaryColor, var(--secondaryColor));
+        border: 1px solid rgb(255 255 255 / 0.1);
+        border-radius: var(--radius-control);
+        box-shadow: 0 10px 28px rgb(0 0 0 / 0.35);
+    }
+    .log-wrap {
+        position: relative;
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+    }
+    .scroll-bottom {
+        position: absolute;
+        bottom: 0.9rem;
+        right: 1.1rem;
+        z-index: 10;
+        width: 2.2rem;
+        height: 2.2rem;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 9999px;
+        background-color: var(--appColor, #4a9eff);
+        color: #fff;
+        box-shadow: 0 4px 14px rgb(0 0 0 / 0.35);
+        cursor: pointer;
+    }
+    .scroll-bottom:hover {
+        filter: brightness(1.1);
+    }
     .flight-logs {
         flex: 1;
         overflow: auto;
@@ -588,7 +730,7 @@
         background: #f87171;
     }
 
-    span, label, .system-state {
+    span, .system-state {
         color: var(--fontColor);
     }
 
@@ -776,15 +918,6 @@
         visibility: visible;
     }
 
-    .form-checkbox {
-        display: flex;
-        align-items: center;
-    }
-
-    .form-checkbox:checked {
-        background-color: #61cd89;
-    }
-
     .form-input {
         padding: 0.5rem;
         font-size: 0.875rem;
@@ -808,29 +941,12 @@
         border-color: #61cd89;
     }
 
-    input[type="checkbox"] {
-        appearance: none;
-        width: 1rem;
-        height: 1rem;
-        border-radius: var(--radius-control);
-        background-color: var(--tertiaryColor);
-        cursor: pointer;
-    }
-
-    input[type="checkbox"]:checked {
-        background-color: #61cd89;
-    }
-
     button {
         font-size: small;
         padding: 4px 8px;
         border-radius: var(--radius-control);
         color: #ffffff;
         cursor: pointer;
-    }
-
-    label {
-        font-size: 10pt;
     }
 
     .heartbeat {
@@ -884,14 +1000,6 @@
         .filters .form-input {
             flex: 1 1 100%;
             min-width: 0;
-        }
-
-        .form-checkbox {
-            display: grid;
-            grid-template-columns: auto 1fr auto 1fr;
-            column-gap: 0.5rem;
-            row-gap: 0.3rem;
-            align-items: center;
         }
 
         .system-state {
