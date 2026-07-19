@@ -18,14 +18,16 @@
     ceilingCellsStore,
     showCeilingsStore,
     obstaclesStore,
-    showObstaclesStore
+    showObstaclesStore,
+    tfrOverlaysStore
   } from '../stores/safetyStore';
-  import { trafficStore, showTrafficStore } from '../stores/trafficStore';
+  import { trafficStore, trafficThreatsStore, showTrafficStore } from '../stores/trafficStore';
   import { missionPlanActionsStore } from '../stores/missionPlanStore';
   import { actionMarkerSrc } from '../lib/mission-icons';
   import {
     AIRSPACE_CONTROLLED_COLOR,
-    AIRSPACE_RESTRICTED_COLOR
+    AIRSPACE_RESTRICTED_COLOR,
+    tfrZones
   } from '../lib/airspace';
   import { ceilingColor, obstacleColor } from '../lib/hazards';
   import { fetchAirspaceForBbox, fetchHazardsForBbox } from '../lib/preflight';
@@ -60,6 +62,17 @@
       features: get(airspaceZonesStore).map((zone) => ({
         type: 'Feature',
         properties: { restricted: zone.restricted },
+        geometry: { type: 'Polygon', coordinates: zone.polygon }
+      }))
+    };
+  }
+
+  function tfrFeatureCollection(): GeoJSON.FeatureCollection {
+    return {
+      type: 'FeatureCollection',
+      features: tfrZones(get(tfrOverlaysStore)).map((zone) => ({
+        type: 'Feature',
+        properties: {},
         geometry: { type: 'Polygon', coordinates: zone.polygon }
       }))
     };
@@ -171,6 +184,16 @@
     setLayerVisibility(m, ['airspace-fill', 'airspace-outline'], get(showAirspaceStore) && !hideOverlay);
   }
 
+  // Active TFRs draw whenever present, independent of the airspace toggle.
+  function renderTfrs3D() {
+    const m = map;
+    if (!m || !m.isStyleLoaded()) return;
+    const source = m.getSource('tfr') as GeoJSONSource | undefined;
+    if (!source) return;
+    source.setData(tfrFeatureCollection());
+    setLayerVisibility(m, ['tfr-fill', 'tfr-outline'], !hideOverlay);
+  }
+
   function renderCeilings3D() {
     const m = map;
     if (!m || !m.isStyleLoaded()) return;
@@ -197,6 +220,7 @@
     const m = map;
     if (!m) return;
     const contacts = get(trafficStore);
+    const threats = get(trafficThreatsStore);
     const visible = get(showTrafficStore) && !hideOverlay;
     for (const [contactId, marker] of trafficMarkers) {
       if (!visible || !contacts[contactId]) {
@@ -225,6 +249,7 @@
       }
       marker.setLngLat([contact.lon, contact.lat]);
       marker.setRotation((contact.headingDeg ?? 0) - 90);
+      marker.getElement().classList.toggle('traffic-threat', threats.has(contact.id));
     }
   }
 
@@ -464,6 +489,22 @@
             'paint': { 'line-color': airspaceColorExpr, 'line-width': 1 }
         });
 
+        m.addSource('tfr', { type: 'geojson', data: tfrFeatureCollection() });
+        m.addLayer({
+            'id': 'tfr-fill',
+            'type': 'fill',
+            'source': 'tfr',
+            'layout': { 'visibility': 'none' },
+            'paint': { 'fill-color': AIRSPACE_RESTRICTED_COLOR, 'fill-opacity': 0.28 }
+        });
+        m.addLayer({
+            'id': 'tfr-outline',
+            'type': 'line',
+            'source': 'tfr',
+            'layout': { 'visibility': 'none' },
+            'paint': { 'line-color': AIRSPACE_RESTRICTED_COLOR, 'line-width': 2, 'line-dasharray': [3, 2] }
+        });
+
         m.addSource('obstacles', { type: 'geojson', data: obstacleFeatureCollection() });
         m.addLayer({
             'id': 'obstacles-circle',
@@ -489,12 +530,13 @@
             'paint': { 'line-color': '#BF93E4', 'line-width': 5 }
         });
 
-        for (const hoverLayer of ['airspace-fill', 'ceilings-fill', 'obstacles-circle']) {
+        for (const hoverLayer of ['airspace-fill', 'tfr-fill', 'ceilings-fill', 'obstacles-circle']) {
             m.on('mouseenter', hoverLayer, () => { m.getCanvas().style.cursor = 'pointer'; });
             m.on('mouseleave', hoverLayer, () => { m.getCanvas().style.cursor = ''; });
         }
 
         renderAirspace3D();
+        renderTfrs3D();
         renderCeilings3D();
         renderObstacles3D();
         renderMissionPaths3D();
@@ -574,6 +616,11 @@
     untrack(() => renderAirspace3D());
   });
   $effect(() => {
+    void $tfrOverlaysStore;
+    void hideOverlay;
+    untrack(() => renderTfrs3D());
+  });
+  $effect(() => {
     void $ceilingCellsStore;
     void $showCeilingsStore;
     void hideOverlay;
@@ -587,6 +634,7 @@
   });
   $effect(() => {
     void $trafficStore;
+    void $trafficThreatsStore;
     void $showTrafficStore;
     void hideOverlay;
     untrack(() => renderTraffic3D());
