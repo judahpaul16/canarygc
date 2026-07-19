@@ -336,7 +336,9 @@ export function mavlinkConfigured(): boolean {
 
 function openConnection(): void {
     if (process.env.NODE_ENV === 'production') {
-        state.port = new SerialPort({ path: '/dev/ttyACM0', baudRate: 115200, lock: false });
+        const path = process.env.MAVLINK_SERIAL_PATH ?? '/dev/ttyACM0';
+        const baudRate = Number(process.env.MAVLINK_BAUD ?? 115200);
+        state.port = new SerialPort({ path, baudRate, lock: false });
     } else {
         const port = Number(process.env.MAVLINK_TCP_PORT ?? 5760);
         const socket = connect({ host: mavlinkTcpHost(), port });

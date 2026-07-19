@@ -69,12 +69,14 @@ services:
       # so the dashboard link stays idle instead of dialing a missing SITL.
       MAVLINK_TCP_HOST: ""
 
-  # Production: the published app image, talking to the autopilot over USB serial.
+  # Production: the published app image, talking to the autopilot over the
+  # configured serial link.
   app:
     profiles: ["production"]
     image: ghcr.io/judahpaul16/canarygc:latest
     devices:
-      - "/dev/ttyACM0:/dev/ttyACM0"
+      - "${MAVLINK_SERIAL_PATH:-/dev/ttyACM0}:${MAVLINK_SERIAL_PATH:-/dev/ttyACM0}"
+      - "${FC_BOOTLOADER_PATH:-/dev/ttyACM0}:${FC_BOOTLOADER_PATH:-/dev/ttyACM0}"
     ports:
       - "${APP_PORT:-3000}:3000"
     container_name: canarygc_app
@@ -88,6 +90,8 @@ services:
       # Inside the data volume, so flight logs survive container recreates.
       FLIGHT_LOG_PATH: ${FLIGHT_LOG_PATH:-/app/src/flight-logs}
       NODE_ENV: production
+      MAVLINK_SERIAL_PATH: ${MAVLINK_SERIAL_PATH:-/dev/ttyACM0}
+      MAVLINK_BAUD: ${MAVLINK_BAUD:-115200}
       MEDIAMTX_API_URL: ${MEDIAMTX_API_URL:-http://host.docker.internal:9997}
     extra_hosts:
       - "host.docker.internal:host-gateway"
