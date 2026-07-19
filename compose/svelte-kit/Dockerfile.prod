@@ -1,6 +1,6 @@
-FROM node:26-alpine AS build
+FROM --platform=$BUILDPLATFORM node:26-alpine AS build
 
-# Baked into the prerendered /version page; a build without them reports dev.
+# Baked into the prerendered /version page, a build without them reports dev.
 ARG CANARYGC_VERSION
 ARG GITHUB_SHA
 ENV CANARYGC_VERSION=$CANARYGC_VERSION
@@ -16,6 +16,16 @@ COPY . .
 
 RUN npm run build
 
+# Runtime dependencies install on the target platform so native bindings such
+# as the serial port stack match the image architecture.
+FROM node:26-alpine AS deps
+
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm ci
+
 FROM node:26-alpine
 
 WORKDIR /app
@@ -30,8 +40,8 @@ RUN apk add --no-cache dfu-util binutils
 RUN mkdir -p /app/src
 
 COPY --from=build /app/build ./build
-COPY --from=build /app/package*.json ./
-COPY --from=build /app/node_modules ./node_modules
+COPY --from=deps /app/package*.json ./
+COPY --from=deps /app/node_modules ./node_modules
 
 ENV DATABASE_PATH=/app/src/data.db
 
