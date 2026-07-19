@@ -478,6 +478,35 @@
     });
   }
 
+  function fit3DBoundsInWindow(ring: [number, number][]) {
+    const m = threeDMap;
+    if (!m) return;
+    const lons = ring.map(([lon]) => lon);
+    const lats = ring.map(([, lat]) => lat);
+    const w = isFullscreen ? null : get(mapWindowStore);
+    const margin = 30;
+    // The transform's persisted padding and a fit-options padding both
+    // subtract from the canvas, so the window inset applies once through
+    // setPadding and the fit carries none of its own.
+    m.setPadding(
+      w
+        ? {
+            top: w.top + margin,
+            left: w.left + margin,
+            right: window.innerWidth - (w.left + w.width) + margin,
+            bottom: window.innerHeight - (w.top + w.height) + margin
+          }
+        : { top: 40, left: 40, right: 40, bottom: 40 }
+    );
+    m.fitBounds(
+      [
+        [Math.min(...lons), Math.min(...lats)],
+        [Math.max(...lons), Math.max(...lats)]
+      ],
+      { maxZoom: 15, animate: false }
+    );
+  }
+
   async function loadTileConfig() {
     try {
       const res = await fetch('/api/map-config');
@@ -1654,6 +1683,7 @@
       lockViewStore.set(false);
       const latlngs = focus.map(([lon, lat]) => [lat, lon] as [number, number]);
       fitBoundsInWindow(L.latLngBounds(latlngs));
+      if (mapType.toLowerCase() === '3d') fit3DBoundsInWindow(focus);
       mapFocusStore.set(null);
     });
   });

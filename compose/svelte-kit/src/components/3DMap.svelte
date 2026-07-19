@@ -187,7 +187,7 @@
   // Active TFRs draw whenever present, independent of the airspace toggle.
   function renderTfrs3D() {
     const m = map;
-    if (!m || !m.isStyleLoaded()) return;
+    if (!m) return;
     const source = m.getSource('tfr') as GeoJSONSource | undefined;
     if (!source) return;
     source.setData(tfrFeatureCollection());
@@ -262,12 +262,17 @@
   function sampleGround(m: pkg.Map, loc: { lat: number; lng: number }) {
     const key = `${loc.lat.toFixed(5)},${loc.lng.toFixed(5)}`;
     if (key === mavGroundKey) return;
-    mavGroundKey = key;
+    let elevation: number | null = null;
     try {
-      mavGround = m.queryTerrainElevation([loc.lng, loc.lat]) ?? 0;
+      elevation = m.queryTerrainElevation([loc.lng, loc.lat]);
     } catch {
-      mavGround = 0;
+      elevation = null;
     }
+    // A null read means the terrain is not ready here yet, so the sample
+    // stays uncommitted and the next frame retries.
+    if (elevation == null) return;
+    mavGround = elevation;
+    mavGroundKey = key;
   }
 
   // The MAV renders as a three.js model at its true flight altitude through a
@@ -378,6 +383,13 @@
             }
         }
         m.setTerrain({ source: 'terrain-dem', exaggeration: 1 });
+
+        // A ground sample taken before the terrain tiles arrive reads zero and
+        // a parked vehicle never re-keys it, leaving the model under the
+        // terrain, so terrain loads invalidate the sample.
+        m.on('sourcedata', (e) => {
+            if (e.sourceId === 'terrain-dem' && e.isSourceLoaded) mavGroundKey = '';
+        });
 
         // Insert the layer beneath any symbol layer.
         const layers = m.getStyle().layers;
@@ -652,7 +664,7 @@
   });
 </script>
 
-<div id='threedmap' class="relative h-full rounded-2xl z-0"></div>
+<div id='threedmap' class="relative h-full z-0"></div>
 
 <style>
   /* Inset the zoom/compass controls and attribution off the corners so they
