@@ -3,6 +3,8 @@ import type { NotificationType } from '../lib/overlays';
 
 export interface Toast {
   id: number;
+  // A push whose key matches a live toast returns that toast instead of a duplicate.
+  key?: string;
   title: string;
   content: string;
   type: NotificationType;
@@ -13,6 +15,8 @@ export interface Toast {
   onDismiss?: () => void;
   // Rendered as a trusted anchor below the content; the caller sets the href.
   link?: { href: string; label: string };
+  // A button below the content that runs an in-app action.
+  action?: { label: string; onClick: () => void };
 }
 
 // At most this many toasts stack at once; the oldest auto-dismissing one is
@@ -24,8 +28,14 @@ export const toastStore = writable<Toast[]>([]);
 let nextId = 1;
 
 export function pushToast(toast: Omit<Toast, 'id'>): number {
-  const id = nextId++;
+  let id = 0;
   toastStore.update((list) => {
+    const live = toast.key ? list.find((t) => t.key === toast.key) : undefined;
+    if (live) {
+      id = live.id;
+      return list;
+    }
+    id = nextId++;
     const next = [...list, { ...toast, id }];
     while (next.length > MAX_TOASTS) {
       const idx = next.findIndex((t) => !t.persistent);

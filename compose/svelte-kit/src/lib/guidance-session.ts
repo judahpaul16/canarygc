@@ -8,6 +8,7 @@ import { get, writable } from 'svelte/store';
 import { missionPlanActionsStore } from '../stores/missionPlanStore';
 import { fcProtocolStore, fcFirmwareStore, mavSatelliteStore } from '../stores/mavlinkStore';
 import { showModal, notify, type ModalInput } from './overlays';
+import { preflightCheck, takeoffCheck } from './preflight';
 import { m } from '$lib/paraglide/messages';
 
 const GPS_MIN_SATS = 6;
@@ -170,8 +171,10 @@ export function startGuidanceWithConfirm(): void {
 		confirmation: true,
 		confirmLabel: m.gs_start_guidance_btn(),
 		inputs: [{ type: 'checkbox', placeholder: m.gs_bench_tested_check(), required: true }],
-		onConfirm: (values) => {
-			if (values[0] === 'true') startGuidance(waypoints);
+		onConfirm: async (values) => {
+			if (values[0] !== 'true') return;
+			if (!(await preflightCheck(get(missionPlanActionsStore)))) return;
+			await startGuidance(waypoints);
 		}
 	});
 }
@@ -313,6 +316,7 @@ export async function startInavMissionWithConfirm(): Promise<void> {
 		inputs,
 		onConfirm: async (values) => {
 			if (values[0] !== 'true') return;
+			if (!(await preflightCheck(get(missionPlanActionsStore)))) return;
 			const picked = values[1] ?? '';
 			if (askLanding && picked !== '' && Number(picked) !== current) {
 				try {
@@ -348,8 +352,11 @@ export function takeoffInavWithConfirm(): void {
 			{ type: 'number', placeholder: m.tl_altitude_placeholder(), required: true },
 			{ type: 'checkbox', placeholder: m.gs_area_clear_check(), required: true }
 		],
-		onConfirm: (values) => {
-			if (values[1] === 'true') postInav('/api/msp/inav_takeoff', { altM: Number(values[0]) }, m.gs_taking_off());
+		onConfirm: async (values) => {
+			if (values[1] !== 'true') return;
+			const altM = Number(values[0]);
+			if (!(await takeoffCheck(altM))) return;
+			postInav('/api/msp/inav_takeoff', { altM }, m.gs_taking_off());
 		}
 	});
 }

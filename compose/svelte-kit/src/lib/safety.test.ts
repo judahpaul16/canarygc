@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validateMission, formatViolations, type AirspaceZone, type SafetyViolation } from './safety';
+import { validateMission, validateTakeoff, formatViolations, type AirspaceZone, type SafetyViolation } from './safety';
 import { DEFAULT_SAFETY_LIMITS } from './safety';
 import type { MissionPlanActions } from '../stores/missionPlanStore';
 
@@ -61,5 +61,51 @@ describe('formatViolations grouping', () => {
 			{ severity: 'error', index: 2, message: 'Waypoint 2 altitude 200 m exceeds the 120 m ceiling.' }
 		];
 		expect(formatViolations(mixed)).toBe('⛔ Waypoint 2 altitude 200 m exceeds the 120 m ceiling.');
+	});
+});
+
+describe('validateTakeoff', () => {
+	const point = { lat: 33.75, lon: -84.39 };
+
+	it('blocks a takeoff inside restricted airspace', () => {
+		const tfr: AirspaceZone = { ...zone, name: 'TFR 6/1', restricted: true, type: 'TFR' };
+		const violations = validateTakeoff(point, 50, DEFAULT_SAFETY_LIMITS, [tfr]);
+		expect(violations).toHaveLength(1);
+		expect(violations[0].severity).toBe('error');
+		expect(violations[0].message).toContain('TFR 6/1');
+	});
+
+	it('warns for a takeoff inside controlled airspace', () => {
+		const violations = validateTakeoff(point, 50, DEFAULT_SAFETY_LIMITS, [zone]);
+		expect(violations).toHaveLength(1);
+		expect(violations[0].severity).toBe('warning');
+		expect(violations[0].message).toContain('TEST CLASS E');
+	});
+
+	it('ignores a zone whose floor is above the target altitude', () => {
+		const shelf: AirspaceZone = { ...zone, lowerM: 213 };
+		expect(validateTakeoff(point, 50, DEFAULT_SAFETY_LIMITS, [shelf])).toEqual([]);
+	});
+
+	it('blocks a takeoff altitude above the safety ceiling', () => {
+		const violations = validateTakeoff(point, 200, DEFAULT_SAFETY_LIMITS, []);
+		expect(violations).toHaveLength(1);
+		expect(violations[0].severity).toBe('error');
+	});
+
+	it('warns above the LAANC ceiling at the takeoff point', () => {
+		const hazards = {
+			ceilings: [{ ceilingFt: 100, airport: 'ATL', laanc: true, polygon: zone.polygon }],
+			obstacles: []
+		};
+		const violations = validateTakeoff(point, 50, DEFAULT_SAFETY_LIMITS, [], hazards);
+		expect(violations).toHaveLength(1);
+		expect(violations[0].severity).toBe('warning');
+		expect(violations[0].message).toContain('ATL');
+	});
+
+	it('passes a clear takeoff', () => {
+		const away = { lat: 34.5, lon: -85.0 };
+		expect(validateTakeoff(away, 50, DEFAULT_SAFETY_LIMITS, [zone])).toEqual([]);
 	});
 });

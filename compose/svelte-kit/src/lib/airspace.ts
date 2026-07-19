@@ -1,4 +1,5 @@
 import type { AirspaceZone } from './safety';
+import { cleanTfrDescription, notamDetailLine, type Notam } from './notams';
 import { m } from '$lib/paraglide/messages';
 
 export const AIRSPACE_RESTRICTED_COLOR = '#f24e4e';
@@ -74,4 +75,29 @@ export function airspacePopupHtml(zone: AirspaceZone): string {
     ceiling +
     `<br><em>${esc(airspaceImplication(zone))}</em>`
   );
+}
+
+// TFR notice as a flight-restriction card matching the alert toast, escaped
+// for a Leaflet popup.
+export function tfrPopupHtml(n: Notam): string {
+  const detail = notamDetailLine(n);
+  const place = `${esc(n.type)}: ${esc(cleanTfrDescription(n.description))}`;
+  return (
+    `<strong>${esc(m.notam_title({ id: n.id }))}</strong>` +
+    `<br>${place}` +
+    (detail ? `<br>${esc(detail)}` : '')
+  );
+}
+
+// Active TFRs as restricted airspace zones for the optimizer and mission
+// validation.
+export function tfrZones(notams: Notam[]): AirspaceZone[] {
+  return notams
+    .filter((n): n is Notam & { boundary: [number, number][] } => !!n.boundary && n.boundary.length >= 3)
+    .map((n) => ({
+      name: `TFR ${n.id}`,
+      restricted: true,
+      polygon: [n.boundary],
+      type: 'TFR'
+    }));
 }

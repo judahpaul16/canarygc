@@ -236,6 +236,67 @@ export function validateMission(
   return violations;
 }
 
+// A bare takeoff climbs from the surface at one point, so the check covers the
+// climb column at the vehicle position up to the requested altitude.
+export function validateTakeoff(
+  point: LatLon,
+  altM: number,
+  limits: SafetyLimits,
+  airspace: AirspaceZone[] = [],
+  hazards: Hazards = { ceilings: [], obstacles: [] }
+): SafetyViolation[] {
+  const violations: SafetyViolation[] = [];
+
+  if (altM > limits.maxAltitudeM) {
+    violations.push({
+      severity: 'error',
+      index: null,
+      message: m.sv_takeoff_alt_exceeds({ alt: altM, max: limits.maxAltitudeM })
+    });
+  }
+
+  for (const zone of airspace) {
+    if (!pointInPolygon(point, zone.polygon)) continue;
+    // The climb starts at the surface, so only a zone floor above the target
+    // altitude keeps the column clear of the zone.
+    if (zone.lowerM !== undefined && zone.lowerM > altM) continue;
+    violations.push({
+      severity: zone.restricted ? 'error' : 'warning',
+      index: null,
+      message: zone.restricted
+        ? m.sv_takeoff_in_restricted({ zone: zone.name })
+        : m.sv_takeoff_in_controlled({ zone: zone.name })
+    });
+  }
+
+  for (const cell of hazards.ceilings) {
+    if (!pointInPolygon(point, cell.polygon)) continue;
+    const ceilingM = feetToMeters(cell.ceilingFt);
+    const airportSuffix = cell.airport ? ` (${cell.airport})` : '';
+    if (cell.ceilingFt === 0) {
+      violations.push({
+        severity: 'warning',
+        index: null,
+        message: m.sv_takeoff_laanc_zero({ airport: airportSuffix })
+      });
+    } else if (altM > ceilingM) {
+      violations.push({
+        severity: 'warning',
+        index: null,
+        message: m.sv_takeoff_laanc_ceiling({
+          alt: altM,
+          ft: cell.ceilingFt,
+          meters: Math.round(ceilingM),
+          airport: airportSuffix
+        })
+      });
+    }
+    break;
+  }
+
+  return violations;
+}
+
 export function hasBlockingViolation(violations: SafetyViolation[]): boolean {
   return violations.some((v) => v.severity === 'error');
 }

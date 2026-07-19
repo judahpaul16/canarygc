@@ -2,6 +2,8 @@
 // notifications that stay until the operator dismisses them. Dismissals are
 // remembered so a notice never nags twice.
 
+import { m } from '$lib/paraglide/messages';
+
 export interface Notam {
   id: string;
   type: string;
@@ -9,14 +11,18 @@ export interface Notam {
   link: string;
   // Filled from the per-TFR detail record when available.
   ceiling?: string;
+  floor?: string;
   effective?: string;
   facility?: string;
+  boundary?: [number, number][];
 }
 
 export interface TfrDetail {
   ceiling?: string;
+  floor?: string;
   effective?: string;
   facility?: string;
+  boundary?: [number, number][];
 }
 
 const DISMISSED_KEY = 'notams.dismissed';
@@ -48,6 +54,29 @@ function tag(xml: string, name: string): string | undefined {
   return m ? m[1].trim() : undefined;
 }
 
+// "33.79418179N" / "084.37416667W" with south and west reading negative.
+function parseCoord(raw?: string): number | undefined {
+  if (!raw) return undefined;
+  const m = raw.match(/^(\d+(?:\.\d+)?)([NSEW])$/);
+  if (!m) return undefined;
+  const val = parseFloat(m[1]);
+  return m[2] === 'S' || m[2] === 'W' ? -val : val;
+}
+
+// The restriction boundary is the ordered list of Avx vertices, emitted
+// [lon, lat] to match the airspace polygons the map already draws.
+export function parseTfrBoundary(xml: string): [number, number][] {
+  const ring: [number, number][] = [];
+  const avx = /<Avx>([\s\S]*?)<\/Avx>/g;
+  let m: RegExpExecArray | null;
+  while ((m = avx.exec(xml))) {
+    const lat = parseCoord(tag(m[1], 'geoLat'));
+    const lon = parseCoord(tag(m[1], 'geoLong'));
+    if (lat !== undefined && lon !== undefined) ring.push([lon, lat]);
+  }
+  return ring;
+}
+
 // A vertical limit reads with its reference: HEI is height above ground, ALT is
 // mean sea level, STD is a flight level.
 function formatAltitude(val?: string, uom?: string, code?: string): string | undefined {
@@ -74,11 +103,23 @@ export function parseTfrDetail(xml: string): TfrDetail {
     tag(xml, 'uomDistVerUpper'),
     tag(xml, 'codeDistVerUpper')
   );
+  const lowerVal = tag(xml, 'valDistVerLower');
+  const floor =
+    lowerVal && lowerVal !== '0'
+      ? formatAltitude(lowerVal, tag(xml, 'uomDistVerLower'), tag(xml, 'codeDistVerLower'))
+      : undefined;
   const from = shortTime(tag(xml, 'dateEffective'));
   const to = shortTime(tag(xml, 'dateExpire'));
   const tz = tag(xml, 'codeTimeZone');
   const effective = from && to ? `${from} to ${to}${tz ? ` ${tz}` : ''}` : undefined;
-  return { ceiling, effective, facility: tag(xml, 'codeFacility') };
+  const boundary = parseTfrBoundary(xml);
+  return {
+    ceiling,
+    floor,
+    effective,
+    facility: tag(xml, 'codeFacility'),
+    boundary: boundary.length >= 3 ? boundary : undefined
+  };
 }
 
 export function unseenNotams(items: Notam[], dismissed: ReadonlySet<string>): Notam[] {
@@ -87,10 +128,17 @@ export function unseenNotams(items: Notam[], dismissed: ReadonlySet<string>): No
 
 export function notamDetailLine(n: Notam): string {
   const parts: string[] = [];
-  if (n.ceiling) parts.push(`Up to ${n.ceiling}`);
+  if (n.floor && n.ceiling) parts.push(m.notam_range({ floor: n.floor, ceiling: n.ceiling }));
+  else if (n.ceiling) parts.push(m.notam_up_to({ ceiling: n.ceiling }));
   if (n.effective) parts.push(n.effective);
-  if (n.facility) parts.push(`${n.facility} Center`);
+  if (n.facility) parts.push(m.notam_center({ facility: n.facility }));
   return parts.join(' · ');
+}
+
+// The FAA description tails with a verbose date range the detail line already
+// states precisely, so only the leading place stays.
+export function cleanTfrDescription(desc: string): string {
+  return desc.replace(/,?\s*(Sun|Mon|Tue|Wed|Thu|Fri|Sat)[a-z]*,.*$/, '').trim();
 }
 
 export function loadDismissedNotams(): Set<string> {

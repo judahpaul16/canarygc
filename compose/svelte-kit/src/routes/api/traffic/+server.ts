@@ -57,7 +57,8 @@ export const GET: RequestHandler = async ({ url }) => {
             lon: a.lon as number,
             altM: typeof a.alt_baro === 'number' ? a.alt_baro * FT_TO_M : null,
             headingDeg: typeof a.track === 'number' ? a.track : null,
-            speedMps: typeof a.gs === 'number' ? a.gs * KT_TO_MPS : null
+            speedMps: typeof a.gs === 'number' ? a.gs * KT_TO_MPS : null,
+            onGround: a.alt_baro === 'ground'
           }));
       } catch {
         // try the next feed

@@ -3,6 +3,7 @@ import { fcProtocolStore, fcFirmwareStore } from '../stores/mavlinkStore';
 import { showModal, notify } from './overlays';
 import { takeoff } from './mavlink-client';
 import { isPlane } from './flight-modes';
+import { takeoffCheck } from './preflight';
 import { landNow, planeHasLandingSequence } from './landing';
 import {
   takeoffInavWithConfirm,
@@ -36,7 +37,9 @@ function initTakeoff(): void {
       }
     ],
     onConfirm: async (values) => {
-      await takeoff(parseInt(values[0]));
+      const altM = parseInt(values[0]);
+      if (!(await takeoffCheck(altM))) return;
+      await takeoff(altM);
     }
   });
 }

@@ -33,6 +33,8 @@ export interface ModalOptions {
 }
 
 export interface NotifyOptions {
+  // Toasts sharing a key never stack a duplicate.
+  key?: string;
   title: string;
   content: string;
   type?: NotificationType;
@@ -44,6 +46,8 @@ export interface NotifyOptions {
   onDismiss?: () => void;
   // Rendered as a trusted anchor below the content; the caller sets the href.
   link?: { href: string; label: string };
+  // A button below the content that runs an in-app action.
+  action?: { label: string; onClick: () => void };
 }
 
 const NOTIFY_DURATION_MS = 6_000;
@@ -114,13 +118,15 @@ export function notify(options: NotifyOptions): () => void {
     ? 0
     : Math.max(MIN_DURATION_MS, options.duration ?? NOTIFY_DURATION_MS);
   const id = pushToast({
+    key: options.key,
     title: options.title,
     content: options.content,
     type: options.type ?? 'info',
     duration,
     persistent,
     onDismiss: options.onDismiss,
-    link: options.link
+    link: options.link,
+    action: options.action
   });
   return () => dismissToast(id);
 }

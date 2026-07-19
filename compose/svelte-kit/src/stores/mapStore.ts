@@ -12,6 +12,9 @@ export const lockViewStore = sessionBool('map.lockView', true);
 // Bumped when a locked map is dragged, so the lock button pulses to explain
 // why the camera snapped back; the 3D map bumps it and the map chrome reacts.
 export const lockNudgeStore = writable(0);
+// The boundary a notice's show-on-map action frames on the map. Setting it
+// releases the follow lock and fits the ring inside the map window.
+export const mapFocusStore = writable<[number, number][] | null>(null);
 export const threeDMapStore = writable<pkg.Map | null>(null);
 
 export interface MapRect {

@@ -4,15 +4,19 @@ import {
   airspaceZonesStore,
   airspaceAttributionsStore,
   ceilingCellsStore,
-  obstaclesStore
+  obstaclesStore,
+  tfrOverlaysStore
 } from '../stores/safetyStore';
+import { tfrZones } from './airspace';
 import { mavLocationStore } from '../stores/mavlinkStore';
 import {
   validateMission,
+  validateTakeoff,
   hasBlockingViolation,
   formatViolations,
   type AirspaceZone,
-  type Hazards
+  type Hazards,
+  type SafetyViolation
 } from './safety';
 import { showModal } from './overlays';
 import { m } from '$lib/paraglide/messages';
@@ -91,9 +95,38 @@ export async function refreshBuildings(actions: MissionPlanActions): Promise<Bui
   return bbox ? fetchBuildingsForBbox(bbox) : [];
 }
 
+// Shows blocking violations as a notice that resolves false, and warnings as a
+// confirmation the operator can accept.
+function confirmViolations(
+  violations: SafetyViolation[],
+  blocked: string,
+  proceed: string
+): Promise<boolean> {
+  if (violations.length === 0) return Promise.resolve(true);
+
+  return new Promise<boolean>((resolve) => {
+    if (hasBlockingViolation(violations)) {
+      showModal({
+        title: m.pf_check_failed_title(),
+        content: `${blocked}\n\n${formatViolations(violations)}`,
+        notification: true,
+        onClose: () => resolve(false)
+      });
+    } else {
+      showModal({
+        title: m.pf_warnings_title(),
+        content: `${formatViolations(violations)}\n\n${proceed}`,
+        confirmation: true,
+        onConfirm: () => resolve(true),
+        onCancel: () => resolve(false),
+        onClose: () => resolve(false)
+      });
+    }
+  });
+}
+
 // Runs the pre-flight safety validation. Resolves true when it is safe to
-// proceed. On blocking violations it shows them and resolves false; on warnings
-// it asks the operator to confirm.
+// proceed.
 export async function preflightCheck(actions: MissionPlanActions): Promise<boolean> {
   const limits = get(safetyLimitsStore);
   const home = get(mavLocationStore);
@@ -103,27 +136,27 @@ export async function preflightCheck(actions: MissionPlanActions): Promise<boole
   };
 
   const [zones, hazards] = await Promise.all([refreshAirspace(actions), refreshHazards(actions)]);
-  const violations = validateMission(actions, effectiveLimits, zones, hazards);
+  const withTfrs = [...zones, ...tfrZones(get(tfrOverlaysStore))];
+  const violations = validateMission(actions, effectiveLimits, withTfrs, hazards);
+  return confirmViolations(violations, m.pf_cannot_start(), m.pf_start_anyway());
+}
 
-  if (violations.length === 0) return true;
-
-  return new Promise<boolean>((resolve) => {
-    if (hasBlockingViolation(violations)) {
-      showModal({
-        title: m.pf_check_failed_title(),
-        content: `${m.pf_cannot_start()}\n\n${formatViolations(violations)}`,
-        notification: true,
-        onClose: () => resolve(false)
-      });
-    } else {
-      showModal({
-        title: m.pf_warnings_title(),
-        content: `${formatViolations(violations)}\n\n${m.pf_start_anyway()}`,
-        confirmation: true,
-        onConfirm: () => resolve(true),
-        onCancel: () => resolve(false),
-        onClose: () => resolve(false)
-      });
-    }
-  });
+// Validates a bare takeoff at the vehicle position against airspace, TFRs, and
+// LAANC ceilings. Resolves true when it is safe to proceed.
+export async function takeoffCheck(altM: number): Promise<boolean> {
+  const loc = get(mavLocationStore);
+  const point = { lat: loc.lat, lon: loc.lng };
+  const bbox = [
+    point.lon - BBOX_PAD_DEG,
+    point.lat - BBOX_PAD_DEG,
+    point.lon + BBOX_PAD_DEG,
+    point.lat + BBOX_PAD_DEG
+  ].join(',');
+  const [zones, hazards] = await Promise.all([
+    fetchAirspaceForBbox(bbox),
+    fetchHazardsForBbox(bbox)
+  ]);
+  const withTfrs = [...zones, ...tfrZones(get(tfrOverlaysStore))];
+  const violations = validateTakeoff(point, altM, get(safetyLimitsStore), withTfrs, hazards);
+  return confirmViolations(violations, m.pf_takeoff_blocked(), m.pf_takeoff_anyway());
 }

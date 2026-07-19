@@ -50,6 +50,7 @@
   import { callout, initCallouts, stopCallouts } from '../lib/callouts';
   import { initAlerts } from '../lib/alerts';
   import {
+    cleanTfrDescription,
     loadDismissedNotams,
     notamDetailLine,
     recordDismissedNotam,
@@ -62,6 +63,8 @@
   import { parseCalStatustext, parseMagCalProgress, parseMagCalReport } from '../lib/calibration';
   import { calibrationStore } from '../stores/calibrationStore';
   import { upsertTraffic } from '../stores/trafficStore';
+  import { tfrOverlaysStore } from '../stores/safetyStore';
+  import { mapFocusStore } from '../stores/mapStore';
 
   let { children } = $props();
 
@@ -688,6 +691,7 @@
             altM: typeof m.altitude === 'number' ? m.altitude / 1000 : null,
             headingDeg: typeof m.heading === 'number' ? m.heading / 100 : null,
             speedMps: typeof m.horVelocity === 'number' ? m.horVelocity / 100 : null,
+            onGround: false,
             source: 'vehicle',
             seenAt: Date.now()
           }
@@ -736,31 +740,57 @@
   // notices that stay until dismissed. A dismissed notice is remembered so it
   // never reappears, and each id shows at most one live toast.
   const NOTAM_CHECK_MS = 5 * 60 * 1000;
+  const NOTAM_RETRY_MS = 20 * 1000;
+  let notamRetryTimer: ReturnType<typeof setTimeout> | undefined;
   let notamDismissed = new Set<string>();
-  const notamShown = new Set<string>();
+
+  function scheduleNotamRetry() {
+    clearTimeout(notamRetryTimer);
+    notamRetryTimer = setTimeout(() => void checkNotams(), NOTAM_RETRY_MS);
+  }
+
+  // Auth resolves after mount, so the first check fires once the session is active.
+  $effect(() => {
+    const active = loggedIn && !isNavHidden;
+    if (active) untrack(() => void checkNotams());
+  });
 
   async function checkNotams() {
     if (!loggedIn || isNavHidden) return;
     const loc = get(mavLocationStore);
     if (!loc) return;
-    let payload: { notams?: Notam[] };
+    let payload: { notams?: Notam[]; error?: string; state?: string | null };
     try {
       const res = await fetch(`/api/notams?lat=${loc.lat}&lon=${loc.lng}`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        scheduleNotamRetry();
+        return;
+      }
       payload = await res.json();
     } catch {
+      scheduleNotamRetry();
       return;
     }
-    for (const n of unseenNotams(payload.notams ?? [], notamDismissed)) {
-      if (notamShown.has(n.id)) continue;
-      notamShown.add(n.id);
+    const all = payload.notams ?? [];
+    // A transient upstream failure must not blank an overlay still in effect.
+    if (!payload.error && payload.state != null) {
+      tfrOverlaysStore.set(all.filter((n) => n.boundary));
+    } else {
+      scheduleNotamRetry();
+    }
+    for (const n of unseenNotams(all, notamDismissed)) {
       const detail = notamDetailLine(n);
+      const place = cleanTfrDescription(n.description);
+      const body = detail ? `${n.type}: ${place}<br>${detail}` : `${n.type}: ${place}`;
+      const boundary = n.boundary;
       notify({
-        title: `Flight restriction ${n.id}`,
-        content: detail ? `${n.type}: ${n.description}<br>${detail}` : `${n.type}: ${n.description}`,
+        key: `notam:${n.id}`,
+        title: m.notam_title({ id: n.id }),
+        content: body,
         type: 'warning',
         persistent: true,
-        link: { href: n.link, label: 'FAA detail' },
+        link: { href: n.link, label: m.notam_faa_detail() },
+        action: boundary ? { label: m.notam_on_map(), onClick: () => mapFocusStore.set(boundary) } : undefined,
         onDismiss: () => {
           notamDismissed.add(n.id);
           recordDismissedNotam(n.id);
@@ -822,7 +852,6 @@
     const flightLogInterval = setInterval(flushFlightLog, FLIGHT_LOG_FLUSH_MS);
     notamDismissed = loadDismissedNotams();
     const notamInterval = setInterval(() => void checkNotams(), NOTAM_CHECK_MS);
-    void checkNotams();
 
     const teardownCallouts = initCallouts();
     const teardownAlerts = initAlerts();
@@ -833,6 +862,7 @@
       clearInterval(statusCheckInterval);
       clearInterval(flightLogInterval);
       clearInterval(notamInterval);
+      clearTimeout(notamRetryTimer);
       void flushFlightLog();
       window.removeEventListener('mousemove', refreshCookie);
       window.removeEventListener('keydown', refreshCookie);

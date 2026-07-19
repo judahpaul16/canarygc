@@ -14,9 +14,10 @@
     persistent: boolean;
     onDismiss?: () => void;
     link?: { href: string; label: string };
+    action?: { label: string; onClick: () => void };
   }
 
-  let { id, title, content, type, duration, persistent, link }: Props = $props();
+  let { id, title, content, type, duration, persistent, link, action }: Props = $props();
 
   const ICONS: Record<NotificationType, string> = {
     info: 'fa-circle-info',
@@ -83,6 +84,9 @@
       <div class="toast-title">{title}</div>
       <!-- eslint-disable-next-line svelte/no-at-html-tags -- safeContent is escaped above; only <br> survives -->
       <div class="toast-content">{@html safeContent}</div>
+      {#if action}
+        <button type="button" class="toast-link toast-action" onclick={() => action?.onClick()}>{action.label}</button>
+      {/if}
       {#if link}
         <a class="toast-link" href={link.href} target="_blank" rel="noopener noreferrer">{link.label}</a>
       {/if}
@@ -154,8 +158,15 @@
     margin-top: 0.3rem;
     font-size: 0.8rem;
     font-weight: 600;
-    color: var(--primaryColor);
+    color: var(--accent);
     text-decoration: underline;
+  }
+  .toast-action {
+    background: none;
+    border: none;
+    padding: 0;
+    margin-right: 0.9rem;
+    cursor: pointer;
   }
   .toast-close {
     flex-shrink: 0;

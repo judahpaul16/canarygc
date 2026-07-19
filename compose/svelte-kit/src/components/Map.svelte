@@ -11,6 +11,7 @@
     mapZoomStore,
     lockViewStore,
     lockNudgeStore,
+    mapFocusStore,
     threeDMapStore,
     missionPathsStore
   } from '../stores/mapStore';
@@ -42,9 +43,10 @@
     ceilingCellsStore,
     showCeilingsStore,
     obstaclesStore,
-    showObstaclesStore
+    showObstaclesStore,
+    tfrOverlaysStore
   } from '../stores/safetyStore';
-  import { airspaceColor, airspacePopupHtml } from '../lib/airspace';
+  import { airspaceColor, airspacePopupHtml, AIRSPACE_RESTRICTED_COLOR, tfrPopupHtml } from '../lib/airspace';
   import { ceilingColor, ceilingPopupHtml, obstacleColor, obstaclePopupHtml } from '../lib/hazards';
   import { pointInPolygon } from '../lib/geo';
   import { resolveTiles, nativeMaxZoom, type TileSources } from '../lib/tiles';
@@ -456,6 +458,24 @@
       [size.x / 2 - (w.left + w.width / 2), size.y / 2 - (w.top + w.height / 2)],
       { animate: false }
     );
+  }
+
+  // Frames a boundary inside the map window rather than the full viewport.
+  function fitBoundsInWindow(bounds: L.LatLngBounds) {
+    if (!leafletMap) return;
+    const w = isFullscreen ? null : get(mapWindowStore);
+    if (!w) {
+      leafletMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 16, animate: false });
+      return;
+    }
+    const size = leafletMap.getSize();
+    const margin = 30;
+    leafletMap.fitBounds(bounds, {
+      paddingTopLeft: [w.left + margin, w.top + margin],
+      paddingBottomRight: [size.x - (w.left + w.width) + margin, size.y - (w.top + w.height) + margin],
+      maxZoom: 16,
+      animate: false
+    });
   }
 
   async function loadTileConfig() {
@@ -916,6 +936,10 @@
         if (withinHit(contact.lat, contact.lon)) sections.push({ html: trafficPopupHtml(contact), accent: '#38bdf8' });
       }
     }
+    for (const n of get(tfrOverlaysStore)) {
+      if (n.boundary && pointInPolygon(point, [n.boundary]))
+        sections.push({ html: tfrPopupHtml(n), accent: AIRSPACE_RESTRICTED_COLOR });
+    }
 
     const missionHits: string[] = [];
     if (mavMarker) {
@@ -1001,6 +1025,33 @@
       airspaceAttribution = m.map_airspace_credit({ sources: attributions.join(', ') });
       leafletMap.attributionControl?.addAttribution(airspaceAttribution);
     }
+  }
+
+  let tfrLayer: L.LayerGroup | null = null;
+
+  // Drawn whenever present, independent of the airspace toggle.
+  function renderTfrs() {
+    if (!L || !leafletMap) return;
+    tfrLayer?.remove();
+    if (hideOverlay) {
+      tfrLayer = null;
+      return;
+    }
+    const renderer = paneRenderer('tfr', '406');
+    const group = L.layerGroup();
+    for (const n of get(tfrOverlaysStore)) {
+      if (!n.boundary) continue;
+      const latlngs = n.boundary.map(([lon, lat]) => [lat, lon] as [number, number]);
+      L.polygon(latlngs, {
+        color: AIRSPACE_RESTRICTED_COLOR,
+        weight: 3,
+        dashArray: '6 4',
+        fillOpacity: 0.28,
+        ...(renderer ? { renderer } : {})
+      }).addTo(group);
+    }
+    group.addTo(leafletMap);
+    tfrLayer = group;
   }
 
   function toggleMap() {
@@ -1092,7 +1143,7 @@
 
   function trafficPopupHtml(c: TrafficContact): string {
     const esc = (v: string) => v.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
-    const alt = c.altM === null ? m.map_unknown() : `${Math.round(c.altM)} m (${Math.round(c.altM / M_PER_FT)} ft)`;
+    const alt = c.onGround ? m.map_tr_ground() : c.altM === null ? m.map_unknown() : `${Math.round(c.altM)} m (${Math.round(c.altM / M_PER_FT)} ft)`;
     const speed = c.speedMps === null ? m.map_unknown() : `${Math.round(c.speedMps)} m/s`;
     const heading = c.headingDeg === null ? m.map_unknown() : `${Math.round(c.headingDeg)}°`;
     const source = c.source === 'vehicle' ? m.map_source_onboard() : m.map_source_network();
@@ -1588,6 +1639,21 @@
     void $showAirspaceStore;
     void hideOverlay;
     untrack(() => renderAirspace());
+  });
+  $effect.pre(() => {
+    void $tfrOverlaysStore;
+    void hideOverlay;
+    untrack(() => renderTfrs());
+  });
+  $effect(() => {
+    const focus = $mapFocusStore;
+    if (!focus || !focus.length || !leafletMap) return;
+    untrack(() => {
+      lockViewStore.set(false);
+      const latlngs = focus.map(([lon, lat]) => [lat, lon] as [number, number]);
+      fitBoundsInWindow(L.latLngBounds(latlngs));
+      mapFocusStore.set(null);
+    });
   });
   $effect.pre(() => {
     void $ceilingCellsStore;

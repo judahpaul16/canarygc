@@ -48,6 +48,22 @@ describe('GET /api/traffic', () => {
 		});
 		expect(contacts[0].altM).toBeCloseTo(3048, 0);
 		expect(contacts[0].speedMps).toBeCloseTo(102.9, 1);
+		expect(contacts[0].onGround).toBe(false);
+	});
+
+	it('marks aircraft reporting alt_baro "ground" as on the ground', async () => {
+		fetchMock.mockResolvedValueOnce(
+			new Response(
+				JSON.stringify({
+					ac: [{ hex: 'grd1', flight: 'AAL3212 ', lat: 33.64, lon: -84.43, alt_baro: 'ground', gs: 0 }]
+				}),
+				{ status: 200 }
+			)
+		);
+		const { contacts } = await request('-84.6,33.6,-84.3,33.7');
+		expect(contacts).toHaveLength(1);
+		expect(contacts[0].onGround).toBe(true);
+		expect(contacts[0].altM).toBeNull();
 	});
 
 	it('falls back to the second feed when the first fails', async () => {

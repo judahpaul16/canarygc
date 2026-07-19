@@ -4,7 +4,13 @@ import { missionPlanTitleStore, missionPlanActionsStore } from '../stores/missio
 import { patternCaptureStore } from '../stores/patternStore';
 import { showModal, notify } from './overlays';
 import { optimizeMissionPath } from './path-planning';
-import { airspaceZonesStore, obstaclesStore, safetyLimitsStore } from '../stores/safetyStore';
+import {
+	airspaceZonesStore,
+	obstaclesStore,
+	safetyLimitsStore,
+	tfrOverlaysStore
+} from '../stores/safetyStore';
+import { tfrZones } from './airspace';
 import { refreshAirspace, refreshHazards, refreshBuildings } from './preflight';
 import { m } from '$lib/paraglide/messages';
 
@@ -22,7 +28,7 @@ export async function optimizePath(): Promise<void> {
 	const limits = get(safetyLimitsStore);
 	const result = optimizeMissionPath(
 		actions,
-		get(airspaceZonesStore),
+		[...get(airspaceZonesStore), ...tfrZones(get(tfrOverlaysStore))],
 		get(obstaclesStore),
 		buildings,
 		limits.maxAltitudeM

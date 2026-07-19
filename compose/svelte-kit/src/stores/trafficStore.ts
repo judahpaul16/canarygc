@@ -9,6 +9,7 @@ export interface TrafficContact {
   altM: number | null;
   headingDeg: number | null;
   speedMps: number | null;
+  onGround: boolean;
   source: 'vehicle' | 'network';
   seenAt: number;
 }
