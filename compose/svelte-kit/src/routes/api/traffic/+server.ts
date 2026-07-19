@@ -9,6 +9,7 @@ const MAX_RADIUS_NM = 250;
 const NM_PER_DEG_LAT = 60;
 const KT_TO_MPS = 0.514444;
 const FT_TO_M = 0.3048;
+const FPM_TO_MPS = FT_TO_M / 60;
 
 interface FeedAircraft {
   hex?: string;
@@ -18,6 +19,7 @@ interface FeedAircraft {
   alt_baro?: number | string;
   gs?: number;
   track?: number;
+  baro_rate?: number;
 }
 
 // Keyless community ADS-B feeds, queried by point and radius in nautical miles.
@@ -58,6 +60,7 @@ export const GET: RequestHandler = async ({ url }) => {
             altM: typeof a.alt_baro === 'number' ? a.alt_baro * FT_TO_M : null,
             headingDeg: typeof a.track === 'number' ? a.track : null,
             speedMps: typeof a.gs === 'number' ? a.gs * KT_TO_MPS : null,
+            verticalRateMps: typeof a.baro_rate === 'number' ? a.baro_rate * FPM_TO_MPS : null,
             onGround: a.alt_baro === 'ground'
           }));
       } catch {

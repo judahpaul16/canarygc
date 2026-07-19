@@ -57,12 +57,14 @@
     unseenNotams,
     type Notam
   } from '../lib/notams';
+  import { recordFlightLine, flushFlightLog } from '../lib/flight-log';
   import { decodeMode, isArmed, isPX4 } from '../lib/flight-modes';
   import { normalizeMission } from '../lib/mission-commands';
   import { decodeParameterValue, requestParameters, sendMavlinkCommand } from '../lib/mavlink-client';
   import { parseCalStatustext, parseMagCalProgress, parseMagCalReport } from '../lib/calibration';
   import { calibrationStore } from '../stores/calibrationStore';
-  import { upsertTraffic } from '../stores/trafficStore';
+  import { trafficStore, trafficThreatsStore, upsertTraffic } from '../stores/trafficStore';
+  import { detectThreats } from '../lib/collision';
   import { tfrOverlaysStore } from '../stores/safetyStore';
   import { mapFocusStore } from '../stores/mapStore';
 
@@ -691,6 +693,7 @@
             altM: typeof m.altitude === 'number' ? m.altitude / 1000 : null,
             headingDeg: typeof m.heading === 'number' ? m.heading / 100 : null,
             speedMps: typeof m.horVelocity === 'number' ? m.horVelocity / 100 : null,
+            verticalRateMps: typeof m.verVelocity === 'number' ? m.verVelocity / 100 : null,
             onGround: false,
             source: 'vehicle',
             seenAt: Date.now()
@@ -702,39 +705,7 @@
     }
   };
 
-  // The ground station keeps its own black box: the live log is batched to a
-  // per-flight session file on the server. The client records because it holds
-  // the unified view of both MAVLink and MSP events, and a gap in the stream
-  // rolls over to a fresh session so each flight lands in its own file.
   const FLIGHT_LOG_FLUSH_MS = 3000;
-  const FLIGHT_LOG_GAP_MS = 90000;
-  let flightLogId = '';
-  let flightLogAt = 0;
-  let flightLogBuffer: string[] = [];
-
-  function recordFlightLine(line: string) {
-    const now = Date.now();
-    if (!flightLogId || now - flightLogAt > FLIGHT_LOG_GAP_MS) {
-      flightLogId = `flight-${new Date(now).toISOString().replace(/[:.]/g, '-')}`;
-    }
-    flightLogAt = now;
-    flightLogBuffer.push(line.replace(/\n+$/, ''));
-  }
-
-  async function flushFlightLog() {
-    if (flightLogBuffer.length === 0 || !flightLogId) return;
-    const lines = flightLogBuffer;
-    flightLogBuffer = [];
-    try {
-      await fetch('/api/flight-log/append', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ id: flightLogId, lines })
-      });
-    } catch {
-      flightLogBuffer = lines.concat(flightLogBuffer);
-    }
-  }
 
   // Temporary flight restrictions over the operating area, shown as persistent
   // notices that stay until dismissed. A dismissed notice is remembered so it
@@ -753,6 +724,46 @@
   $effect(() => {
     const active = loggedIn && !isNavHidden;
     if (active) untrack(() => void checkNotams());
+  });
+
+  const TRAFFIC_ALERT_MS = 15_000;
+
+  // Advisory only. Network ADS-B arrives seconds late, so the station alerts
+  // and the operator maneuvers.
+  $effect(() => {
+    const contacts = Object.values($trafficStore);
+    untrack(() => {
+      if (!loggedIn || isNavHidden) return;
+      const loc = get(mavLocationStore);
+      const threats = detectThreats(
+        {
+          lat: loc.lat,
+          lon: loc.lng,
+          altM: get(mavAltitudeAmslStore),
+          headingDeg: get(mavHeadingStore),
+          speedMps: get(mavSpeedStore)
+        },
+        contacts
+      );
+      trafficThreatsStore.set(new Set(threats.map((t) => t.contact.id)));
+      for (const t of threats) {
+        const seconds = Math.round(t.tSec);
+        notify({
+          key: `traffic:${t.contact.id}`,
+          title: m.traffic_alert_title(),
+          content:
+            seconds < 1
+              ? m.traffic_alert_now({ callsign: t.contact.callsign, meters: Math.round(t.horizontalM) })
+              : m.traffic_alert_body({
+                  callsign: t.contact.callsign,
+                  meters: Math.round(t.horizontalM),
+                  seconds
+                }),
+          type: 'warning',
+          duration: TRAFFIC_ALERT_MS
+        });
+      }
+    });
   });
 
   async function checkNotams() {

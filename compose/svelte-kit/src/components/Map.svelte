@@ -61,7 +61,7 @@
   } from '../stores/customizationStore';
   import { mapWindowStore, mapShellStore, mapPanelStore, mapFullscreenStore, type MapRect } from '../stores/mapStore';
   import { loggedInStore } from '../stores/authStore';
-  import { trafficStore, showTrafficStore, upsertTraffic, type TrafficContact } from '../stores/trafficStore';
+  import { trafficStore, trafficThreatsStore, showTrafficStore, upsertTraffic, type TrafficContact } from '../stores/trafficStore';
   import { m } from '$lib/paraglide/messages';
   import 'leaflet/dist/leaflet.css';
 
@@ -1158,6 +1158,7 @@
     if (!L || !leafletMap) return;
     const contacts = Object.values(get(trafficStore));
     const visible = get(showTrafficStore) && !hideOverlay;
+    const threats = get(trafficThreatsStore);
     const live = new Set(contacts.map((c) => c.id));
     for (const [id, marker] of trafficMarkers2D) {
       if (!visible || !live.has(id)) {
@@ -1181,6 +1182,7 @@
         trafficMarkers2D.set(c.id, marker);
       }
       marker.setLatLng([c.lat, c.lon]);
+      marker.getElement()?.classList.toggle('traffic-threat', threats.has(c.id));
       const iconEl = marker.getElement()?.querySelector('i') as HTMLElement | null;
       if (iconEl) iconEl.style.transform = `rotate(${(c.headingDeg ?? 0) - 90}deg)`;
     }
@@ -1669,6 +1671,7 @@
   });
   $effect.pre(() => {
     void $trafficStore;
+    void $trafficThreatsStore;
     void $showTrafficStore;
     void hideOverlay;
     untrack(() => renderTraffic());
@@ -1862,6 +1865,10 @@
     font-size: 16px;
     text-shadow: 0 0 3px rgba(0, 0, 0, 0.9);
     display: inline-block;
+  }
+
+  .map-container :global(.traffic-icon.traffic-threat i) {
+    color: #f24e4e;
   }
 
   .map-container :global(.mav-marker) {

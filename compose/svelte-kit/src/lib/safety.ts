@@ -15,6 +15,9 @@ export interface SafetyViolation {
   severity: Severity;
   index: number | null;
   message: string;
+  // An airspace-restriction error the operator can clear by attesting
+  // authorization from the controlling agency.
+  overridable?: boolean;
   // When many waypoints trip the same predicate (all inside one airspace, all
   // in a 0 ft grid), they share a group so the summary collapses them into a
   // single line with the waypoint range instead of one line each.
@@ -125,6 +128,7 @@ export function validateMission(
         message: zone.restricted
           ? m.sv_inside_restricted({ index: i, zone: zone.name })
           : m.sv_inside_controlled({ index: i, zone: zone.name }),
+        ...(zone.restricted ? { overridable: true } : {}),
         group: {
           key: `airspace:${zone.restricted ? 'restricted' : 'controlled'}:${zone.name}`,
           noun: zone.restricted ? m.sv_noun_restricted({ zone: zone.name }) : m.sv_noun_controlled({ zone: zone.name })
@@ -172,7 +176,8 @@ export function validateMission(
           index: to.i,
           message: zone.restricted
             ? m.sv_leg_restricted({ from: from.i, to: to.i, zone: zone.name })
-            : m.sv_leg_controlled({ from: from.i, to: to.i, zone: zone.name })
+            : m.sv_leg_controlled({ from: from.i, to: to.i, zone: zone.name }),
+          ...(zone.restricted ? { overridable: true } : {})
         });
       }
     }
@@ -265,7 +270,8 @@ export function validateTakeoff(
       index: null,
       message: zone.restricted
         ? m.sv_takeoff_in_restricted({ zone: zone.name })
-        : m.sv_takeoff_in_controlled({ zone: zone.name })
+        : m.sv_takeoff_in_controlled({ zone: zone.name }),
+      ...(zone.restricted ? { overridable: true } : {})
     });
   }
 
@@ -295,10 +301,6 @@ export function validateTakeoff(
   }
 
   return violations;
-}
-
-export function hasBlockingViolation(violations: SafetyViolation[]): boolean {
-  return violations.some((v) => v.severity === 'error');
 }
 
 // Collapses a sorted index list into compact ranges: [7,8,9,12] => "7-9, 12".

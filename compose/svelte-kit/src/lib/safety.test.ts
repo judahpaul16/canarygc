@@ -109,3 +109,25 @@ describe('validateTakeoff', () => {
 		expect(validateTakeoff(away, 50, DEFAULT_SAFETY_LIMITS, [zone])).toEqual([]);
 	});
 });
+
+describe('overridable marking', () => {
+	const point = { lat: 33.75, lon: -84.39 };
+	const restricted: AirspaceZone = { ...zone, name: 'TFR 6/1', restricted: true, type: 'TFR' };
+
+	it('marks a restricted-airspace takeoff error as overridable', () => {
+		const violations = validateTakeoff(point, 50, DEFAULT_SAFETY_LIMITS, [restricted]);
+		expect(violations[0].overridable).toBe(true);
+	});
+
+	it('marks a restricted-airspace waypoint error as overridable', () => {
+		const actions: MissionPlanActions = { 1: waypoint() };
+		const violations = validateMission(actions, DEFAULT_SAFETY_LIMITS, [restricted]);
+		const inside = violations.find((v) => v.message.includes('TFR 6/1'));
+		expect(inside?.overridable).toBe(true);
+	});
+
+	it('leaves an altitude error without the override', () => {
+		const violations = validateTakeoff(point, 200, DEFAULT_SAFETY_LIMITS, []);
+		expect(violations[0].overridable).toBeUndefined();
+	});
+});

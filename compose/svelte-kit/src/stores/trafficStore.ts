@@ -9,6 +9,7 @@ export interface TrafficContact {
   altM: number | null;
   headingDeg: number | null;
   speedMps: number | null;
+  verticalRateMps?: number | null;
   onGround: boolean;
   source: 'vehicle' | 'network';
   seenAt: number;
@@ -18,6 +19,8 @@ const CONTACT_STALE_MS = 15_000;
 
 export const showTrafficStore = sessionBool('map.showTraffic', false);
 export const trafficStore = writable<Record<string, TrafficContact>>({});
+// Contacts projected to lose well clear with the vehicle inside the horizon.
+export const trafficThreatsStore = writable<ReadonlySet<string>>(new Set());
 
 export function upsertTraffic(contacts: TrafficContact[]) {
   trafficStore.update((current) => {

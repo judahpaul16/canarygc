@@ -12,12 +12,12 @@ import { mavLocationStore } from '../stores/mavlinkStore';
 import {
   validateMission,
   validateTakeoff,
-  hasBlockingViolation,
   formatViolations,
   type AirspaceZone,
   type Hazards,
   type SafetyViolation
 } from './safety';
+import { recordFlightLine } from './flight-log';
 import { showModal } from './overlays';
 import { m } from '$lib/paraglide/messages';
 import type { Building } from './hazards';
@@ -96,7 +96,10 @@ export async function refreshBuildings(actions: MissionPlanActions): Promise<Bui
 }
 
 // Shows blocking violations as a notice that resolves false, and warnings as a
-// confirmation the operator can accept.
+// confirmation the operator can accept. A block whose errors are all airspace
+// restrictions offers an authorization attestation instead of a dead end,
+// because operators with an SGI waiver or COA are cleared to fly in them; the
+// attestation is written to the flight log.
 function confirmViolations(
   violations: SafetyViolation[],
   blocked: string,
@@ -105,7 +108,28 @@ function confirmViolations(
   if (violations.length === 0) return Promise.resolve(true);
 
   return new Promise<boolean>((resolve) => {
-    if (hasBlockingViolation(violations)) {
+    const errors = violations.filter((v) => v.severity === 'error');
+    if (errors.length > 0 && errors.every((v) => v.overridable)) {
+      showModal({
+        title: m.pf_auth_required_title(),
+        content: `${blocked}\n\n${formatViolations(violations)}\n\n${m.pf_auth_note()}`,
+        confirmation: true,
+        confirmLabel: m.pf_auth_proceed_btn(),
+        inputs: [{ type: 'checkbox', placeholder: m.pf_auth_attest_check(), required: true }],
+        onConfirm: (values) => {
+          if (values[0] !== 'true') {
+            resolve(false);
+            return;
+          }
+          recordFlightLine(
+            `Operator attested authorization to proceed: ${formatViolations(errors).replace(/\n/g, ' | ')}`
+          );
+          resolve(true);
+        },
+        onCancel: () => resolve(false),
+        onClose: () => resolve(false)
+      });
+    } else if (errors.length > 0) {
       showModal({
         title: m.pf_check_failed_title(),
         content: `${blocked}\n\n${formatViolations(violations)}`,
