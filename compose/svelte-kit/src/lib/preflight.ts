@@ -96,10 +96,11 @@ export async function refreshBuildings(actions: MissionPlanActions): Promise<Bui
 }
 
 // Shows blocking violations as a notice that resolves false, and warnings as a
-// confirmation the operator can accept. A block whose errors are all airspace
-// restrictions offers an authorization attestation instead of a dead end,
-// because operators with an SGI waiver or COA are cleared to fly in them; the
-// attestation is written to the flight log.
+// confirmation the operator can accept. Lines that assert an airspace
+// authorization carry a required attestation checkbox, and confirming writes
+// the attested lines to the flight log, so a block whose errors are all
+// airspace restrictions offers the attestation instead of a dead end and an
+// airspace-entry warning records the LAANC assertion it implies.
 function confirmViolations(
   violations: SafetyViolation[],
   blocked: string,
@@ -109,7 +110,12 @@ function confirmViolations(
 
   return new Promise<boolean>((resolve) => {
     const errors = violations.filter((v) => v.severity === 'error');
-    if (errors.length > 0 && errors.every((v) => v.overridable)) {
+    const attested = violations.filter((v) => v.authRequired);
+    const recordAttestation = () =>
+      recordFlightLine(
+        `Operator attested authorization to proceed: ${formatViolations(attested).replace(/\n/g, ' | ')}`
+      );
+    if (errors.length > 0 && errors.every((v) => v.authRequired)) {
       showModal({
         title: m.pf_auth_required_title(),
         content: `${blocked}\n\n${formatViolations(violations)}\n\n${m.pf_auth_note()}`,
@@ -121,9 +127,7 @@ function confirmViolations(
             resolve(false);
             return;
           }
-          recordFlightLine(
-            `Operator attested authorization to proceed: ${formatViolations(errors).replace(/\n/g, ' | ')}`
-          );
+          recordAttestation();
           resolve(true);
         },
         onCancel: () => resolve(false),
@@ -134,6 +138,23 @@ function confirmViolations(
         title: m.pf_check_failed_title(),
         content: `${blocked}\n\n${formatViolations(violations)}`,
         notification: true,
+        onClose: () => resolve(false)
+      });
+    } else if (attested.length > 0) {
+      showModal({
+        title: m.pf_warnings_title(),
+        content: `${formatViolations(violations)}\n\n${m.pf_auth_note()}\n\n${proceed}`,
+        confirmation: true,
+        inputs: [{ type: 'checkbox', placeholder: m.pf_auth_attest_check(), required: true }],
+        onConfirm: (values) => {
+          if (values[0] !== 'true') {
+            resolve(false);
+            return;
+          }
+          recordAttestation();
+          resolve(true);
+        },
+        onCancel: () => resolve(false),
         onClose: () => resolve(false)
       });
     } else {
