@@ -70,13 +70,19 @@ services:
       MAVLINK_TCP_HOST: ""
 
   # Production: the published app image, talking to the autopilot over the
-  # configured serial link.
+  # configured or autodetected serial link.
   app:
     profiles: ["production"]
     image: ghcr.io/judahpaul16/canarygc:latest
-    devices:
-      - "${MAVLINK_SERIAL_PATH:-/dev/ttyACM0}:${MAVLINK_SERIAL_PATH:-/dev/ttyACM0}"
-      - "${FC_BOOTLOADER_PATH:-/dev/ttyACM0}:${FC_BOOTLOADER_PATH:-/dev/ttyACM0}"
+    # The station scans the host's serial ports when no path is pinned, so the
+    # serial and USB device classes map in as a whole.
+    device_cgroup_rules:
+      - "c 166:* rmw"
+      - "c 188:* rmw"
+      - "c 204:* rmw"
+      - "c 4:64 rmw"
+      - "c 4:65 rmw"
+      - "c 189:* rmw"
     ports:
       - "${APP_PORT:-3000}:3000"
     container_name: canarygc_app
@@ -84,6 +90,7 @@ services:
     # logs) across image rebuilds and container recreates.
     volumes:
       - canarygc_data:/app/src
+      - /dev:/dev
     environment:
       <<: *app-env
       DATABASE_PATH: ${DATABASE_PATH:-/app/src/data.db}

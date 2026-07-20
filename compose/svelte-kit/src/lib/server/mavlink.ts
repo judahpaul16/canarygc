@@ -1,5 +1,6 @@
 import { SerialPort } from 'serialport';
 import { connect, type Socket } from 'net';
+import { existsSync, readdirSync, realpathSync } from 'node:fs';
 import {
     MavLinkPacketSplitter,
     MavLinkPacketParser,
@@ -132,7 +133,12 @@ function superviseLink(): void {
     const now = Date.now();
     const streamedThenStalled = state.lastPacketAt > 0 && now - state.lastPacketAt > STALE_LINK_MS;
     const neverStreamed = state.lastPacketAt === 0 && now - state.connectedAt > FIRST_PACKET_RECYCLE_MS;
-    if (streamedThenStalled || neverStreamed) teardownConnection();
+    if (streamedThenStalled || neverStreamed) {
+        // A detected port that went silent may have re-enumerated elsewhere,
+        // so the next dial re-scans.
+        if (neverStreamed && !process.env.MAVLINK_SERIAL_PATH) detected = null;
+        teardownConnection();
+    }
 }
 
 // The server owns the autopilot link and keeps it alive on its own; browser
@@ -297,11 +303,15 @@ function initializePort(): void {
         // the current key, self-healing a startup that raced the DB.
         refreshSigningConfig().catch(() => {});
         openConnection();
+        // Serial detection may still be scanning; the supervisor redials once
+        // it locks a port.
+        if (!state.port) return;
         setupPacketReader();
         setupPortListeners();
         state.connectedAt = Date.now();
     } catch (error) {
         teardownConnection();
+        if (!process.env.MAVLINK_SERIAL_PATH) detected = null;
         const message = (error as Error).message;
         if (message !== state.lastErrorMessage) {
             state.lastErrorMessage = message;
@@ -334,10 +344,116 @@ export function mavlinkConfigured(): boolean {
     return process.env.NODE_ENV === 'production' || mavlinkTcpHost() !== '';
 }
 
+// Serial autodetection: with no MAVLINK_SERIAL_PATH pinned, the link scans the
+// host's serial devices and locks onto the first port carrying CRC-valid
+// MAVLink frames. The probe only listens, so a modem or GPS on a sibling port
+// never receives a byte, and the autopilot's 1 Hz heartbeat puts frames well
+// inside the window.
+const DETECT_WINDOW_MS = 3000;
+const DETECT_MIN_FRAMES = 2;
+const DETECT_UART_BAUDS = [115200, 921600, 57600];
+
+let detected: { path: string; baud: number } | null = null;
+let detecting = false;
+
+function configuredBaud(): number {
+    return Number(process.env.MAVLINK_BAUD ?? 115200);
+}
+
+function serialCandidates(): string[] {
+    const paths: string[] = [];
+    const add = (candidate: string) => {
+        try {
+            const real = realpathSync(candidate);
+            if (!paths.includes(real)) paths.push(real);
+        } catch {
+            // Absent device.
+        }
+    };
+    try {
+        for (const name of readdirSync('/dev/serial/by-id')) add(`/dev/serial/by-id/${name}`);
+    } catch {
+        // No by-id directory on this host.
+    }
+    for (const p of ['/dev/ttyACM0', '/dev/ttyACM1', '/dev/ttyACM2', '/dev/ttyAMA0', '/dev/serial0', '/dev/ttyUSB0', '/dev/ttyUSB1']) {
+        if (existsSync(p)) add(p);
+    }
+    const msp = process.env.MSP_SERIAL_PATH;
+    if (!msp) return paths;
+    let mspReal = msp;
+    try {
+        mspReal = realpathSync(msp);
+    } catch {
+        // Keep the configured spelling.
+    }
+    return paths.filter((p) => p !== mspReal);
+}
+
+function probePort(path: string, baudRate: number): Promise<boolean> {
+    return new Promise((resolve) => {
+        let port: SerialPort;
+        try {
+            port = new SerialPort({ path, baudRate, lock: false, autoOpen: false });
+        } catch {
+            resolve(false);
+            return;
+        }
+        let settled = false;
+        let frames = 0;
+        const parser = port.pipe(new MavLinkPacketSplitter()).pipe(new MavLinkPacketParser());
+        const finish = (ok: boolean) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            parser.removeAllListeners();
+            port.removeAllListeners();
+            if (port.isOpen) port.close(() => resolve(ok));
+            else resolve(ok);
+        };
+        const timer = setTimeout(() => finish(false), DETECT_WINDOW_MS);
+        parser.on('data', () => {
+            frames += 1;
+            if (frames >= DETECT_MIN_FRAMES) finish(true);
+        });
+        port.on('error', () => finish(false));
+        port.open((error) => {
+            if (error) finish(false);
+        });
+    });
+}
+
+async function detectSerial(): Promise<void> {
+    if (detecting) return;
+    detecting = true;
+    try {
+        for (const path of serialCandidates()) {
+            // USB CDC ports ignore the baud, so one probe covers them; a UART
+            // tries the configured rate first, then the common MAVLink rates.
+            const bauds = /ttyACM/.test(path)
+                ? [configuredBaud()]
+                : [configuredBaud(), ...DETECT_UART_BAUDS.filter((b) => b !== configuredBaud())];
+            for (const baud of bauds) {
+                if (await probePort(path, baud)) {
+                    detected = { path, baud };
+                    pushLog(`MAVLink autodetected ${path} at ${baud} baud`);
+                    return;
+                }
+            }
+        }
+    } finally {
+        detecting = false;
+    }
+}
+
 function openConnection(): void {
     if (process.env.NODE_ENV === 'production') {
-        const path = process.env.MAVLINK_SERIAL_PATH ?? '/dev/ttyACM0';
-        const baudRate = Number(process.env.MAVLINK_BAUD ?? 115200);
+        const configured = process.env.MAVLINK_SERIAL_PATH;
+        if (!configured && !detected) {
+            void detectSerial();
+            return;
+        }
+        const path = configured || detected!.path;
+        const baudRate = configured ? configuredBaud() : detected!.baud;
         state.port = new SerialPort({ path, baudRate, lock: false });
     } else {
         const port = Number(process.env.MAVLINK_TCP_PORT ?? 5760);
