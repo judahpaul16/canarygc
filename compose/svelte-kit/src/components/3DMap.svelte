@@ -29,7 +29,7 @@
     AIRSPACE_RESTRICTED_COLOR,
     tfrZones
   } from '../lib/airspace';
-  import { ceilingColor, obstacleColor } from '../lib/hazards';
+  import { ceilingColor, feetToMeters, obstacleColor } from '../lib/hazards';
   import { fetchAirspaceForBbox, fetchHazardsForBbox } from '../lib/preflight';
   import { get } from 'svelte/store';
   import pkg, { type GeoJSONSource, type ExpressionSpecification } from 'maplibre-gl';
@@ -72,7 +72,7 @@
       type: 'FeatureCollection',
       features: tfrZones(get(tfrOverlaysStore)).map((zone) => ({
         type: 'Feature',
-        properties: {},
+        properties: { ceilingM: zone.upperM ?? 0 },
         geometry: { type: 'Polygon', coordinates: zone.polygon }
       }))
     };
@@ -83,7 +83,7 @@
       type: 'FeatureCollection',
       features: get(ceilingCellsStore).map((cell) => ({
         type: 'Feature',
-        properties: { color: ceilingColor(cell.ceilingFt) },
+        properties: { color: ceilingColor(cell.ceilingFt), ceilingM: feetToMeters(cell.ceilingFt) },
         geometry: { type: 'Polygon', coordinates: cell.polygon }
       }))
     };
@@ -191,7 +191,7 @@
     const source = m.getSource('tfr') as GeoJSONSource | undefined;
     if (!source) return;
     source.setData(tfrFeatureCollection());
-    setLayerVisibility(m, ['tfr-fill', 'tfr-outline'], !hideOverlay);
+    setLayerVisibility(m, ['tfr-fill', 'tfr-outline', 'tfr-volume'], !hideOverlay);
   }
 
   function renderCeilings3D() {
@@ -200,7 +200,11 @@
     const source = m.getSource('ceilings') as GeoJSONSource | undefined;
     if (!source) return;
     source.setData(ceilingFeatureCollection());
-    setLayerVisibility(m, ['ceilings-fill', 'ceilings-outline'], get(showCeilingsStore) && !hideOverlay);
+    setLayerVisibility(
+      m,
+      ['ceilings-fill', 'ceilings-outline', 'ceilings-volume'],
+      get(showCeilingsStore) && !hideOverlay
+    );
   }
 
   function renderObstacles3D() {
@@ -484,6 +488,20 @@
             'layout': { 'visibility': 'none' },
             'paint': { 'line-color': featureColorExpr, 'line-width': 0.5 }
         });
+        // Each grid cell rises to its authorized ceiling; zero-ceiling cells
+        // stay in the flat fill.
+        m.addLayer({
+            'id': 'ceilings-volume',
+            'type': 'fill-extrusion',
+            'source': 'ceilings',
+            'layout': { 'visibility': 'none' },
+            'filter': ['>', ['get', 'ceilingM'], 0],
+            'paint': {
+                'fill-extrusion-color': featureColorExpr,
+                'fill-extrusion-height': ['get', 'ceilingM'],
+                'fill-extrusion-opacity': 0.22
+            }
+        });
 
         m.addSource('airspace', { type: 'geojson', data: airspaceFeatureCollection() });
         m.addLayer({
@@ -515,6 +533,19 @@
             'source': 'tfr',
             'layout': { 'visibility': 'none' },
             'paint': { 'line-color': AIRSPACE_RESTRICTED_COLOR, 'line-width': 2, 'line-dasharray': [3, 2] }
+        });
+        // The restriction as a volume from the surface to its ceiling.
+        m.addLayer({
+            'id': 'tfr-volume',
+            'type': 'fill-extrusion',
+            'source': 'tfr',
+            'layout': { 'visibility': 'none' },
+            'filter': ['>', ['get', 'ceilingM'], 0],
+            'paint': {
+                'fill-extrusion-color': AIRSPACE_RESTRICTED_COLOR,
+                'fill-extrusion-height': ['get', 'ceilingM'],
+                'fill-extrusion-opacity': 0.18
+            }
         });
 
         m.addSource('obstacles', { type: 'geojson', data: obstacleFeatureCollection() });

@@ -11,6 +11,7 @@ export interface Notam {
   link: string;
   // Filled from the per-TFR detail record when available.
   ceiling?: string;
+  ceilingM?: number;
   floor?: string;
   effective?: string;
   facility?: string;
@@ -19,6 +20,7 @@ export interface Notam {
 
 export interface TfrDetail {
   ceiling?: string;
+  ceilingM?: number;
   floor?: string;
   effective?: string;
   facility?: string;
@@ -87,6 +89,17 @@ function formatAltitude(val?: string, uom?: string, code?: string): string | und
   return `${val} ${unit}${ref}`;
 }
 
+const FT_TO_M = 0.3048;
+
+function altitudeMeters(val?: string, uom?: string, code?: string): number | undefined {
+  if (!val) return undefined;
+  const n = parseFloat(val);
+  if (!Number.isFinite(n)) return undefined;
+  if (code === 'STD' || uom === 'FL') return n * 100 * FT_TO_M;
+  if (uom === 'M') return n;
+  return n * FT_TO_M;
+}
+
 // The FAA times are local to the TFR's own zone, so the parts render verbatim
 // rather than through a Date that would shift them to the browser zone.
 function shortTime(iso?: string): string | undefined {
@@ -103,6 +116,11 @@ export function parseTfrDetail(xml: string): TfrDetail {
     tag(xml, 'uomDistVerUpper'),
     tag(xml, 'codeDistVerUpper')
   );
+  const ceilingM = altitudeMeters(
+    tag(xml, 'valDistVerUpper'),
+    tag(xml, 'uomDistVerUpper'),
+    tag(xml, 'codeDistVerUpper')
+  );
   const lowerVal = tag(xml, 'valDistVerLower');
   const floor =
     lowerVal && lowerVal !== '0'
@@ -115,6 +133,7 @@ export function parseTfrDetail(xml: string): TfrDetail {
   const boundary = parseTfrBoundary(xml);
   return {
     ceiling,
+    ceilingM,
     floor,
     effective,
     facility: tag(xml, 'codeFacility'),

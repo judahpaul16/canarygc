@@ -58,10 +58,17 @@ describe('parseTfrDetail', () => {
   it('reads the ceiling, active window, and controlling center', () => {
     expect(parseTfrDetail(DETAIL_XML)).toEqual({
       ceiling: '400 ft AGL',
+      ceilingM: 121.92,
       effective: 'Jun 17 04:01 to Jul 17 03:59 EDT',
       facility: 'ZTL',
       boundary: undefined
     });
+  });
+
+  it('reads the ceiling in meters for a flight level', () => {
+    expect(
+      parseTfrDetail('<codeDistVerUpper>STD</codeDistVerUpper><valDistVerUpper>180</valDistVerUpper>').ceilingM
+    ).toBeCloseTo(5486.4, 3);
   });
 
   it('reads the restriction boundary as [lon, lat] vertices', () => {

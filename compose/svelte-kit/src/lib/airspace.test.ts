@@ -28,9 +28,25 @@ describe('tfrZones', () => {
             [-85, 34]
           ]
         ],
-        type: 'TFR'
+        type: 'TFR',
+        lowerM: 0
       }
     ]);
+  });
+
+  it('carries the notice ceiling as the zone upper limit', () => {
+    const zones = tfrZones([
+      notam('6/4', {
+        ceilingM: 121.92,
+        boundary: [
+          [-84, 33],
+          [-86, 35],
+          [-85, 34]
+        ]
+      })
+    ]);
+    expect(zones[0].upperM).toBe(121.92);
+    expect(zones[0].lowerM).toBe(0);
   });
 
   it('skips notices without a usable boundary', () => {
