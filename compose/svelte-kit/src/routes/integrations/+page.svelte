@@ -4,6 +4,7 @@
   import { resolveTiles, TILE_PRESETS, MAPTILER_PRESETS, maptilerTileUrl } from '../../lib/tiles';
   import Select from '../../components/Select.svelte';
   import { mavVideoStreamStore } from '../../stores/mavlinkStore';
+  import { safetyLimitsStore } from '../../stores/safetyStore';
   import { m } from '$lib/paraglide/messages';
   let loading = $state(true);
   let saving = $state(false);
@@ -29,6 +30,11 @@
   let aiKeySet = $state(false);
   let mavlink = $state<{ signingKey: string; signingLinkId: string; signingStrict: boolean }>({ signingKey: '', signingLinkId: '1', signingStrict: false });
   let failsafe = $state<{ lostOperatorMinutes: string }>({ lostOperatorMinutes: '0' });
+  let safety = $state<{ maxAltitudeM: string; minAltitudeM: string; geofenceRadiusM: string }>({
+    maxAltitudeM: '120',
+    minAltitudeM: '0',
+    geofenceRadiusM: '1000'
+  });
   let mavKeyVisible = $state(false);
   // Fills a strong random passphrase and reveals it so the operator can copy the
   // same value onto the autopilot; both ends must share it for signing to secure
@@ -71,7 +77,8 @@
     camera: 'camera video feed source stream live rtsp rtmp srt usb v4l2 capture fpv betaflight mediamtx pi',
     ai: 'ai assistant pid tuning llm openai litellm ollama api key model base url gpt tune',
     mavlink: 'mavlink signing security authentication key passphrase sign verify replay tamper link id strict command injection',
-    failsafe: 'failsafe lost operator link loss rtl return autoland recovery timeout minutes unattended'
+    failsafe: 'failsafe lost operator link loss rtl return autoland recovery timeout minutes unattended',
+    safety: 'safety limits maximum altitude ceiling floor geofence radius preflight takeoff meters 400 ft'
   };
 
   function panelVisible(panel: keyof typeof PANEL_KEYWORDS): boolean {
@@ -133,6 +140,12 @@
       if (data.ai) { ai = { baseUrl: data.ai.baseUrl ?? '', model: data.ai.model ?? '', apiKey: '' }; aiKeySet = data.ai.keySet ?? false; }
       if (data.mavlink) { mavlink = { signingKey: '', signingLinkId: String(data.mavlink.signingLinkId ?? '1'), signingStrict: Boolean(data.mavlink.signingStrict) }; mavlinkKeySet = data.mavlink.signingKeySet ?? false; }
       if (data.failsafe) failsafe = { lostOperatorMinutes: String(data.failsafe.lostOperatorMinutes ?? 0) };
+      if (data.safety)
+        safety = {
+          maxAltitudeM: String(data.safety.maxAltitudeM ?? 120),
+          minAltitudeM: String(data.safety.minAltitudeM ?? 0),
+          geofenceRadiusM: String(data.safety.geofenceRadiusM ?? 1000)
+        };
     } catch {
       notify({ title: m.int_load_failed_title(), content: m.int_load_failed_body(), type: 'warning' });
     } finally {
@@ -146,7 +159,23 @@
       const res = await fetch('/api/integrations', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email, smtp, openaip, altitudeAngel, maptiler, tiles: tileOverrides(), camera, ai, mavlink, failsafe: { lostOperatorMinutes: Number(failsafe.lostOperatorMinutes) || 0 } })
+        body: JSON.stringify({
+          email,
+          smtp,
+          openaip,
+          altitudeAngel,
+          maptiler,
+          tiles: tileOverrides(),
+          camera,
+          ai,
+          mavlink,
+          failsafe: { lostOperatorMinutes: Number(failsafe.lostOperatorMinutes) || 0 },
+          safety: {
+            maxAltitudeM: Number(safety.maxAltitudeM) || 120,
+            minAltitudeM: Number(safety.minAltitudeM) || 0,
+            geofenceRadiusM: Number(safety.geofenceRadiusM) || 1000
+          }
+        })
       });
       if (res.ok) {
         const data = await res.json();
@@ -162,6 +191,12 @@
         openaip = '';
         altitudeAngel = '';
         cameraApplied = data.cameraApplied ?? null;
+        safetyLimitsStore.update((cur) => ({
+          ...cur,
+          maxAltitudeM: Number(safety.maxAltitudeM) || 120,
+          minAltitudeM: Number(safety.minAltitudeM) || 0,
+          geofenceRadiusM: Number(safety.geofenceRadiusM) || 1000
+        }));
         notify({ title: m.int_saved_title(), content: m.int_saved_body(), duration: 3000 });
         if (data.signingPushed && !data.signingPushed.ok) {
           notify({ title: m.int_not_keyed_title(), content: data.signingPushed.message, type: 'warning', duration: 5000 });
@@ -227,7 +262,7 @@
     <div class="panel"><p class="muted">{m.common_loading()}</p></div>
   {:else}
     <form onsubmit={(e) => { e.preventDefault(); save(); }}>
-      {#if filter.trim() && !panelVisible('operator') && !panelVisible('smtp') && !panelVisible('airspace') && !panelVisible('tiles') && !panelVisible('camera') && !panelVisible('ai') && !panelVisible('mavlink') && !panelVisible('failsafe')}
+      {#if filter.trim() && !panelVisible('operator') && !panelVisible('smtp') && !panelVisible('airspace') && !panelVisible('tiles') && !panelVisible('camera') && !panelVisible('ai') && !panelVisible('mavlink') && !panelVisible('failsafe') && !panelVisible('safety')}
         <div class="panel"><p class="muted">{m.int_no_match({ filter })}</p></div>
       {/if}
       <div class="settings-grid">
@@ -430,6 +465,31 @@
           <label for="fs-minutes">{m.int_failsafe_minutes()}</label>
           <input id="fs-minutes" type="number" min="0" max="720" step="1" bind:value={failsafe.lostOperatorMinutes} autocomplete="off" placeholder="0" />
           <p class="hint">{m.int_failsafe_hint()}</p>
+        </div>
+      </section>
+      {/if}
+
+      {#if panelVisible('safety')}
+      <section class="panel">
+        <div class="panel-head">
+          <span class="icon-chip"><i class="fas fa-shield-halved"></i></span>
+          <div>
+            <h2>{m.int_safety_title()}</h2>
+            <p class="muted">{m.int_safety_desc()}</p>
+          </div>
+        </div>
+        <div class="field">
+          <label for="safety-max-alt">{m.int_safety_max_alt()}</label>
+          <input id="safety-max-alt" type="number" min="1" step="1" bind:value={safety.maxAltitudeM} autocomplete="off" placeholder="120" />
+          <p class="hint">{m.int_safety_max_alt_hint()}</p>
+        </div>
+        <div class="field">
+          <label for="safety-min-alt">{m.int_safety_min_alt()}</label>
+          <input id="safety-min-alt" type="number" min="0" step="1" bind:value={safety.minAltitudeM} autocomplete="off" placeholder="0" />
+        </div>
+        <div class="field">
+          <label for="safety-geofence">{m.int_safety_geofence()}</label>
+          <input id="safety-geofence" type="number" min="1" step="1" bind:value={safety.geofenceRadiusM} autocomplete="off" placeholder="1000" />
         </div>
       </section>
       {/if}

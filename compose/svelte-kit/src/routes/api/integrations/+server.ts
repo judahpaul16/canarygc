@@ -63,6 +63,11 @@ export const GET: RequestHandler = async (event) => {
         },
         failsafe: {
             lostOperatorMinutes: Number((await getSetting('failsafe.lostOperatorMinutes')) ?? 0)
+        },
+        safety: {
+            maxAltitudeM: Number((await getSetting('safety.maxAltitudeM')) ?? 120),
+            minAltitudeM: Number((await getSetting('safety.minAltitudeM')) ?? 0),
+            geofenceRadiusM: Number((await getSetting('safety.geofenceRadiusM')) ?? 1000)
         }
     });
 };
@@ -147,6 +152,20 @@ export const POST: RequestHandler = async (event) => {
     if (failsafe.lostOperatorMinutes !== undefined) {
         const minutes = Math.max(0, Math.round(Number(failsafe.lostOperatorMinutes) || 0));
         await setSetting('failsafe.lostOperatorMinutes', String(minutes));
+    }
+
+    const safety = body.safety ?? {};
+    if (safety.maxAltitudeM !== undefined) {
+        const meters = Math.max(1, Math.round(Number(safety.maxAltitudeM) || 120));
+        await setSetting('safety.maxAltitudeM', String(meters));
+    }
+    if (safety.minAltitudeM !== undefined) {
+        const meters = Math.max(0, Math.round(Number(safety.minAltitudeM) || 0));
+        await setSetting('safety.minAltitudeM', String(meters));
+    }
+    if (safety.geofenceRadiusM !== undefined) {
+        const meters = Math.max(1, Math.round(Number(safety.geofenceRadiusM) || 1000));
+        await setSetting('safety.geofenceRadiusM', String(meters));
     }
 
     return json({ message: m.api_saved(), cameraApplied, signingPushed });

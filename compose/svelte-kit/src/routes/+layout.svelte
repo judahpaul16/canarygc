@@ -65,7 +65,7 @@
   import { calibrationStore } from '../stores/calibrationStore';
   import { trafficStore, trafficThreatsStore, upsertTraffic } from '../stores/trafficStore';
   import { detectThreats } from '../lib/collision';
-  import { tfrOverlaysStore } from '../stores/safetyStore';
+  import { safetyLimitsStore, tfrOverlaysStore } from '../stores/safetyStore';
   import { mapFocusStore } from '../stores/mapStore';
 
   let { children } = $props();
@@ -723,8 +723,30 @@
   // Auth resolves after mount, so the first check fires once the session is active.
   $effect(() => {
     const active = loggedIn && !isNavHidden;
-    if (active) untrack(() => void checkNotams());
+    if (active)
+      untrack(() => {
+        void checkNotams();
+        void hydrateSafetyLimits();
+      });
   });
+
+  // The saved limits from Integrations back every pre-flight and takeoff check.
+  async function hydrateSafetyLimits() {
+    let saved: { maxAltitudeM?: number; minAltitudeM?: number; geofenceRadiusM?: number };
+    try {
+      const res = await fetch('/api/integrations');
+      if (!res.ok) return;
+      saved = (await res.json()).safety ?? {};
+    } catch {
+      return;
+    }
+    safetyLimitsStore.update((cur) => ({
+      ...cur,
+      maxAltitudeM: Number(saved.maxAltitudeM) || cur.maxAltitudeM,
+      minAltitudeM: Number.isFinite(Number(saved.minAltitudeM)) ? Number(saved.minAltitudeM) : cur.minAltitudeM,
+      geofenceRadiusM: Number(saved.geofenceRadiusM) || cur.geofenceRadiusM
+    }));
+  }
 
   const TRAFFIC_ALERT_MS = 15_000;
 
