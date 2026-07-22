@@ -248,23 +248,124 @@
     setOnline(true);
   }
 
+  // The unreliable DataChannel carries telemetry when it establishes: a lost
+  // frame drops instead of stalling the stream behind TCP retransmits. It falls
+  // back to the HTTP binary stream when the peer connection cannot form, so a
+  // network that blocks WebRTC still gets telemetry.
+  let telemetryPc: RTCPeerConnection | null = null;
+
+  // ICE only needs one working candidate pair, so the offer goes out on the
+  // first candidate rather than waiting for the full gather, which otherwise
+  // stalls on a slow or blocked STUN server. A short ceiling covers the case
+  // where the first candidate is late.
+  function iceGathered(pc: RTCPeerConnection): Promise<void> {
+    if (pc.iceGatheringState === 'complete') return Promise.resolve();
+    return new Promise((resolve) => {
+      const done = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+      const timer = setTimeout(resolve, 2000);
+      pc.addEventListener('icecandidate', (ev) => {
+        if (ev.candidate) done();
+      });
+      pc.addEventListener('icegatheringstatechange', () => {
+        if (pc.iceGatheringState === 'complete') done();
+      });
+    });
+  }
+
+  // Resolves true once the channel has opened and later closed, false if it
+  // never opened, so the supervisor retries the channel after a clean drop and
+  // falls back to HTTP after a failure.
+  async function runDataChannel(ac: AbortController): Promise<boolean> {
+    const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    telemetryPc = pc;
+    const decoder = new EnvelopeDecoder();
+    let opened = false;
+    try {
+      const channel = pc.createDataChannel('telemetry', { ordered: false, maxRetransmits: 0 });
+      channel.binaryType = 'arraybuffer';
+      // Telemetry preempts the video track when the browser schedules the peer
+      // connection's streams, where the property is supported.
+      try {
+        (channel as RTCDataChannel & { priority?: string }).priority = 'high';
+      } catch {
+        // Not every engine exposes the priority hint.
+      }
+
+      const closed = new Promise<void>((resolve) => {
+        channel.onopen = () => {
+          opened = true;
+          streamActive = true;
+        };
+        channel.onmessage = (ev) => {
+          for (const e of decoder.push(new Uint8Array(ev.data as ArrayBuffer))) handleTelemetryEvent(e);
+        };
+        channel.onclose = () => resolve();
+        pc.addEventListener('connectionstatechange', () => {
+          if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) resolve();
+        });
+        ac.signal.addEventListener('abort', () => resolve());
+      });
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      await iceGathered(pc);
+      if (ac.signal.aborted) throw new Error('aborted');
+      const res = await fetch('/api/mavlink/rtc', {
+        method: 'POST',
+        signal: ac.signal,
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ sdp: pc.localDescription?.sdp })
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      const { sdp } = await res.json();
+      await pc.setRemoteDescription({ type: 'answer', sdp });
+
+      const openTimeout = new Promise<void>((resolve) => setTimeout(resolve, 8000));
+      await Promise.race([closed, openTimeout]);
+      if (!opened) throw new Error('channel did not open');
+      await closed;
+    } finally {
+      streamActive = false;
+      pc.close();
+      if (telemetryPc === pc) telemetryPc = null;
+    }
+    return opened;
+  }
+
+  async function runHttpStream(ac: AbortController): Promise<void> {
+    try {
+      const res = await fetch('/api/mavlink/stream', { signal: ac.signal, cache: 'no-store' });
+      if (!res.ok || !res.body) throw new Error(String(res.status));
+      streamActive = true;
+      const decoder = new EnvelopeDecoder();
+      const reader = res.body.getReader();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        for (const ev of decoder.push(value)) handleTelemetryEvent(ev);
+      }
+    } catch {
+      // Dropped mid-read or failed to open; the supervisor retries.
+    } finally {
+      streamActive = false;
+    }
+  }
+
   async function runTelemetryStream(ac: AbortController) {
     while (!ac.signal.aborted) {
+      let opened = false;
       try {
-        const res = await fetch('/api/mavlink/stream', { signal: ac.signal, cache: 'no-store' });
-        if (!res.ok || !res.body) throw new Error(String(res.status));
-        streamActive = true;
-        const decoder = new EnvelopeDecoder();
-        const reader = res.body.getReader();
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          for (const ev of decoder.push(value)) handleTelemetryEvent(ev);
-        }
+        opened = await runDataChannel(ac);
       } catch {
-        // Dropped mid-read or failed to open; the retry below covers both.
+        opened = false;
       }
-      streamActive = false;
+      if (ac.signal.aborted) break;
+      // The channel never formed: fall back to the HTTP stream for one session
+      // before trying the channel again.
+      if (!opened) await runHttpStream(ac);
       if (ac.signal.aborted) break;
       setOnline(false);
       await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -281,6 +382,8 @@
   function closeTelemetryStream() {
     telemetryAbort?.abort();
     telemetryAbort = null;
+    telemetryPc?.close();
+    telemetryPc = null;
     streamActive = false;
   }
 

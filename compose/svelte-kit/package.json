@@ -51,6 +51,7 @@
 		"leaflet": "^1.9.4",
 		"lucia": "^3.2.2",
 		"maplibre-gl": "^5.0.0",
+		"node-datachannel": "^0.30.0",
 		"node-mavlink": "^2.3.0",
 		"nodemailer": "^9.0.3",
 		"pngjs": "^7.0.0",
