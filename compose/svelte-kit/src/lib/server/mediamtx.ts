@@ -8,8 +8,8 @@ const API_URL = (process.env.MEDIAMTX_API_URL ?? 'http://localhost:9997').replac
 // file or restarting a container. The camera bridge runs only in the
 // production profile, so an unreachable API (dev, or the bridge down) is
 // logged and swallowed; the setting re-applies once the bridge is up.
-export async function applyCameraSource(source: CameraSource): Promise<boolean> {
-    const patch = toMediaMtxPatch(source);
+export async function applyCameraSource(source: CameraSource, lowBandwidth = false): Promise<boolean> {
+    const patch = toMediaMtxPatch(source, lowBandwidth);
     try {
         const res = await fetch(`${API_URL}/v3/config/paths/patch/cam`, {
             method: 'PATCH',
@@ -43,5 +43,13 @@ let applied = false;
 export async function initCameraSource(): Promise<void> {
     if (applied) return;
     applied = true;
-    await applyCameraSource(await readCameraSource());
+    const lowBandwidth = (await getSetting('mode.lowBandwidth')) === 'true';
+    await applyCameraSource(await readCameraSource(), lowBandwidth);
+}
+
+// Re-applies the stored camera source at the current bandwidth posture, so
+// toggling low-bandwidth mode caps or restores the video encoder without the
+// operator re-picking the source.
+export async function applyBandwidthMode(lowBandwidth: boolean): Promise<boolean> {
+    return applyCameraSource(await readCameraSource(), lowBandwidth);
 }

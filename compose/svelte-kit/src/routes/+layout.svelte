@@ -65,7 +65,7 @@
   import { calibrationStore } from '../stores/calibrationStore';
   import { trafficStore, trafficThreatsStore, upsertTraffic } from '../stores/trafficStore';
   import { detectThreats } from '../lib/collision';
-  import { safetyLimitsStore, tfrOverlaysStore } from '../stores/safetyStore';
+  import { safetyLimitsStore, tfrOverlaysStore, lowBandwidthStore } from '../stores/safetyStore';
   import { mapFocusStore } from '../stores/mapStore';
   import { EnvelopeDecoder, type TelemetryEvent } from '$lib/telemetry-envelope';
   import { decodeFrameToLine } from '$lib/mavlink-decode';
@@ -745,20 +745,25 @@
 
   // The saved limits from Integrations back every pre-flight and takeoff check.
   async function hydrateSafetyLimits() {
-    let saved: { maxAltitudeM?: number; minAltitudeM?: number; geofenceRadiusM?: number };
+    let payload: {
+      safety?: { maxAltitudeM?: number; minAltitudeM?: number; geofenceRadiusM?: number };
+      lowBandwidth?: boolean;
+    };
     try {
       const res = await fetch('/api/integrations');
       if (!res.ok) return;
-      saved = (await res.json()).safety ?? {};
+      payload = await res.json();
     } catch {
       return;
     }
+    const saved = payload.safety ?? {};
     safetyLimitsStore.update((cur) => ({
       ...cur,
       maxAltitudeM: Number(saved.maxAltitudeM) || cur.maxAltitudeM,
       minAltitudeM: Number.isFinite(Number(saved.minAltitudeM)) ? Number(saved.minAltitudeM) : cur.minAltitudeM,
       geofenceRadiusM: Number(saved.geofenceRadiusM) || cur.geofenceRadiusM
     }));
+    lowBandwidthStore.set(Boolean(payload.lowBandwidth));
   }
 
   const TRAFFIC_ALERT_MS = 15_000;
@@ -802,7 +807,7 @@
   });
 
   async function checkNotams() {
-    if (!loggedIn || isNavHidden) return;
+    if (!loggedIn || isNavHidden || get(lowBandwidthStore)) return;
     const loc = get(mavLocationStore);
     if (!loc) return;
     let payload: { notams?: Notam[]; error?: string; state?: string | null };
