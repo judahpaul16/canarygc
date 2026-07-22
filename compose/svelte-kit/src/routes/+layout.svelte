@@ -67,6 +67,8 @@
   import { detectThreats } from '../lib/collision';
   import { safetyLimitsStore, tfrOverlaysStore } from '../stores/safetyStore';
   import { mapFocusStore } from '../stores/mapStore';
+  import { EnvelopeDecoder, type TelemetryEvent } from '$lib/telemetry-envelope';
+  import { decodeFrameToLine } from '$lib/mavlink-decode';
 
   let { children } = $props();
 
@@ -158,9 +160,9 @@
   let mspIdentity: { firmware: string; boardName: string; targetName: string; boardIdentifier: string } | null = null;
   let mspTelemetryInFlight = false;
 
-  // The SSE telemetry stream pushes each MAVLink log line in real time; the
+  // The binary telemetry stream pushes each MAVLink frame in real time; the
   // heartbeat poll only drains logs as a fallback while the stream is down.
-  let telemetryStream: EventSource | null = null;
+  let telemetryAbort: AbortController | null = null;
   let streamActive = false;
 
   function mspVoltageToPercent(v: number): number {
@@ -231,43 +233,54 @@
     if (consecutiveMisses >= OFFLINE_AFTER_MISSES && online) onlineStore.set(false);
   }
 
-  function openTelemetryStream() {
-    if (telemetryStream) return;
-    const es = new EventSource('/api/mavlink/stream');
-    telemetryStream = es;
-    es.onopen = () => {
-      streamActive = true;
-    };
-    es.onmessage = (ev) => {
-      let msg: { log?: string; disabled?: boolean };
+  function handleTelemetryEvent(ev: TelemetryEvent) {
+    if (ev.kind === 'disabled') {
+      // MSP flight controller: no MAVLink stream, so the poll drives it.
+      mavlinkDisabled = true;
+      return;
+    }
+    const line = ev.kind === 'line' ? ev.line : decodeFrameToLine(ev.tsMs, ev.frame);
+    if (!line) return;
+    mavlinkDisabled = false;
+    fcProtocolStore.set('mavlink');
+    fcFirmwareStore.set(null);
+    getLogs(line.replace(/\\"/g, '"') + '\n');
+    setOnline(true);
+  }
+
+  async function runTelemetryStream(ac: AbortController) {
+    while (!ac.signal.aborted) {
       try {
-        msg = JSON.parse(ev.data);
+        const res = await fetch('/api/mavlink/stream', { signal: ac.signal, cache: 'no-store' });
+        if (!res.ok || !res.body) throw new Error(String(res.status));
+        streamActive = true;
+        const decoder = new EnvelopeDecoder();
+        const reader = res.body.getReader();
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          for (const ev of decoder.push(value)) handleTelemetryEvent(ev);
+        }
       } catch {
-        return;
+        // Dropped mid-read or failed to open; the retry below covers both.
       }
-      if (msg.disabled) {
-        // MSP flight controller: no MAVLink stream, so the poll drives it.
-        mavlinkDisabled = true;
-        return;
-      }
-      if (typeof msg.log === 'string') {
-        mavlinkDisabled = false;
-        fcProtocolStore.set('mavlink');
-        fcFirmwareStore.set(null);
-        getLogs(msg.log.replace(/\\"/g, '"') + '\n');
-        setOnline(true);
-      }
-    };
-    es.onerror = () => {
-      // The browser reconnects on its own; the poll covers the gap.
       streamActive = false;
+      if (ac.signal.aborted) break;
       setOnline(false);
-    };
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+  }
+
+  function openTelemetryStream() {
+    if (telemetryAbort) return;
+    const ac = new AbortController();
+    telemetryAbort = ac;
+    void runTelemetryStream(ac);
   }
 
   function closeTelemetryStream() {
-    telemetryStream?.close();
-    telemetryStream = null;
+    telemetryAbort?.abort();
+    telemetryAbort = null;
     streamActive = false;
   }
 

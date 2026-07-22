@@ -1,11 +1,19 @@
 import type { RequestHandler } from '@sveltejs/kit';
-import { subscribeLogs, mavlinkConfigured, latestHeartbeat } from '$lib/server/mavlink';
+import { subscribeTelemetry, mavlinkConfigured, latestHeartbeat } from '$lib/server/mavlink';
 import { operatorStreamOpened, operatorStreamClosed } from '$lib/server/operator-failsafe';
+import {
+    ENVELOPE_DISABLED,
+    ENVELOPE_KEEPALIVE,
+    encodeFrameEnvelope,
+    encodeLineEnvelope,
+    encodeMarkerEnvelope
+} from '$lib/telemetry-envelope';
 
-// Server-Sent Events telemetry stream. Each MAVLink log line is pushed the
-// instant it is parsed, so the client renders a fresh fix rather than draining
-// a batch on the next poll. The hooks gate already rejects an unauthenticated
-// caller with 401, so no session check is needed here.
+// Binary telemetry stream. Each vehicle message travels as its raw MAVLink
+// wire frame inside a small envelope and the browser decodes it, which costs
+// a tenth of the bytes of the text lines it replaces. Station events ride the
+// same stream as text envelopes. The hooks gate already rejects an
+// unauthenticated caller with 401, so no session check is needed here.
 export const GET: RequestHandler = async () => {
     let unsubscribe: (() => void) | null = null;
     let keepalive: ReturnType<typeof setInterval> | null = null;
@@ -15,10 +23,9 @@ export const GET: RequestHandler = async () => {
             // Each open telemetry stream marks an operator as present; the
             // lost-operator failsafe watches for the last one closing.
             operatorStreamOpened();
-            const encoder = new TextEncoder();
-            const send = (obj: unknown) => {
+            const send = (bytes: Uint8Array) => {
                 try {
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
+                    controller.enqueue(bytes);
                 } catch {
                     // Consumer went away between the check and the enqueue.
                 }
@@ -27,19 +34,18 @@ export const GET: RequestHandler = async () => {
             if (!mavlinkConfigured()) {
                 // No MAVLink vehicle (an MSP flight controller): the client
                 // falls back to its MSP telemetry poll.
-                send({ disabled: true });
+                send(encodeMarkerEnvelope(ENVELOPE_DISABLED));
             } else {
                 const heartbeat = latestHeartbeat();
-                if (heartbeat) send({ log: heartbeat });
+                if (heartbeat) send(encodeLineEnvelope(Date.now(), heartbeat));
             }
 
-            unsubscribe = subscribeLogs((line) => send({ log: line }));
+            unsubscribe = subscribeTelemetry({
+                onFrame: (tsMs, frame) => send(encodeFrameEnvelope(tsMs, frame)),
+                onLine: (tsMs, line) => send(encodeLineEnvelope(tsMs, line))
+            });
             keepalive = setInterval(() => {
-                try {
-                    controller.enqueue(encoder.encode(': keepalive\n\n'));
-                } catch {
-                    // Stream closed; cancel() will clean up.
-                }
+                send(encodeMarkerEnvelope(ENVELOPE_KEEPALIVE));
             }, 15000);
         },
         cancel() {
@@ -51,8 +57,8 @@ export const GET: RequestHandler = async () => {
 
     return new Response(stream, {
         headers: {
-            'Content-Type': 'text/event-stream',
-            'Cache-Control': 'no-cache, no-transform',
+            'Content-Type': 'application/octet-stream',
+            'Cache-Control': 'no-store, no-transform',
             Connection: 'keep-alive'
         }
     });
