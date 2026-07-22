@@ -24,17 +24,28 @@ export interface MediaMtxEnv {
   WEBRTC_RUNONDEMAND: string;
 }
 
+// The video bitrate the marginal-link posture caps the encoder at, in bits per
+// second. The camera bridge and the WebRTC video track share the uplink with
+// telemetry, so a hard cap leaves room for the control stream.
+export const LOW_BANDWIDTH_BITRATE = 500_000;
+const RPI_DEFAULT_BITRATE = 5_000_000;
+
 // MediaMTX transcodes the captured V4L2 device to RTSP on its own server, then
-// serves it over WebRTC; browsers cannot play RTSP or raw V4L2 directly.
+// serves it over WebRTC; browsers cannot play RTSP or raw V4L2 directly. A
+// bitrate caps the encoder for the marginal-link posture.
 export function captureCommand(
   device: string,
   width = 720,
   height = 480,
-  fps = 30
+  fps = 30,
+  bitrate?: number
 ): string {
+  const rate = bitrate
+    ? `-b:v ${bitrate} -maxrate ${bitrate} -bufsize ${bitrate * 2} `
+    : '';
   return (
     `ffmpeg -f v4l2 -framerate ${fps} -video_size ${width}x${height} -i ${device} ` +
-    `-c:v libx264 -preset ultrafast -tune zerolatency -pix_fmt yuv420p ` +
+    `-c:v libx264 -preset ultrafast -tune zerolatency -pix_fmt yuv420p ${rate}` +
     `-f rtsp rtsp://localhost:8554/cam`
   );
 }
@@ -61,15 +72,30 @@ export function toMediaMtxEnv(source: CameraSource): MediaMtxEnv {
 // The body for MediaMTX's `PATCH /v3/config/paths/patch/cam` control-API call,
 // which updates the live `cam` path source without a restart. A capture device
 // publishes through an on-demand FFmpeg command; every other source is set
-// directly.
-export function toMediaMtxPatch(source: CameraSource): Record<string, unknown> {
-  const env = toMediaMtxEnv(source);
-  if (env.WEBRTC_RUNONDEMAND) {
-    return {
-      source: env.WEBRTC_SOURCE,
-      runOnDemand: env.WEBRTC_RUNONDEMAND,
-      runOnDemandRestart: true
-    };
+// directly. lowBandwidth caps the encoder bitrate for the Pi camera and the
+// USB capture; a URL source runs its own encoder the station cannot reach.
+export function toMediaMtxPatch(source: CameraSource, lowBandwidth = false): Record<string, unknown> {
+  const bitrate = lowBandwidth ? LOW_BANDWIDTH_BITRATE : undefined;
+  switch (source.kind) {
+    case 'usb':
+      return {
+        source: 'publisher',
+        runOnDemand: captureCommand(
+          (source.device ?? '/dev/video0').trim(),
+          source.width,
+          source.height,
+          source.fps,
+          bitrate
+        ),
+        runOnDemandRestart: true
+      };
+    case 'pi':
+      return {
+        source: 'rpiCamera',
+        rpiCameraBitrate: bitrate ?? RPI_DEFAULT_BITRATE,
+        runOnDemand: ''
+      };
+    case 'url':
+      return { source: (source.url ?? '').trim(), runOnDemand: '' };
   }
-  return { source: env.WEBRTC_SOURCE, runOnDemand: '' };
 }

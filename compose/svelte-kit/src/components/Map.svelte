@@ -44,7 +44,8 @@
     showCeilingsStore,
     obstaclesStore,
     showObstaclesStore,
-    tfrOverlaysStore
+    tfrOverlaysStore,
+    lowBandwidthStore
   } from '../stores/safetyStore';
   import { airspaceColor, airspacePopupHtml, AIRSPACE_RESTRICTED_COLOR, tfrPopupHtml } from '../lib/airspace';
   import { ceilingColor, ceilingPopupHtml, obstacleColor, obstaclePopupHtml } from '../lib/hazards';
@@ -875,7 +876,7 @@
   let viewportTimer: ReturnType<typeof setTimeout> | null = null;
 
   function refreshViewportOverlays() {
-    if (!leafletMap || hideOverlay || leafletMap.getZoom() < MIN_OVERLAY_ZOOM) return;
+    if (!leafletMap || hideOverlay || get(lowBandwidthStore) || leafletMap.getZoom() < MIN_OVERLAY_ZOOM) return;
     const b = leafletMap.getBounds();
     const bbox = `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`;
     if (get(showAirspaceStore)) fetchAirspaceForBbox(bbox);
@@ -1148,7 +1149,7 @@
   const M_PER_FT = 0.3048;
 
   async function refreshTraffic() {
-    if (!leafletMap || hideOverlay || !get(showTrafficStore)) return;
+    if (!leafletMap || hideOverlay || get(lowBandwidthStore) || !get(showTrafficStore)) return;
     // The 3D map pans independently, so contacts follow whichever view is up.
     const b =
       get(mapTypeStore) === '3D' && threeDMap ? threeDMap.getBounds() : leafletMap.getBounds();

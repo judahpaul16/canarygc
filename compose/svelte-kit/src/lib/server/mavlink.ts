@@ -146,6 +146,7 @@ if (!building) {
     // Load the signing key once the DB is reachable; a failure here leaves the
     // link unsigned until the operator saves the setting, which reloads it.
     refreshSigningConfig().catch(() => {});
+    initTelemetryRates().catch(() => {});
 
     if (state.supervisor) clearInterval(state.supervisor);
     state.supervisor = setInterval(superviseLink, SUPERVISOR_INTERVAL_MS);
@@ -465,9 +466,27 @@ const TELEMETRY_INTERVALS: [messageId: number, intervalUs: number][] = [
     [common.HomePosition.MSG_ID, 2_000_000]
 ];
 
+// The marginal-link posture stretches every telemetry interval so the
+// autopilot streams a fraction of the messages. The dividing factor keeps the
+// fastest messages (attitude, position) frequent enough to fly by while
+// dropping the total frame rate.
+const LOW_BANDWIDTH_DIVISOR = 4;
+let lowBandwidth = false;
+
+// A fresh dial re-applies whatever posture the operator last saved.
+export async function initTelemetryRates(): Promise<void> {
+    lowBandwidth = (await getSettings('mode.'))['mode.lowBandwidth'] === 'true';
+}
+
+export async function setTelemetryRates(low: boolean): Promise<void> {
+    lowBandwidth = low;
+    if (linkAlive()) await requestTelemetryStreams();
+}
+
 async function requestTelemetryStreams(): Promise<void> {
+    const factor = lowBandwidth ? LOW_BANDWIDTH_DIVISOR : 1;
     for (const [messageId, intervalUs] of TELEMETRY_INTERVALS) {
-        await sendMavlinkCommand('SET_MESSAGE_INTERVAL', [messageId, intervalUs], true);
+        await sendMavlinkCommand('SET_MESSAGE_INTERVAL', [messageId, intervalUs * factor], true);
     }
 }
 

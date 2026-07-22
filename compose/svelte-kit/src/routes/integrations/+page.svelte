@@ -4,7 +4,7 @@
   import { resolveTiles, TILE_PRESETS, MAPTILER_PRESETS, maptilerTileUrl } from '../../lib/tiles';
   import Select from '../../components/Select.svelte';
   import { mavVideoStreamStore } from '../../stores/mavlinkStore';
-  import { safetyLimitsStore } from '../../stores/safetyStore';
+  import { safetyLimitsStore, lowBandwidthStore } from '../../stores/safetyStore';
   import { m } from '$lib/paraglide/messages';
   let loading = $state(true);
   let saving = $state(false);
@@ -35,6 +35,7 @@
     minAltitudeM: '0',
     geofenceRadiusM: '1000'
   });
+  let lowBandwidth = $state(false);
   let mavKeyVisible = $state(false);
   // Fills a strong random passphrase and reveals it so the operator can copy the
   // same value onto the autopilot; both ends must share it for signing to secure
@@ -78,7 +79,8 @@
     ai: 'ai assistant pid tuning llm openai litellm ollama api key model base url gpt tune',
     mavlink: 'mavlink signing security authentication key passphrase sign verify replay tamper link id strict command injection',
     failsafe: 'failsafe lost operator link loss rtl return autoland recovery timeout minutes unattended',
-    safety: 'safety limits maximum altitude ceiling floor geofence radius preflight takeoff meters 400 ft'
+    safety: 'safety limits maximum altitude ceiling floor geofence radius preflight takeoff meters 400 ft',
+    lowbandwidth: 'low bandwidth marginal link cellular lte video bitrate telemetry rate traffic airspace posture degraded weak signal'
   };
 
   function panelVisible(panel: keyof typeof PANEL_KEYWORDS): boolean {
@@ -146,6 +148,7 @@
           minAltitudeM: String(data.safety.minAltitudeM ?? 0),
           geofenceRadiusM: String(data.safety.geofenceRadiusM ?? 1000)
         };
+      lowBandwidth = Boolean(data.lowBandwidth);
     } catch {
       notify({ title: m.int_load_failed_title(), content: m.int_load_failed_body(), type: 'warning' });
     } finally {
@@ -174,7 +177,8 @@
             maxAltitudeM: Number(safety.maxAltitudeM) || 120,
             minAltitudeM: Number(safety.minAltitudeM) || 0,
             geofenceRadiusM: Number(safety.geofenceRadiusM) || 1000
-          }
+          },
+          lowBandwidth
         })
       });
       if (res.ok) {
@@ -197,6 +201,7 @@
           minAltitudeM: Number(safety.minAltitudeM) || 0,
           geofenceRadiusM: Number(safety.geofenceRadiusM) || 1000
         }));
+        lowBandwidthStore.set(lowBandwidth);
         notify({ title: m.int_saved_title(), content: m.int_saved_body(), duration: 3000 });
         if (data.signingPushed && !data.signingPushed.ok) {
           notify({ title: m.int_not_keyed_title(), content: data.signingPushed.message, type: 'warning', duration: 5000 });
@@ -262,7 +267,7 @@
     <div class="panel"><p class="muted">{m.common_loading()}</p></div>
   {:else}
     <form onsubmit={(e) => { e.preventDefault(); save(); }}>
-      {#if filter.trim() && !panelVisible('operator') && !panelVisible('smtp') && !panelVisible('airspace') && !panelVisible('tiles') && !panelVisible('camera') && !panelVisible('ai') && !panelVisible('mavlink') && !panelVisible('failsafe') && !panelVisible('safety')}
+      {#if filter.trim() && !panelVisible('operator') && !panelVisible('smtp') && !panelVisible('airspace') && !panelVisible('tiles') && !panelVisible('camera') && !panelVisible('ai') && !panelVisible('mavlink') && !panelVisible('failsafe') && !panelVisible('safety') && !panelVisible('lowbandwidth')}
         <div class="panel"><p class="muted">{m.int_no_match({ filter })}</p></div>
       {/if}
       <div class="settings-grid">
@@ -491,6 +496,26 @@
           <label for="safety-geofence">{m.int_safety_geofence()}</label>
           <input id="safety-geofence" type="number" min="1" step="1" bind:value={safety.geofenceRadiusM} autocomplete="off" placeholder="1000" />
         </div>
+      </section>
+      {/if}
+
+      {#if panelVisible('lowbandwidth')}
+      <section class="panel">
+        <div class="panel-head">
+          <span class="icon-chip"><i class="fas fa-signal"></i></span>
+          <div>
+            <h2>{m.int_lowbw_title()}</h2>
+            <p class="muted">{m.int_lowbw_desc()}</p>
+          </div>
+        </div>
+        <div class="field toggle-field">
+          <span class="toggle-label">{m.int_lowbw_toggle()}</span>
+          <label class="switch">
+            <input type="checkbox" bind:checked={lowBandwidth} />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <p class="hint">{m.int_lowbw_hint()}</p>
       </section>
       {/if}
       </div>

@@ -17,3 +17,7 @@ export const ceilingCellsStore = writable<CeilingCell[]>([]);
 export const showCeilingsStore = sessionBool('map.showCeilings', false);
 export const obstaclesStore = writable<Obstacle[]>([]);
 export const showObstaclesStore = sessionBool('map.showObstacles', false);
+// The marginal-link posture. On, the client stops polling traffic and airspace
+// overlays and the server caps video and thins telemetry; hydrated from the
+// saved setting so a reload keeps the posture.
+export const lowBandwidthStore = writable<boolean>(false);
