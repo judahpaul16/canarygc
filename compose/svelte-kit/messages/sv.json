@@ -1071,5 +1071,7 @@
   "notam_up_to": "Upp till {ceiling}",
   "notam_center": "Central {facility}",
   "map_tr_ground": "På marken",
-  "notam_range": "{floor} till {ceiling}"
+  "notam_range": "{floor} till {ceiling}",
+  "fl_duration": "Varaktighet",
+  "fl_total_flight_time": "Total flygtid"
 }

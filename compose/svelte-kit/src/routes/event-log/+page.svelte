@@ -1,5 +1,6 @@
 <script lang="ts">
     import { mavlinkLogStore, mavStateStore, mavModelStore, fcProtocolStore } from '../../stores/mavlinkStore';
+    import { m } from '$lib/paraglide/messages';
     import { showModal } from '../../lib/overlays';
     import { sendMavlinkCommand } from '../../lib/mavlink-client';
     import { commandCatalog, paramHint, parseConsoleInput } from '../../lib/mav-console';
@@ -26,8 +27,9 @@
 
     type LogTab = 'live' | 'flights';
     let activeTab = $state<LogTab>('live');
-    let flightLogs = $state<{ name: string; size: number; modified: string }[]>([]);
+    let flightLogs = $state<{ name: string; size: number; modified: string; durationMs: number }[]>([]);
     let flightLogsLoading = $state(false);
+    let totalFlightMs = $derived(flightLogs.reduce((sum, f) => sum + (f.durationMs || 0), 0));
 
     async function loadFlightLogs() {
         flightLogsLoading = true;
@@ -61,6 +63,15 @@
         if (n < 1024) return `${n} B`;
         if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
         return `${(n / 1024 / 1024).toFixed(1)} MB`;
+    }
+
+    function formatDuration(ms: number): string {
+        if (ms < 1000) return '0m';
+        const minutes = Math.round(ms / 60000);
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        if (h === 0) return `${m}m`;
+        return `${h}h ${m}m`;
     }
 
     let logs = $state<string[]>(get(mavlinkLogStore));
@@ -539,14 +550,16 @@
                 {:else if flightLogs.length === 0}
                     <div class="log-empty">No recordings yet. Files appear here once telemetry is flowing.</div>
                 {:else}
+                    <p class="fl-total">{m.fl_total_flight_time()}: {formatDuration(totalFlightMs)}</p>
                     <table class="fl-table">
                         <thead>
-                            <tr><th>Recording</th><th>Size</th><th>Recorded</th><th></th></tr>
+                            <tr><th>Recording</th><th>{m.fl_duration()}</th><th>Size</th><th>Recorded</th><th></th></tr>
                         </thead>
                         <tbody>
                             {#each flightLogs as f (f.name)}
                                 <tr>
                                     <td class="fl-name">{f.name}</td>
+                                    <td>{formatDuration(f.durationMs)}</td>
                                     <td>{formatBytes(f.size)}</td>
                                     <td>{new Date(f.modified).toLocaleString()}</td>
                                     <td class="fl-actions">
@@ -690,6 +703,11 @@
     .fl-desc {
         font-size: 0.85rem;
         opacity: 0.75;
+    }
+    .fl-total {
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 0.6rem;
     }
     .fl-table {
         width: 100%;

@@ -1071,5 +1071,7 @@
   "notam_up_to": "Até {ceiling}",
   "notam_center": "Centro {facility}",
   "map_tr_ground": "No solo",
-  "notam_range": "{floor} a {ceiling}"
+  "notam_range": "{floor} a {ceiling}",
+  "fl_duration": "Duração",
+  "fl_total_flight_time": "Tempo total de voo"
 }

@@ -1071,5 +1071,7 @@
   "notam_up_to": "Tot {ceiling}",
   "notam_center": "Centrum {facility}",
   "map_tr_ground": "Aan de grond",
-  "notam_range": "{floor} tot {ceiling}"
+  "notam_range": "{floor} tot {ceiling}",
+  "fl_duration": "Duur",
+  "fl_total_flight_time": "Totale vliegtijd"
 }
