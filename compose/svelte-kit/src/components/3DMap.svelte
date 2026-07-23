@@ -296,13 +296,37 @@
     };
   }
 
+  let followZoom = Number.NaN;
+  let followPadKey = '';
+
   function followCamera(m: pkg.Map, loc: { lat: number; lng: number }) {
     // Camera moves cost a full MapLibre render; skip them while the 3D view
     // is hidden behind the 2D map. The next telemetry frame after switching
     // to 3D catches the camera up.
     if (get(mapTypeStore) !== '3D' || !get(lockViewStore) || m.isMoving()) return;
-    // Camera padding centers the vehicle inside the registered window.
+    const zoom = get(mapZoomStore) - 1;
     const w = get(mapFullscreenStore) ? null : get(mapWindowStore);
+    const padKey = w
+      ? `${w.top},${w.left},${w.width},${w.height},${window.innerWidth},${window.innerHeight}`
+      : 'full';
+    // Zoom and padding stick on the transform once set, so steady follow
+    // ticks move only the center and skip moves under half a pixel.
+    if (zoom === followZoom && padKey === followPadKey) {
+      const c = m.getCenter();
+      const degPerPxLng = 360 / (512 * 2 ** zoom);
+      const degPerPxLat = degPerPxLng * Math.cos((loc.lat * Math.PI) / 180);
+      if (
+        Math.abs(loc.lng - c.lng) < degPerPxLng * 0.5 &&
+        Math.abs(loc.lat - c.lat) < degPerPxLat * 0.5
+      ) {
+        return;
+      }
+      m.jumpTo({ center: [loc.lng, loc.lat] });
+      return;
+    }
+    followZoom = zoom;
+    followPadKey = padKey;
+    // Camera padding centers the vehicle inside the registered window.
     const padding = w
       ? {
           top: Math.max(0, w.top),
@@ -313,7 +337,7 @@
       : { top: 0, left: 0, right: 0, bottom: 0 };
     m.jumpTo({
       center: [loc.lng, loc.lat],
-      zoom: get(mapZoomStore) - 1,
+      zoom,
       padding
     });
   }
@@ -355,6 +379,7 @@
       zoom: get(mapZoomStore) - 1, // starting zoom
       pitch: 45,
       maxPitch: 85, // let the operator tilt low to read terrain relief
+      fadeDuration: 0,
       canvasContextAttributes: {antialias: true}
     });
     map = m;
@@ -423,7 +448,9 @@
                     'source': 'openmaptiles',
                     'source-layer': 'building',
                     'type': 'fill-extrusion',
-                    'minzoom': 1,
+                    // Heights ramp in from zoom 15, so below that the layer
+                    // only adds flat geometry cost across a wide view.
+                    'minzoom': 15,
                     'filter': ['!=', ['get', 'hide_3d'], true],
                     'paint': {
                         'fill-extrusion-color': [
@@ -624,6 +651,7 @@
 
   onDestroy(() => {
     if (viewportTimer) clearTimeout(viewportTimer);
+    if (poseTrailer) clearTimeout(poseTrailer);
     if (map?.getLayer('mav-3d')) map.removeLayer('mav-3d');
     for (const marker of trafficMarkers.values()) marker.remove();
     trafficMarkers.clear();
@@ -631,8 +659,23 @@
     missionMarkers.clear();
   });
 
+  // Smoothed pose stores tick every animation frame, and each repaint or
+  // camera move costs a full terrain render, so pose-driven renders are paced
+  // to this floor with a trailing call that lands the settled pose.
+  const POSE_FRAME_MS = 30;
+  let poseRenderedAt = 0;
+  let poseTrailer: ReturnType<typeof setTimeout> | null = null;
+
+  function renderPose(m: pkg.Map) {
+    const loc = get(smoothLocationStore);
+    if (!loc || get(mapTypeStore) !== '3D') return;
+    sampleGround(m, loc);
+    m.triggerRepaint();
+    followCamera(m, loc);
+  }
+
   $effect(() => {
-    const loc = $smoothLocationStore;
+    void $smoothLocationStore;
     void $smoothHeadingStore;
     void $smoothRollStore;
     void $smoothPitchStore;
@@ -640,15 +683,23 @@
     void $mavTypeStore;
     const m = map;
     untrack(() => {
-      if (!m || !loc) return;
+      if (!m) return;
       // Repaint only while the 3D view is on screen; the hidden 3D canvas stays
       // idle in the 2D view, so the model costs nothing there. The custom layer
       // reads the live pose in its own render pass, so one repaint per fix drives
       // the redraw when the camera is not already following.
       if (get(mapTypeStore) !== '3D') return;
-      sampleGround(m, loc);
-      m.triggerRepaint();
-      followCamera(m, loc);
+      const wait = POSE_FRAME_MS - (performance.now() - poseRenderedAt);
+      if (wait > 0) {
+        poseTrailer ??= setTimeout(() => {
+          poseTrailer = null;
+          poseRenderedAt = performance.now();
+          renderPose(m);
+        }, wait);
+        return;
+      }
+      poseRenderedAt = performance.now();
+      renderPose(m);
     });
   });
 
