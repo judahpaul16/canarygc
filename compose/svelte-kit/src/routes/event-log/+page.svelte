@@ -755,12 +755,20 @@
     .log-view {
         font-family: ui-monospace, 'SFMono-Regular', 'Menlo', 'Consolas', monospace;
         font-size: 0.8rem;
-        line-height: 1.5;
+        /* Whole-pixel line boxes: the view stays pinned to the bottom while
+           old lines leave the ring, and fractional line heights land the
+           pinned content on a different subpixel offset after every removal,
+           which reads as the text shimmering. */
+        line-height: 20px;
         background-color: var(--secondaryColor);
         border-radius: var(--radius-control);
         padding: 0.4rem 0;
         flex: 1 1 auto;
         min-height: 0;
+        /* The view pins itself to the bottom while old lines leave the ring;
+           browser scroll anchoring fights that pin and the tug shows as the
+           lines shimmering. */
+        overflow-anchor: none;
         overflow-y: auto;
     }
 
@@ -869,7 +877,7 @@
     }
 
     .log-line {
-        padding: 0.05rem 0.75rem 0.05rem 0.6rem;
+        padding: 1px 0.75rem 1px 0.6rem;
         border-left: 3px solid var(--accent);
         white-space: pre-wrap;
         word-break: break-word;
@@ -1026,6 +1034,7 @@
 
         .log-view {
             font-size: 0.7rem;
+            line-height: 18px;
         }
 
         .console-suggestions {
