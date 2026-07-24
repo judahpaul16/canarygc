@@ -11,10 +11,15 @@ const CACHE = `cache-${version}`;
 
 const ASSETS = [...build, ...files];
 
+// The root HTML is the navigation fallback, so a cold offline start can boot
+// the shell and let the client router take over from the precached chunks.
+const SHELL = '/';
+
 self.addEventListener('install', (event) => {
 	async function addFilesToCache() {
 		const cache = await caches.open(CACHE);
 		await cache.addAll(ASSETS);
+		await cache.add(SHELL);
 	}
 
 	event.waitUntil(addFilesToCache());
@@ -25,6 +30,9 @@ self.addEventListener('activate', (event) => {
 		for (const key of await caches.keys()) {
 			if (key !== CACHE) await caches.delete(key);
 		}
+		// Control the first session too, so pages fetched from here on land in
+		// the runtime cache instead of waiting for the next visit.
+		await self.clients.claim();
 	}
 
 	event.waitUntil(deleteOldCaches());
@@ -63,6 +71,10 @@ self.addEventListener('fetch', (event) => {
 		} catch (err) {
 			const response = await cache.match(event.request);
 			if (response) return response;
+			if (event.request.mode === 'navigate') {
+				const shell = await cache.match(SHELL);
+				if (shell) return shell;
+			}
 			throw err;
 		}
 	}
