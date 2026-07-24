@@ -26,7 +26,9 @@ if [ -z "$IFACE" ]; then
     exit 1
 fi
 
-if ! command -v nft >/dev/null || ! command -v tc >/dev/null; then
+# nft and tc live in sbin, which the invoking user's PATH may not include.
+if ! PATH="$PATH:/usr/sbin:/sbin" command -v nft >/dev/null ||
+   ! PATH="$PATH:/usr/sbin:/sbin" command -v tc >/dev/null; then
     sudo apt-get update
     sudo apt-get -y install nftables iproute2
 fi
