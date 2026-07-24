@@ -612,8 +612,12 @@
         renderMissionPaths3D();
         renderMissionMarkers3D();
 
-        // The vehicle rides above the terrain as a 3D model of its type.
-        if (!m.getLayer('mav-3d')) m.addLayer(createMav3DLayer(mav3DState));
+        // The vehicle rides above the terrain as a 3D model of its type. It
+        // draws before the ceiling and restriction volumes, so their
+        // translucent faces tint the model behind them instead of hiding it,
+        // and the model still occludes volume faces behind it through the
+        // shared depth buffer.
+        if (!m.getLayer('mav-3d')) m.addLayer(createMav3DLayer(mav3DState), 'ceilings-volume');
 
         m.addControl(
             new NavigationControl({
