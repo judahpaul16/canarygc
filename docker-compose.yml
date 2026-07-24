@@ -75,8 +75,10 @@ services:
     image: ghcr.io/judahpaul16/canarygc:latest
     devices:
       - "/dev/ttyACM0:/dev/ttyACM0"
-    ports:
-      - "${APP_PORT:-3000}:3000"
+    # Host networking so the telemetry DataChannel's ICE candidates carry the
+    # station's real addresses instead of the docker bridge, matching mediamtx.
+    # The app answers on host port 3000.
+    network_mode: host
     container_name: canarygc_app
     # Persist the SQLite database (operator account, settings, missions, flight
     # logs) across image rebuilds and container recreates.
@@ -88,9 +90,7 @@ services:
       # Inside the data volume, so flight logs survive container recreates.
       FLIGHT_LOG_PATH: ${FLIGHT_LOG_PATH:-/app/src/flight-logs}
       NODE_ENV: production
-      MEDIAMTX_API_URL: ${MEDIAMTX_API_URL:-http://host.docker.internal:9997}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      MEDIAMTX_API_URL: ${MEDIAMTX_API_URL:-http://localhost:9997}
     deploy:
       resources:
         limits:
@@ -107,6 +107,10 @@ services:
       - app
     ports:
       - "${HTTP_PORT:-80}:80"
+    # The app lives on the host network, so its upstream name resolves to the
+    # host gateway here.
+    extra_hosts:
+      - "app:host-gateway"
     volumes:
       - ./compose/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     restart: always
