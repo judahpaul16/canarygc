@@ -380,7 +380,10 @@
       pitch: 45,
       maxPitch: 85, // let the operator tilt low to read terrain relief
       fadeDuration: 0,
-      canvasContextAttributes: {antialias: true}
+      // Expired tiles stay until re-requested by a move, which also puts
+      // raster downloads on the browser's fast image path.
+      refreshExpiredTiles: false,
+      canvasContextAttributes: {antialias: true, powerPreference: 'high-performance'}
     });
     map = m;
 
@@ -406,7 +409,9 @@
                     tiles: ['https://elevation-tiles-prod.s3.amazonaws.com/terrarium/{z}/{x}/{y}.png'],
                     encoding: 'terrarium',
                     tileSize: 256,
-                    maxzoom: 15,
+                    // Matches the keyed path's relief detail while requesting a
+                    // fraction of the tiles a mission-zoom view needs at 15.
+                    maxzoom: 12,
                     attribution: '<a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Terrain Tiles</a>'
                 });
             }

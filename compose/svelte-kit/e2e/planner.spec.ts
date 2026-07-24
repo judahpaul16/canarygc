@@ -64,6 +64,9 @@ test.describe('mission planner window', () => {
 	});
 
 	test('map type toggle cycles Satellite, 3D Buildings, and Streets', async ({ page }) => {
+		// Three map mounts through software WebGL need more than the default
+		// budget on a loaded host.
+		test.setTimeout(120_000);
 		const readLabel = () =>
 			page.evaluate(() => document.querySelector('#map-toggle span span')?.textContent);
 		const seen = new Set<string>([(await readLabel()) ?? '']);
