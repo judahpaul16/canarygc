@@ -35,6 +35,9 @@ jobs:
     needs: [check]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[skip ci]')
     runs-on: ubuntu-latest
+    concurrency:
+      group: release
+      cancel-in-progress: false
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
