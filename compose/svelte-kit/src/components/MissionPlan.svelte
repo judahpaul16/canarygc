@@ -313,7 +313,7 @@
         {m.mp_how_to()}
       </a>
       <button class="px-2 py-1 bg-[#d9a21b] rounded-lg hover:bg-[#f5c518]" aria-label={m.mp_survey_pattern()} onclick={startSurveyCapture}>
-        <i class="fas fa-vector-square"></i>
+        <i class="fas fa-draw-polygon"></i>
         <div class="tooltip">{m.mp_survey_pattern()}</div>
       </button>
       <button class="px-2 py-1 bg-[#38bdf8] rounded-lg hover:bg-[#6fd1ff]" aria-label={m.mp_orbit_pattern()} onclick={startOrbitCapture}>
