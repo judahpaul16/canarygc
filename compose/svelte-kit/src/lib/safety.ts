@@ -15,9 +15,9 @@ export interface SafetyViolation {
   severity: Severity;
   index: number | null;
   message: string;
-  // An airspace-restriction error the operator can clear by attesting
-  // authorization from the controlling agency.
-  overridable?: boolean;
+  // Passing this line asserts an airspace authorization such as LAANC, an SGI
+  // waiver, or controlling-agency approval.
+  authRequired?: boolean;
   // When many waypoints trip the same predicate (all inside one airspace, all
   // in a 0 ft grid), they share a group so the summary collapses them into a
   // single line with the waypoint range instead of one line each.
@@ -128,7 +128,7 @@ export function validateMission(
         message: zone.restricted
           ? m.sv_inside_restricted({ index: i, zone: zone.name })
           : m.sv_inside_controlled({ index: i, zone: zone.name }),
-        ...(zone.restricted ? { overridable: true } : {}),
+        authRequired: true,
         group: {
           key: `airspace:${zone.restricted ? 'restricted' : 'controlled'}:${zone.name}`,
           noun: zone.restricted ? m.sv_noun_restricted({ zone: zone.name }) : m.sv_noun_controlled({ zone: zone.name })
@@ -145,6 +145,7 @@ export function validateMission(
           severity: 'warning',
           index: i,
           message: m.sv_laanc_zero({ index: i, airport: airportSuffix }),
+          authRequired: true,
           group: {
             key: `laanc-zero:${cell.airport ?? ''}`,
             noun: m.sv_noun_laanc_zero({ airport: airportSuffix })
@@ -154,7 +155,8 @@ export function validateMission(
         violations.push({
           severity: 'warning',
           index: i,
-          message: m.sv_laanc_ceiling({ index: i, alt, ft: cell.ceilingFt, meters: Math.round(ceilingM), airport: airportSuffix })
+          message: m.sv_laanc_ceiling({ index: i, alt, ft: cell.ceilingFt, meters: Math.round(ceilingM), airport: airportSuffix }),
+          authRequired: true
         });
       }
       break;
@@ -177,7 +179,7 @@ export function validateMission(
           message: zone.restricted
             ? m.sv_leg_restricted({ from: from.i, to: to.i, zone: zone.name })
             : m.sv_leg_controlled({ from: from.i, to: to.i, zone: zone.name }),
-          ...(zone.restricted ? { overridable: true } : {})
+          authRequired: true
         });
       }
     }
@@ -271,7 +273,7 @@ export function validateTakeoff(
       message: zone.restricted
         ? m.sv_takeoff_in_restricted({ zone: zone.name })
         : m.sv_takeoff_in_controlled({ zone: zone.name }),
-      ...(zone.restricted ? { overridable: true } : {})
+      authRequired: true
     });
   }
 
@@ -283,7 +285,8 @@ export function validateTakeoff(
       violations.push({
         severity: 'warning',
         index: null,
-        message: m.sv_takeoff_laanc_zero({ airport: airportSuffix })
+        message: m.sv_takeoff_laanc_zero({ airport: airportSuffix }),
+        authRequired: true
       });
     } else if (altM > ceilingM) {
       violations.push({
@@ -294,7 +297,8 @@ export function validateTakeoff(
           ft: cell.ceilingFt,
           meters: Math.round(ceilingM),
           airport: airportSuffix
-        })
+        }),
+        authRequired: true
       });
     }
     break;

@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
-import { cached } from '$lib/server/geocache';
+import { cached, etagJson } from '$lib/server/geocache';
 import { parseTfrDetail, tfrLink, type Notam, type TfrDetail } from '$lib/notams';
 
 // Active FAA temporary flight restrictions for the vehicle's state, from the
@@ -59,7 +59,7 @@ async function stateForPoint(lat: number, lon: number): Promise<string | null> {
   return typeof stusab === 'string' && stusab.length === 2 ? stusab : null;
 }
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ url, request }) => {
   const lat = parseFloat(url.searchParams.get('lat') ?? '');
   const lon = parseFloat(url.searchParams.get('lon') ?? '');
   if (isNaN(lat) || isNaN(lon)) {
@@ -109,5 +109,5 @@ export const GET: RequestHandler = async ({ url }) => {
     })
   );
 
-  return json({ state, notams });
+  return etagJson(request, { state, notams });
 };

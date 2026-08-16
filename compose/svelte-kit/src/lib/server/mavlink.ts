@@ -13,6 +13,7 @@ import {
 
 import { building } from '$app/environment';
 import { REGISTRY } from '$lib/mavlink-registry'
+import { convertBigIntToNumber, formatTelemetryLine } from '$lib/telemetry-line';
 import { getSettings } from '$lib/server/settings';
 import { deriveSigningKey, nextSigningTimestamp } from '$lib/server/mavlink-signing';
 import { decideUploadAction, type UploadEvent } from '$lib/server/mission-upload';
@@ -151,6 +152,7 @@ if (!building) {
     // Load the signing key once the DB is reachable; a failure here leaves the
     // link unsigned until the operator saves the setting, which reloads it.
     refreshSigningConfig().catch(() => {});
+    initTelemetryRates().catch(() => {});
 
     if (state.supervisor) clearInterval(state.supervisor);
     state.supervisor = setInterval(superviseLink, SUPERVISOR_INTERVAL_MS);
@@ -183,7 +185,7 @@ export function vehicleSnapshot(): VehicleSnapshot {
 }
 
 // Station-originated events enter the same log stream the vehicle telemetry
-// rides, so they reach the event log and every SSE consumer.
+// rides, so they reach the event log and every stream consumer.
 export function pushStationLog(text: string): void {
     pushLog(text);
 }
@@ -209,22 +211,29 @@ export function forceReconnect(): void {
     initializePort();
 }
 
-// SSE consumers receive each line the instant it is parsed, so the marker and
-// HUD reach a fresh fix instead of one drained on the next poll.
-const logSubscribers = new Set<(line: string) => void>();
-export function subscribeLogs(cb: (line: string) => void): () => void {
-    logSubscribers.add(cb);
-    return () => logSubscribers.delete(cb);
+// Stream consumers receive each message the instant it is parsed, so the
+// marker and HUD reach a fresh fix instead of one drained on the next poll.
+// Vehicle messages travel as their raw wire frames and station events as
+// text lines.
+export interface TelemetryStreamSubscriber {
+    onFrame(tsMs: number, frame: Buffer): void;
+    onLine(tsMs: number, line: string): void;
+}
+const streamSubscribers = new Set<TelemetryStreamSubscriber>();
+export function subscribeTelemetry(sub: TelemetryStreamSubscriber): () => void {
+    streamSubscribers.add(sub);
+    return () => streamSubscribers.delete(sub);
 }
 
-function pushLog(entry: string): void {
+function pushLog(entry: string, tsMs = Date.now(), frame?: Buffer): void {
     logs.push(entry);
     newLogs.push(entry);
     if (logs.length > MAX_LOG_ENTRIES) logs.splice(0, logs.length - MAX_LOG_ENTRIES);
     if (newLogs.length > MAX_LOG_ENTRIES) newLogs.splice(0, newLogs.length - MAX_LOG_ENTRIES);
-    for (const cb of logSubscribers) {
+    for (const sub of streamSubscribers) {
         try {
-            cb(entry);
+            if (frame) sub.onFrame(tsMs, frame);
+            else sub.onLine(tsMs, entry);
         } catch {
             // A broken stream consumer must not stall telemetry parsing.
         }
@@ -500,9 +509,9 @@ function setupPacketReader(): void {
         if (clazz) {
             const data = packet.protocol.data(packet.payload, clazz);
             const sanitizedData = convertBigIntToNumber(data);
-            const timestamp = new Date().toISOString();
-            const logEntry = `${clazz.MSG_NAME}(${clazz.MAGIC_NUMBER})::${timestamp}::${JSON.stringify(sanitizedData)}`;
-            pushLog(logEntry);
+            const now = Date.now();
+            const logEntry = formatTelemetryLine(clazz, sanitizedData, new Date(now).toISOString());
+            pushLog(logEntry, now, packet.buffer);
             // The vehicle heartbeat arrives at 1 Hz while attitude and position
             // stream far faster, so it can rotate out of the capped ring between
             // client polls; the newest one is kept aside so every poll sees it.
@@ -575,9 +584,27 @@ const TELEMETRY_INTERVALS: [messageId: number, intervalUs: number][] = [
     [common.HomePosition.MSG_ID, 2_000_000]
 ];
 
+// The marginal-link posture stretches every telemetry interval so the
+// autopilot streams a fraction of the messages. The dividing factor keeps the
+// fastest messages (attitude, position) frequent enough to fly by while
+// dropping the total frame rate.
+const LOW_BANDWIDTH_DIVISOR = 4;
+let lowBandwidth = false;
+
+// A fresh dial re-applies whatever posture the operator last saved.
+export async function initTelemetryRates(): Promise<void> {
+    lowBandwidth = (await getSettings('mode.'))['mode.lowBandwidth'] === 'true';
+}
+
+export async function setTelemetryRates(low: boolean): Promise<void> {
+    lowBandwidth = low;
+    if (linkAlive()) await requestTelemetryStreams();
+}
+
 async function requestTelemetryStreams(): Promise<void> {
+    const factor = lowBandwidth ? LOW_BANDWIDTH_DIVISOR : 1;
     for (const [messageId, intervalUs] of TELEMETRY_INTERVALS) {
-        await sendMavlinkCommand('SET_MESSAGE_INTERVAL', [messageId, intervalUs], true);
+        await sendMavlinkCommand('SET_MESSAGE_INTERVAL', [messageId, intervalUs * factor], true);
     }
 }
 
@@ -900,20 +927,6 @@ async function setGlobalOrigin(lat: number, lon: number, altM: number) {
     origin.altitude = Math.round(altM * 1000);
     await sendMsg(state.port, origin);
     await sendMavlinkCommand('DO_SET_HOME', [0, 0, 0, 0, lat, lon, altM]);
-}
-
-function convertBigIntToNumber(obj: unknown): unknown {
-    if (typeof obj === 'bigint') {
-        return Number(obj);
-    } else if (Array.isArray(obj)) {
-        return obj.map(convertBigIntToNumber);
-    } else if (obj !== null && typeof obj === 'object') {
-        return Object.fromEntries(
-            Object.entries(obj).map(([key, value]) => [key, convertBigIntToNumber(value)])
-        );
-    } else {
-        return obj;
-    }
 }
 
 export {

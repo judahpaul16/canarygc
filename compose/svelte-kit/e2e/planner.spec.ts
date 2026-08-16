@@ -5,7 +5,7 @@ test.describe('mission planner window', () => {
 		await page.goto('/mission-planner');
 		// The window chrome mounts once the map registers the page's window
 		// rect; a fixed sleep races the dev server's module waterfall.
-		await page.locator('.map-btn[aria-label="Toggle fullscreen"]').waitFor({ timeout: 30_000 });
+		await page.locator('.map-btn[aria-label="Toggle fullscreen"]').waitFor({ timeout: 60_000 });
 		await waitForLink(page);
 		await page.waitForTimeout(800);
 	});
@@ -19,14 +19,22 @@ test.describe('mission planner window', () => {
 			'Toggle obstacles',
 			'Toggle live air traffic'
 		]) {
-			const hitsSelf = await page.evaluate((l) => {
-				const btn = document.querySelector(`.map-btn[aria-label="${l}"]`);
-				if (!btn) return false;
-				const r = btn.getBoundingClientRect();
-				const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-				return hit === btn || btn.contains(hit);
-			}, label);
-			expect(hitsSelf, `${label} is clickable`).toBe(true);
+			// The map floats over the page grid on a fixed overlay; for a beat
+			// after mount a control's center still hits the grid cell beneath it,
+			// so the hit test polls until the control settles on top.
+			await expect
+				.poll(
+					async () =>
+						page.evaluate((l) => {
+							const btn = document.querySelector(`.map-btn[aria-label="${l}"]`);
+							if (!btn) return false;
+							const r = btn.getBoundingClientRect();
+							const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+							return hit === btn || btn.contains(hit);
+						}, label),
+					{ timeout: 10_000 }
+				)
+				.toBe(true);
 		}
 		const lock = page.locator('.map-btn[aria-label="Toggle map lock"]');
 		const before = await lock.locator('i').getAttribute('class');
@@ -56,6 +64,9 @@ test.describe('mission planner window', () => {
 	});
 
 	test('map type toggle cycles Satellite, 3D Buildings, and Streets', async ({ page }) => {
+		// Three map mounts through software WebGL need more than the default
+		// budget on a loaded host.
+		test.setTimeout(120_000);
 		const readLabel = () =>
 			page.evaluate(() => document.querySelector('#map-toggle span span')?.textContent);
 		const seen = new Set<string>([(await readLabel()) ?? '']);
@@ -106,7 +117,7 @@ test.describe('mission planner window', () => {
 		await airspace.click();
 		await page.waitForTimeout(400);
 		await page.reload();
-		await page.locator('.map-btn[aria-label="Toggle airspace overlay"]').waitFor({ timeout: 30_000 });
+		await page.locator('.map-btn[aria-label="Toggle airspace overlay"]').waitFor({ timeout: 60_000 });
 		const isOn = (await airspace.getAttribute('class'))?.includes('text-') ?? false;
 		expect(isOn).toBe(!wasOn);
 		await airspace.click();

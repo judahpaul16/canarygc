@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toMediaMtxEnv, captureCommand, toMediaMtxPatch } from './camera-source';
+import { LOW_BANDWIDTH_BITRATE, toMediaMtxEnv, captureCommand, toMediaMtxPatch } from './camera-source';
 
 describe('camera source to MediaMTX env', () => {
   it('maps the Pi camera to rpiCamera with no runOnDemand', () => {
@@ -45,5 +45,16 @@ describe('camera source to MediaMTX env', () => {
     expect(patch.source).toBe('publisher');
     expect(patch.runOnDemand).toContain('ffmpeg');
     expect(patch.runOnDemandRestart).toBe(true);
+  });
+
+  it('sets the Pi camera bitrate, capped in low-bandwidth mode', () => {
+    expect(toMediaMtxPatch({ kind: 'pi' }).rpiCameraBitrate).toBe(5_000_000);
+    expect(toMediaMtxPatch({ kind: 'pi' }, true).rpiCameraBitrate).toBe(LOW_BANDWIDTH_BITRATE);
+  });
+
+  it('caps the capture encoder bitrate in low-bandwidth mode', () => {
+    const patch = toMediaMtxPatch({ kind: 'usb', device: '/dev/video0' }, true);
+    expect(patch.runOnDemand).toContain(`-b:v ${LOW_BANDWIDTH_BITRATE}`);
+    expect(patch.runOnDemand).toContain(`-maxrate ${LOW_BANDWIDTH_BITRATE}`);
   });
 });

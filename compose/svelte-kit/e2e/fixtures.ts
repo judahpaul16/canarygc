@@ -10,7 +10,7 @@ const SESSION_TTL_S = 3600;
 
 // The dev server writes the same sqlite file, so writes retry through
 // transient busy locks.
-async function withRetry<T>(fn: () => Promise<T>, attempts = 6): Promise<T> {
+async function withRetry<T>(fn: () => Promise<T>, attempts = 12): Promise<T> {
 	let lastError: unknown;
 	for (let i = 0; i < attempts; i++) {
 		try {
@@ -38,6 +38,13 @@ export const test = base.extend({
 		await context.addCookies([
 			{ name: 'auth_session', value: sessionId, url: baseURL ?? 'http://localhost:5174' }
 		]);
+		// Live advisories over the simulator's real-world location (an active
+		// TFR, ADS-B traffic) raise toasts over the map controls and vary run to
+		// run; the specs run against quiet skies.
+		await context.route('**/api/notams*', (route) =>
+			route.fulfill({ json: { state: null, notams: [] } })
+		);
+		await context.route('**/api/traffic*', (route) => route.fulfill({ json: { contacts: [] } }));
 		await use(context);
 		await withRetry(() => db.execute({ sql: 'DELETE FROM session WHERE id = ?', args: [sessionId] }));
 	}
@@ -51,3 +58,4 @@ export async function waitForLink(page: import('@playwright/test').Page) {
 	const { expect } = await import('@playwright/test');
 	await expect(page.getByText('You are currently offline')).toHaveCount(0, { timeout: 30_000 });
 }
+

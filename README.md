@@ -76,67 +76,88 @@ The reference hardware build (Raspberry Pi 4B, Holybro S500 V2, camera, and 4G m
 
 ## ✨ Features
 
-* **Live telemetry & control** over MAVLink: attitude, position, battery, GPS, flight-mode changes, arm/disarm, and a virtual D-Pad.
-* **ArduPilot and PX4 support.** Flight-mode encoding and decoding is selected per autopilot through a strategy layer, so mode changes and armed-state readouts work on both stacks.
-* **Mission planner** with a 2D map (Leaflet) and a 3D map (MapLibre). A single persistent map renders behind every page; the planner and dashboard mini-map are windows into it, and fullscreen expands the same map. Waypoint legs draw as smooth curves, and the map toggles (overlays, view lock, street/satellite/3D) persist for the browser session.
-* **Configurable basemaps.** Light, dark, and hybrid-satellite tiles resolve from a MapTiler key (with keyless fallbacks), and the map swaps to a real dark basemap when the theme toggles. Each mode's tile source is overridable in Integrations with a preset dropdown or a custom XYZ URL.
-* **Cross-autopilot missions.** A plan is stored autopilot-neutral and normalized to the connected stack on upload: ArduPilot runs the full command set, and PX4 substitutes or skips commands it cannot run and reports what changed.
-* **Mission import.** Load QGroundControl `.plan` and Mission Planner `.waypoints` (QGC WPL) files, the app's own JSON, a Google Earth `.kml` or `.kmz`, or a plain coordinate `.csv`, straight into the planner.
-* **Mission patterns.** Five generators in the planner: click an area's corners for serpentine survey transects at a chosen spacing, grid angle, and altitude; click a center for an orbit ring; draw a path for a corridor of parallel lanes across a width; drop a datum for an expanding-square search; or click a structure for a scan of stacked orbit rings that spiral up. The survey and orbit patterns follow QGroundControl's.
-* **Gamepad flight.** A toggle streams a connected gamepad as MAVLink `MANUAL_CONTROL` (Mode 2 sticks, 20 Hz, hover-centered thrust), with a connect dialog that previews live stick input. Enabling in flight switches the vehicle to its stick-flying mode (PX4 Position, ArduPilot Loiter); ending the stream hands it back to an autonomous hold.
-* **Smart path optimization.** One click routes the mission clear of hazards without reordering waypoints: it raises legs over FAA obstacles and OpenStreetMap buildings when the ceiling allows, routes around them when it does not, and always routes around restricted airspace. Overlays refetch as you pan and lookups are cached per area.
-* **Airspace overlays.** Both the 2D and 3D maps draw restricted and controlled airspace for the mission area, toggled from a map control, with a popup for each zone's class, altitude band, and operating implication. Worldwide coverage comes from [OpenAIP](https://www.openaip.net) with a key; without one it falls back to the FAA's keyless public airspace layers (US).
-* **LAANC ceilings and obstacles.** Two more toggleable overlays on both maps from the FAA's keyless layers: the UAS Facility Map grid colored by each square's pre-approved ceiling, and Digital Obstacle File towers and structures colored by height, each with plain-language popups.
-* **Live air traffic.** A toggleable ADS-B layer on both maps draws nearby aircraft with heading, altitude, and speed, merging traffic reported by the vehicle's onboard receiver (`ADSB_VEHICLE`) with keyless community network feeds (adsb.lol, adsb.fi).
-* **Pre-flight safety checks.** Before a mission starts, every waypoint is validated against an altitude ceiling and floor, a home-relative geofence radius, and the fetched airspace, and each leg is checked for passing through a zone. Restricted airspace, or a waypoint past a limit, blocks the launch; controlled airspace prompts for confirmation.
-* **Audible callouts.** Spoken telemetry callouts (arm/disarm, mode changes, battery, GPS, failsafe, link loss) over the browser speech API, with an on/off toggle that defaults on.
-* **Email alerts.** Enable per-event alerts (arm/disarm, mode change, failsafe, low battery, GPS or link loss, and more); each fires an email with the live coordinates and telemetry.
-* **Lost-operator failsafe.** When the vehicle is armed and no operator has been connected for a configured window (set in Integrations), the station commands the recovery itself: return to launch for a copter, rover, or sub, and the synthesized autoland approach for a fixed wing.
-* **Color-coded event log.** The `/event-log` stream colors each MAVLink event by message type and severity, with per-message filters, search highlighting, and one-click log download.
-* **MAVLink command console.** A console under the event stream sends raw `MAV_CMD`s with autocomplete over the detected autopilot's command set, per-command parameter hints, input validation, and history; the resulting `COMMAND_ACK` shows up in the stream above it.
-* **Flight controller firmware.** A Firmware tab flashes all four stacks. It detects a connected Betaflight or INAV board over the MultiWii Serial Protocol (MSP), browses the live INAV, Betaflight, ArduPilot, and PX4 catalogs, and flashes: an INAV target hex or a Betaflight cloud build over USB DFU, an ArduPilot `.apj` or PX4 `.px4` over the autopilot's own serial bootloader (CRC-verified), or any Intel HEX. It can reboot a board into its DFU bootloader first, and each provider explains release versus target.
-* **Sensor calibration.** A `/calibration` page runs accelerometer (six-position), level-horizon, gyroscope, compass, and ESC calibration, adapting the MAVLink commands and progress parsing to the connected autopilot, with an animated orientation guide and a live status log.
-* **Vehicle parameters.** Read, edit, search, import, and export the full parameter set. Curated quick-config chips filter the table to failsafe, logging, OSD, battery, geofence, and return parameters (matched to the connected autopilot) and annotate the common ones with plain-language descriptions.
-* **AI PID tuning.** From the parameters page, the current rate and attitude gains plus recent vibration and attitude telemetry go to an OpenAI-compatible endpoint (OpenAI, a LiteLLM proxy, or a local Ollama, configured in Integrations), and the returned gain suggestions apply with one click.
-* **MAVLink signing.** A shared passphrase set in Integrations signs every outbound message and verifies inbound ones, MAVLink 2 authentication with replay protection, so a publicly reachable link accepts commands only from a holder of the key. Strict mode also rejects unsigned messages.
-* **Integrations & password reset.** In-app settings for SMTP (your own mail server), airspace keys, map tiles, and the operator email, which also backs an emailed, expiring password-reset link.
-* **WebRTC camera feed** from an on-board Raspberry Pi camera via [MediaMTX](https://github.com/bluenviron/mediamtx).
-* **Weather, compass, and stats** widgets on a customizable dashboard.
-* **Build info** at `/version` (release tag, commit, build time).
+**Flight and control**
+* Live MAVLink telemetry and control (attitude, position, battery, GPS, mode changes, arm/disarm, virtual D-Pad), with flight modes and armed state decoded correctly for both ArduPilot and PX4.
+* Gamepad flight streams a connected pad as `MANUAL_CONTROL`, switches the vehicle to its stick mode (PX4 Position, ArduPilot Loiter), and hands back to an autonomous hold on release.
+* WebRTC camera feed from an onboard Raspberry Pi camera via [MediaMTX](https://github.com/bluenviron/mediamtx).
+
+**Maps and airspace** (2D Leaflet, 3D MapLibre)
+* One persistent map behind every page with curved waypoint legs and session-persistent toggles, plus light, dark, and hybrid-satellite basemaps from a MapTiler key or keyless fallbacks, each overridable with a custom XYZ URL.
+* Airspace, LAANC ceiling grid, obstacle, and live ADS-B traffic overlays on both maps, from [OpenAIP](https://www.openaip.net) with a key or the FAA's keyless US layers, each with a plain-language popup.
+
+**Mission planning**
+* Plans are stored autopilot-neutral and adjusted to the connected autopilot on upload, ArduPilot running the full command set and PX4 reporting what it substitutes or skips.
+* Import QGroundControl `.plan`, Mission Planner `.waypoints`, the app's JSON, a Google Earth `.kml` or `.kmz`, or a coordinate `.csv`.
+* Five pattern generators (survey transects, orbit ring, corridor lanes, expanding-square search, structure scan) and one-click path optimization that raises or routes legs around obstacles, buildings, and restricted airspace.
+
+**Safety**
+* Pre-flight validation of every waypoint and leg against altitude limits, a home geofence, and fetched airspace, blocking on restricted airspace and prompting on controlled.
+* Lost-operator failsafe (return to launch or synthesized autoland), a manual-control deadman, audible callouts, and per-event email alerts with live coordinates.
+* MAVLink 2 signing with replay protection, so a publicly reachable link accepts commands only from a key holder.
+
+**Firmware, calibration, and tuning**
+* Firmware tab flashes ArduPilot, PX4, Betaflight, and INAV, detecting boards over MSP and flashing over USB DFU or the autopilot's CRC-verified serial bootloader.
+* Sensor calibration (accelerometer, level, gyro, compass, ESC) adapted per autopilot, and full parameter read, edit, search, import, and export with quick-config chips.
+* AI-assisted PID tuning sends the current gains and recent telemetry to an OpenAI-compatible endpoint and applies the suggestions with one click.
+
+**Console, logs, and ops**
+* Color-coded event log with per-message filters, search, and download, and a raw `MAV_CMD` console with autocomplete, parameter hints, and validation.
+* Integrations for SMTP, airspace keys, and tiles, an emailed expiring password reset, dashboard weather, compass, and stats widgets, and build info at `/version`.
 
 ---
 
 ## ❓ Why Not Just Run Mission Planner or QGC over a VPN?
 
-A GCS setup has two links: the GCS-to-autopilot link that carries the command
-and control traffic, and whatever carries the operator's view. A desktop GCS
-merges them. The laptop is the ground station, so the aircraft's C2 link
-stretches over the internet to wherever that laptop is, and every cell blip is
-a GCS-loss event for the autopilot. The laptop sleeps, roams, or crashes, and
-the aircraft just lost its ground station mid-mission.
+A GCS setup has two links. One carries command and control to the autopilot,
+the other carries the operator's view. A desktop GCS merges them. The laptop is
+the ground station, so the aircraft's C2 link stretches over the internet to
+wherever that laptop sits, and the autopilot's GCS failsafe ends up judging
+internet weather. Leave the timeout at its default 5 seconds and a rough patch
+of coverage can trip a failsafe mid-mission. Stretch it or configure the
+failsafe to ignore the loss and it stops protecting you from anything. The
+laptop sleeps, roams, or crashes, and the aircraft flies on with whatever
+compromise you picked.
 
-CanaryGC splits the two links. The ground station rides the airframe and
-heartbeats the flight controller at 1 Hz over a short serial link, so the
-autopilot's GCS failsafe watches the companion computer, a failure genuinely
-worth reacting to. The internet hop carries only the operator's browser
-session, and losing it is handled at the layer that can see it:
+CanaryGC splits the two. The ground station runs onboard the aircraft and
+heartbeats the flight controller at 1 Hz over a short serial link. That
+heartbeat only stops if the companion computer itself fails, so a GCS failsafe
+means a real onboard problem and not a coverage gap. The internet hop carries
+only the operator's browser session, and a dropped connection never takes the
+ground station down.
 
-* An autonomous mission continues onboard, unaffected, with the battery,
-  geofence, and EKF failsafes still active. The browser reconnects on its own
-  when coverage returns.
-* Manual control runs a deadman: the gamepad and companion-guidance streams
-  release the craft to the flight controller's own failsafe when the operator
-  goes quiet.
-* The lost-operator failsafe commands a recovery when nobody has been connected
-  for a configured window: return to launch for a copter, rover, or sub, and
-  the synthesized autoland approach for a fixed wing.
+When the connection does drop, an autonomous mission continues onboard with no
+GCS failsafe firing and the battery, geofence, and EKF failsafes still active,
+and the browser reconnects on its own when coverage returns. Manual control
+runs a deadman, so the gamepad and companion-guidance streams release the craft
+to the flight controller's own failsafe when the operator goes quiet. And when
+nobody has been connected for a set window, the lost-operator failsafe commands
+a recovery on its own, return to launch for a copter, rover, or sub, and a
+synthesized autoland for a fixed wing.
 
-Running the desktop GCS on the Pi itself (over VNC or RDP) avoids the laptop
-but streams a desktop image over LTE: a full X11 stack on the companion,
-constant frame encoding, and control through a laggy remote session. A headless
-web GCS streams telemetry and commands instead of pixels, runs with no desktop
-stack, and serves any browser, so the field device is whatever is in your
-pocket.
+Running the desktop GCS on the Pi itself over VNC or RDP avoids the laptop but
+streams a desktop image over cellular, a full X11 stack on the companion and
+control through a laggy remote session. A headless web GCS streams telemetry
+and commands instead of pixels, runs with no desktop stack, and serves any
+browser, so the field device is whatever is in your pocket.
+
+An LTE kit like the [XBStation](https://www.xbstation.com/) moves MAVLink and
+video onto the cell network, but the laptop running Mission Planner or
+QGroundControl is still the ground station. The raw C2 stream still crosses the
+internet, every coverage blip is still a GCS-loss event at the autopilot, and a
+sleeping or crashed laptop still orphans the aircraft mid-mission. CanaryGC
+moves the ground station itself onto the airframe. The GCS heartbeat stays on a
+serial link that cannot lose coverage, the failsafes above run onboard next to
+the autopilot, and what crosses the cell network is a browser session you can
+drop and rejoin from any device.
+
+None of this makes cellular a cure-all. A cell link needs coverage, its latency
+is not RF-grade for hand-flown FPV, and a publicly reachable autopilot has to be
+signed or tunneled. ArduPilot recommends
+[redundant telemetry links](https://ardupilot.org/plane/docs/common-redundant-telemetry.html)
+in general, and one example it gives is a cellular primary with a long-range 900
+or 433 MHz radio backing it up, where even a short-range WiFi link helps regain
+control once the craft returns home. CanaryGC is the cellular link in that
+setup, and an RF radio should back it up on long range or certified operations.
 
 ---
 
@@ -231,9 +252,10 @@ npm run test:e2e                    # planner, event log, persistence
 E2E_SITL=1 npm run test:e2e         # adds the SITL flight: arm, takeoff, move, climb, yaw
 ```
 
-The flight spec flies the simulator, so run it against a freshly started
-`development-px4` profile; a lockstep SITL under heavy host load drifts. The
-suite runs single-worker because every spec shares one app and one vehicle.
+The flight spec flies the simulator and sets ArduCopter's Guided mode, so run
+it against a freshly started `development` profile (the ArduPilot SITL); a
+lockstep SITL under heavy host load drifts. The suite runs single-worker
+because every spec shares one app and one vehicle.
 
 ---
 

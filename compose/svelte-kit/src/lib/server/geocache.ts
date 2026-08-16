@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 // A small in-memory TTL cache for the map-overlay endpoints. The station runs
 // as a single Node process, so a process-local map is the right fit: no network
 // hop, and it dies with the process (the data is public and cheap to refetch).
@@ -19,6 +21,21 @@ export function bboxKey(prefix: string, bbox: string): string {
     .map((n) => Number(n).toFixed(3))
     .join(',');
   return `${prefix}:${rounded}`;
+}
+
+// Content-addressed JSON response for endpoints whose data changes on cache
+// TTLs rather than per request, so a repeat poll of unchanged data costs a 304
+// and headers instead of the body. The weak validator survives nginx's gzip,
+// which drops strong ETags when it rewrites a response.
+export function etagJson(request: Request, data: unknown): Response {
+  const body = JSON.stringify(data);
+  const etag = `W/"${createHash('sha1').update(body).digest('base64url')}"`;
+  if (request.headers.get('if-none-match') === etag) {
+    return new Response(null, { status: 304, headers: { etag } });
+  }
+  return new Response(body, {
+    headers: { 'content-type': 'application/json', etag }
+  });
 }
 
 export async function cached<T>(key: string, ttlMs: number, fetcher: () => Promise<T>): Promise<T> {

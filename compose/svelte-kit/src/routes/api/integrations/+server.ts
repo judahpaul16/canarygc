@@ -1,8 +1,8 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { getSetting, getSettings, setSetting } from '$lib/server/settings';
-import { applyCameraSource } from '$lib/server/mediamtx';
-import { refreshSigningConfig, provisionVehicleSigning } from '$lib/server/mavlink';
+import { applyCameraSource, applyBandwidthMode } from '$lib/server/mediamtx';
+import { refreshSigningConfig, provisionVehicleSigning, setTelemetryRates } from '$lib/server/mavlink';
 import type { CameraSourceKind } from '$lib/camera-source';
 import { baseLocale, isLocale } from '$lib/paraglide/runtime';
 import { m } from '$lib/paraglide/messages';
@@ -63,7 +63,13 @@ export const GET: RequestHandler = async (event) => {
         },
         failsafe: {
             lostOperatorMinutes: Number((await getSetting('failsafe.lostOperatorMinutes')) ?? 0)
-        }
+        },
+        safety: {
+            maxAltitudeM: Number((await getSetting('safety.maxAltitudeM')) ?? 120),
+            minAltitudeM: Number((await getSetting('safety.minAltitudeM')) ?? 0),
+            geofenceRadiusM: Number((await getSetting('safety.geofenceRadiusM')) ?? 1000)
+        },
+        lowBandwidth: (await getSetting('mode.lowBandwidth')) === 'true'
     });
 };
 
@@ -147,6 +153,28 @@ export const POST: RequestHandler = async (event) => {
     if (failsafe.lostOperatorMinutes !== undefined) {
         const minutes = Math.max(0, Math.round(Number(failsafe.lostOperatorMinutes) || 0));
         await setSetting('failsafe.lostOperatorMinutes', String(minutes));
+    }
+
+    const safety = body.safety ?? {};
+    if (safety.maxAltitudeM !== undefined) {
+        const meters = Math.max(1, Math.round(Number(safety.maxAltitudeM) || 120));
+        await setSetting('safety.maxAltitudeM', String(meters));
+    }
+    if (safety.minAltitudeM !== undefined) {
+        const meters = Math.max(0, Math.round(Number(safety.minAltitudeM) || 0));
+        await setSetting('safety.minAltitudeM', String(meters));
+    }
+    if (safety.geofenceRadiusM !== undefined) {
+        const meters = Math.max(1, Math.round(Number(safety.geofenceRadiusM) || 1000));
+        await setSetting('safety.geofenceRadiusM', String(meters));
+    }
+
+    // Low-bandwidth mode caps the video encoder and thins the telemetry stream
+    // live, so a save takes effect without a reconnect.
+    if (typeof body.lowBandwidth === 'boolean') {
+        await setSetting('mode.lowBandwidth', body.lowBandwidth ? 'true' : 'false');
+        await applyBandwidthMode(body.lowBandwidth);
+        await setTelemetryRates(body.lowBandwidth);
     }
 
     return json({ message: m.api_saved(), cameraApplied, signingPushed });

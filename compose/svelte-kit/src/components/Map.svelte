@@ -44,7 +44,8 @@
     showCeilingsStore,
     obstaclesStore,
     showObstaclesStore,
-    tfrOverlaysStore
+    tfrOverlaysStore,
+    lowBandwidthStore
   } from '../stores/safetyStore';
   import { airspaceColor, airspacePopupHtml, AIRSPACE_RESTRICTED_COLOR, tfrPopupHtml } from '../lib/airspace';
   import { ceilingColor, ceilingPopupHtml, obstacleColor, obstaclePopupHtml } from '../lib/hazards';
@@ -208,6 +209,8 @@
   let lockPulseTimer: ReturnType<typeof setTimeout> | undefined;
   // A recenter closer than this is telemetry jitter, not a snap worth signaling.
   const LOCK_PULSE_MIN_PX = 30;
+  const RECENTER_FRAME_MS = 30;
+  let recenteredAt = 0;
 
   function triggerLockPulse() {
     lockPulse = false;
@@ -476,6 +479,35 @@
       maxZoom: 16,
       animate: false
     });
+  }
+
+  function fit3DBoundsInWindow(ring: [number, number][]) {
+    const m = threeDMap;
+    if (!m) return;
+    const lons = ring.map(([lon]) => lon);
+    const lats = ring.map(([, lat]) => lat);
+    const w = isFullscreen ? null : get(mapWindowStore);
+    const margin = 30;
+    // The transform's persisted padding and a fit-options padding both
+    // subtract from the canvas, so the window inset applies once through
+    // setPadding and the fit carries none of its own.
+    m.setPadding(
+      w
+        ? {
+            top: w.top + margin,
+            left: w.left + margin,
+            right: window.innerWidth - (w.left + w.width) + margin,
+            bottom: window.innerHeight - (w.top + w.height) + margin
+          }
+        : { top: 40, left: 40, right: 40, bottom: 40 }
+    );
+    m.fitBounds(
+      [
+        [Math.min(...lons), Math.min(...lats)],
+        [Math.max(...lons), Math.max(...lats)]
+      ],
+      { maxZoom: 15, animate: false }
+    );
   }
 
   async function loadTileConfig() {
@@ -846,7 +878,7 @@
   let viewportTimer: ReturnType<typeof setTimeout> | null = null;
 
   function refreshViewportOverlays() {
-    if (!leafletMap || hideOverlay || leafletMap.getZoom() < MIN_OVERLAY_ZOOM) return;
+    if (!leafletMap || hideOverlay || get(lowBandwidthStore) || leafletMap.getZoom() < MIN_OVERLAY_ZOOM) return;
     const b = leafletMap.getBounds();
     const bbox = `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`;
     if (get(showAirspaceStore)) fetchAirspaceForBbox(bbox);
@@ -1071,6 +1103,8 @@
       // A session restored straight into 3D booted Leaflet in a hidden div.
       leafletMap.invalidateSize();
       centerInWindow(get(mavLocationStore) as L.LatLng, get(mapZoomStore));
+      // The marker and leg sat frozen while the 3D view had the screen.
+      updateMAVMarker();
     } else if (leafletMap && mapType.toLowerCase() === 'openstreetmap') {
       map.style.display = 'block';
       threedmap.style.display = 'none';
@@ -1119,7 +1153,7 @@
   const M_PER_FT = 0.3048;
 
   async function refreshTraffic() {
-    if (!leafletMap || hideOverlay || !get(showTrafficStore)) return;
+    if (!leafletMap || hideOverlay || get(lowBandwidthStore) || !get(showTrafficStore)) return;
     // The 3D map pans independently, so contacts follow whichever view is up.
     const b =
       get(mapTypeStore) === '3D' && threeDMap ? threeDMap.getBounds() : leafletMap.getBounds();
@@ -1457,6 +1491,7 @@
     }
 
     planPaths = drawnPaths;
+    planPathsRev++;
     updateMavLeg();
   }
 
@@ -1466,6 +1501,11 @@
   // main-thread time and drops the marker between frames.
   function updateMAVMarker() {
     if (!L || !leafletMap || !mavLocation) return;
+    // While the 3D view is up the Leaflet map is a hidden div, and a locked
+    // recenter re-projects every overlay polygon, so per-tick work stops here.
+    // The 3D mission leg rides the raw-fix effect and toggleMap resyncs the
+    // marker when the 2D view returns.
+    if (get(mapTypeStore) === '3D') return;
     if (!mavMarker) {
       const icon = L.divIcon({
         className: 'mav-marker',
@@ -1494,6 +1534,11 @@
       const targetPoint = leafletMap.latLngToContainerPoint(mavLocation as L.LatLng);
       const snapDistance = Math.hypot(windowCenter.x - targetPoint.x, windowCenter.y - targetPoint.y);
       if (snapDistance > LOCK_PULSE_MIN_PX) triggerLockPulse();
+      // A recenter re-projects every overlay polygon, so follow ticks pace it
+      // to this floor and skip while the vehicle sits under a pixel off center.
+      const now = performance.now();
+      if (snapDistance < 0.5 || now - recenteredAt < RECENTER_FRAME_MS) return;
+      recenteredAt = now;
       centerInWindow(mavLocation as L.LatLng, get(mapZoomStore));
     }
   }
@@ -1502,7 +1547,9 @@
   // rate; it updates in place while the plan segments rebuild only on plan or
   // progress changes.
   let planPaths: PathPoint[][] = [];
+  let planPathsRev = 0;
   let mavLegLine: L.Polyline | null = null;
+  let mavLegKey = '';
 
   function updateMavLeg() {
     if (!L || !leafletMap) return;
@@ -1511,7 +1558,11 @@
     if (!mav || !target) {
       mavLegLine?.remove();
       mavLegLine = null;
-      missionPathsStore.set(planPaths);
+      const key = `none:${planPathsRev}`;
+      if (key !== mavLegKey) {
+        mavLegKey = key;
+        missionPathsStore.set(planPaths);
+      }
       return;
     }
     const targetLatLng = target.getLatLng();
@@ -1527,10 +1578,17 @@
     } else {
       mavLegLine.setLatLngs(points);
     }
+    // The store write makes the hidden MapLibre map re-tessellate its mission
+    // source, so it fires per raw fix while the leg polyline above glides per
+    // smoothed tick.
+    const raw = (get(mavLocationStore) as L.LatLng | null) ?? mav;
+    const key = `${raw.lat},${raw.lng},${targetLatLng.lat},${targetLatLng.lng}:${planPathsRev}`;
+    if (key === mavLegKey) return;
+    mavLegKey = key;
     missionPathsStore.set([
       ...planPaths,
       [
-        { lat: mav.lat, lng: mav.lng },
+        { lat: raw.lat, lng: raw.lng },
         { lat: targetLatLng.lat, lng: targetLatLng.lng }
       ]
     ]);
@@ -1561,6 +1619,14 @@
   $effect.pre(() => {
     void $smoothLocationStore;
     untrack(() => updateMAVMarker());
+  });
+  // With the 3D view up updateMAVMarker stands down, so the mission leg the
+  // 3D map draws follows the raw fix from here.
+  $effect.pre(() => {
+    void $mavLocationStore;
+    untrack(() => {
+      if (get(mapTypeStore) === '3D') updateMavLeg();
+    });
   });
   $effect.pre(() => {
     void $mavIconStore;
@@ -1654,6 +1720,7 @@
       lockViewStore.set(false);
       const latlngs = focus.map(([lon, lat]) => [lat, lon] as [number, number]);
       fitBoundsInWindow(L.latLngBounds(latlngs));
+      if (mapType.toLowerCase() === '3d') fit3DBoundsInWindow(focus);
       mapFocusStore.set(null);
     });
   });

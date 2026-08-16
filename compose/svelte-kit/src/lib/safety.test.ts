@@ -110,24 +110,39 @@ describe('validateTakeoff', () => {
 	});
 });
 
-describe('overridable marking', () => {
+describe('authorization marking', () => {
 	const point = { lat: 33.75, lon: -84.39 };
 	const restricted: AirspaceZone = { ...zone, name: 'TFR 6/1', restricted: true, type: 'TFR' };
 
-	it('marks a restricted-airspace takeoff error as overridable', () => {
+	it('marks a restricted-airspace takeoff error', () => {
 		const violations = validateTakeoff(point, 50, DEFAULT_SAFETY_LIMITS, [restricted]);
-		expect(violations[0].overridable).toBe(true);
+		expect(violations[0].authRequired).toBe(true);
 	});
 
-	it('marks a restricted-airspace waypoint error as overridable', () => {
+	it('marks a restricted-airspace waypoint error', () => {
 		const actions: MissionPlanActions = { 1: waypoint() };
 		const violations = validateMission(actions, DEFAULT_SAFETY_LIMITS, [restricted]);
 		const inside = violations.find((v) => v.message.includes('TFR 6/1'));
-		expect(inside?.overridable).toBe(true);
+		expect(inside?.authRequired).toBe(true);
 	});
 
-	it('leaves an altitude error without the override', () => {
+	it('marks a controlled-airspace warning', () => {
+		const violations = validateTakeoff(point, 50, DEFAULT_SAFETY_LIMITS, [zone]);
+		expect(violations[0].severity).toBe('warning');
+		expect(violations[0].authRequired).toBe(true);
+	});
+
+	it('marks a LAANC ceiling warning', () => {
+		const hazards = {
+			ceilings: [{ ceilingFt: 100, airport: 'ATL', laanc: true, polygon: zone.polygon }],
+			obstacles: []
+		};
+		const violations = validateTakeoff(point, 50, DEFAULT_SAFETY_LIMITS, [], hazards);
+		expect(violations[0].authRequired).toBe(true);
+	});
+
+	it('leaves an altitude error unmarked', () => {
 		const violations = validateTakeoff(point, 200, DEFAULT_SAFETY_LIMITS, []);
-		expect(violations[0].overridable).toBeUndefined();
+		expect(violations[0].authRequired).toBeUndefined();
 	});
 });

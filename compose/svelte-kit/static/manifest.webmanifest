@@ -1,0 +1,21 @@
+{
+	"name": "Canary Ground Control",
+	"short_name": "Canary",
+	"start_url": "/",
+	"display": "standalone",
+	"background_color": "#121212",
+	"theme_color": "#1c1c1e",
+	"icons": [
+		{
+			"src": "/favicon.png",
+			"sizes": "256x256",
+			"type": "image/png"
+		},
+		{
+			"src": "/logo.png",
+			"sizes": "712x712",
+			"type": "image/png",
+			"purpose": "any"
+		}
+	]
+}

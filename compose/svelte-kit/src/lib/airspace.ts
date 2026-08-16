@@ -90,7 +90,8 @@ export function tfrPopupHtml(n: Notam): string {
 }
 
 // Active TFRs as restricted airspace zones for the optimizer and mission
-// validation.
+// validation. The vertical band runs from the surface to the notice's ceiling,
+// so flight above the ceiling validates clean.
 export function tfrZones(notams: Notam[]): AirspaceZone[] {
   return notams
     .filter((n): n is Notam & { boundary: [number, number][] } => !!n.boundary && n.boundary.length >= 3)
@@ -98,6 +99,8 @@ export function tfrZones(notams: Notam[]): AirspaceZone[] {
       name: `TFR ${n.id}`,
       restricted: true,
       polygon: [n.boundary],
-      type: 'TFR'
+      type: 'TFR',
+      lowerM: 0,
+      ...(n.ceilingM !== undefined ? { upperM: n.ceilingM } : {})
     }));
 }
