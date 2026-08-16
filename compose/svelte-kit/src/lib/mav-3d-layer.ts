@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import maplibregl, { type CustomLayerInterface, type CustomRenderMethodInput, type Map as MapLibreMap } from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
+import type { CustomLayerInterface, CustomRenderMethodInput, Map as MapLibreMap } from 'maplibre-gl';
 import { buildVehicleModel, disposeVehicleModel, type VehicleClass } from './vehicle-models-3d';
 
 export interface Mav3DState {

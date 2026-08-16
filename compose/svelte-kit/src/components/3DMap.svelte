@@ -32,7 +32,8 @@
   import { ceilingColor, feetToMeters, obstacleColor } from '../lib/hazards';
   import { fetchAirspaceForBbox, fetchHazardsForBbox } from '../lib/preflight';
   import { get } from 'svelte/store';
-  import pkg, { type GeoJSONSource, type ExpressionSpecification } from 'maplibre-gl';
+  import * as pkg from 'maplibre-gl';
+  import type { GeoJSONSource, ExpressionSpecification } from 'maplibre-gl';
   const { Map, Marker, NavigationControl } = pkg;
 
   interface Props {

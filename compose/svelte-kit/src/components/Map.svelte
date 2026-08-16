@@ -53,7 +53,7 @@
   import { resolveTiles, nativeMaxZoom, type TileSources } from '../lib/tiles';
   import { refreshAirspace, refreshHazards, fetchAirspaceForBbox, fetchHazardsForBbox } from '../lib/preflight';
   import ThreeDMap from './3DMap.svelte';
-  import type pkg from 'maplibre-gl';
+  import type * as pkg from 'maplibre-gl';
   import { ACTION_TYPES, ACTION_MARKERS } from '../lib/mission-icons';
 
   import {
