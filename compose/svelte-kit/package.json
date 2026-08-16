@@ -47,7 +47,7 @@
 		"hls.js": "^1.5.15",
 		"leaflet": "^1.9.4",
 		"lucia": "^3.2.2",
-		"maplibre-gl": "^5.0.0",
+		"maplibre-gl": "^6.0.0",
 		"node-datachannel": "^0.30.0",
 		"node-mavlink": "^2.3.0",
 		"nodemailer": "^9.0.3",
