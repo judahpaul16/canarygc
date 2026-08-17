@@ -60,7 +60,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
                 return new Response('No logs available', { status: 503 });
             } catch (err) {
                 console.error(err);
-                return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
+                return new Response(`Error: ${(err as Error).message}`, { status: 500 });
             }
         case 'send_command': {
             const command = event.request.headers.get('command');
@@ -81,7 +81,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
                 }
             } catch (err) {
                 console.error(err);
-                return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
+                return new Response(`Error: ${(err as Error).message}`, { status: 500 });
             }
         }
         case 'manual_control': {
@@ -96,7 +96,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
                 return new Response('Manual control frame sent', { status: 200 });
             } catch (err) {
                 console.error(err);
-                return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
+                return new Response(`Error: ${(err as Error).message}`, { status: 500 });
             }
         }
         case 'clear_mission':
@@ -106,7 +106,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
                 return new Response('MAVLink missions cleared', { status: 200 });
             } catch (err) {
                 console.error(err);
-                return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
+                return new Response(`Error: ${(err as Error).message}`, { status: 500 });
             }
         case 'load_mission': {
             const actions = event.request.headers.get('actions');
@@ -117,7 +117,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
                 return new Response(result.message, { status: result.ok ? 200 : 502 });
             } catch (err) {
                 console.error(err);
-                return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
+                return new Response(`Error: ${(err as Error).message}`, { status: 500 });
             }
         }
         case 'set_origin': {
@@ -135,7 +135,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
                 return new Response(`Origin and home set to ${lat}, ${lon}, ${alt} m`, { status: 200 });
             } catch (err) {
                 console.error(err);
-                return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
+                return new Response(`Error: ${(err as Error).message}`, { status: 500 });
             }
         }
         case 'set_position_local': {
@@ -150,7 +150,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
                 return new Response(`Local position set manually: x: ${x}, y: ${y}, z: ${z}`, { status: 200 });
             } catch (err) {
                 console.error(err);
-                return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
+                return new Response(`Error: ${(err as Error).message}`, { status: 500 });
             }
         }
         case 'set_depth': {
@@ -163,7 +163,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
                 return new Response(`Depth set to ${depth} m below surface`, { status: 200 });
             } catch (err) {
                 console.error(err);
-                return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
+                return new Response(`Error: ${(err as Error).message}`, { status: 500 });
             }
         }
         case 'set_altitude': {
@@ -178,7 +178,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
                 return new Response(`Altitude set to ${alt} m`, { status: 200 });
             } catch (err) {
                 console.error(err);
-                return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
+                return new Response(`Error: ${(err as Error).message}`, { status: 500 });
             }
         }
         case 'request_params':
@@ -187,7 +187,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
                 return new Response('Parameters requested', { status: 200 });
             } catch (err) {
                 console.error(err);
-                return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
+                return new Response(`Error: ${(err as Error).message}`, { status: 500 });
             }
         case 'write_param': {
             const id = event.request.headers.get('id')!;
@@ -205,7 +205,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
                 return new Response(`Parameter written: ${processedId}, value: ${value}, type: ${type}`, { status: 200 });
             } catch (err) {
                 console.error(err);
-                return new Response(`Error: ${(err as Error).stack}`, { status: 500 });
+                return new Response(`Error: ${(err as Error).message}`, { status: 500 });
             }
         }
         default:

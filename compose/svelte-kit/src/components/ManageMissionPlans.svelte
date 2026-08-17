@@ -113,8 +113,8 @@
         method: "POST",
         headers: {
             "content-type": "application/json",
-            "title": title,
         },
+        body: JSON.stringify({ title }),
     });
 
     missionPlanTitleStore.set(title);
@@ -158,8 +158,8 @@
         method: "POST",
         headers: {
             "content-type": "application/json",
-            "title": title,
         },
+        body: JSON.stringify({ title }),
       });
       let responseData = await response.json();
       console.log(responseData);
@@ -177,9 +177,8 @@
             method: "POST",
             headers: {
               "content-type": "application/json",
-              "title": missionPlan.title,
-              "actions": JSON.stringify(missionPlan.actions),
             },
+            body: JSON.stringify({ title: missionPlan.title, actions: missionPlan.actions }),
           }).catch((error) => {
             showModal({
               title: m.common_error(),
@@ -207,9 +206,8 @@
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "title": missionPlan.title,
-        "actions": JSON.stringify(missionPlan.actions),
       },
+      body: JSON.stringify({ title: missionPlan.title, actions: missionPlan.actions }),
     }).catch((error) => {
       showModal({
         title: m.common_error(),
@@ -243,8 +241,8 @@
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "title": title,
         },
+        body: JSON.stringify({ title }),
       });
       missionPlans = missionPlans.filter((plan) => plan.title !== title);
     } catch (error) {
