@@ -78,7 +78,7 @@
     // The MediaMTX feed is optional; while it is down the iframe stays behind
     // the placeholder and the view falls back to the HUD.
     const fetchLiveFeed = async () => {
-      let available = false;
+      let available: boolean;
       try {
         const response = await fetch(feedSrc);
         available = response.ok;

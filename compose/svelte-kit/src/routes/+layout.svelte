@@ -356,7 +356,7 @@
 
   async function runTelemetryStream(ac: AbortController) {
     while (!ac.signal.aborted) {
-      let opened = false;
+      let opened: boolean;
       try {
         opened = await runDataChannel(ac);
       } catch {

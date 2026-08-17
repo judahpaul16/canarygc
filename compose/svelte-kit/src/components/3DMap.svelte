@@ -267,7 +267,7 @@
   function sampleGround(m: pkg.Map, loc: { lat: number; lng: number }) {
     const key = `${loc.lat.toFixed(5)},${loc.lng.toFixed(5)}`;
     if (key === mavGroundKey) return;
-    let elevation: number | null = null;
+    let elevation: number | null;
     try {
       elevation = m.queryTerrainElevation([loc.lng, loc.lat]);
     } catch {

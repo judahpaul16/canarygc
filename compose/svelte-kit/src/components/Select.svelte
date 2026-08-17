@@ -37,7 +37,8 @@
 		onchange?: (value: string) => void;
 	} = $props();
 
-	const listId = `select-list-${++uid}`;
+	uid += 1;
+	const listId = `select-list-${uid}`;
 
 	// Upstream catalogs occasionally repeat a value; a keyed each throws on a
 	// duplicate key, so the option list is de-duplicated before rendering.

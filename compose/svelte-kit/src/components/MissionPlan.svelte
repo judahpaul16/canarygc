@@ -140,14 +140,14 @@
     // Determine the next index
     const newIndex = Object.keys(actions).length;
 
-    let location = { lat: 0, lng: 0 };
-    let type = 'NAV_WAYPOINT';
-    if (newIndex === 0 || newIndex === 1) type = 'NAV_TAKEOFF';
-    if (newIndex === 0 || newIndex === 1) location = mavLocation;
-    else location = {
-      lat: Object.values(actions)[newIndex - 1].lat,
-      lng: Object.values(actions)[newIndex - 1].lon
-    };
+    const isTakeoff = newIndex === 0 || newIndex === 1;
+    const type = isTakeoff ? 'NAV_TAKEOFF' : 'NAV_WAYPOINT';
+    const location = isTakeoff
+      ? mavLocation
+      : {
+          lat: Object.values(actions)[newIndex - 1].lat,
+          lng: Object.values(actions)[newIndex - 1].lon
+        };
 
     // Add new action
     actions = { 

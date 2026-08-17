@@ -77,7 +77,7 @@ export const GET: RequestHandler = async ({ url, request }) => {
   }
   if (!state) return json({ state: null, notams: [] as Notam[] });
 
-  let list: TfrItem[] = [];
+  let list: TfrItem[];
   try {
     list = await cached('notam-tfr-list', TFR_TTL_MS, fetchTfrList);
   } catch (error) {

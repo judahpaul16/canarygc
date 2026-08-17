@@ -141,9 +141,7 @@ export class MspParser {
 	feed(chunk: Uint8Array): MspFrame[] {
 		const frames: MspFrame[] = [];
 		for (const byte of chunk) this.buffer.push(byte);
-		let progressed = true;
-		while (progressed) {
-			progressed = false;
+		while (true) {
 			const start = this.buffer.indexOf(0x24);
 			if (start === -1) {
 				this.buffer.length = 0;
@@ -161,7 +159,6 @@ export class MspParser {
 				if (this.buffer.length < total) break;
 				const frame = this.buffer.slice(0, total);
 				this.buffer.splice(0, total);
-				progressed = true;
 				let checksum = frame[3] ^ frame[4];
 				for (let i = 5; i < 5 + size; i++) checksum ^= frame[i];
 				if (checksum === frame[total - 1]) {
@@ -179,7 +176,6 @@ export class MspParser {
 				if (this.buffer.length < total) break;
 				const frame = this.buffer.slice(0, total);
 				this.buffer.splice(0, total);
-				progressed = true;
 				const crc = crc8DvbS2(Uint8Array.from(frame.slice(3, total - 1)));
 				if (crc === frame[total - 1]) {
 					frames.push({
@@ -192,7 +188,6 @@ export class MspParser {
 			} else {
 				// Not an MSP response header; drop the '$' and resync.
 				this.buffer.splice(0, 1);
-				progressed = true;
 			}
 		}
 		return frames;
