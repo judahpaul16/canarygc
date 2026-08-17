@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM ubuntu:22.10
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG COPTER_TAG=Copter-4.5.7
