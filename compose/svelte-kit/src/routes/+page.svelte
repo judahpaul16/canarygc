@@ -3,6 +3,11 @@
   import { m } from '$lib/paraglide/messages';
 
   let { data } = $props();
+  const escapedUsername = $derived(
+    (data.user?.username ?? '').replace(/[&<>"']/g, (c: string) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string
+    )
+  );
   const features = [
     {
       icon: 'fa-satellite-dish',
@@ -83,8 +88,8 @@
       <p class="tagline">{m.home_tagline()}</p>
 
       {#if data.user}
-        <!-- eslint-disable-next-line svelte/no-at-html-tags -- username is the operator's own account name, wrapped in the translated string's <strong> -->
-        <p class="state-note">{@html m.home_signed_in({ username: data.user.username })}</p>
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -- username is escaped above; only the translated string's <strong> survives -->
+        <p class="state-note">{@html m.home_signed_in({ username: escapedUsername })}</p>
         <div class="cta-row">
           <a href="/dashboard" class="cta">{m.home_open_dashboard()} <i class="fas fa-arrow-right"></i></a>
           <button type="button" class="cta cta-ghost" onclick={openVehicleLocationModal}>

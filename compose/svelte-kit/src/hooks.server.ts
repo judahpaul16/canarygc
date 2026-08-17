@@ -75,5 +75,20 @@ const handleParaglide: Handle = ({ event, resolve }) =>
 		});
 	});
 
+const SECURITY_HEADERS = {
+	"X-Content-Type-Options": "nosniff",
+	"X-Frame-Options": "SAMEORIGIN",
+	"Referrer-Policy": "strict-origin-when-cross-origin",
+	"Permissions-Policy": "camera=(), microphone=(), geolocation=()"
+};
+
+const handleHeaders: Handle = async ({ event, resolve }) => {
+	const response = await resolve(event);
+	for (const [header, value] of Object.entries(SECURITY_HEADERS)) {
+		response.headers.set(header, value);
+	}
+	return response;
+};
+
 // Paraglide first so the locale is set before the auth handle emits its 401 JSON.
-export const handle = sequence(handleParaglide, handleAuth);
+export const handle = sequence(handleParaglide, handleHeaders, handleAuth);
