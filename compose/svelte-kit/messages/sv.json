@@ -572,6 +572,8 @@
   "email_map": "Karta",
   "api_reset_generic": "Om den e-posten finns registrerad är en återställningslänk på väg.",
   "api_reset_email_failed": "E-postmeddelandet kunde inte skickas. Kontrollera SMTP-inställningarna under Integrationer.",
+  "api_reset_link_invalid": "Denna återställningslänk är ogiltig eller har gått ut.",
+  "api_server_error": "Ett oväntat fel inträffade.",
   "email_reset_subject": "Återställ ditt CanaryGC-lösenord",
   "email_reset_body": "En lösenordsåterställning begärdes för ditt CanaryGC-operatörskonto.",
   "email_reset_link_text": "Återställ ditt lösenord",

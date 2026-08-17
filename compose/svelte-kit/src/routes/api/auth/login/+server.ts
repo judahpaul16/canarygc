@@ -1,4 +1,4 @@
-import { lucia, secureCookie } from "$lib/server/auth";
+import { lucia, secureCookie, ARGON2_OPTIONS, dummyHash } from "$lib/server/auth";
 import { verify } from "@node-rs/argon2";
 import { db } from "$lib/server/db";
 import type { RequestHandler } from '@sveltejs/kit';
@@ -13,13 +13,6 @@ function json(message: string, status: number, headers: Record<string, string> =
         headers: { "content-type": "application/json", ...headers }
     });
 }
-
-const ARGON2_OPTIONS = {
-    memoryCost: 19456,
-    timeCost: 2,
-    outputLen: 32,
-    parallelism: 1
-};
 
 const USERNAME_MIN = 3;
 const USERNAME_MAX = 31;
@@ -73,6 +66,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
         const result = await db.execute({ sql: "SELECT * FROM user WHERE username = ?", args: [username] });
         const existingUser = result.rows[0] as unknown as DatabaseUser | undefined;
         if (!existingUser) {
+            await verify(await dummyHash, password, ARGON2_OPTIONS);
             noteFailure(`login:${rateKey}`);
             return json(m.api_incorrect_credentials(), 400);
         }
@@ -92,12 +86,8 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
             secure: secureCookie(event)
         });
     } catch (e) {
-        return new Response(JSON.stringify({ message: (e as Error).message }), {
-            status: 500,
-            headers: {
-                "content-type": "application/json"
-            }
-        });
+        console.error("Login failed:", e);
+        return json(m.api_server_error(), 500);
     }
 
     return new Response(JSON.stringify({ message: m.api_success() }), {

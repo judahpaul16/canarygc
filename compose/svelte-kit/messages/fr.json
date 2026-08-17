@@ -572,6 +572,8 @@
   "email_map": "Carte",
   "api_reset_generic": "Si cet e-mail est enregistré, un lien de réinitialisation est en route.",
   "api_reset_email_failed": "L'e-mail n'a pas pu être envoyé. Vérifiez les paramètres SMTP sous Intégrations.",
+  "api_reset_link_invalid": "Ce lien de réinitialisation est invalide ou a expiré.",
+  "api_server_error": "Une erreur inattendue s'est produite.",
   "email_reset_subject": "Réinitialisez votre mot de passe CanaryGC",
   "email_reset_body": "Une réinitialisation de mot de passe a été demandée pour votre compte opérateur CanaryGC.",
   "email_reset_link_text": "Réinitialiser votre mot de passe",

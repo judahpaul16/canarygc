@@ -572,6 +572,8 @@
   "email_map": "Map",
   "api_reset_generic": "If that email is on file, a reset link is on its way.",
   "api_reset_email_failed": "Email could not be sent. Check the SMTP settings under Integrations.",
+  "api_reset_link_invalid": "This reset link is invalid or has expired.",
+  "api_server_error": "An unexpected error occurred.",
   "email_reset_subject": "Reset your CanaryGC password",
   "email_reset_body": "A password reset was requested for your CanaryGC operator account.",
   "email_reset_link_text": "Reset your password",

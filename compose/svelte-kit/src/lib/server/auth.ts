@@ -1,9 +1,19 @@
 import { Lucia } from "lucia";
 import { LibSQLAdapter } from "@lucia-auth/adapter-sqlite";
+import { hash } from "@node-rs/argon2";
 import { db } from "./db";
 
 import type { RequestEvent } from "@sveltejs/kit";
 import type { DatabaseUser } from "./db";
+
+export const ARGON2_OPTIONS = {
+	memoryCost: 19456,
+	timeCost: 2,
+	outputLen: 32,
+	parallelism: 1
+};
+
+export const dummyHash = hash("canarygc", ARGON2_OPTIONS);
 
 const adapter = new LibSQLAdapter(db, {
 	user: "user",

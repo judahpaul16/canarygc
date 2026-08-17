@@ -572,6 +572,8 @@
   "email_map": "Karte",
   "api_reset_generic": "Wenn diese E-Mail hinterlegt ist, ist ein Link zum Zurücksetzen unterwegs.",
   "api_reset_email_failed": "Die E-Mail konnte nicht gesendet werden. Prüfen Sie die SMTP-Einstellungen unter Integrationen.",
+  "api_reset_link_invalid": "Dieser Link zum Zurücksetzen ist ungültig oder abgelaufen.",
+  "api_server_error": "Ein unerwarteter Fehler ist aufgetreten.",
   "email_reset_subject": "Setzen Sie Ihr CanaryGC-Passwort zurück",
   "email_reset_body": "Für Ihr CanaryGC-Bedienerkonto wurde ein Zurücksetzen des Passworts angefordert.",
   "email_reset_link_text": "Passwort zurücksetzen",

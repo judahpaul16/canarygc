@@ -572,6 +572,8 @@
   "email_map": "Mappa",
   "api_reset_generic": "Se questa e-mail è registrata, un link di reimpostazione è in arrivo.",
   "api_reset_email_failed": "Impossibile inviare l'e-mail. Controlla le impostazioni SMTP in Integrazioni.",
+  "api_reset_link_invalid": "Questo link di reimpostazione non è valido o è scaduto.",
+  "api_server_error": "Si è verificato un errore imprevisto.",
   "email_reset_subject": "Reimposta la tua password CanaryGC",
   "email_reset_body": "È stata richiesta una reimpostazione della password per il tuo account operatore CanaryGC.",
   "email_reset_link_text": "Reimposta la tua password",

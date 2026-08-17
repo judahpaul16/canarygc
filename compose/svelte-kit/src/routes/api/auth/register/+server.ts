@@ -1,16 +1,9 @@
-import { lucia, secureCookie } from "$lib/server/auth";
+import { lucia, secureCookie, ARGON2_OPTIONS } from "$lib/server/auth";
 import { generateId } from "lucia";
 import { hash } from "@node-rs/argon2";
 import { db } from "$lib/server/db";
 import type { RequestHandler } from '@sveltejs/kit';
 import { m } from '$lib/paraglide/messages';
-
-const ARGON2_OPTIONS = {
-    memoryCost: 19456,
-    timeCost: 2,
-    outputLen: 32,
-    parallelism: 1
-};
 
 const USERNAME_MIN = 3;
 const USERNAME_MAX = 31;
@@ -69,10 +62,18 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
     const userId = generateId(USER_ID_LENGTH);
 
     try {
-        await db.execute({
-            sql: "INSERT INTO user (id, username, password_hash, email) VALUES(?, ?, ?, ?)",
+        const inserted = await db.execute({
+            sql: "INSERT INTO user (id, username, password_hash, email) SELECT ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM user)",
             args: [userId, username, passwordHash, email]
         });
+        if (inserted.rowsAffected === 0) {
+            return new Response(JSON.stringify({ message: m.api_registration_closed() }), {
+                status: 403,
+                headers: {
+                    "content-type": "application/json"
+                }
+            });
+        }
         const session = await lucia.createSession(userId, {});
         const sessionCookie = lucia.createSessionCookie(session.id);
         event.cookies.set(sessionCookie.name, sessionCookie.value, {
@@ -81,7 +82,8 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
             secure: secureCookie(event)
         });
     } catch (e) {
-        return new Response(JSON.stringify({ message: (e as Error).stack }), {
+        console.error("Registration failed:", e);
+        return new Response(JSON.stringify({ message: m.api_server_error() }), {
             status: 500,
             headers: {
                 "content-type": "application/json"
@@ -89,7 +91,7 @@ export const POST: RequestHandler = async (event): Promise<Response> => {
         });
     }
 
-    return new Response(JSON.stringify({ message: "Success" }), {
+    return new Response(JSON.stringify({ message: m.api_success() }), {
         status: 200,
         headers: {
             "content-type": "application/json"

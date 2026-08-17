@@ -572,6 +572,8 @@
   "email_map": "Kaart",
   "api_reset_generic": "Als dat e-mailadres bekend is, is een resetlink onderweg.",
   "api_reset_email_failed": "De e-mail kon niet worden verzonden. Controleer de SMTP-instellingen onder Integraties.",
+  "api_reset_link_invalid": "Deze herstellink is ongeldig of verlopen.",
+  "api_server_error": "Er is een onverwachte fout opgetreden.",
   "email_reset_subject": "Stel uw CanaryGC-wachtwoord opnieuw in",
   "email_reset_body": "Er is een wachtwoordreset aangevraagd voor uw CanaryGC-operatoraccount.",
   "email_reset_link_text": "Uw wachtwoord opnieuw instellen",

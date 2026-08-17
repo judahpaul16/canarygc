@@ -572,6 +572,8 @@
   "email_map": "Mapa",
   "api_reset_generic": "Jeśli ten e-mail jest zapisany, link do resetu jest w drodze.",
   "api_reset_email_failed": "Nie można wysłać e-maila. Sprawdź ustawienia SMTP w Integracjach.",
+  "api_reset_link_invalid": "Ten link do resetowania jest nieprawidłowy lub wygasł.",
+  "api_server_error": "Wystąpił nieoczekiwany błąd.",
   "email_reset_subject": "Zresetuj swoje hasło CanaryGC",
   "email_reset_body": "Zażądano zresetowania hasła dla Twojego konta operatora CanaryGC.",
   "email_reset_link_text": "Zresetuj swoje hasło",

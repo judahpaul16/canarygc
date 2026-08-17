@@ -572,6 +572,8 @@
   "email_map": "Mapa",
   "api_reset_generic": "Si ese correo está registrado, un enlace de restablecimiento está en camino.",
   "api_reset_email_failed": "No se pudo enviar el correo. Verifique los ajustes de SMTP en Integraciones.",
+  "api_reset_link_invalid": "Este enlace de restablecimiento no es válido o ha expirado.",
+  "api_server_error": "Se produjo un error inesperado.",
   "email_reset_subject": "Restablezca su contraseña de CanaryGC",
   "email_reset_body": "Se solicitó un restablecimiento de contraseña para su cuenta de operador de CanaryGC.",
   "email_reset_link_text": "Restablecer su contraseña",

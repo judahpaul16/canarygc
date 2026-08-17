@@ -572,6 +572,8 @@
   "email_map": "Mapa",
   "api_reset_generic": "Se esse e-mail estiver registrado, um link de redefinição está a caminho.",
   "api_reset_email_failed": "Não foi possível enviar o e-mail. Verifique as configurações de SMTP em Integrações.",
+  "api_reset_link_invalid": "Este link de redefinição é inválido ou expirou.",
+  "api_server_error": "Ocorreu um erro inesperado.",
   "email_reset_subject": "Redefina sua senha do CanaryGC",
   "email_reset_body": "Uma redefinição de senha foi solicitada para sua conta de operador do CanaryGC.",
   "email_reset_link_text": "Redefinir sua senha",
