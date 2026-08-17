@@ -43,8 +43,6 @@
 		"@lucia-auth/adapter-sqlite": "^3.0.2",
 		"@node-rs/argon2": "^2.1.0",
 		"@types/three": "^0.185.4",
-		"axios": "^1.19.0",
-		"hls.js": "^1.7.0",
 		"leaflet": "^1.9.4",
 		"lucia": "^3.2.2",
 		"maplibre-gl": "^5.24.0",
