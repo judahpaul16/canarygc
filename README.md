@@ -55,7 +55,7 @@ curl -s https://raw.githubusercontent.com/judahpaul16/canarygc/main/contrib/setu
 ```
 
 ### Install-Only (Without System Setup)
-Skips the host provisioning (installing Docker, nginx, and the other system packages, the UFW firewall and 4G routing rules, the Docker daemon config, and the Raspberry Pi UART overlays) and just brings the app up with Docker Compose, assuming Docker is already installed and running.
+Skips the host provisioning (installing Docker and the other system packages, the UFW firewall and 4G routing rules, the Docker daemon config, and the Raspberry Pi UART overlays) and just brings the app up with Docker Compose, assuming Docker is already installed and running.
 ```bash
 curl -s https://raw.githubusercontent.com/judahpaul16/canarygc/main/contrib/setup.sh | \
     bash -s -- --install-only
@@ -218,13 +218,13 @@ docker restart canarygc_app
 
 The schema recreates empty on the next boot, and the app then prompts for first-run operator setup.
 
-**Production** pulls the published app image (`ghcr.io/judahpaul16/canarygc`) and runs the WebRTC camera bridge, talking to a real autopilot over USB serial (`/dev/ttyACM0`):
+**Production** pulls the published app image (`ghcr.io/judahpaul16/canarygc`) and runs the nginx front end and the WebRTC camera bridge, talking to a real autopilot over its serial link (autodetected, or pinned with `MAVLINK_SERIAL_PATH`):
 
 ```bash
-docker compose --profile production up -d app webrtc
+docker compose --profile production up -d app webrtc nginx
 ```
 
-The app is served at `http://localhost:3000`.
+nginx serves the app at `http://localhost` on port `80`, and the app also answers directly on `3000`.
 
 ### Gates
 
