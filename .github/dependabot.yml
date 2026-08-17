@@ -16,6 +16,8 @@ updates:
       # TypeScript major bump breaks npm ci until typescript-eslint catches up.
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
+      - dependency-name: "maplibre-gl"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: docker
     directories:
@@ -26,6 +28,9 @@ updates:
     groups:
       all:
         patterns: ["*"]
+    ignore:
+      - dependency-name: "ubuntu"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
