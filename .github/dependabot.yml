@@ -30,7 +30,9 @@ updates:
         patterns: ["*"]
     ignore:
       - dependency-name: "ubuntu"
-        update-types: ["version-update:semver-major"]
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
 
   - package-ecosystem: github-actions
     directory: /
