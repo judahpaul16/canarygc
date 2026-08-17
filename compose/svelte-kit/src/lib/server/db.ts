@@ -58,6 +58,8 @@ const MIGRATIONS: Array<() => Promise<string[]>> = [
 ];
 
 async function migrate(): Promise<void> {
+	await db.execute("PRAGMA journal_mode = WAL");
+	await db.execute("PRAGMA busy_timeout = 5000");
 	const result = await db.execute("PRAGMA user_version");
 	const current = Number((result.rows[0] as unknown as { user_version: number }).user_version ?? 0);
 	for (let version = current; version < MIGRATIONS.length; version++) {
