@@ -39,7 +39,7 @@
     >
         <div class="relative">
             <button
-              class="absolute right-2 top-2 p-2 hover:bg-opacity-20 hover:bg-black rounded-full transition-colors"
+              class="absolute right-2 top-2 p-2 hover:bg-black/20 rounded-full transition-colors"
               onclick={toggleMinimize}
               aria-label={isMinimized ? m.common_maximize() : m.common_minimize()}
             >

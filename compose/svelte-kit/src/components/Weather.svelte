@@ -138,7 +138,7 @@
 </script>
 
 {#if isDashboard}
-  <div class="weather min-w-[max-content] h-full max-h-[190px] overflow-y-visible text-center transform -translate-y-[10px]">
+  <div class="weather min-w-max h-full max-h-[190px] overflow-y-visible text-center transform translate-y-[-10px]">
     {#if error}
       <div class="error">{error}</div>
     {:else}

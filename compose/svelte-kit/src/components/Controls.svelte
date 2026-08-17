@@ -43,7 +43,7 @@
     <i class="fas fa-gamepad {gamepadActive ? 'text-[#61cd89]' : ''}"></i>
   </button>
   <div class="mini-col flex flex-col">
-    <div class="mini-map flex-shrink-0 h-48 w-48" use:mapWindow={{ overlay: false }}></div>
+    <div class="mini-map shrink-0 h-48 w-48" use:mapWindow={{ overlay: false }}></div>
     <div class="hdop-strip flex justify-between w-full px-2 pt-2">
       <span class="text-xs text-gray-400">
         <a href="https://en.wikipedia.org/wiki/Dilution_of_precision_(navigation)" target="_blank">

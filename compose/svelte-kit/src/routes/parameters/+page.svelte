@@ -321,7 +321,7 @@
                         type="text"
                         bind:value={searchTerm}
                         placeholder={m.param_search_placeholder()}
-                        class="w-full p-2 rounded-lg search border focus:border-blue-500 focus:outline-none"
+                        class="w-full p-2 rounded-lg search border focus:border-blue-500 focus:outline-hidden"
                     />
                 </div>
 
@@ -347,9 +347,9 @@
 
                 <!-- Parameter List -->
                 {#if fcIsMsp}
-                    <p class="msp-hint flex-grow">{m.param_msp_hint({ model: $mavModelStore })}</p>
+                    <p class="msp-hint grow">{m.param_msp_hint({ model: $mavModelStore })}</p>
                 {:else}
-                <div class="param-list flex-grow overflow-y-auto">
+                <div class="param-list grow overflow-y-auto">
                     <table class="w-full text-white">
                         <thead class="sticky top-0" style={ $darkModeStore ? 'background-color: #1f2937' : 'background-color: slategrey' }>
                             <tr>

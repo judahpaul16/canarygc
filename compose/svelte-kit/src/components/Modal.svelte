@@ -93,7 +93,7 @@
 
 <svelte:window onkeydown={handleKeydown} />
 {#if isOpen}
-  <div class="elevated-surface fixed inset-0 flex items-center justify-center z-50 bg-[#00000090] p-4 backdrop-blur-sm"
+  <div class="elevated-surface fixed inset-0 flex items-center justify-center z-50 bg-[#00000090] p-4 backdrop-blur-xs"
   >
     <button type="button" aria-label={m.modal_close_dialog()} class="absolute inset-0 h-full w-full cursor-default" onclick={closeModal}></button>
     <div class="container relative z-10 rounded-2xl shadow-2xl w-full {html ? 'max-w-lg' : 'max-w-md'}" role="dialog" aria-modal="true">
@@ -153,13 +153,13 @@
         </div>
         {#if confirmation}
           <div class="flex justify-end px-4 py-2 border-t">
-            <button type="submit" onclick={handleConfirm} class="bg-blue-500 px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 mr-2">{confirmLabel}</button>
-            <button type="button" onclick={cancel} class="bg-gray-500 px-4 py-2 rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400">{cancelLabel}</button>
+            <button type="submit" onclick={handleConfirm} class="bg-blue-500 px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-hidden focus:ring-2 focus:ring-blue-400 mr-2">{confirmLabel}</button>
+            <button type="button" onclick={cancel} class="bg-gray-500 px-4 py-2 rounded-lg hover:bg-gray-600 focus:outline-hidden focus:ring-2 focus:ring-gray-400">{cancelLabel}</button>
           </div>
         {/if}
         {#if notification}
           <div class="flex justify-end px-4 py-2 border-t">
-            <button type="button" onclick={closeModal} class="bg-blue-500 px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400">{m.common_okay()}</button>
+            <button type="button" onclick={closeModal} class="bg-blue-500 px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-hidden focus:ring-2 focus:ring-blue-400">{m.common_okay()}</button>
           </div>
         {/if}
       </form>

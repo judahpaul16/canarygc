@@ -32,7 +32,7 @@
   });
 </script>
 
-<div class="elevated-surface fixed inset-0 flex items-center justify-center z-50 bg-[#00000090] p-4 backdrop-blur-sm">
+<div class="elevated-surface fixed inset-0 flex items-center justify-center z-50 bg-[#00000090] p-4 backdrop-blur-xs">
   <button type="button" aria-label={m.modal_close_dialog()} class="absolute inset-0 h-full w-full cursor-default" onclick={onCancel}></button>
   <div class="container relative z-10 rounded-2xl shadow-2xl w-full max-w-md" role="dialog" aria-modal="true">
     <div class="relative border-b" style="border-color: rgb(from var(--fontColor) r g b / 0.12);">
@@ -87,11 +87,11 @@
         type="button"
         disabled={!pad}
         onclick={onStart}
-        class="bg-blue-500 px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 mr-2 disabled:opacity-40 disabled:cursor-not-allowed"
+        class="bg-blue-500 px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-hidden focus:ring-2 focus:ring-blue-400 mr-2 disabled:opacity-40 disabled:cursor-not-allowed"
       >
         {m.gc_start_flying()}
       </button>
-      <button type="button" onclick={onCancel} class="bg-gray-500 px-4 py-2 rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400">{m.common_cancel()}</button>
+      <button type="button" onclick={onCancel} class="bg-gray-500 px-4 py-2 rounded-lg hover:bg-gray-600 focus:outline-hidden focus:ring-2 focus:ring-gray-400">{m.common_cancel()}</button>
     </div>
   </div>
 </div>

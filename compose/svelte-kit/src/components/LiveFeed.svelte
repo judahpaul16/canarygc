@@ -140,12 +140,12 @@
 
   {#if !compact}
     {#if view === 'feed'}
-      <div class="caution-text opacity-[50%] text-md absolute bottom-2 left-2 bg-[#252525cf] px-2 py-1 mr-[0.5em] rounded-full z-20">{m.lf_caution()}</div>
+      <div class="caution-text opacity-50 text-md absolute bottom-2 left-2 bg-[#252525cf] px-2 py-1 mr-[0.5em] rounded-full z-20">{m.lf_caution()}</div>
     {/if}
-    <button class="chrome absolute top-2 right-14 p-2 px-[14px] rounded-full z-30 opacity-[60%]" aria-label={m.lf_rotate_aria()} data-tip={m.lf_rotate_tip()} data-tip-pos="below" onclick={rotateVideo}>
+    <button class="chrome absolute top-2 right-14 p-2 px-[14px] rounded-full z-30 opacity-60" aria-label={m.lf_rotate_aria()} data-tip={m.lf_rotate_tip()} data-tip-pos="below" onclick={rotateVideo}>
       <i class="fas fa-sync-alt"></i>
     </button>
-    <button class="chrome absolute top-2 right-2 p-2 px-[14px] rounded-full z-30 opacity-[60%]" aria-label={m.lf_fullscreen()} data-tip={m.lf_fullscreen()} data-tip-pos="below" onclick={handleFullScreen}>
+    <button class="chrome absolute top-2 right-2 p-2 px-[14px] rounded-full z-30 opacity-60" aria-label={m.lf_fullscreen()} data-tip={m.lf_fullscreen()} data-tip-pos="below" onclick={handleFullScreen}>
       <i class="fas fa-expand"></i>
     </button>
   {/if}

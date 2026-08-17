@@ -1114,7 +1114,7 @@
     <nav class="desktop-nav w-min h-full p-4 flex flex-col opacity-0 z-20" style:display={isNavHidden ? 'none' : 'flex'} use:navTooltips>
       <div class="shrink-0 mb-5 flex justify-center">
         <button onclick={(e) => { e.preventDefault(); handleNavigation('/'); }}>
-          <img src="/logo.png" alt="Logo" class="w-12 h-12 min-w-[3rem] object-contain">
+          <img src="/logo.png" alt="Logo" class="w-12 h-12 min-w-12 object-contain">
         </button>
       </div>
       <div class="nav-scroll flex-1 min-h-0 overflow-y-auto flex flex-col items-center">
@@ -1201,7 +1201,7 @@
         </button>
         <span class="text-xl font-semibold">Canary Ground Control</span>
         <a href="/" onclick={(e) => { e.preventDefault(); handleNavigation('/'); }}>
-          <img src="/logo.png" alt="Logo" class="w-8 h-8 min-w-[2rem] object-contain">
+          <img src="/logo.png" alt="Logo" class="w-8 h-8 min-w-8 object-contain">
         </a>
       </div>
       <div class={`mobile-nav-links ${isNavOpen ? 'block' : 'hidden'} flex flex-col items-center mt-4`}>
@@ -1260,7 +1260,7 @@
       </div>
     </nav>
 
-    <div class="slot-container flex-grow { !isNavHidden ? 'pr-8' : '' } justify-center items-center overflow-auto z-10">
+    <div class="slot-container grow { !isNavHidden ? 'pr-8' : '' } justify-center items-center overflow-auto z-10">
       {@render children?.()}
     </div>
 

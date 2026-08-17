@@ -2353,7 +2353,7 @@
   {/if}
   {#if isFullscreen || win}
     <div class="window-frame">
-  <div class="map-controls absolute top-2.5 right-2.5 z-[1] flex flex-col gap-2">
+  <div class="map-controls absolute top-2.5 right-2.5 z-1 flex flex-col gap-2">
     <button class="map-btn" aria-label={m.map_toggle_fullscreen()} data-tip={isFullscreen ? m.map_exit_fullscreen() : m.map_enter_fullscreen()} data-tip-pos="left" onclick={handleFullScreen}>
       <i class="fas fa-expand"></i>
     </button>
@@ -2381,7 +2381,7 @@
       <i class="fas fa-map"></i>
       <span>{mapType === '3D' ? m.map_type_3d() : mapType === 'OpenStreetMap' ? m.map_type_streets() : mapType}</span>
     </span>
-    <div class="relative w-16 h-6 ml-3 bg-[#2b7c3f rounded-full transition-colors peer-focus:outline-none" class:bg-blue-500={mapType === 'OpenStreetMap'} class:bg-green-500={mapType === 'Satellite'} class:bg-purple-500={mapType === '3D'}>
+    <div class="relative w-16 h-6 ml-3 rounded-full transition-colors peer-focus:outline-hidden" class:bg-blue-500={mapType === 'OpenStreetMap'} class:bg-green-500={mapType === 'Satellite'} class:bg-purple-500={mapType === '3D'}>
       <div class="absolute top-[2px] left-[2px] bg-white rounded-full h-5 w-5 transition-all duration-300" style:transform={mapType === 'OpenStreetMap' ? 'translateX(0)' : mapType === 'Satellite' ? 'translateX(100%)' : 'translateX(200%)'}></div>
     </div>
   </label>
