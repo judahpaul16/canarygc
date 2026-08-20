@@ -48,6 +48,7 @@ export const GET: RequestHandler = async (event) => {
         },
         camera: {
             kind: (await getSetting('camera.kind')) ?? 'pi',
+            piCamId: Number((await getSetting('camera.piCamId')) ?? '0') || 0,
             url: (await getSetting('camera.url')) ?? '',
             device: (await getSetting('camera.device')) ?? '/dev/video0'
         },
@@ -107,14 +108,24 @@ export const POST: RequestHandler = async (event) => {
     let cameraApplied: boolean | null = null;
     const camera = body.camera ?? {};
     if (typeof camera.kind === 'string') {
-        await setSetting('camera.kind', camera.kind);
-        if (typeof camera.url === 'string') await setSetting('camera.url', camera.url.trim());
-        if (typeof camera.device === 'string') await setSetting('camera.device', camera.device.trim());
-        cameraApplied = await applyCameraSource({
-            kind: camera.kind as CameraSourceKind,
-            url: typeof camera.url === 'string' ? camera.url.trim() : '',
-            device: typeof camera.device === 'string' ? camera.device.trim() : '/dev/video0'
-        });
+        const kind = camera.kind as CameraSourceKind;
+        const url = typeof camera.url === 'string' ? camera.url.trim() : '';
+        const device = typeof camera.device === 'string' ? camera.device.trim() : '/dev/video0';
+        if (kind === 'url' && !/^(rtsp|rtsps|rtmp|rtmps|srt):\/\/\S+$/i.test(url)) {
+            return json({ message: m.api_camera_url_invalid() }, 400);
+        }
+        if (kind === 'usb' && !device.startsWith('/dev/')) {
+            return json({ message: m.api_camera_device_invalid() }, 400);
+        }
+        const piCamId = Number(camera.piCamId) === 1 ? 1 : 0;
+        await setSetting('camera.kind', kind);
+        await setSetting('camera.piCamId', String(piCamId));
+        if (typeof camera.url === 'string') await setSetting('camera.url', url);
+        if (typeof camera.device === 'string') await setSetting('camera.device', device);
+        cameraApplied = await applyCameraSource(
+            { kind, piCamId, url, device },
+            (await getSetting('mode.lowBandwidth')) === 'true'
+        );
     }
 
     const ai = body.ai ?? {};

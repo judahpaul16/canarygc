@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { LOW_BANDWIDTH_BITRATE, toMediaMtxEnv, captureCommand, toMediaMtxPatch } from './camera-source';
+import {
+  LOW_BANDWIDTH_BITRATE,
+  toMediaMtxEnv,
+  captureCommand,
+  toMediaMtxPatch,
+  patchMatchesPathConf
+} from './camera-source';
 
 describe('camera source to MediaMTX env', () => {
   it('maps the Pi camera to rpiCamera with no runOnDemand', () => {
@@ -50,6 +56,24 @@ describe('camera source to MediaMTX env', () => {
   it('sets the Pi camera bitrate, capped in low-bandwidth mode', () => {
     expect(toMediaMtxPatch({ kind: 'pi' }).rpiCameraBitrate).toBe(5_000_000);
     expect(toMediaMtxPatch({ kind: 'pi' }, true).rpiCameraBitrate).toBe(LOW_BANDWIDTH_BITRATE);
+  });
+
+  it('selects CSI camera 0 unless another camera id is given', () => {
+    expect(toMediaMtxPatch({ kind: 'pi' }).rpiCameraCamID).toBe(0);
+    expect(toMediaMtxPatch({ kind: 'pi', piCamId: 1 }).rpiCameraCamID).toBe(1);
+  });
+
+  it('reports whether a live path config already carries the patch', () => {
+    const patch = toMediaMtxPatch({ kind: 'pi', piCamId: 1 });
+    expect(patchMatchesPathConf(patch, { ...patch, extra: 'x' })).toBe(true);
+    expect(patchMatchesPathConf(patch, { ...patch, rpiCameraCamID: 0 })).toBe(false);
+    expect(patchMatchesPathConf(patch, null)).toBe(false);
+  });
+
+  it('treats an empty patched value and an absent config value as equal', () => {
+    expect(patchMatchesPathConf({ source: 'rtsp://a/b', runOnDemand: '' }, { source: 'rtsp://a/b' })).toBe(
+      true
+    );
   });
 
   it('caps the capture encoder bitrate in low-bandwidth mode', () => {

@@ -1,15 +1,48 @@
 <script lang="ts">
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import { onMount } from 'svelte';
-  import { showModal } from '../lib/overlays';
+  import { notify, showModal } from '../lib/overlays';
   import Hud from './Hud.svelte';
   import { feedViewStore, setFeedView, reportFeedAvailability, type FeedView } from '../stores/feedViewStore';
   import { m } from '$lib/paraglide/messages';
 
   let { compact = false }: { compact?: boolean } = $props();
+  let containerEl = $state<HTMLElement | null>(null);
+  let iframeEl = $state<HTMLIFrameElement | null>(null);
   let containerAspect = 16 / 9;
   let videoAspect = 16 / 9;
   let feedSrc = $state('');
+  let camKind = $state('');
+  let piCamId = $state(0);
+  let switching = $state(false);
+
+  async function switchCamera() {
+    if (switching) return;
+    switching = true;
+    const target = piCamId === 0 ? 1 : 0;
+    try {
+      const res = await fetch('/api/camera', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ piCamId: target })
+      });
+      const data = await res.json();
+      if (res.ok && data.applied) {
+        piCamId = data.piCamId;
+        if (data.ready === false) {
+          notify({ title: m.lf_cam_title(), content: m.lf_cam_no_signal({ id: String(piCamId) }), type: 'warning', duration: 5000 });
+        } else {
+          notify({ title: m.lf_cam_title(), content: m.lf_cam_switched({ id: String(piCamId) }), duration: 3000 });
+        }
+      } else {
+        notify({ title: m.lf_cam_title(), content: m.lf_cam_failed(), type: 'warning', duration: 5000 });
+      }
+    } catch {
+      notify({ title: m.lf_cam_title(), content: m.lf_cam_failed(), type: 'warning', duration: 5000 });
+    } finally {
+      switching = false;
+    }
+  }
 
   const view = $derived($feedViewStore);
   const showFeed = $derived(view === 'feed' || view === 'hybrid');
@@ -36,44 +69,47 @@
   }
 
   function handleFullScreen() {
-    const liveFeedElement = document.querySelector('#live-feed-container > div');
-    if (liveFeedElement instanceof HTMLElement) {
-      toggleFullScreen(liveFeedElement);
-    }
+    if (containerEl) toggleFullScreen(containerEl);
   }
 
   function adjustVideoSize() {
-    const container = document.querySelector('#live-feed-container');
-    const iframe = document.querySelector('#live-feed') as HTMLIFrameElement;
+    if (!containerEl || !iframeEl) return;
 
-    if (!container || !iframe) return;
-
-    containerAspect = container.clientWidth / container.clientHeight;
+    containerAspect = containerEl.clientWidth / containerEl.clientHeight;
 
     if (containerAspect > videoAspect) {
       const scale = (containerAspect / videoAspect) * 100;
-      iframe.style.width = `${scale}%`;
-      iframe.style.height = `${scale}%`;
+      iframeEl.style.width = `${scale}%`;
+      iframeEl.style.height = `${scale}%`;
     } else {
       const scale = (videoAspect / containerAspect) * 100;
-      iframe.style.width = `${scale}%`;
-      iframe.style.height = `${scale}%`;
+      iframeEl.style.width = `${scale}%`;
+      iframeEl.style.height = `${scale}%`;
     }
   }
 
   function rotateVideo() {
-    const iframe = document.querySelector('#live-feed') as HTMLIFrameElement;
-    if (!iframe) return;
+    if (!iframeEl) return;
 
-    if (String(iframe.style.transform).includes('rotate(180deg)')) {
-      iframe.style.transform = 'translate(-50%, -50%) rotate(0deg)';
+    if (String(iframeEl.style.transform).includes('rotate(180deg)')) {
+      iframeEl.style.transform = 'translate(-50%, -50%) rotate(0deg)';
     } else {
-      iframe.style.transform = 'translate(-50%, -50%) rotate(180deg)';
+      iframeEl.style.transform = 'translate(-50%, -50%) rotate(180deg)';
     }
   }
 
   onMount(() => {
     feedSrc = `http://${window.location.hostname}:8889/cam`;
+
+    fetch('/api/camera')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          camKind = data.kind ?? '';
+          piCamId = Number(data.piCamId) === 1 ? 1 : 0;
+        }
+      })
+      .catch(() => undefined);
 
     // The MediaMTX feed is optional; while it is down the iframe stays behind
     // the placeholder and the view falls back to the HUD.
@@ -86,8 +122,7 @@
         available = false;
       }
       reportFeedAvailability(available);
-      const liveFeed = document.getElementById('live-feed');
-      if (liveFeed) liveFeed.style.zIndex = available ? '20' : '0';
+      if (iframeEl) iframeEl.style.zIndex = available ? '20' : '0';
       adjustVideoSize();
     };
     fetchLiveFeed();
@@ -103,7 +138,7 @@
   });
 </script>
 
-<div id="live-feed-container" class="text-[#ffffff] rounded-2xl h-full relative overflow-hidden">
+<div id="live-feed-container" bind:this={containerEl} class="text-[#ffffff] rounded-2xl h-full relative overflow-hidden">
   <!-- The video, no-signal fallback, and HUD are clipped to the rounded frame
        so nothing bleeds past the corners; the controls sit outside this clip so
        their tooltips are not cut off. -->
@@ -113,7 +148,7 @@
            so hybrid shows the static behind the instruments when the feed is down
            instead of the broken iframe. -->
       <img id="no-signal" src="no-signal.gif" alt={m.lf_no_signal()} class="absolute top-0 w-full h-full object-cover z-10" />
-      <iframe allowfullscreen id="live-feed" title={m.lf_live_feed_title()} src={feedSrc}></iframe>
+      <iframe allowfullscreen id="live-feed" bind:this={iframeEl} title={m.lf_live_feed_title()} src={feedSrc}></iframe>
     {/if}
     {#if showHud}
       <div class="hud-layer" class:overlay={view === 'hybrid'}>
@@ -142,12 +177,28 @@
     {#if view === 'feed'}
       <div class="caution-text opacity-50 text-md absolute bottom-2 left-2 bg-[#252525cf] px-2 py-1 mr-[0.5em] rounded-full z-20">{m.lf_caution()}</div>
     {/if}
-    <button class="chrome absolute top-2 right-14 p-2 px-[14px] rounded-full z-30 opacity-60" aria-label={m.lf_rotate_aria()} data-tip={m.lf_rotate_tip()} data-tip-pos="below" onclick={rotateVideo}>
-      <i class="fas fa-sync-alt"></i>
-    </button>
-    <button class="chrome absolute top-2 right-2 p-2 px-[14px] rounded-full z-30 opacity-60" aria-label={m.lf_fullscreen()} data-tip={m.lf_fullscreen()} data-tip-pos="below" onclick={handleFullScreen}>
-      <i class="fas fa-expand"></i>
-    </button>
+    <div class="view-toggle absolute top-2 right-2 z-30">
+      {#if showFeed && camKind === 'pi'}
+        <button
+          class="seg"
+          aria-label={m.lf_switch_cam({ id: String(piCamId === 0 ? 1 : 0) })}
+          data-tip={m.lf_switch_cam({ id: String(piCamId === 0 ? 1 : 0) })}
+          data-tip-pos="below"
+          disabled={switching}
+          onclick={switchCamera}
+        >
+          <i class="fas {switching ? 'fa-spinner fa-spin' : 'fa-camera-rotate'}"></i>
+        </button>
+      {/if}
+      {#if showFeed}
+        <button class="seg" aria-label={m.lf_rotate_aria()} data-tip={m.lf_rotate_tip()} data-tip-pos="below" onclick={rotateVideo}>
+          <i class="fas fa-sync-alt"></i>
+        </button>
+      {/if}
+      <button class="seg" aria-label={m.lf_fullscreen()} data-tip={m.lf_fullscreen()} data-tip-pos="below" onclick={handleFullScreen}>
+        <i class="fas fa-expand"></i>
+      </button>
+    </div>
   {/if}
 </div>
 
@@ -157,8 +208,13 @@
     border: 10px solid var(--primaryColor);
   }
 
-  #live-feed-container:hover .caution-text,
-  #live-feed-container:hover .chrome {
+  #live-feed-container:fullscreen {
+    border: none;
+    border-radius: 0;
+    height: 100%;
+  }
+
+  #live-feed-container:hover .caution-text {
     opacity: 1;
   }
 
@@ -220,6 +276,11 @@
     border: 2px solid rgb(from var(--secondaryColor) r g b / 75%);
   }
 
+  .seg:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
   #live-feed {
     width: 300%;
     height: 300%;
@@ -232,18 +293,6 @@
     object-fit: cover;
     border-radius: var(--radius-control);
     z-index: 0;
-  }
-
-  /* The data-tip base rule sets position: relative at equal specificity with
-     Tailwind's absolute utility, so the overlay placement is pinned here. */
-  .chrome {
-    position: absolute;
-    color: var(--fontColor);
-    background-color: rgb(from var(--primaryColor) r g b / 75%);
-  }
-
-  .chrome:hover {
-    opacity: 0.75 !important;
   }
 
   @media (max-width: 990px) {

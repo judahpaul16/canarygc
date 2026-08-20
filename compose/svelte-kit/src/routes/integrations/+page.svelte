@@ -20,8 +20,9 @@
   let maptiler = $state('');
   let tiles = $state({ light: '', dark: '', satellite: '' });
   let presetPick = $state({ light: '', dark: '', satellite: '' });
-  let camera = $state<{ kind: string; url: string; device: string }>({
+  let camera = $state<{ kind: string; piCamId: string; url: string; device: string }>({
     kind: 'pi',
+    piCamId: '0',
     url: '',
     device: '/dev/video0'
   });
@@ -54,6 +55,11 @@
     { value: 'usb', label: m.int_cam_usb() }
   ];
 
+  const PI_CAMERAS = [
+    { value: '0', label: m.int_pi_cam0() },
+    { value: '1', label: m.int_pi_cam1() }
+  ];
+
   const detectedStream = $derived($mavVideoStreamStore);
 
   function useDetectedStream() {
@@ -75,7 +81,7 @@
     smtp: 'email smtp mail server host port username password from tls alerts',
     airspace: 'airspace openaip altitude angel api key faa zones no-fly',
     tiles: 'map tiles basemap maptiler key light dark satellite url preset xyz',
-    camera: 'camera video feed source stream live rtsp rtmp srt usb v4l2 capture fpv betaflight mediamtx pi',
+    camera: 'camera video feed source stream live rtsp rtmp srt usb v4l2 capture fpv betaflight mediamtx pi csi cam0 cam1 dual switch',
     ai: 'ai assistant pid tuning llm openai litellm ollama api key model base url gpt tune',
     mavlink: 'mavlink signing security authentication key passphrase sign verify replay tamper link id strict command injection',
     failsafe: 'failsafe lost operator link loss rtl return autoland recovery timeout minutes unattended',
@@ -138,7 +144,13 @@
         satelliteUrl: data.tiles?.satellite
       });
       tiles = { light: eff.light, dark: eff.dark, satellite: eff.satellite };
-      if (data.camera) camera = { kind: data.camera.kind ?? 'pi', url: data.camera.url ?? '', device: data.camera.device ?? '/dev/video0' };
+      if (data.camera)
+        camera = {
+          kind: data.camera.kind ?? 'pi',
+          piCamId: Number(data.camera.piCamId) === 1 ? '1' : '0',
+          url: data.camera.url ?? '',
+          device: data.camera.device ?? '/dev/video0'
+        };
       if (data.ai) { ai = { baseUrl: data.ai.baseUrl ?? '', model: data.ai.model ?? '', apiKey: '' }; aiKeySet = data.ai.keySet ?? false; }
       if (data.mavlink) { mavlink = { signingKey: '', signingLinkId: String(data.mavlink.signingLinkId ?? '1'), signingStrict: Boolean(data.mavlink.signingStrict) }; mavlinkKeySet = data.mavlink.signingKeySet ?? false; }
       if (data.failsafe) failsafe = { lostOperatorMinutes: String(data.failsafe.lostOperatorMinutes ?? 0) };
@@ -391,7 +403,11 @@
             <p class="hint">{m.int_capture_hint()}</p>
           </div>
         {:else}
-          <p class="hint">{m.int_pi_hint()}</p>
+          <div class="field">
+            <label for="camera-picam">{m.int_pi_cam_label()}</label>
+            <Select id="camera-picam" bind:value={camera.piCamId} options={PI_CAMERAS} />
+            <p class="hint">{m.int_pi_hint()} {m.int_pi_cam_hint()}</p>
+          </div>
         {/if}
         {#if cameraApplied !== null}
           <p class="hint">{cameraApplied ? m.int_cam_applied() : m.int_cam_saved()}</p>

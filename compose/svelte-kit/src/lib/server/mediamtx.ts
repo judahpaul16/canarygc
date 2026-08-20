@@ -1,7 +1,13 @@
-import { toMediaMtxPatch, type CameraSource, type CameraSourceKind } from '../camera-source';
+import {
+    patchMatchesPathConf,
+    toMediaMtxPatch,
+    type CameraSource,
+    type CameraSourceKind
+} from '../camera-source';
 import { getSetting } from './settings';
 
 const API_URL = (process.env.MEDIAMTX_API_URL ?? 'http://localhost:9997').replace(/\/$/, '');
+const RECONCILE_MS = 60_000;
 
 // Pushes the chosen source onto the live MediaMTX `cam` path via its control
 // API, so the operator's pick in Integrations takes effect without editing a
@@ -29,11 +35,39 @@ export async function applyCameraSource(source: CameraSource, lowBandwidth = fal
 
 export async function readCameraSource(): Promise<CameraSource> {
     const kind = ((await getSetting('camera.kind')) ?? 'pi') as CameraSourceKind;
+    const piCamId = Number((await getSetting('camera.piCamId')) ?? '0');
     return {
         kind,
+        piCamId: Number.isInteger(piCamId) && piCamId >= 0 ? piCamId : 0,
         url: (await getSetting('camera.url')) ?? '',
         device: (await getSetting('camera.device')) ?? '/dev/video0'
     };
+}
+
+export async function checkCameraReady(): Promise<boolean | null> {
+    try {
+        const res = await fetch(`${API_URL}/v3/paths/get/cam`);
+        if (!res.ok) return null;
+        const data = (await res.json()) as { ready?: boolean };
+        return Boolean(data.ready);
+    } catch {
+        return null;
+    }
+}
+
+export async function reconcileCameraSource(): Promise<void> {
+    const lowBandwidth = (await getSetting('mode.lowBandwidth')) === 'true';
+    const source = await readCameraSource();
+    const patch = toMediaMtxPatch(source, lowBandwidth);
+    try {
+        const res = await fetch(`${API_URL}/v3/config/paths/get/cam`);
+        if (!res.ok) return;
+        const conf = (await res.json()) as Record<string, unknown>;
+        if (patchMatchesPathConf(patch, conf)) return;
+    } catch {
+        return;
+    }
+    await applyCameraSource(source, lowBandwidth);
 }
 
 let applied = false;
@@ -45,6 +79,9 @@ export async function initCameraSource(): Promise<void> {
     applied = true;
     const lowBandwidth = (await getSetting('mode.lowBandwidth')) === 'true';
     await applyCameraSource(await readCameraSource(), lowBandwidth);
+    setInterval(() => {
+        void reconcileCameraSource();
+    }, RECONCILE_MS);
 }
 
 // Re-applies the stored camera source at the current bandwidth posture, so

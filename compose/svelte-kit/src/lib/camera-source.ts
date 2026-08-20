@@ -6,6 +6,7 @@ export type CameraSourceKind = 'pi' | 'url' | 'usb';
 
 export interface CameraSource {
   kind: CameraSourceKind;
+  piCamId?: number;
   // A stream URL for kind 'url' (rtsp://, rtmp://, or srt://). An FC-attached
   // camera that advertises RTSP via MAVLink, an IP camera, or a companion
   // computer all land here.
@@ -92,10 +93,23 @@ export function toMediaMtxPatch(source: CameraSource, lowBandwidth = false): Rec
     case 'pi':
       return {
         source: 'rpiCamera',
+        rpiCameraCamID: source.piCamId ?? 0,
         rpiCameraBitrate: bitrate ?? RPI_DEFAULT_BITRATE,
         runOnDemand: ''
       };
     case 'url':
       return { source: (source.url ?? '').trim(), runOnDemand: '' };
   }
+}
+
+export function patchMatchesPathConf(
+  patch: Record<string, unknown>,
+  conf: Record<string, unknown> | null | undefined
+): boolean {
+  if (!conf) return false;
+  return Object.entries(patch).every(([key, value]) => {
+    const current = conf[key];
+    if (value === '' && (current === undefined || current === null || current === '')) return true;
+    return current === value;
+  });
 }
