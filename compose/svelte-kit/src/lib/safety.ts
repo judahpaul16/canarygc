@@ -329,7 +329,7 @@ function formatIndexRanges(indices: number[]): string {
 export function formatViolations(violations: SafetyViolation[]): string {
   const icon = (severity: Severity) => (severity === 'error' ? '⛔' : '⚠');
   const groups = new Map<string, { severity: Severity; noun: string; indices: number[] }>();
-  const lines: string[] = [];
+  const lines: Array<{ text: string } | { groupKey: string }> = [];
 
   for (const v of violations) {
     if (v.group) {
@@ -338,19 +338,19 @@ export function formatViolations(violations: SafetyViolation[]): string {
         group = { severity: v.severity, noun: v.group.noun, indices: [] };
         groups.set(v.group.key, group);
         // Reserve this group's slot in output order at its first occurrence.
-        lines.push(` ${v.group.key}`);
+        lines.push({ groupKey: v.group.key });
       }
       if (v.severity === 'error') group.severity = 'error';
       if (v.index !== null) group.indices.push(v.index);
     } else {
-      lines.push(`${icon(v.severity)} ${v.message}`);
+      lines.push({ text: `${icon(v.severity)} ${v.message}` });
     }
   }
 
   return lines
     .map((line) => {
-      if (!line.startsWith(' ')) return line;
-      const group = groups.get(line.slice(1))!;
+      if ('text' in line) return line.text;
+      const group = groups.get(line.groupKey)!;
       const label =
         group.indices.length === 1
           ? m.sv_label_one({ index: group.indices[0] })
