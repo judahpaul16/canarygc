@@ -508,9 +508,7 @@
                       "actions": JSON.stringify(items),
                   },
               });
-              if (response.ok) {
-                  console.log(await response.text());
-              } else {
+              if (!response.ok) {
                   console.error(`Error: ${await response.text()}`);
               }
           } catch (error) {

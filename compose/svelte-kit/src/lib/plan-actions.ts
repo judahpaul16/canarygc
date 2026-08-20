@@ -151,9 +151,7 @@ async function removeAllActions(clearLoadedPlan: boolean): Promise<void> {
 					'content-type': 'application/json'
 				}
 			});
-			if (response.ok) {
-				console.log(await response.text());
-			} else {
+			if (!response.ok) {
 				console.error(`Error: ${await response.text()}`);
 			}
 		} catch (error) {

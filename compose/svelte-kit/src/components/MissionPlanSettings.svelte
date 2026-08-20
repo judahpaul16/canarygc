@@ -133,9 +133,7 @@
                     "content-type": "application/json",
                 },
             });
-            if (response.ok) {
-                console.log(await response.text());
-            } else {
+            if (!response.ok) {
                 console.error(`Error: ${await response.text()}`);
             }
         } catch (error) {
@@ -180,9 +178,7 @@
                     "actions": JSON.stringify(items),
                 },
             });
-            if (response.ok) {
-                console.log(await response.text());
-            } else {
+            if (!response.ok) {
                 console.error(`Error: ${await response.text()}`);
             }
         } catch (error) {
@@ -220,7 +216,6 @@
             body: JSON.stringify({ title }),
         });
         let responseData = await response.json();
-        console.log(responseData);
         if (responseData.length > 0) missionExists = true;
 
         if (missionExists) {

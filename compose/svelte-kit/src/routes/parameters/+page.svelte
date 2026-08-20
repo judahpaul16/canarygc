@@ -104,14 +104,7 @@
             
             // Remove any extra quotes from the parameter ID
             const cleanId = id.replace(/^"|"$/g, '');
-            
-            console.log('Writing parameter:', {
-                id: cleanId,
-                originalValue: value,
-                encodedValue,
-                type
-            });
-            
+
             const response = await fetch('/api/mavlink/write_param', {
                 method: 'POST',
                 headers: {
