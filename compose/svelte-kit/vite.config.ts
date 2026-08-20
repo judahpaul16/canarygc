@@ -16,7 +16,10 @@ export default defineConfig({
 	],
 	server: {
 	  host: true,
-	  port: 5173
+	  port: 5173,
+	  watch: {
+	    ignored: ['**/*.db', '**/*.db-wal', '**/*.db-shm']
+	  }
 	},
 	// Prebundled up front so lazily visited pages never trigger a mid-session
 	// re-optimization, which splits the module graph across cache versions.
