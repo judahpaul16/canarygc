@@ -36,6 +36,7 @@
   }
 
   let { title = $bindable('') }: Props = $props();
+  let titleInput = $state<HTMLInputElement | null>(null);
   let actions: MissionPlanActions = $derived($missionPlanActionsStore);
   // Rows with any parameter set keep the inputs visible; the rest collapse to
   // a button so the common case stays compact.
@@ -76,9 +77,10 @@
   }
 
   onMount(async () => {
-    const input = document.querySelector('input[type="text"]') as HTMLInputElement;
+    const input = titleInput;
+    if (!input) return;
     function resizeInput() {
-      input.style.width = `${input.scrollWidth}px`;
+      if (input) input.style.width = `${input.scrollWidth}px`;
     }
     resizeInput();
       let width = Math.max(140, input.scrollWidth - 88);
@@ -293,7 +295,7 @@
 >
   <div class="container">
     <div class="head">
-    <input type="text" class="text-md font-bold ml-4 focus:outline-hidden" placeholder={m.mp_untitled()} id="mission-plan-title" bind:value={title} oninput={(event) => updateTitle(event)} />
+    <input type="text" class="text-md font-bold ml-4 focus:outline-hidden" placeholder={m.mp_untitled()} id="mission-plan-title" bind:this={titleInput} bind:value={title} oninput={(event) => updateTitle(event)} />
     <div class="mission-btns flex items-center gap-2 text-sm">
       <a href="https://ardupilot.org/planner/docs/common-planning-a-mission-with-waypoints-and-events.html" target="_blank" class="text-[#61cd89] hover:underline mr-2">
         <i class="fas fa-question-circle"></i>

@@ -138,7 +138,7 @@
   });
 </script>
 
-<div id="live-feed-container" bind:this={containerEl} class="text-[#ffffff] rounded-2xl h-full relative overflow-hidden">
+<div bind:this={containerEl} class="live-feed-container text-[#ffffff] rounded-2xl h-full relative overflow-hidden">
   <!-- The video, no-signal fallback, and HUD are clipped to the rounded frame
        so nothing bleeds past the corners; the controls sit outside this clip so
        their tooltips are not cut off. -->
@@ -147,8 +147,8 @@
       <!-- The static sits under the video (which covers it while the feed is up),
            so hybrid shows the static behind the instruments when the feed is down
            instead of the broken iframe. -->
-      <img id="no-signal" src="no-signal.gif" alt={m.lf_no_signal()} class="absolute top-0 w-full h-full object-cover z-10" />
-      <iframe allowfullscreen id="live-feed" bind:this={iframeEl} title={m.lf_live_feed_title()} src={feedSrc}></iframe>
+      <img class="no-signal absolute top-0 w-full h-full object-cover z-10" src="no-signal.gif" alt={m.lf_no_signal()} />
+      <iframe allowfullscreen class="live-feed" bind:this={iframeEl} title={m.lf_live_feed_title()} src={feedSrc}></iframe>
     {/if}
     {#if showHud}
       <div class="hud-layer" class:overlay={view === 'hybrid'}>
@@ -203,22 +203,22 @@
 </div>
 
 <style>
-  #live-feed-container {
+  .live-feed-container {
     background-color: var(--primaryColor);
     border: 10px solid var(--primaryColor);
   }
 
-  #live-feed-container:fullscreen {
+  .live-feed-container:fullscreen {
     border: none;
     border-radius: 0;
     height: 100%;
   }
 
-  #live-feed-container:hover .caution-text {
+  .live-feed-container:hover .caution-text {
     opacity: 1;
   }
 
-  #no-signal {
+  .no-signal {
     background-color: var(--primaryColor);
   }
 
@@ -281,7 +281,7 @@
     cursor: default;
   }
 
-  #live-feed {
+  .live-feed {
     width: 300%;
     height: 300%;
     pointer-events: none;
@@ -296,7 +296,7 @@
   }
 
   @media (max-width: 990px) {
-    #live-feed-container {
+    .live-feed-container {
       height: 300px;
     }
   }
