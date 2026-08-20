@@ -130,6 +130,12 @@
 		box-shadow: 0 0 0 3px rgba(245, 197, 24, 0.18);
 	}
 
+	select option,
+	select optgroup {
+		background-color: var(--primaryColor);
+		color: var(--fontColor);
+	}
+
 	/* Chromium draws its own datalist expander arrow inside the input; the
 	   wrapper's caret replaces it. */
 	input::-webkit-calendar-picker-indicator {

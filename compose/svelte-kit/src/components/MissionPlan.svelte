@@ -15,8 +15,8 @@
   } from '../stores/missionPlanStore';
   import { get } from 'svelte/store';
   import { showModal, notify } from '../lib/overlays';
-  import { sendMavlinkCommand, setFlightMode } from '../lib/mavlink-client';
-  import { isAutoLabel, isGuidedLabel } from '../lib/flight-modes';
+  import { setFlightMode } from '../lib/mavlink-client';
+  import { isAutoLabel } from '../lib/flight-modes';
   import { startMissionWithConfirm } from '../lib/start-mission';
   import { takeoffWithConfirm, landWithConfirm } from '../lib/takeoff-land';
   import { ACTION_TYPES } from '../lib/mission-icons';
@@ -29,10 +29,7 @@
   import { optimizePath, startSurveyCapture, startOrbitCapture, startCorridorCapture, startSarCapture, startStructureScanCapture } from '../lib/plan-actions';
   import { m } from '$lib/paraglide/messages';
 
-  const GRIPPER_SERVO_CHANNEL = 9;
-  const GRIPPER_OPEN_PWM_US = 1050;
-  const GRIPPER_CLOSE_PWM_US = 1950;
-  const GRIPPER_CYCLE_DELAY_MS = 500;
+  import { showServoActions } from '../lib/servo-actions-overlay';
 
   interface Props {
     title?: string;
@@ -120,17 +117,7 @@
   }
 
   function releasePayload() {
-    showModal({
-      title: m.mp_release_title(),
-      content: m.mp_release_confirm(),
-      confirmation: true,
-      onConfirm: async () => {
-        if (!isGuidedLabel(mavMode)) await setFlightMode('GUIDED');
-        await sendMavlinkCommand('DO_SET_SERVO', [GRIPPER_SERVO_CHANNEL, GRIPPER_OPEN_PWM_US]);
-        await new Promise((resolve) => setTimeout(resolve, GRIPPER_CYCLE_DELAY_MS));
-        await sendMavlinkCommand('DO_SET_SERVO', [GRIPPER_SERVO_CHANNEL, GRIPPER_CLOSE_PWM_US]);
-      },
-    });
+    showServoActions();
   }
 
   function addAction() {
@@ -339,7 +326,7 @@
       <span class="btn-divider"></span>
       <button class="px-2 py-1 bg-[#588ae7] rounded-lg hover:bg-[#6f9ff9]" onclick={() => {releasePayload()}}>
           <i class="fas fa-parachute-box"></i>
-          <div class="tooltip">{m.mp_release_payload()}</div>
+          <div class="tooltip">{m.sa_tooltip()}</div>
       </button>
       {#if systemState === 'STANDBY' || !isArmed}
         <button class="px-2 py-1 bg-[#6366f1] rounded-lg hover:bg-[#818cf8]"

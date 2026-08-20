@@ -26,7 +26,7 @@
 
   import { showModal, notify } from '../lib/overlays';
   import { sendMavlinkCommand, setFlightMode } from '../lib/mavlink-client';
-  import { isAutoLabel, isGuidedLabel, isPX4 } from '../lib/flight-modes';
+  import { isAutoLabel, isPX4 } from '../lib/flight-modes';
   import { startMissionWithConfirm } from '../lib/start-mission';
   import { takeoffWithConfirm, landWithConfirm } from '../lib/takeoff-land';
   import { missionPlanActionsStore } from '../stores/missionPlanStore';
@@ -38,10 +38,7 @@
   } from '../lib/guidance-session';
   import type { LatLng } from 'leaflet';
 
-  const GRIPPER_SERVO_CHANNEL = 9;
-  const GRIPPER_OPEN_PWM_US = 1050;
-  const GRIPPER_CLOSE_PWM_US = 1950;
-  const GRIPPER_CYCLE_DELAY_MS = 500;
+  import { showServoActions } from '../lib/servo-actions-overlay';
   const CALIBRATION_SETTLE_DELAY_MS = 5000;
 
   interface Props {
@@ -237,17 +234,7 @@
   }
 
   function releasePayload() {
-    showModal({
-      title: m.stats_release_title(),
-      content: m.stats_release_body(),
-      confirmation: true,
-      onConfirm: async () => {
-        if (!isGuidedLabel(mavMode)) await setFlightMode('GUIDED');
-        await sendMavlinkCommand('DO_SET_SERVO', [GRIPPER_SERVO_CHANNEL, GRIPPER_OPEN_PWM_US]);
-        await new Promise((resolve) => setTimeout(resolve, GRIPPER_CYCLE_DELAY_MS));
-        await sendMavlinkCommand('DO_SET_SERVO', [GRIPPER_SERVO_CHANNEL, GRIPPER_CLOSE_PWM_US]);
-      },
-    });
+    showServoActions();
   }
 
   let darkMode = $derived($darkModeStore);
@@ -365,9 +352,9 @@
             </button>
           </div>
           <div class="relative group">
-            <button class="circular-button" onclick={releasePayload} disabled={fcIsMsp}>
+            <button class="circular-button" onclick={releasePayload}>
               <i class="fas fa-parachute-box"></i>
-              <div class="tooltip text-white">{m.stats_tip_release()}</div>
+              <div class="tooltip text-white">{m.sa_tooltip()}</div>
             </button>
           </div>
           {#if systemState === 'STANDBY' || !isArmed}
