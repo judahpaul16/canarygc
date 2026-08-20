@@ -79,7 +79,8 @@ The reference hardware build (Raspberry Pi 4B, Holybro S500 V2, camera, and 4G m
 **Flight and control**
 * Live MAVLink telemetry and control (attitude, position, battery, GPS, mode changes, arm/disarm, virtual D-Pad), with flight modes and armed state decoded correctly for both ArduPilot and PX4.
 * Gamepad flight streams a connected pad as `MANUAL_CONTROL`, switches the vehicle to its stick mode (PX4 Position, ArduPilot Loiter), and hands back to an autonomous hold on release.
-* WebRTC camera feed from an onboard Raspberry Pi camera via [MediaMTX](https://github.com/bluenviron/mediamtx).
+* Servo actions on every flight surface send servo PWM, parachute, gripper, relay, and winch commands, with a quick confirm for the configured payload release.
+* WebRTC camera feed via [MediaMTX](https://github.com/bluenviron/mediamtx) from a Raspberry Pi camera (with in-flight CAM0/CAM1 switching), an RTSP/RTMP/SRT stream, or a USB capture device.
 
 **Maps and airspace** (2D Leaflet, 3D MapLibre)
 * One persistent map behind every page with curved waypoint legs and session-persistent toggles, plus light, dark, and hybrid-satellite basemaps from a MapTiler key or keyless fallbacks, each overridable with a custom XYZ URL.
