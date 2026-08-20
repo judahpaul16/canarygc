@@ -1066,6 +1066,7 @@
   "stats_px4_calib_title": "Non disponibile su PX4",
   "stats_px4_calib_body": "La calibrazione della bussola riferita alla prua utilizza un comando ArduPilot. Calibra i sensori PX4 dalla pagina Calibrazione sensori.",
   "stats_calib_body": "Vuoi davvero calibrare i sensori? In tal caso specifica manualmente la prua (direzione) attuale del MAV in gradi.",
+  "stats_calib_advanced": "Calibrazione avanzata",
   "stats_calib_heading": "Prua attuale",
   "stats_stop_title": "Ferma la missione",
   "stats_stop_body": "Vuoi davvero fermare la missione?",

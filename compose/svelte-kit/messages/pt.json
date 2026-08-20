@@ -1066,6 +1066,7 @@
   "stats_px4_calib_title": "Indisponível no PX4",
   "stats_px4_calib_body": "A calibração da bússola referenciada à proa usa um comando do ArduPilot. Calibre os sensores do PX4 na página Calibração de sensores.",
   "stats_calib_body": "Tem certeza de que deseja calibrar os sensores? Se sim, especifique manualmente a proa (direção) atual do MAV em graus.",
+  "stats_calib_advanced": "Calibração avançada",
   "stats_calib_heading": "Proa atual",
   "stats_stop_title": "Parar missão",
   "stats_stop_body": "Tem certeza de que deseja parar a missão?",

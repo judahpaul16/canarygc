@@ -27,6 +27,8 @@ export interface ModalOptions {
   confirmLabel?: string;
   cancelLabel?: string;
   inputs?: ModalInput[] | null;
+  // Rendered as a trusted anchor below the content; the caller sets the href.
+  link?: { href: string; label: string };
   onConfirm?: (values: string[]) => void | Promise<void>;
   onCancel?: (values: string[]) => void;
   onClose?: () => void;
@@ -78,6 +80,7 @@ export function showModal(options: ModalOptions): () => void {
       confirmLabel: options.confirmLabel ?? m.common_confirm(),
       cancelLabel: options.cancelLabel ?? m.common_cancel(),
       inputs: options.inputs ?? null,
+      link: options.link ?? null,
       onConfirm: async (values: string[]) => {
         await options.onConfirm?.(values);
       },

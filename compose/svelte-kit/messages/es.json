@@ -1066,6 +1066,7 @@
   "stats_px4_calib_title": "No disponible en PX4",
   "stats_px4_calib_body": "La calibración de la brújula referenciada al rumbo usa un comando de ArduPilot. Calibre los sensores de PX4 desde la página de Calibración de sensores.",
   "stats_calib_body": "¿Seguro que desea calibrar los sensores? Si es así, especifique manualmente el rumbo (dirección) actual del MAV en grados.",
+  "stats_calib_advanced": "Calibración avanzada",
   "stats_calib_heading": "Rumbo actual",
   "stats_stop_title": "Detener misión",
   "stats_stop_body": "¿Seguro que desea detener la misión?",

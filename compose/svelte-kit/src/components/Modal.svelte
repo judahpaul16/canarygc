@@ -19,6 +19,7 @@
       value?: string;
       options?: { value: string; label: string }[];
     }[] | null;
+    link?: { href: string; label: string } | null;
     onConfirm?: (values: string[]) => void | Promise<void>;
     onCancel?: (values: string[]) => void;
     onClose?: () => void;
@@ -34,6 +35,7 @@
     confirmLabel = m.common_confirm(),
     cancelLabel = m.common_cancel(),
     inputs = null,
+    link = null,
     onConfirm = () => {},
     onCancel = () => {},
     onClose = () => {}
@@ -111,6 +113,12 @@
             <!-- eslint-disable-next-line svelte/no-at-html-tags -- html is an opt-in flag; callers pass app-built markup with FAA values escaped -->
             {@html content}
           {:else}{content}{/if}
+          {#if link}
+            <a href={link.href} class="modal-link" onclick={closeModal}>
+              {link.label}
+              <i class="fas fa-arrow-right"></i>
+            </a>
+          {/if}
           {#if inputs}
             <div class="input-grid">
               {#each inputs as input, i (i)}
@@ -266,5 +274,19 @@
 
   .border-b, .border-t {
     border-color: var(--secondaryColor);
+  }
+
+  .modal-link {
+    color: #3290e7;
+    white-space: nowrap;
+  }
+
+  .modal-link:hover {
+    text-decoration: underline;
+  }
+
+  .modal-link i {
+    font-size: 0.7rem;
+    margin-left: 0.15rem;
   }
 </style>

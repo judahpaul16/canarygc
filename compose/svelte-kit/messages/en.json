@@ -1066,6 +1066,7 @@
   "stats_px4_calib_title": "Not available on PX4",
   "stats_px4_calib_body": "Yaw-referenced compass calibration uses an ArduPilot command. Calibrate PX4 sensors from the Sensor Calibration page.",
   "stats_calib_body": "Are you sure you want to calibrate the sensors? If so please manually specify the current heading (direction) of the MAV in degrees.",
+  "stats_calib_advanced": "Advanced calibration",
   "stats_calib_heading": "Current Heading",
   "stats_stop_title": "Stop Mission",
   "stats_stop_body": "Are you sure you want to stop the mission?",

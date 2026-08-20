@@ -1066,6 +1066,7 @@
   "stats_px4_calib_title": "Inte tillgängligt på PX4",
   "stats_px4_calib_body": "Den kursrefererade kompasskalibreringen använder ett ArduPilot-kommando. Kalibrera PX4-sensorer från sidan Sensorkalibrering.",
   "stats_calib_body": "Är du säker på att du vill kalibrera sensorerna? Ange i så fall manuellt MAV:ens aktuella kurs (riktning) i grader.",
+  "stats_calib_advanced": "Avancerad kalibrering",
   "stats_calib_heading": "Aktuell kurs",
   "stats_stop_title": "Stoppa uppdrag",
   "stats_stop_body": "Är du säker på att du vill stoppa uppdraget?",

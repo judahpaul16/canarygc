@@ -1066,6 +1066,7 @@
   "stats_px4_calib_title": "Niedostępne w PX4",
   "stats_px4_calib_body": "Kalibracja kompasu odniesiona do kursu używa polecenia ArduPilot. Skalibruj czujniki PX4 na stronie Kalibracja czujników.",
   "stats_calib_body": "Czy na pewno chcesz skalibrować czujniki? Jeśli tak, podaj ręcznie bieżący kurs (kierunek) MAV w stopniach.",
+  "stats_calib_advanced": "Zaawansowana kalibracja",
   "stats_calib_heading": "Bieżący kurs",
   "stats_stop_title": "Zatrzymaj misję",
   "stats_stop_body": "Czy na pewno chcesz zatrzymać misję?",

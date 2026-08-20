@@ -187,6 +187,7 @@
       title: m.nav_calibration(),
       content: m.stats_calib_body(),
       confirmation: true,
+      link: { href: '/calibration', label: m.stats_calib_advanced() },
       inputs: [
         {
           type: 'number',

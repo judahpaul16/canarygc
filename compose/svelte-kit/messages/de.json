@@ -1066,6 +1066,7 @@
   "stats_px4_calib_title": "Bei PX4 nicht verfügbar",
   "stats_px4_calib_body": "Die gierbezogene Kompasskalibrierung verwendet einen ArduPilot-Befehl. Kalibrieren Sie PX4-Sensoren auf der Seite Sensorkalibrierung.",
   "stats_calib_body": "Möchten Sie die Sensoren wirklich kalibrieren? Geben Sie in diesem Fall die aktuelle Ausrichtung (Richtung) des MAV in Grad manuell an.",
+  "stats_calib_advanced": "Erweiterte Kalibrierung",
   "stats_calib_heading": "Aktuelle Ausrichtung",
   "stats_stop_title": "Mission stoppen",
   "stats_stop_body": "Möchten Sie die Mission wirklich stoppen?",

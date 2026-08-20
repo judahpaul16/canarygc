@@ -1066,6 +1066,7 @@
   "stats_px4_calib_title": "Non disponible sur PX4",
   "stats_px4_calib_body": "L'étalonnage du compas référencé au cap utilise une commande ArduPilot. Calibrez les capteurs PX4 depuis la page Calibration des capteurs.",
   "stats_calib_body": "Voulez-vous vraiment calibrer les capteurs ? Si oui, indiquez manuellement le cap (direction) actuel du MAV en degrés.",
+  "stats_calib_advanced": "Étalonnage avancé",
   "stats_calib_heading": "Cap actuel",
   "stats_stop_title": "Arrêter la mission",
   "stats_stop_body": "Voulez-vous vraiment arrêter la mission ?",

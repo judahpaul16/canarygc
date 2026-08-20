@@ -1066,6 +1066,7 @@
   "stats_px4_calib_title": "Niet beschikbaar op PX4",
   "stats_px4_calib_body": "De op koers gerefereerde kompaskalibratie gebruikt een ArduPilot-commando. Kalibreer PX4-sensoren via de pagina Sensorkalibratie.",
   "stats_calib_body": "Weet u zeker dat u de sensoren wilt kalibreren? Geef in dat geval handmatig de huidige koers (richting) van de MAV in graden op.",
+  "stats_calib_advanced": "Geavanceerde kalibratie",
   "stats_calib_heading": "Huidige koers",
   "stats_stop_title": "Missie stoppen",
   "stats_stop_body": "Weet u zeker dat u de missie wilt stoppen?",
