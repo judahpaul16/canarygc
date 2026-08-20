@@ -20,6 +20,7 @@
   let tab = $state<ServoActionTab>('servo');
   let values = $state(loadServoActions());
   let sending = $state(false);
+  let validationError = $state('');
 
   const fcIsMsp = $derived($fcProtocolStore === 'msp');
 
@@ -46,8 +47,38 @@
 
   const activeTab = $derived(TABS.find((t) => t.id === tab) ?? TABS[0]);
 
+  function tabIsValid(which: ServoActionTab): boolean {
+    const finite = (n: unknown) => typeof n === 'number' && Number.isFinite(n);
+    const v = values;
+    switch (which) {
+      case 'servo':
+        return (
+          finite(v.servo.channel) &&
+          finite(v.servo.pwm) &&
+          (!v.servo.cycle || (finite(v.servo.cyclePwm) && finite(v.servo.cycleDelayMs)))
+        );
+      case 'parachute':
+        return true;
+      case 'gripper':
+        return finite(v.gripper.instance);
+      case 'relay':
+        return finite(v.relay.instance);
+      case 'winch':
+        return (
+          finite(v.winch.instance) &&
+          (v.winch.action !== 'length' || finite(v.winch.lengthM)) &&
+          ((v.winch.action !== 'length' && v.winch.action !== 'rate') || finite(v.winch.rateMs))
+        );
+    }
+  }
+
   async function send(which: ServoActionTab) {
     if (sending) return;
+    if (!tabIsValid(which)) {
+      validationError = m.modal_required_fields();
+      return;
+    }
+    validationError = '';
     sending = true;
     try {
       saveServoActions(values);
@@ -98,7 +129,10 @@
                 aria-selected={tab === t.id}
                 class="tab"
                 class:active={tab === t.id}
-                onclick={() => (tab = t.id)}
+                onclick={() => {
+                  tab = t.id;
+                  validationError = '';
+                }}
               >
                 {t.label}
               </button>
@@ -213,6 +247,9 @@
               {/if}
             </div>
           {/if}
+        {/if}
+        {#if validationError}
+          <div class="text-red-400 text-sm mt-2">{validationError}</div>
         {/if}
         <div class="check-field mt-4">
           <input id="sa-advanced" type="checkbox" bind:checked={advanced} />
@@ -331,9 +368,5 @@
 
   .check-field label {
     font-size: 0.9rem;
-  }
-
-  .mt-4 {
-    margin-top: 1rem;
   }
 </style>
