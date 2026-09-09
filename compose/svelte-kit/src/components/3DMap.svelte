@@ -33,8 +33,10 @@
   import { fetchAirspaceForBbox, fetchHazardsForBbox } from '../lib/preflight';
   import { get } from 'svelte/store';
   import * as pkg from 'maplibre-gl';
+  import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
   import type { GeoJSONSource, ExpressionSpecification } from 'maplibre-gl';
-  const { Map, Marker, NavigationControl } = pkg;
+  const { Map, Marker, NavigationControl, setWorkerUrl } = pkg;
+  setWorkerUrl(maplibreWorkerUrl);
 
   interface Props {
     onFeatureClick?: (lat: number, lng: number) => void;

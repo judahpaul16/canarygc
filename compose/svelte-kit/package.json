@@ -34,7 +34,7 @@
 		"typescript": "^5.0.0",
 		"typescript-eslint": "^8.67.0",
 		"vite": "^8.2.1",
-		"vitest": "^4.0.5"
+		"vitest": "^4.1.11"
 	},
 	"type": "module",
 	"dependencies": {
@@ -45,10 +45,10 @@
 		"@types/three": "^0.185.4",
 		"leaflet": "^1.9.4",
 		"lucia": "^3.2.2",
-		"maplibre-gl": "^5.24.0",
+		"maplibre-gl": "^6.8.0",
 		"node-datachannel": "^0.33.0",
 		"node-mavlink": "^2.3.0",
-		"nodemailer": "^9.0.5",
+		"nodemailer": "^9.1.1",
 		"pngjs": "^7.0.0",
 		"serialport": "^13.0.0",
 		"three": "^0.185.1"
