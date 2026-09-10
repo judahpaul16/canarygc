@@ -16,7 +16,7 @@
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
 		"@inlang/paraglide-js": "^2.24.1",
-		"@playwright/test": "1.62.1",
+		"@playwright/test": "1.63.0",
 		"@sveltejs/adapter-node": "^5.5.7",
 		"@sveltejs/kit": "^2.69.2",
 		"@sveltejs/vite-plugin-svelte": "^7.3.0",
@@ -39,7 +39,7 @@
 	"type": "module",
 	"dependencies": {
 		"@fortawesome/fontawesome-free": "^7.3.1",
-		"@libsql/client": "^0.17.4",
+		"@libsql/client": "^0.18.0",
 		"@lucia-auth/adapter-sqlite": "^3.0.2",
 		"@node-rs/argon2": "^2.1.0",
 		"@types/three": "^0.185.4",
