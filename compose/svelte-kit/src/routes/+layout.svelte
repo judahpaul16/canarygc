@@ -3,6 +3,7 @@
   import { MavCmd, MavResult } from 'mavlink-mappings/dist/lib/common';
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import { page } from '$app/stores';
+  import { dev } from '$app/environment';
   import { onMount, untrack } from 'svelte';
   import { goto } from '$app/navigation';
   import '../app.css';
@@ -971,6 +972,22 @@
   }
 
   onMount(() => {
+    // The offline shell runs in production only. Dev sweeps out any worker a
+    // production build or an earlier session left on this origin, since a
+    // worker outliving its server floods the console with failed fetches.
+    if ('serviceWorker' in navigator) {
+      if (dev) {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const registration of registrations) registration.unregister();
+        });
+        caches.keys().then((keys) => {
+          for (const key of keys) caches.delete(key);
+        });
+      } else {
+        navigator.serviceWorker.register('/service-worker.js');
+      }
+    }
+
     const startupTimer = setTimeout(() => {
       if (isNavHidden) return;
       checkLoadedMission();

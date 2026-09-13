@@ -41,6 +41,10 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
 	if (event.request.method !== 'GET') return;
 
+	// DevTools issues only-if-cached requests outside same-origin mode, which
+	// fetch() rejects inside a worker (a Chromium quirk), so those pass through.
+	if (event.request.cache === 'only-if-cached' && event.request.mode !== 'same-origin') return;
+
 	const url = new URL(event.request.url);
 
 	// Live data stays live: telemetry, overlays, and video signaling never
@@ -68,14 +72,14 @@ self.addEventListener('fetch', (event) => {
 			}
 
 			return response;
-		} catch (err) {
+		} catch {
 			const response = await cache.match(event.request);
 			if (response) return response;
 			if (event.request.mode === 'navigate') {
 				const shell = await cache.match(SHELL);
 				if (shell) return shell;
 			}
-			throw err;
+			return Response.error();
 		}
 	}
 
