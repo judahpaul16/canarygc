@@ -29,6 +29,7 @@ export const MSP = {
 	ACC_CALIBRATION: 205,
 	MAG_CALIBRATION: 206,
 	SET_WP: 209,
+	SET_HEAD: 211,
 	// MSP v2 named-setting access (16-bit commands, sent as MSP v2).
 	COMMON_SETTING: 0x1003,
 	COMMON_SET_SETTING: 0x1004

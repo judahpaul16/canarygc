@@ -67,10 +67,30 @@
     }
   ];
 
+  const mspLinks = [
+    { href: 'https://github.com/iNavFlight/inav/wiki/MSP-V2', text: 'MSP V2 Protocol' },
+    {
+      href: 'https://github.com/iNavFlight/inav/wiki/MSP-Navigation-Messages',
+      text: 'MSP Navigation Messages'
+    },
+    {
+      href: 'https://betaflight.com/docs/development/API/MSP-Extensions',
+      text: 'Betaflight MSP Extensions'
+    },
+    { href: 'https://github.com/iNavFlight/inav/wiki', text: 'INAV Wiki' },
+    { href: 'https://betaflight.com/docs/wiki', text: 'Betaflight Wiki' }
+  ];
+
   const safetyLinks = [
     { href: 'https://dronesafetymap.com', text: 'Drone Safety Map' },
     { href: 'https://ardupilot.org/copter/docs/common-prearm-safety-checks.html', text: 'Prearm Safety Checks' },
-    { href: 'https://www.faa.gov/uas', text: 'FAA Rules and Regulations for UAS' }
+    { href: 'https://www.faa.gov/uas', text: 'FAA Rules and Regulations for UAS' },
+    { href: 'https://www.faa.gov/uas/getting_started/b4ufly', text: 'B4UFLY Airspace Awareness' },
+    { href: 'https://www.faa.gov/uas/getting_started/laanc', text: 'LAANC Airspace Authorization' },
+    {
+      href: 'https://www.faa.gov/uas/recreational_flyers/knowledge_test_updates',
+      text: 'TRUST Recreational Flyer Test'
+    }
   ];
 </script>
 
@@ -122,6 +142,14 @@
         <h2><i class="fas fa-book"></i> MAVLink</h2>
         <ul>
           {#each mavlinkLinks as link (link.href)}
+            <li><a href={link.href} target="_blank" rel="noopener noreferrer">{link.text}</a></li>
+          {/each}
+        </ul>
+      </div>
+      <div class="res-col msp">
+        <h2><i class="fas fa-book"></i> MSP</h2>
+        <ul>
+          {#each mspLinks as link (link.href)}
             <li><a href={link.href} target="_blank" rel="noopener noreferrer">{link.text}</a></li>
           {/each}
         </ul>
@@ -306,7 +334,7 @@
 
   .resources {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
     gap: 1.5rem;
     padding: 1.5rem 1.75rem;
   }

@@ -15,10 +15,10 @@
     threeDMapStore,
     missionPathsStore
   } from '../stores/mapStore';
-  import { mavLocationStore, mavAltitudeStore, mavTypeStore } from '../stores/mavlinkStore';
+  import { mavLocationStore, mavAltitudeStore, mavTypeStore, fcProtocolStore, fcFirmwareStore } from '../stores/mavlinkStore';
   import { smoothLocationStore, smoothHeadingStore } from '../lib/smooth-telemetry';
   import { isAirVehicle, isPX4, isPlane } from '../lib/flight-modes';
-  import { applyMaxSpeed, goToVertical, verticalStep, yawStep, YAW_STEP_DEG } from '../lib/vehicle-nudges';
+  import { applyMaxSpeed, goToVertical, verticalStep, yawStep, YAW_STEP_DEG, ALTITUDE_STEP_M } from '../lib/vehicle-nudges';
   import { missionSegmentPaths, stopsAt, type PathNode, type PathPoint } from '../lib/spline-path';
   import { hasSessionValue } from '../lib/session-persisted';
   import { surveyGrid, orbit, corridor, sarExpandingSquare, structureScan, type PatternPoint } from '../lib/mission-patterns';
@@ -73,9 +73,11 @@
   let { id = 'map' }: Props = $props();
 
   let mavLocation: L.LatLng | { lat: number; lng: number } = $derived($smoothLocationStore);
-  // A fixed-wing has no in-place yaw or strafe, so the dock hides the D-Pad and
-  // rotate controls for a plane.
+  // A fixed-wing has no strafe, so the dock hides the D-Pad for a plane. The
+  // yaw buttons stay, they command a course change on a plane, and hide only
+  // on a Betaflight board, which has no heading target the station can set.
   let plane = $derived(isPlane($mavTypeStore));
+  let noHeadingTarget = $derived($fcProtocolStore === 'msp' && $fcFirmwareStore !== 'INAV');
   let win = $derived($mapWindowStore);
   let isFullscreen = $state(false);
   let hideOverlay = $derived(isFullscreen ? false : win ? !win.overlay : true);
@@ -176,11 +178,6 @@
   let mavHeading: number = $state(0);
   let mavMarker: L.Marker;
   let darkMode = $derived($darkModeStore);
-
-  // One meter per click: a vertical step is the ground-impact axis, so each
-  // press stays small and predictable; big altitude changes belong to the
-  // plan or a guided target. Horizontal D-pad nudges stay at 10 m.
-  const ALTITUDE_STEP_M = 1;
 
   // On a phone the docks open collapsed so they do not bury the fullscreen map;
   // on desktop they open expanded.
@@ -2455,15 +2452,18 @@
               </div>
               {#if !plane}
               <DPad />
+              {/if}
+              {#if !noHeadingTarget}
               <div class="control-col">
-                <button class="ctl-btn" aria-label={m.map_rotate_left()} data-tip={m.map_yaw_left({ step: YAW_STEP_DEG })} data-tip-pos="left" onclick={() => yawStep(-1)}>
+                <button class="ctl-btn" aria-label={m.controls_yaw_left()} data-tip={m.map_yaw_left({ step: YAW_STEP_DEG })} data-tip-pos="left" onclick={() => yawStep(-1)}>
                   <i class="fas fa-rotate-left"></i>
                 </button>
-                <button class="ctl-btn" aria-label={m.map_rotate_right()} data-tip={m.map_yaw_right({ step: YAW_STEP_DEG })} data-tip-pos="left" onclick={() => yawStep(1)}>
+                <button class="ctl-btn" aria-label={m.controls_yaw_right()} data-tip={m.map_yaw_right({ step: YAW_STEP_DEG })} data-tip-pos="left" onclick={() => yawStep(1)}>
                   <i class="fas fa-rotate-right"></i>
                 </button>
               </div>
-              {:else}
+              {/if}
+              {#if plane}
               <div class="ctl-fields">
                 <label class="ctl-field">
                   <span>{m.map_max_speed()}</span>

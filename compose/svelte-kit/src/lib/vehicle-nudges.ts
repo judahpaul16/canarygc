@@ -1,5 +1,11 @@
 import { get } from 'svelte/store';
-import { mavModeStore, mavAltitudeStore, mavHeadingStore } from '../stores/mavlinkStore';
+import {
+  mavModeStore,
+  mavAltitudeStore,
+  mavHeadingStore,
+  fcProtocolStore,
+  fcFirmwareStore
+} from '../stores/mavlinkStore';
 import {
   sendMavlinkCommand,
   setFlightMode,
@@ -15,6 +21,7 @@ import {
   isPX4,
   MAV_MODE_FLAG_CUSTOM_MODE_ENABLED
 } from './flight-modes';
+import { MSP } from './msp';
 
 const SPEED_TYPE_AIRSPEED = 0;
 const SPEED_TYPE_GROUNDSPEED = 1;
@@ -23,6 +30,9 @@ const SPEED_ABSOLUTE = 0;
 const SUB_DEPTH_HOLD_MODE = 2; // ArduSub ALT_HOLD (depth hold)
 const YAW_RATE_DEG_PER_S = 10;
 const YAW_RELATIVE_OFFSET = 1;
+const HEADING_TYPE_COURSE_OVER_GROUND = 0;
+const PLANE_HEADING_ACCEL_MSS = 2;
+const PLANE_TURN_DISTANCE_M = 300;
 
 export const ALTITUDE_STEP_M = 10;
 export const YAW_STEP_DEG = 10;
@@ -71,15 +81,50 @@ export async function goToVertical(valueM: number): Promise<void> {
   }
 }
 
-// PX4 rides DO_REPOSITION for yaw (CONDITION_YAW comes back UNSUPPORTED
-// there); ArduPilot yaws in place through its GUIDED mechanism.
+// INAV takes a heading-hold target over MSP; Betaflight has no heading
+// target, so the buttons hide on a Betaflight board.
+async function setMspHeading(headingDeg: number): Promise<void> {
+  const target = Math.round(headingDeg) % 360;
+  await fetch('/api/msp/command', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ code: MSP.SET_HEAD, payload: [target & 0xff, (target >> 8) & 0xff] })
+  });
+}
+
+// A rotorcraft yaws in place: PX4 rides DO_REPOSITION for yaw (CONDITION_YAW
+// comes back UNSUPPORTED there) and ArduPilot yaws through its GUIDED
+// mechanism. A plane turns instead: ArduPlane takes GUIDED_CHANGE_HEADING and
+// PX4 fixed-wing moves its hold point onto the new course. INAV takes a
+// heading-hold target over MSP.
 export async function yawStep(direction: 1 | -1): Promise<void> {
+  const target = (get(mavHeadingStore) + direction * YAW_STEP_DEG + 360) % 360;
+  if (get(fcProtocolStore) === 'msp') {
+    if (get(fcFirmwareStore) === 'INAV') await setMspHeading(target);
+    return;
+  }
   if (isPX4()) {
-    const yaw = (get(mavHeadingStore) + direction * YAW_STEP_DEG + 360) % 360;
-    await repositionRelative(0, 0, 0, yaw);
+    if (isPlane()) {
+      const rad = (target * Math.PI) / 180;
+      await repositionRelative(
+        PLANE_TURN_DISTANCE_M * Math.cos(rad),
+        PLANE_TURN_DISTANCE_M * Math.sin(rad),
+        0
+      );
+    } else {
+      await repositionRelative(0, 0, 0, target);
+    }
     return;
   }
   await ensureGuided();
+  if (isPlane()) {
+    await sendMavlinkCommand(
+      'GUIDED_CHANGE_HEADING',
+      [HEADING_TYPE_COURSE_OVER_GROUND, target, PLANE_HEADING_ACCEL_MSS, 0],
+      { ardupilotMega: true }
+    );
+    return;
+  }
   await sendMavlinkCommand('CONDITION_YAW', [YAW_STEP_DEG, YAW_RATE_DEG_PER_S, direction, YAW_RELATIVE_OFFSET]);
 }
 

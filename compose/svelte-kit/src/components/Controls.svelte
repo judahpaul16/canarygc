@@ -2,9 +2,9 @@
   import DPad from './DPad.svelte';
   import { mapWindow, mapPanel } from '../lib/map-window';
   import Weather from './Weather.svelte';
-  import { mavLocationStore, mavSatelliteStore, mavTypeStore } from '../stores/mavlinkStore';
+  import { mavLocationStore, mavSatelliteStore, mavTypeStore, fcProtocolStore, fcFirmwareStore } from '../stores/mavlinkStore';
   import { isSubmarine, isGroundOrSurface, isPlane } from '../lib/flight-modes';
-  import { applyMaxSpeed, goToVertical, verticalStep, yawStep } from '../lib/vehicle-nudges';
+  import { applyMaxSpeed, goToVertical, verticalStep, yawStep, YAW_STEP_DEG, ALTITUDE_STEP_M } from '../lib/vehicle-nudges';
   import { gamepadActiveStore, toggleGamepad } from '../lib/gamepad-session';
   import { m } from '$lib/paraglide/messages';
 
@@ -18,9 +18,12 @@
   // positive); a rover or boat has no vertical axis and hides the control.
   let submarine = $derived(isSubmarine($mavTypeStore));
   let surface = $derived(isGroundOrSurface($mavTypeStore));
-  // A fixed-wing has no in-place yaw or strafe: it steers with the gamepad,
-  // go-to-altitude, and missions, so the rotate and D-Pad nudges are hidden.
+  // A fixed-wing has no strafe: it steers with the gamepad, go-to-altitude,
+  // and missions, so the D-Pad nudges are hidden. The yaw buttons stay, they
+  // command a course change on a plane. Betaflight has no heading target the
+  // station can set, so they hide on a Betaflight board.
   let plane = $derived(isPlane($mavTypeStore));
+  let noHeadingTarget = $derived($fcProtocolStore === 'msp' && $fcFirmwareStore !== 'INAV');
 
   async function setSpeedAndVertical() {
     await applyMaxSpeed(parseFloat(maxSpeed));
@@ -100,30 +103,30 @@
       <div class="alt-btns column flex flex-col items-center justify-center text-center space-y-4">
         <div class="flex flex-col items-center">
           <div class="label text-sm mb-1" title={submarine ? m.controls_ascend() : m.controls_altitude_up()}>{submarine ? m.controls_ascend() : m.controls_altitude_up()}</div>
-          <button class="alt-button rounded-full" aria-label={submarine ? m.controls_ascend() : m.controls_altitude_up()} onclick={() => verticalStep(true)}>
+          <button class="alt-button rounded-full" aria-label={submarine ? m.controls_ascend() : m.controls_altitude_up()} data-tip={submarine ? m.controls_ascend_tip({ step: ALTITUDE_STEP_M }) : m.map_climb({ step: ALTITUDE_STEP_M })} data-tip-pos="top" onclick={() => verticalStep(true)}>
             <i class="alt-up fas fa-arrow-up"></i>
           </button>
         </div>
         <div class="flex flex-col items-center justify-center">
           <div class="label text-sm mb-1" title={submarine ? m.controls_descend() : m.controls_altitude_down()}>{submarine ? m.controls_descend() : m.controls_altitude_down()}</div>
-          <button class="alt-button rounded-full" aria-label={submarine ? m.controls_descend() : m.controls_altitude_down()} onclick={() => verticalStep(false)}>
+          <button class="alt-button rounded-full" aria-label={submarine ? m.controls_descend() : m.controls_altitude_down()} data-tip={m.map_descend({ step: ALTITUDE_STEP_M })} data-tip-pos="top" onclick={() => verticalStep(false)}>
               <i class="alt-down fas fa-arrow-down"></i>
           </button>
         </div>
       </div>
     {/if}
-    {#if !plane}
+    {#if !noHeadingTarget}
     <div class="separator"></div>
     <div class="rotate-btns column flex flex-col items-center justify-center text-center space-y-4">
       <div id="rotate-left-button" class="flex flex-col items-center">
-        <div class="label text-sm mb-1">{m.controls_rotate_left()}</div>
-        <button class="rotate-button rotate-left rounded-full" aria-label={m.controls_rotate_left()} onclick={() => yawStep(-1)}>
+        <div class="label text-sm mb-1">{m.controls_yaw_left()}</div>
+        <button class="rotate-button rotate-left rounded-full" aria-label={m.controls_yaw_left()} data-tip={m.map_yaw_left({ step: YAW_STEP_DEG })} data-tip-pos="top" onclick={() => yawStep(-1)}>
           <i class="fas fa-rotate-left"></i>
         </button>
       </div>
       <div class="flex flex-col items-center">
-        <div class="label text-sm mb-1">{m.controls_rotate_right()}</div>
-        <button class="rotate-button rotate-right rounded-full" aria-label={m.controls_rotate_right()} onclick={() => yawStep(1)}>
+        <div class="label text-sm mb-1">{m.controls_yaw_right()}</div>
+        <button class="rotate-button rotate-right rounded-full" aria-label={m.controls_yaw_right()} data-tip={m.map_yaw_right({ step: YAW_STEP_DEG })} data-tip-pos="top" onclick={() => yawStep(1)}>
           <i class="fas fa-rotate-right"></i>
         </button>
       </div>
