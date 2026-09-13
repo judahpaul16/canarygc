@@ -61,15 +61,37 @@ export function overlayTarget(): HTMLElement {
   return (document.fullscreenElement as HTMLElement | null) ?? document.body;
 }
 
+// Each modal mounts in its own host so entering or leaving fullscreen can
+// move every open modal into whichever subtree the Fullscreen API renders.
+const modalHosts = new Set<HTMLElement>();
+let modalFullscreenListener = false;
+
+function ensureModalFullscreenListener(): void {
+  if (modalFullscreenListener) return;
+  modalFullscreenListener = true;
+  document.addEventListener('fullscreenchange', () => {
+    const target = overlayTarget();
+    for (const host of modalHosts) {
+      if (host.parentElement !== target) target.appendChild(host);
+    }
+  });
+}
+
 export function showModal(options: ModalOptions): () => void {
+  ensureModalFullscreenListener();
+  const host = document.createElement('div');
+  overlayTarget().appendChild(host);
+  modalHosts.add(host);
   let closed = false;
   const close = () => {
     if (closed) return;
     closed = true;
     unmount(instance);
+    modalHosts.delete(host);
+    host.remove();
   };
   const instance = mount(Modal, {
-    target: overlayTarget(),
+    target: host,
     props: {
       title: options.title,
       content: options.content,
