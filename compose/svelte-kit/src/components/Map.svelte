@@ -2045,6 +2045,14 @@
     pointer-events: auto;
   }
 
+  /* The dock under the pointer floats above its siblings so its tooltips,
+     which cannot escape the panel's own stacking context, stay readable when
+     docks sit close together. */
+  .dock-slot:hover,
+  .dock-slot:focus-within {
+    z-index: 5;
+  }
+
   /* Default positions; a dragged dock overrides these with an inline position
      that persists for the session. The live feed and manual control sit down
      the left, the small compass sits just right of the manual control, and
