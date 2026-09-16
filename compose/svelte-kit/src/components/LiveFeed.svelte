@@ -9,8 +9,6 @@
   let { compact = false }: { compact?: boolean } = $props();
   let containerEl = $state<HTMLElement | null>(null);
   let iframeEl = $state<HTMLIFrameElement | null>(null);
-  let containerAspect = 16 / 9;
-  let videoAspect = 16 / 9;
   let feedSrc = $state('');
   let camKind = $state('');
   let piCamId = $state(0);
@@ -72,29 +70,13 @@
     if (containerEl) toggleFullScreen(containerEl);
   }
 
-  function adjustVideoSize() {
-    if (!containerEl || !iframeEl) return;
-
-    containerAspect = containerEl.clientWidth / containerEl.clientHeight;
-
-    if (containerAspect > videoAspect) {
-      const scale = (containerAspect / videoAspect) * 100;
-      iframeEl.style.width = `${scale}%`;
-      iframeEl.style.height = `${scale}%`;
-    } else {
-      const scale = (videoAspect / containerAspect) * 100;
-      iframeEl.style.width = `${scale}%`;
-      iframeEl.style.height = `${scale}%`;
-    }
-  }
-
   function rotateVideo() {
     if (!iframeEl) return;
 
     if (String(iframeEl.style.transform).includes('rotate(180deg)')) {
-      iframeEl.style.transform = 'translate(-50%, -50%) rotate(0deg)';
+      iframeEl.style.transform = 'rotate(0deg)';
     } else {
-      iframeEl.style.transform = 'translate(-50%, -50%) rotate(180deg)';
+      iframeEl.style.transform = 'rotate(180deg)';
     }
   }
 
@@ -123,17 +105,13 @@
       }
       reportFeedAvailability(available);
       if (iframeEl) iframeEl.style.zIndex = available ? '20' : '0';
-      adjustVideoSize();
     };
     fetchLiveFeed();
 
     const feedTimer = setInterval(() => fetchLiveFeed(), 5000);
 
-    window.addEventListener('resize', adjustVideoSize);
-
     return () => {
       clearInterval(feedTimer);
-      window.removeEventListener('resize', adjustVideoSize);
     };
   });
 </script>
@@ -282,16 +260,14 @@
   }
 
   .live-feed {
-    width: 300%;
-    height: 300%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     pointer-events: none;
     background-color: #000;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    object-fit: cover;
-    border-radius: var(--radius-control);
+    border-radius: 0;
     z-index: 0;
   }
 
