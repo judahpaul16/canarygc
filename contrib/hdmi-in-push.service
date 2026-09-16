@@ -1,0 +1,18 @@
+[Unit]
+Description=CanaryGC HDMI-in push (rk3588) — HDMI-RX capture → MediaMTX cam path
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/hdmi-in-push.sh
+EnvironmentFile=-/etc/default/hdmi-in-push
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=30
+KillMode=control-group
+
+[Install]
+WantedBy=multi-user.target

@@ -61,6 +61,22 @@ curl -s https://raw.githubusercontent.com/judahpaul16/canarygc/main/contrib/setu
     bash -s -- --install-only
 ```
 
+### 🎬 RK3588 (aarch64 / Armbian)
+
+Deploy on Ubuntu 24.04-based Armbian without the Raspberry Pi-specific setup:
+```bash
+curl -fsSL https://raw.githubusercontent.com/judahpaul16/canarygc/main/contrib/setup-rk3588.sh | \
+    bash -s --
+```
+
+The installer reuses an existing checkout and preserves its `.env`. New
+installations use `WEBRTC_SOURCE=publisher` for external video publishing.
+The deployment guide covers board UART selection and an optional HDMI-RX
+service using `rk_hdmirx` and the `h264_rkmpp` hardware encoder.
+
+See [`docs/DEPLOY_RK3588.md`](docs/DEPLOY_RK3588.md) for setup, prerequisites,
+validation, and the hardware test boundary. MIPI-CSI sensor and ISP setup is
+board-specific and is not implemented by the HDMI-RX service.
 
 ---
 
