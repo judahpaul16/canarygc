@@ -4,6 +4,7 @@
   import { notify, showModal } from '../lib/overlays';
   import Hud from './Hud.svelte';
   import { feedViewStore, setFeedView, reportFeedAvailability, type FeedView } from '../stores/feedViewStore';
+  import { startFeedPoller } from '../lib/live-feed-poller';
   import { m } from '$lib/paraglide/messages';
 
   let { compact = false }: { compact?: boolean } = $props();
@@ -101,38 +102,39 @@
   onMount(() => {
     feedSrc = `http://${window.location.hostname}:8889/cam`;
 
-    fetch('/api/camera')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data) {
-          camKind = data.kind ?? '';
-          piCamId = Number(data.piCamId) === 1 ? 1 : 0;
-        }
-      })
-      .catch(() => undefined);
+    function syncCameraDefaults(data: Record<string, unknown>) {
+      camKind = (data.kind as string | undefined) ?? '';
+      piCamId = Number(data.piCamId) === 1 ? 1 : 0;
+    }
 
-    // The MediaMTX feed is optional; while it is down the iframe stays behind
-    // the placeholder and the view falls back to the HUD.
-    const fetchLiveFeed = async () => {
-      let available: boolean;
-      try {
-        const response = await fetch(feedSrc);
-        available = response.ok;
-      } catch {
-        available = false;
+    const pollHandle = startFeedPoller({
+      pollReady: async (signal) => {
+        const res = await fetch('/api/camera', { signal });
+        if (!res.ok) return 'unknown';
+        const data = await res.json();
+        if (data && !signal.aborted) syncCameraDefaults(data);
+        if (data?.ready === true) return 'ready';
+        if (data?.ready === false) return 'down';
+        return 'unknown';
+      },
+      pollAvailable: async (signal) => {
+        const res = await fetch(feedSrc, { signal });
+        return res.ok;
+      },
+      onReadyFlip: () => {
+        if (iframeEl) iframeEl.src = feedSrc;
+      },
+      onAvailability: (available) => {
+        reportFeedAvailability(available);
+        if (iframeEl) iframeEl.style.zIndex = available ? '20' : '0';
+        adjustVideoSize();
       }
-      reportFeedAvailability(available);
-      if (iframeEl) iframeEl.style.zIndex = available ? '20' : '0';
-      adjustVideoSize();
-    };
-    fetchLiveFeed();
-
-    const feedTimer = setInterval(() => fetchLiveFeed(), 5000);
+    });
 
     window.addEventListener('resize', adjustVideoSize);
 
     return () => {
-      clearInterval(feedTimer);
+      pollHandle.stop();
       window.removeEventListener('resize', adjustVideoSize);
     };
   });
