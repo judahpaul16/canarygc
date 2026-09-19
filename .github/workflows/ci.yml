@@ -31,8 +31,14 @@ jobs:
       - run: npm run build
       - run: npm audit --audit-level=moderate
 
+  platform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: PYTHONDONTWRITEBYTECODE=1 python3 -W error::ResourceWarning -m unittest tests.test_rk3588_platform
+
   release:
-    needs: [check]
+    needs: [check, platform]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[skip ci]')
     runs-on: ubuntu-latest
     concurrency:
