@@ -74,9 +74,10 @@ installations use `WEBRTC_SOURCE=publisher` for external video publishing.
 The deployment guide covers board UART selection and an optional HDMI-RX
 service using `rk_hdmirx` and the `h264_rkmpp` hardware encoder.
 
-See [`docs/DEPLOY_RK3588.md`](docs/DEPLOY_RK3588.md) for setup, prerequisites,
-validation, and the hardware test boundary. MIPI-CSI sensor and ISP setup is
-board-specific and is not implemented by the HDMI-RX service.
+See the [RK3588 Deployment](https://github.com/judahpaul16/canarygc/wiki/RK3588-Deployment)
+wiki page for setup, prerequisites, validation, and the hardware test boundary.
+MIPI-CSI sensor and ISP setup is board-specific and is not implemented by the
+HDMI-RX service.
 
 ---
 

@@ -122,7 +122,7 @@ fi
 
 for bin in v4l2-ctl ffmpeg flock curl pgrep; do
     command -v "$bin" >/dev/null 2>&1 || {
-        echo "ERROR: required '$bin' not found in PATH; see docs/DEPLOY_RK3588.md for host dependencies" >&2
+        echo "ERROR: required '$bin' not found in PATH; see https://github.com/judahpaul16/canarygc/wiki/RK3588-Deployment for host dependencies" >&2
         exit 1
     }
 done
